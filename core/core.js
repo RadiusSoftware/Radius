@@ -121,24 +121,6 @@
 
 
     /*****
-     * In some cases, developers may find that they don't know whether a value
-     * is a promise or a regular objevt.  The function handles that by returning
-     * a promise that will be fulfilled wither when (a) the value is NOT a promise
-     * or (b) immediately by returning the original value (promise) itself.
-    *****/
-    global.onValue = async (arg) => {
-        return new Promise(async (ok, fail) => {
-            if (arg instanceof Promise) {
-                ok(await arg);
-            }
-            else {
-                ok(arg);
-            }
-        });
-    }
-
-
-    /*****
      * Register a function or class in the specified namespace.  Functions must
      * be named using camcel case names, whereas classes are expected to use
      * pascal case.  Registered functions are placed into the specified namespace

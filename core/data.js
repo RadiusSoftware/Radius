@@ -21,8 +21,6 @@
 *****/
 
 
-/*****
-*****/
 singleton('', class Data {
     /*****
      * This is the most generic and powerful comparison function for two js values.
@@ -130,6 +128,62 @@ singleton('', class Data {
     }
 
     /*****
+     * classHeirarchyList() and classHierarchyStack() return the class hierarchy
+     * list or stack for the specified object.  Stack means it's in reverse order,
+     * which means from subclass to super class.  List is the opposite order, which
+     * is from super clas to subclass.
+    *****/
+    enumerateClassHierarchy(arg, method) {
+        let ctor;
+        let classes = [];
+    
+        if (typeof arg == 'object') {
+            ctor = Reflect.getPrototypeOf(arg).constructor;
+        }
+        else if (typeof arg == 'function' && arg.toString().startsWith('class')) {
+            ctor = arg;
+        }
+    
+        if (ctor) {
+            while (true) {
+                classes[method](ctor);
+                let match = ctor.toString().match(/extends[ \t\n\r]+([A-Za-z0-9_]+)[ \t\n\r]+\{/m);
+    
+                if (match) {
+                    if (match[1] in global) {
+                        eval(`ctor = ${match[1]}`);
+                        continue;
+                    }
+                }
+    
+                break;
+            }
+        }
+    
+        return classes;
+    }
+    
+    classHierarchyList(arg) {
+        return enumerateClassHierarchy(arg, 'unshift');
+    }
+    
+    classHierarchyStack(arg) {
+        return enumerateClassHierarchy(arg, 'push');
+    }
+    
+    classExtends(clss, base) {
+        if (clss !== base) {
+            for (let baseClss of classHierarchyStack(clss)) {
+                if (baseClss === base) {
+                    return true;
+                }
+            }
+        }
+    
+        return false;
+    }
+
+    /*****
      * This utility provides a robust algorithm for deeply cloning any javascript
      * value, including objects and arrays with circular references.  When viewing
      * this code below, remember that javascript non-object values, NOVs, are
@@ -206,5 +260,50 @@ singleton('', class Data {
         else {
             return value;
         }
+    }
+
+    /*****
+     * This utility function flattens a complex object into a single object containing
+     * all of the properties of the original object.  There can be cases where sub-
+     * object property names may clash with other sub-object property names.  That's
+     * where the "override" parameter comes in play.  If override is true, sub-object
+     * values will overwrite previously written property values on the flat object.
+    *****/
+    flattenObject(object, override) {
+        const flat = {};
+        const stack = [object];
+    
+        const useAsValue = value => {
+            if (typeof value == 'object') {
+                for (let ctor of [ Date ]) {
+                    if (value instanceof ctor) {
+                        return true;
+                    }
+                }
+    
+                return false;
+            }
+    
+            return true;
+        };
+    
+        while (stack.length) {
+            let obj = stack.pop();
+    
+            for (let property in obj) {
+                let value = obj[property];
+    
+                if (useAsValue(value)) {
+                    if (override || !(property in flat)) {
+                        flat[property] = obj[property];
+                    }
+                }
+                else {
+                    stack.push(value);
+                }
+            }   
+        }
+    
+        return flat;
     }
 });
