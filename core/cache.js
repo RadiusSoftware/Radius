@@ -22,323 +22,214 @@
 
 
 /*****
+ * A cache is a data storage object that notifies listeners when it's been
+ * modified.  This makes the cache a nexux for communications between some sort
+ * of algorithm, a background task, or an asyncronous event and other objects
+ * that are handling those events as they occur.  There are two types of Cache
+ * aggregates: ObjectCache and ArrayCache.  Each of these classes have been
+ * written to work with the underlying data aggregate type.
 *****/
-register('', class Cache extends Emitter {
-    static nextId = 1;
-
+register('', class ObjectCache extends Emitter {
     constructor() {
+        super();
         this.properties = {};
     }
 
-    clear(name) {
-    }
+    clear(key) {
+        if (typeof key == 'string') {
+            if (key in this.properties) {
+                let previousValue = this.properties[key];
+                delete this.properties[key];
 
-    get(name) {
-    }
-
-    set(name, value) {
-    }
-});
-/*
-register('', class CacheX {
-    static nextId = 1;
-    static idKey = Symbol('id');
-    static pathKey = Symbol('Path');
-    static nakedKey = Symbol('Naked');
-    static proxyKey = Symbol('Proxy');
-    static emitterKey = Symbol('Emitter');
-    static rootKey = Symbol('Root');
-    static reflection = null;
-    static reflecting = false;
-    static suppress = false;
-  
-    static proxy = {
-        deleteProperty(nakedCache, key) {
-            if (key in nakedCache) {
-                let oldValue = nakedCache[key];
-  
-                if (Array.isArray(nakedCache)) {
-                    nakedCache.splice(key, 1);
-                }
-                else {
-                    delete nakedCache[key];
-                }
- 
-                nakedCache[Cache.emitterKey].send({
-                    messageName: 'Cache',
-                    CacheId: nakedCache[Cache.idKey],
-                    Cache: nakedCache[Cache.proxyKey],
-                    action: 'delete',
-                    key: key,
-                    oldValue: oldValue,
+                this.send({
+                    name: 'CacheUpdate',
+                    type: 'CLEARED',
+                    sender: this,
+                    property: key,
+                    previousValue: previousValue,
                 });
- 
-                return nakedCache[Cache.proxyKey];
             }
-        },
- 
-        get(nakedCache, key) {
-            if (Cache.reflecting) {
-                let refid = `{nakedCache[Cache.idKey]}-{key}`;
-                reflection[refid] = {Cache: nakedCache[Cache.proxyKey], key: key};
-                return nakedCache[key];
+        }
+
+        return this;
+    }
+
+    get(key) {
+        if (typeof key == 'string') {
+            if (key in this.properties) {
+                return this.properties(key);
             }
-            else if (key === Cache.nakedKey) {
-                return nakedCache;
+        }
+        else {
+            return Data.clone(this.elements);
+        }
+    }
+
+    set(key, value) {
+        if (typeof key == 'string' && typeof value != 'undefined') {
+            if (key in this.properties) {
+                let previousValue = this.properties[key];
+                this.properties[key] = value;
+
+                if (previousValue != value) {
+                    this.send({
+                        name: 'CacheUpdate',
+                        type: 'CHANGED',
+                        sender: this,
+                        property: key,
+                        previousValue: previousValue,
+                        newValue: value,
+                    });
+                }
+
+                return this;
             }
             else {
-                return nakedCache[key];
+                this.properties[key] = value;
+
+                this.send({
+                    name: 'CacheUpdate',
+                    type: 'ADDED',
+                    sender: this,
+                    property: key,
+                    newValue: value,
+                });
             }
-        },
- 
-        set(nakedCache, key, value) {
-            if (key in nakedCache) {
-                let oldValue = Cache.value(nakedCache[key]);
- 
-                if (typeof value == 'object' && !(value instanceof Date) && !(value instanceof Time)) {
-                    Cache.assign(nakedCache[Cache.proxyKey], value);
+        }
+
+        return this;
+    }
+});
+
+
+/*****
+ * A cache is a data storage object that notifies listeners when it's been
+ * modified.  This makes the cache a nexux for communications between some sort
+ * of algorithm, a background task, or an asyncronous event and other objects
+ * that are handling those events as they occur.  There are two types of Cache
+ * aggregates: ObjectCache and ArrayCache.  Each of these classes have been
+ * written to work with the underlying data aggregate type.
+*****/
+register('', class ArrayCache extends Emitter {
+    constructor() {
+        super();
+        this.elements = [];
+    }
+
+    delete(index, count) {
+        if (typeof index == 'number') {
+            if (index >= 0 && index < this.elements.length) {
+                let sliceCount = typeof count == 'number' ? count : 1;
+
+                if (index + sliceCount > this.elements.length) {
+                    sliceCount = this.elements.length - 1;
+                }
+
+                let previousValues = this.elements.slice(index, index + sliceCount);
+                this.elements.splice(index, sliceCount);
+
+                this.send({
+                    name: 'CacheUpdate',
+                    type: 'DELETE',
+                    sender: this,
+                    index: index,
+                    count: sliceCount,
+                    previousValues: previousValues,
+                });
+            }
+        }
+
+        return this;
+    }
+
+    getLength() {
+        return this.elements.length;
+    }
+
+    get(index) {
+        if (typeof index == 'number' && index >= 0 && index <= this.elements.length) {
+            return this.elements[index];
+        }
+        else {
+            return Data.copy(this.elements);
+        }
+    }
+
+    insert(index, value) {
+        if (typeof value != 'undefined') {
+            if (typeof index == 'number' && index >= 0) {
+                if (index >= this.elements.length) {
+                    this.push(value);
                 }
                 else {
-                    nakedCache[key] = value;
-                }
- 
-                if (!Cache.suppress) {
-                    nakedCache[Cache.emitterKey].send({
-                        messageName: 'Cache',
-                        CacheId: nakedCache[Cache.idKey],
-                        Cache: nakedCache[Cache.proxyKey],
-                        action: 'change',
-                        key: key,
-                        oldValue: oldValue,
+                    this.elements.splice(index, 0, value);
+
+                    this.send({
+                        name: 'CacheUpdate',
+                        type: 'INSERT',
+                        sender: this,
+                        index: index,
                         newValue: value,
                     });
                 }
             }
-            else {
-                if (Array.isArray(nakedCache)) {
-                    if (key < 0) {
-                        nakedCache.unshift(value);
-                    }
-                    else if (key >= nakedCache.length) {
-                        nakedCache.push(value);
-                    }
-                }
-                else if (typeof value == 'object' && !(value instanceof Date) && !(value instanceof Time)) {
-                    Cache.suppress = true;
-                    nakedCache[key] = new Cache(value, nakedCache, key);
-                    Cache.suppress = false;
-                }
-                else {
-                    nakedCache[key] = value;
-                }
- 
-                if (!Cache.suppress) {
-                    nakedCache[Cache.emitterKey].send({
-                        messageName: 'Cache',
-                        CacheId: nakedCache[Cache.idKey],
-                        Cache: nakedCache[Cache.proxyKey],
-                        action: 'add',
-                        key: key,
-                        value: value
+        }
+
+        return this;
+    }
+
+    pop(value) {
+        if (this.elements.length) {
+            if (typeof value != 'undefined') {
+                let previousValue = this.elements.pop();
+
+                this.send({
+                    name: 'CacheUpdate',
+                    type: 'POP',
+                    sender: this,
+                    previousValue: previousValue,
+                });
+            }
+        }
+
+        return this;
+    }
+
+    push(value) {
+        if (typeof value != 'undefined') {
+            this.elements.push(value);
+
+            this.send({
+                name: 'CacheUpdate',
+                type: 'PUSH',
+                sender: this,
+                index: this.elements.length - 1,
+                newValue: value,
+            });
+        }
+
+        return this;
+    }
+
+    set(index, value) {
+        if (typeof index == 'number' && index >= 0 && index <= this.elements.length) {
+            if (typeof value != 'undefined') {
+                let previousValue = this.elements[index];
+                this.elements[index] = value;
+
+                if (previousValue != value) {
+                    this.send({
+                        name: 'CacheUpdate',
+                        type: 'CHANGE',
+                        sender: this,
+                        index: index,
+                        previousValue: previousValue,
+                        newValue: value,
                     });
                 }
             }
- 
-            return nakedCache[Cache.proxyKey];
-        },
-    };
-
-    constructor(arg, naked, key) {
-        let init;
-        let Cache;
-  
-        if (arg === true) {
-            init = false;
-            Cache = new Array();
-        }
-        else if (arg === false || arg instanceof Date || arg instanceof Time) {
-            init = false;
-            Cache = new Object();
-        }
-        else if (typeof arg == 'undefined') {
-            init = false;
-            Cache = new Object();
-        }
-        else if (Array.isArray(arg)) {
-            init = true;
-            Cache = new Array();
-        }
-        else if (typeof arg == 'object') {
-            init = true;
-            Cache = new Object();
-        }
-        else  {
-            init = false;
-            Cache = new Object();
-        }
- 
-        Cache[Cache.idKey] = Cache.nextId++;
-        Cache[Cache.proxyKey] = new Proxy(Cache, Cache.proxy);
- 
-        if (naked) {
-            Cache[Cache.pathKey] = naked[Cache.pathKey] ? `{naked[Cache.pathKey]}.{key}` : key;
-            Cache[Cache.rootKey] = naked[Cache.rootKey][Cache.proxyKey];
-            Cache[Cache.emitterKey] = naked[Cache.emitterKey];
-        }
-        else {
-            Cache[Cache.pathKey] = '';
-            Cache[Cache.rootKey] = Cache[Cache.proxyKey];
-            Cache[Cache.emitterKey] = mkEmitter();
-        }
- 
-        if (init) {
-            Cache.assign(Cache[Cache.proxyKey], arg);
-        }
- 
-        return Cache[Cache.proxyKey];
-    }
- 
-    static assign(proxy, arg) {
-        if (typeof proxy == 'object' && proxy[Cache.nakedKey] !== undefined) {
-            if (Array.isArray(proxy) && Array.isArray(arg)) {
-                for (let i = 0; i < arg.length; i++) {
-                    proxy[i] = arg[i];
-                }
-            }
-            else if (typeof arg == 'object') {
-                for (let key in arg) {
-                    proxy[key] = arg[key];
-                }
-            }
-        }
-  
-        return Cache;
-    }
-
-    static clear(proxy, key) {
-        if (typeof proxy == 'object' && proxy[Cache.nakedKey] !== undefined) {
-            let naked = proxy[Cache.nakedKey];
-
-            if (key) {
-                 if (Array.isArray(naked[key])) {
-                    naked[key].splice(0, naked[key].length);
-                }
-                else if (typeof naked[key] == 'object') {
-                    for (let propertyName in naked[key]) {
-                        delete naked[key][propertyName];
-                    }
-                }
-            }
-            else {
-                 if (Array.isArray(naked)) {
-                    naked.splice(0, naked.length);
-                }
-                else if (typeof naked == 'object') {
-                    for (let propertyName in naked) {
-                        delete naked[propertyName];
-                    }
-                }
-            }
-        }
-    }
-
-    static id(proxy) {
-        if (typeof proxy == 'object' && proxy[Cache.nakedKey] !== undefined) {
-            return proxy[Cache.nakedKey][Cache.idKey];
-        }
-  
-        return null;
-    }
-
-    static is(arg1, arg2) {
-        if (typeof arg1 == 'object' && typeof arg2 == 'object') {
-            if (arg1[Cache.idKey] && arg2[Cache.idKey]) {
-                return arg1[Cache.idKey] == arg2[Cache.idKey];
-            }
         }
 
-        return false;
-    }
-
-    static has(proxy, key) {
-        if (typeof proxy == 'object' && proxy[Cache.nakedKey] !== undefined) {
-            return key in proxy[Cache.nakedKey];
-        }
-  
-        return false;
-    }
- 
-    static isCache(arg) {
-        if (typeof arg == 'object') {
-            return arg[Cache.idKey] !== undefined;
-        }
- 
-        return false;
-    }
-  
-    static off(Cache, handler) {
-        Cache[Cache.emitterKey].off('Cache', handler);
-        return Cache;
-    }
- 
-    static on(Cache, handler, filter) {
-        Cache[Cache.emitterKey].on('Cache', handler, filter);
-        return Cache;
-    }
- 
-    static once(Cache, handler, filter) {
-        Cache[Cache.emitterKey].once('Cache', handler, filter);
-        return Cache;
-    }
-  
-    static reflect(func, ...args) {
-        Cache.reflection = {};
-        Cache.reflecting = true;
-
-        try {
-            func(...args);
-        }
-        catch (e) {
-            console.log('Cache refelction error!');
-            console.log(func.toString());
-            console.log(e);
-        }
-        finally {
-            Cache.reflecting = false;
-            return Object.values(Cache.reflection);
-        }
-    }
-  
-    static root(proxy) {
-        if (proxy) {
-            return proxy[Cache.rootKey];
-        }
-    }
-  
-    static value(arg) {
-        if (typeof arg == 'object' && arg[Cache.idKey]) {
-            if (Array.isArray(arg)) {
-                let val = [];
- 
-                for (let i = 0; i < arg.length; i++) {
-                    val.push(Cache.value(arg[i]));
-                }
- 
-                return val;
-            }
-            else {
-                let val = {};
- 
-                Object.entries(arg).forEach(entry => {
-                    val[entry[0]] = Cache.value(entry[1]);
-                });
- 
-                return val;
-            }
-        }
-        else {
-            return arg;
-        }
+        return this;
     }
 });
-*/

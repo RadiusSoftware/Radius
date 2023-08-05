@@ -1,6 +1,5 @@
 /*****
  * Copyright (c) 2023 Radius Software
- * https://github.com/RadiusSoftware/kode/blob/main/LICENSE
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal

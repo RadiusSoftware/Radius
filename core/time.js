@@ -1,6 +1,5 @@
 /*****
- * Copyright (c) 2017-2023 Kode Programming
- * https://github.com/KodeProgramming/kode/blob/main/LICENSE
+ * Copyright (c) 2023 Radius Software
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal

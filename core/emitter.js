@@ -299,38 +299,8 @@ register('', class Trap {
  * handler.  The static reply() function is used by the remote handler to
  * reply to the sending endpoint.
 *****/
-register('', function reply(message, value) {
+register('', function replyToQuery(message, value) {
     if ('#Trap' in message) {
         Trap.handleReply(message['#Trap'], reply);
     }
 });
-
-
-/*****
- * This is in effect the "global" emitter.  Each process, which is either the
- * client environment or a process on the server, has a single global emitter
- * to facility general-scoped communications within the process.
-*****/
-{
-    const e = mkEmitter();
-    
-    global.off = (name, handler) => {
-        return e.off(name, handler);
-    };
-    
-    global.on = (name, handler, filter) => {
-        return e.on(name, handler, filter);
-    };
-    
-    global.once = (name, handler, filter) => {
-        return e.once(name, handler, filter);
-    };
-    
-    global.query = message => {
-        return e.query(message);
-    };
-    
-    global.send = message => {
-        return e.send(message);
-    };
-}

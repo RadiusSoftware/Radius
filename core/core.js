@@ -69,6 +69,39 @@
 
 
     /*****
+    *****/
+    global.exitApp = (ok, reason) => {
+        if (platform == 'mozilla') {
+            throw new Error(`Exiting application.  ${reason}`);
+        }
+        else if (platform == 'nodejs') {
+        }
+    }
+
+
+    /*****
+    *****/
+    global.exitProcess = (ok, reason) => {
+        if (platform == 'mozilla') {
+            throw new Error(`Exiting process.  ${reason}`);
+        }
+        else if (platform == 'nodejs') {
+        }
+    }
+
+
+    /*****
+    *****/
+    global.logError = (ok, reason) => {
+        if (platform == 'mozilla') {
+            console.log(reason);
+        }
+        else if (platform == 'nodejs') {
+        }
+    }
+
+
+    /*****
      * Singletons may have init() methods, and the init() methods may be async.
      * When async, it may be necessary to wait on the singleton's initialization
      * before proceeding with additional code.  The function returns a promise
@@ -210,86 +243,3 @@
         }
     }
 })();
-
-
-/*****
- * This utility provides a robust algorithm for deeply cloning any javascript
- * value, including objects and arrays with circular references.  When viewing
- * this code below, remember that javascript non-object values, NOVs, are
- * immutable.  Hence, there's no need to clone them.  If an immutable value is
- * passed as the argument, it is simply returned.  If an object is passed, it
- * gets interesting.  Now we have to recursively create new objects to be clones
- * and add values from the source object network.  We need the weak map to
- * keep instances of objects and arrays to know where they link when there are
- * circular references.
-*****/
-register('', function clone(src) {
-    if (typeof src == 'object') {
-        let map = new WeakMap();
-        let dst = Array.isArray(src) ? new Array() : new Object();
-        map.set(src, dst);
-        let stack = [{ src: src, dst: dst }];
-        
-        function addObjectValue(src, dst, key, value) {
-            if (map.has(value)) {
-                dst[key] = map.get(value);
-            }
-            else {
-                let clone = Array.isArray(value) ? new Array() : new Object();
-                map.set(value, clone);
-                dst[key] = clone;
-                stack.push({ src: value, dst: clone });
-            }
-        }
-        
-        while (stack.length) {
-            let { src, dst } = stack.pop();
-         
-            if (Array.isArray(src)) {
-                for (let i = 0; i < src.length; i++) {
-                    let value = src[i];
-     
-                    if (typeof value == 'object') {
-                        addObjectValue(src, dst, i, value);
-                    }
-                    else {
-                        dst[i] = value;
-                    }
-                }
-            }
-            else {
-                Object.entries(src).forEach(entry => {
-                    let [ key, value ] = entry;
-                    
-                    if (typeof value == 'object') {
-                        addObjectValue(src, dst, key, value);
-                    }
-                    else {
-                        dst[key] = value;
-                    }
-                });
-            }
-        }
-        
-        return dst;
-    }
-    else {
-        return src;
-    }
-});
-
-
-/*****
- * Function to create a shallow copy of the original or src object.  A shallow
- * copy is especially useful when the src contains browser-based DOM objects, in
- * which case a deep clone is not practical to generated.
-*****/
-register('', function copy(src) {
-    let copy = {};
-
-    for (let property in src) {
-        copy[property] = src[property];
-    }
-
-    return copy;
-});

@@ -128,7 +128,7 @@ register('', function toJson(value, humanReadable) {
                 return value;
             }
             else {
-                let decorated = copy(value);
+                let decorated = Data.copy(value);
                 decorated['#CTOR'] = ctor.name;
 
                 if ('#NAMESPACE' in ctor) {
