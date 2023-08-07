@@ -299,10 +299,12 @@ register('', class Trap {
  * handler.  The static reply() function is used by the remote handler to
  * reply to the sending endpoint.
 *****/
-register('', class Message {
+singleton('', class Message extends Emitter {
     reply(message, value) {
         if ('#Trap' in message) {
             Trap.handleReply(message['#Trap'], reply);
         }
     }
 });
+
+

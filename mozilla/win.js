@@ -29,7 +29,7 @@
  * our window wrapper.  One of the key features is that the framework window is
  * an Emitter and will send messages for all registerd window events.
 *****/
-register(class Win extends Emitter {  
+register('', class Win extends Emitter {  
     constructor(win) {
         super();
         this.win = win;

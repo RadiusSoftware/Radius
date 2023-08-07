@@ -24,104 +24,17 @@
 
 
 /*****
-*****
-(async () => {
-    let scriptUrl = document.currentScript;
-
-    class Loader {
-        constructor() {
-            this.radiusUrl = scriptUrl.src.substring(0, scriptUrl.src.indexOf('/mozilla/radius.js'));
-            this.http = this.radiusUrl.startsWith('http') ? true : false;
-            this.xmlhttp = this.http ? new XMLHttpRequest() : false;
-        }
-
-        async load(url) {
-            this.url = `${this.radiusUrl}/${url}`;
-            this.http ? await this.loadHttp() : await this.loadFile();
-        }
-
-        loadFile() {
-            return new Promise(async (ok, fail) => {
-            });
-        }
-
-        loadHttp() {
-            return new Promise(async (ok, fail) => {
-                this.xmlhttp.onreadystatechange = event => {
-                    if (this.xmlhttp.readyState == XMLHttpRequest.DONE) {
-                        let contentType = this.http.getResponseHeader('content-type');
-                        let rsp = new HttpResponse(this.req);
-                        let status = rsp.getStatus();
-        
-                        if (rsp.isMessage()) {
-                            let message = rsp.getMessage();
-                            let pending = '#Pending' in message ? message['#Pending'] : [];
-                            delete message['#Pending'];
-                            Trap.pushReply(this.trap.id, message.response);
-        
-                            for (let pendingMessage of pending) {
-                                global.send(pendingMessage);
-                            }
-                        }
-                        else {
-                            Trap.pushReply(this.trap.id, rsp);
-                        }
-                    }
-                    else if (this.http.readyState == XMLHttpRequest.DONE) {
-                    }
-                };
-
-                this.http.send();
-            });
-        }
-    }
-
-    window.addEventListener('load', async event => {
-        let loader = new Loader();
-
-        for (let fileName of [
-            'core.js',
-            'flow.js',
-            'buffer.js',
-            'data.js',
-            'emitter.js',
-            'cache.js',
-            'json.js',
-            'stringSet.js',
-            'time.js',
-            'mime.js',
-            'text.js',
-            'textTemplate.js',
-            'language.js',
-        ]) {
-            await loader.load(`/core/${fileName}`);
-        }
-        
-        for (let fileName of [
-            'element.js',
-            'document.js',
-            'win.js',
-        ]) {
-            await loader.load(`/mozilla/${fileName}`);
-        }
-    })();
-});*/
-
-
-/*****
+ * This is the client bootstrapper or client loader for the Radius Software
+ * development framework.  It's loaded within the HEAD element of the HTML
+ * document supported with Radius.  It's primary job is to load in each of
+ * the specified framework script files and wait for each file to be fully
+ * compiled before moving on to the next script file.  This is importatn
+ * because the order of evaluation is critical due to dependencies.  Note that
+ * this script only loads the framework.  Once loaded, the framework will be
+ * used for loading in developer application code, CSS, and HTML framents.
 *****/
 (async () => {
-    window.addEventListener('load', async event => {
-        console.log('COMPILING....');
-        document.head.append(...scripts);
-    });
-
-    const scripts =[];
-    const scriptElement = document.currentScript;
-    const radiusUrl = scriptElement.src.substring(0, scriptElement.src.indexOf('/mozilla/radius.js'));
-    console.log('LOADING....');
-
-    for (let fileName of [
+    const sourceFileNames = [
         'core.js',
         'flow.js',
         'buffer.js',
@@ -135,11 +48,35 @@
         'mime.js',
         'textTemplate.js',
         'textUtils.js',
-    ]) {
+        'mozilla/win.js',
+        'mozilla/doc.js',
+        'mozilla/element.js',
+    ];
+
+    let index = 0;
+    const scripts = [];
+    const scriptElement = document.currentScript;
+    const radiusUrl = scriptElement.src.substring(0, scriptElement.src.indexOf('/mozilla/radius.js'));
+
+    const loadNext = () => {
+        let fileName = sourceFileNames[index++];
         let htmlElement = document.createElement('script');
-        htmlElement.setAttribute('defer', false);
+        htmlElement.setAttribute('defer', true);
         htmlElement.setAttribute('async', false);
-        htmlElement.setAttribute('src', `${radiusUrl}/core/${fileName}`);
+        htmlElement.setAttribute('src', `${radiusUrl}/${fileName}`);
         scripts.push(htmlElement);
-    }
+        document.head.append(htmlElement);
+
+        htmlElement.addEventListener('load', async event => {
+            if (index >= sourceFileNames.length) {
+                await onSingletons();
+                Message.send('MozillaReady');
+            }
+            else {
+                loadNext();
+            }
+        });
+    };
+
+    loadNext();
 })();

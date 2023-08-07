@@ -27,7 +27,7 @@
  * is to simplifiy the complexity and histority mess associated with the long
  * history of the document API.
 *****/
-register(class Doc extends Emitter {
+register('', class Doc extends Emitter {
     constructor(doc) {
         super();
         this.doc = doc;
