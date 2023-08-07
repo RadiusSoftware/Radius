@@ -21,7 +21,7 @@
 *****/
 
 
-singleton('', class Text {
+singleton('', class TextUtils {
     /*****
      * A very simple implementation of the percent-encoding algorithm used for URI
      * values in the query portion of the URI.  To generate the value, iterate
