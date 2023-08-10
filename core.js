@@ -151,7 +151,7 @@
                     return makerFunc;
                 }
                 else {
-                    throw new Error(`register(), class name must start with an upper-case letter: ${func.name}`);
+                    throw new Error(`register(), class name must start with an upper-case letter: ${arg.name}`);
                 }
             }
             else if (arg.name) {
@@ -163,12 +163,12 @@
                     namespace[arg.name].code = arg.toString();
                 }
                 else {
-                    throw new Error(`register(), function name must start with an lower-case letter: ${func.name}`);
+                    throw new Error(`register(), function name must start with an lower-case letter: ${arg.name}`);
                 }
             }
         }
         else {
-            throw new Error(`register(), name already exists in container: ${func.name}`);
+            throw new Error(`register(), name already exists in container: ${arg.name}`);
         }
     }
 
@@ -215,12 +215,12 @@
                     return obj;
                 }
                 else {
-                    throw new Error(`register(), class name must start with an upper-case letter: ${func.name}`);
+                    throw new Error(`register(), class name must start with an upper-case letter: ${arg.name}`);
                 }
             }
         }
         else {
-            throw new Error(`register(), name already exists in container: ${func.name}`);
+            throw new Error(`register(), name already exists in container: ${arg.name}`);
         }
     }
 })();

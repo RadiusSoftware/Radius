@@ -1,4 +1,5 @@
 /*****
+ * 
  * Copyright (c) 2023 Radius Software
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -23,7 +24,7 @@
 
 
 /*****
- * This is the client bootstrapper or client loader for the Radius Software
+ * This is the nodejs bootstrapper or nodejs loader for the Radius Software
  * development framework.  It's loaded within the HEAD element of the HTML
  * document supported with Radius.  It's primary job is to load in each of
  * the specified framework script files and wait for each file to be fully
@@ -34,57 +35,26 @@
 *****/
 (async () => {
     const sourceFileNames = [
-        'core.js',
-        'flow.js',
-        'buffer.js',
-        'data.js',
-        'emitter.js',
-        'cache.js',
-        'json.js',
-        'language.js',
-        'stringSet.js',
-        'time.js',
-        'mime.js',
-        'textTemplate.js',
-        'textUtils.js',
-        'mozilla/win.js',
-        'mozilla/doc.js',
-        'mozilla/element.js',
-        'mozilla/svg.js',
-        'mozilla/math.js',
+        '../core.js',
+        '../flow.js',
+        '../buffer.js',
+        '../data.js',
+        '../emitter.js',
+        '../cache.js',
+        '../json.js',
+        '../language.js',
+        '../stringSet.js',
+        '../time.js',
+        '../mime.js',
+        '../textTemplate.js',
+        '../textUtils.js',
     ];
 
-    let index = 0;
-    const scripts = [];
-    const scriptElement = document.currentScript;
-    const radiusUrl = scriptElement.src.substring(0, scriptElement.src.indexOf('/mozilla/radius.js'));
+    const Path = require('path');
 
-    const loadNext = () => {
-        let fileName = sourceFileNames[index++];
-        let htmlElement = document.createElement('script');
-        htmlElement.setAttribute('defer', true);
-        htmlElement.setAttribute('async', false);
-        htmlElement.setAttribute('src', `${radiusUrl}/${fileName}`);
-        scripts.push(htmlElement);
-        document.head.append(htmlElement);
-
-        htmlElement.addEventListener('load', event => {
-            if (index >= sourceFileNames.length) {
-                wrapDocument();
-            }
-            else {
-                loadNext();
-            }
-        });
-    };
-
-    async function wrapDocument() {
-        await onSingletons();
-        global.win = mkWin(window);
-        global.doc = mkDoc(document);
-        // TODO -- complete wrapping of the remaining document.
-        typeof bootstrap == 'function' ? bootstrap() : false;
+    for (let sourceFileName of sourceFileNames) {
+        require(Path.join(__dirname, sourceFileNames));
     }
 
-    loadNext();
+    Message.send({ name: 'RadiusReady' })
 })();

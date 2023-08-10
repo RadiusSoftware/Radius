@@ -1,5 +1,4 @@
 /*****
- * 
  * Copyright (c) 2023 Radius Software
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -29,7 +28,7 @@
      * ensuring that no one outside of your code can replace or remove this
      * value since we want our DocElement objects to be stateful.
     *****/
-    const nodeKey = Symbol('node-key');
+    const nodeKey = Symbol('NodeKey');
 
 
     /*****
@@ -39,7 +38,7 @@
      * any specific type of object, just return a Text node using the argument as
      * the value to be converted to text.
     *****/
-    register('' ,function wrapDocNode(arg) {
+    register('', function wrapDocNode(arg) {
         if (arg instanceof Text) {
             return arg[nodeKey] ? arg[nodeKey] : mkDocText(arg);
         }
@@ -75,7 +74,7 @@
      * object.  The return node extends beyond HTML because it includes our wrapper
      * objects as well as SVG and MathML elements, both of which extend Node.
     *****/
-    register('' ,function unwrapDocNode(arg) {
+    register('',  function unwrapDocNode(arg) {
         if (arg instanceof DocNode) {
             return arg.node;
         }
@@ -95,7 +94,7 @@
      * class for DocText and HtmlElement.  Methods in this class are applicable for
      * both types of derived object instances.
     *****/
-    register('' ,class DocNode extends Emitter {
+    register('', class DocNode extends Emitter {
         constructor(node) {
             super();
             this.node = node;
@@ -429,7 +428,7 @@
      * of DocText are return in API class that refer to the underlying Text class.
      * Moreover, DocText provides a link-free copy function.
     *****/
-    register('' ,class DocText extends DocNode {
+    register('', class DocText extends DocNode {
         constructor(arg) {
             super(typeof arg == 'string' ? document.createTextNode(arg) : unwrapDocNode(arg));
         }
@@ -461,7 +460,7 @@
         },
     };
 
-    register('' ,class ElementEvent {
+    register('', class ElementEvent {
         constructor(event) {
             this[eventKey] = event;
             return new Proxy(this, eventProxy);
@@ -495,7 +494,7 @@
      * MathMLElement.  It has attributes, children, a parent, ... etc.  Just keep
      * in min that this wrapper class is non-specific.
     *****/
-    register('' ,class DocElement extends DocNode {
+    register('', class DocElement extends DocNode {
         constructor(node) {
             super(node);
             this.listeners = {};
@@ -842,7 +841,7 @@
      * also wraps the standard Emitter class to make the event-structure associated
      * with an HMTLElement fits within the framework API for events and messaging.
     *****/
-    register('' ,class HtmlElement extends DocElement {
+    register('', class HtmlElement extends DocElement {
         constructor(arg) {
             if (arg instanceof HTMLElement) {
                 super(arg);

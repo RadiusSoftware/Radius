@@ -1,5 +1,4 @@
 /*****
- * 
  * Copyright (c) 2023 Radius Software
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,6 +27,27 @@
  * associated with DOM windows and we don't just have a singleton object for
  * our window wrapper.  One of the key features is that the framework window is
  * an Emitter and will send messages for all registerd window events.
+ *
+ * Additional Objects that may be useful for additional features and classes:
+ * 
+ *      CacheStorage
+ *      Crypto
+ *      CustomElementRegistry
+ *      History
+ *      LaunchQueue
+ *      LocalStorage
+ *      Location
+ *      MediaQuerylist
+ *      Navigator
+ *      Performance
+ *      Scheduler
+ *      Screen
+ *      SessionStorage
+ *      SpeechSynthesis
+ *      VisualViewport
+ * 
+ * We are not planning on wrapping these.  Just keep them in mind for adding
+ * newer innovative features.
 *****/
 register('', class Win extends Emitter {  
     constructor(win) {
@@ -40,6 +60,8 @@ register('', class Win extends Emitter {
             'animiationend',
             'animationiteration',
             'animationstart',
+            'appinstalled',
+            'beforeinstallprompt',
             'beforeunload',
             'beforeprint',
             'blur',
@@ -55,14 +77,22 @@ register('', class Win extends Emitter {
             'hashchange',
             'languagechange',
             'load',
+            'mnessage',
+            'messageerror',
             'offline',
             'online',
             'pagehide',
             'pageshow',
             'paste',
             'popstate',
+            'rejectionhandled',
             'resize',
             'storage',
+            'transitioncancel',
+            'transitionend',
+            'transitionrun',
+            'transitionstart',
+            'unhandledrejection',
             'unload',
         ].forEach(eventName => this.win.addEventListener(eventName, event => {
             this.send({
@@ -72,18 +102,9 @@ register('', class Win extends Emitter {
         }));
     }
 
-    alert() {
-        this.win.alert();
-        return this;
-    }
-
     blur() {
         this.win.blur();
         return this;
-    }
-
-    clientInformation() {
-        return this.win.clientInformation;
     }
 
     close() {
@@ -91,139 +112,174 @@ register('', class Win extends Emitter {
         return this;
     }
 
-    confirm(message) {
-        return this.win.confirm(message);
-    }
-
-    closed() {
-        return this.win.closed;
-    }
-
-    crypto() {
-        return this.win.crypto;
-    }
-
-    doc() {
-        return mkDoc(this.win.document);
-    }
-
     focus() {
         this.win.focus();
         return this;
     }
 
-    frameElement() {
-        return wrapDocNode(this.win.frameElement);
+    getComputedStyle() {
+        return this.win.getComputedStyle();
     }
 
-    frames() {
+    getDevicePixelRatio() {
+        return this.win.devicePixelRatio;
+    }
+
+    getDocument() {
+        return mkDoc(this.win.document);
+    }
+
+    getFrameElement() {
+        return this.win.frameElement ? wrapDocNode(this.win.frameElement) : null;
+    }
+
+    getFrames() {
         let frames = [];
 
         for (let i = 0; i < this.win.frames.length; i++) {
-            frames.push(mkWindow(this.win.frames[i]));
+            frames.push(mkWin(this.win.frames[i]));
         }
 
         return frames;
     }
 
-    getScreen() {
-        return this.win.screen;
-    }
-
-    innerHeight() {
+    getInnerHeight() {
         return this.win.innerHeight;
     }
 
-    innerWidth() {
+    getInnerWidth() {
         return this.win.innerWidth;
     }
 
-    isSecure() {
-        return this.win.isSecureContext;
+    getLength() {
+        return this.win.length;
     }
 
-    location(url) {
-        if (url) {
-            this.win.location.assign(url);
-        }
-        else {
-            return this.win.location;
-        }
+    getMenuBar() {
+        return this.win.menubar;
     }
 
-    name() {
+    getLocation() {
+        return this.win.location;
+    }
+
+    getLocationBar() {
+        return this.win.locationbar;
+    }
+
+    getName() {
         return this.win.name;
     }
 
-    outerHeight() {
+    getOpener() {
+        return mkWin(this.win.opener);
+    }
+
+    getOrigin() {
+        return this.win.origin;
+    }
+
+    getOuterHeight() {
         return this.win.outerHeight;
     }
 
-    outerWidth() {
+    getOuterWidth() {
         return this.win.outerWidth;
     }
 
-    pageXOffset() {
+    getPageXOffset() {
         return this.win.pageXOffset;
     }
 
-    pageYOffset() {
+    getPageYOffset() {
         return this.win.pageYOffset;
     }
 
-    parent() {
-        if (this.win.parent) {
-            return mkWindow(this.win.parent);
-        }
-
-        return null;
+    getParent() {
+        return this.win.parent;
     }
 
-    pixelRatio() {
-        return this.win.devicePixelRatio;
+    getPersonalBar() {
+        return this.win.personalbar;
     }
 
-    resizeBy(dx, dy) {
-        this.win.resizeBy(dx, dy);
-        return this;
-    }
-
-    resizeTo(x, y) {
-        this.win.resizeTo(x, y);
-        return this;
-    }
-
-    screenX() {
-        return this.win.screenX;
-    }
-
-    screenY() {
+    getScreenY() {
         return this.win.screenY;
     }
 
-    scroll(x, y) {
-        this.win.scroll(x, y);
+    getScrollBars() {
+        return this.win.scrollbars;
+    }
+
+    getScrollMaxX() {
+        return this.win.scrollMaxX;
+    }
+
+    getScrollMaxY() {
+        return this.win.scrollMaxY;
+    }
+
+    getSelection() {
+        return this.win.getSelection();
+    }
+
+    getStatusBar() {
+        return this.win.statusbar;
+    }
+
+    getToolBar() {
+        return this.win.toolbar;
+    }
+
+    isClosed() {
+        return this.win.closed;
+    }
+
+    isFullScreen() {
+        return this.win.fullScreen;
+    }
+
+    isSecureContext() {
+        return this.win.isSecureContext;
+    }
+
+    moveBy(deltaX, deltaY) {
+        this.win.moveBy(deltaX, deltaY);
         return this;
     }
 
-    scrollBy(dx, dy) {
-        this.win.scrollBy(dx, dy);
+    moveTo(x, y) {
+        this.win.moveTo(x, y);
         return this;
     }
 
-    scrollX() {
-        return this.win.scrollX;
+    resizeBy(xDelta, yDelta) {
+        this.win.resizeBy(xDelta, yDelta);
+        return this;
     }
 
-    scrollY() {
-        return this.win.scrollY;
+    resize(width, height) {
+        this.win.resizeTo(width, height);
+        return this;
     }
 
-    top() {
-        return mkWindow(this.win.top);
+    scroll(xCoord, yCoord) {
+        this.win.scroll(xCoord, yCoord);
+        return this;
     }
 
-    viewport() {
-        return this.win.visualViewport;
+    scrollTo(x, y) {
+        this.win.scrollTo(x, y);
+        return this;
+    }
+
+    setName(name) {
+        this.win.name = name;
+        return this;
+    }
+
+    stop() {
+        this.win.stop();
+        return this;
     }
 });
