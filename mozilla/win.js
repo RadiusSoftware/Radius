@@ -27,27 +27,6 @@
  * associated with DOM windows and we don't just have a singleton object for
  * our window wrapper.  One of the key features is that the framework window is
  * an Emitter and will send messages for all registerd window events.
- *
- * Additional Objects that may be useful for additional features and classes:
- * 
- *      CacheStorage
- *      Crypto
- *      CustomElementRegistry
- *      History
- *      LaunchQueue
- *      LocalStorage
- *      Location
- *      MediaQuerylist
- *      Navigator
- *      Performance
- *      Scheduler
- *      Screen
- *      SessionStorage
- *      SpeechSynthesis
- *      VisualViewport
- * 
- * We are not planning on wrapping these.  Just keep them in mind for adding
- * newer innovative features.
 *****/
 register('', class Win extends Emitter {  
     constructor(win) {

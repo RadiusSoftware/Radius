@@ -52,6 +52,8 @@
         'mozilla/element.js',
         'mozilla/svg.js',
         'mozilla/math.js',
+        'mozilla/widget.js',
+        'mozilla/styleSheet.js',
     ];
 
     let index = 0;

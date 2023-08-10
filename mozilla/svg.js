@@ -22,7 +22,6 @@
 
 
 /*****
- * TODO
 *****/
 register('', class SvgElement extends DocElement {
     constructor(arg) {

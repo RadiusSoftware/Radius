@@ -61,13 +61,14 @@ register('', class Doc extends Emitter {
             'pointerenter',
             'pointerleave',
             'pointerlockchange',
-            'poointerlockerror',
+            'pointerlockerror',
             'pointermove',
             'pointerout',
             'pointerover',
             'pointerup',
             'readystatechange',
             'scroll',
+            'selectinchange',
             'touchcancel',
             'touchend',
             'touchmove',
@@ -76,7 +77,6 @@ register('', class Doc extends Emitter {
             'transitionend',
             'transitionrun',
             'transitionstart',
-            'selectchange',
             'visibilitychange',
             'wheel',
         ].forEach(eventName => this.doc.addEventListener(eventName, event => {
@@ -87,16 +87,13 @@ register('', class Doc extends Emitter {
         }));
     }
 
-    activeElement() {
-        return wrapDocNode(this.doc.activeElement);
+    adoptNode(externalNode) {
+        let internalNode = this.doc.adoptNode(unwarpDocNode(externalMode));
+        return wrapDocNode(internalNode);
     }
 
-    characterSet() {
-        return this.doc.characterSet;
-    }
-
-    cookies() {
-        return [];
+    close() {
+        this.doc.close();
     }
 
     async copy(value) {
@@ -107,24 +104,196 @@ register('', class Doc extends Emitter {
         return this;
     }
 
-    direction() {
-        return this.doc.dir;
+    createRange() {
+        return this.doc.createRange();
+    }
+
+    createTreeWalker(node, includes) {
+        return this.doc.createTreeWalkter(node, includes);
+    }
+
+    exitFullScreen() {
+        this.doc.exitFullScreen();
+        return this;
+    }
+
+    exitPictureInPicture() {
+        this.doc.exitPictureInPicture();
+        return this;
+    }
+
+    exitPointerLock() {
+        this.doc.exitPointerLock();
+        return this;
+    }
+
+    getActiveElement() {
+        return wrapDocNode(this.doc.activeElement);
+    }
+
+    getAdoptedStyleSheets() {
+        return this.doc.adoptedStyleSheets().map(adopted => mkCssStyleSheet(adopted));
+    }
+
+    getAnimations() {
+        return this.doc.getAnimations();
     }
 
     getBody() {
-        return this.doc.body;
+        return wrapDocNode(this.doc.body);
     }
 
-    getDocument() {
-        return this.doc;
+    getCaretPositionFromPoint(x, y) {
+        return this.doc.caretPositionFromPoint(x, y);
+    }
+
+    getCharacterSet() {
+        return this.doc.characterSet;
+    }
+
+    getCompatMode() {
+        return this.doc.compatMode;
+    }
+
+    getContentType() {
+        return this.doc.contentType;
+    }
+
+    getCookie() {
+        // TODO ******************        
+    }
+
+    getCurrentScript() {
+        return mkDocNode(this.doc.currentScript);
+    }
+
+    getDesignMode() {
+        return this.doc.designMode;
+    }
+
+    getDir() {
+        return this.doc.dir;
+    }
+
+    getDocType() {
+        return this.doc.doctype;
+    }
+
+    getDocumentUri() {
+        return this.doc.documentURI;
+    }
+
+    getElementById(id) {
+        return this.doc.getElementById(id);
+    }
+
+    getElementFromPoint(x, y) {
+        let element = this.doc.elementFromPoint(x, y);
+        return element ? wrapDocNode(element) : null;
+    }
+
+    getElementFromPoints(x, y) {
+        let elements = [];
+
+        for (let element of this.doc.elementsFromPoint(x, y)) {
+            elements.push(wrapDocNode(element));
+        }
+
+        return elements;
+    }
+
+    getFonts() {
+        return this.doc.fonts;
+    }
+
+    getForms() {
+        return this.doc.forms;
+    }
+
+    getFullScreenElement() {
+        return this.doc.fullScreenElement;
+    }
+
+    getFullScreenEnabled() {
+        return this.doc.fullscreenEnabled;
     }
 
     getHead() {
-        return this.doc.head;
+        return wrapDocNode(this.doc.head);
     }
 
     getHtml() {
-        return this.doc.documentElement
+        return wrapDocNode(this.doc.documentElement);
+    }
+
+    getImages() {
+        let elements = [];
+
+        for (let i = 0; i < this.doc.images.length; i++) {
+            elements.push(wrapDocNode(this.doc.images.item(i)));
+        }
+
+        return elements;
+    }
+
+    getImplementation() {
+        return this.doc.implementation;
+    }
+
+    getLastModiied() {
+        return this.mkTime(this.doc.lastModified);
+    }
+
+    getLocation() {
+        return this.doc.location;
+    }
+
+    getLinks() {
+        let elements = [];
+
+        for (let i = 0; i < this.doc.links.length; i++) {
+            elements.push(wrapDocNode(this.doc.links.item(i)));
+        }
+
+        return elements;      
+    }
+
+    getPictureInPictureElement() {
+        if (this.doc.pictureInPictureElement) {
+            return wrapDocNode(this.doc.pictureInPictureElement);
+        }
+
+        return null;
+    }
+
+    getPointerLockElement() {
+        if (this.doc.pointLockElement) {
+            return wrapDocNode(this.doc.pointLockElement);
+        }
+
+        return null;
+    }
+
+    getPlugins() {
+        return this.doc.plugins;
+    }
+
+    getReadyState() {
+        return this.doc.readyState;
+    }
+
+    getReferrer() {
+        return this.doc.referrer;
+    }
+
+    getScripts() {
+        let elements = [];
+
+        for (let i = 0; i < this.doc.scripts.length; i++) {
+            elements.push(wrapDocNode(this.doc.scripts.item(i)));
+        }
+
+        return elements;      
     }
 
     getStyleSheet(title) {
@@ -145,34 +314,46 @@ register('', class Doc extends Emitter {
     getStyleSheets() {
         let styleSheets = [];
 
-        for (let sheet of this.doc.styleSheets) {
-            styleSheets.push(mkCssStyleSheet(sheet));
+        for (let i = 0; i < this.doc.styleSheets.length; i++) {
+            styleSheets.push(wrapDocNode(this.doc.styleSheets.item(i)));
         }
 
-        return styleSheets;
+        return styleSheets;       
     }
 
-    hidden() {
+    getTimeline() {
+        return this.doc.timeline;
+    }
+
+    getTitle() {
+        return this.doc.title;
+    }
+
+    getUrl() {
+        return this.doc.URL;
+    }
+
+    getVisibilityState() {
+        return this.doc.visibilityState;
+    }
+
+    getWindow() {
+        return mkWin(this.doc.defaultView);
+    }
+
+    hasFocus() {
+        return this.doc.hasFocus();
+    }
+
+    isHidden() {
         return this.doc.hidden;
-    }
-
-    location() {
-        return this.doc.location;
-    }
-
-    readyState() {
-        return this.doc.readyState;
-    }
-
-    referer() {
-        return this.doc.referer;
     }
 
     queryAll(selector) {
         let selected = [];
       
         if (typeof selector == 'string' && selector != '') {
-            let nodeList = document.querySelectorAll(selector);
+            let nodeList = this.doc.querySelectorAll(selector);
       
             for (let i = 0; i < nodeList.length; i++) {
                 selected.push(wrapDocNode(nodeList.item(i)));
@@ -194,11 +375,29 @@ register('', class Doc extends Emitter {
         return null;
     }
 
-    title() {
-        return this.doc.title;
+    setCookie() {
+        // TODO ****************** 
+        return this;
     }
 
-    url() {
-        return this.doc.URL;
+    setDesignMode(mode) {
+        this.doc.designMode = mode ? 'on' : 'off';
+        return this;
+    }
+
+    setDir(dir) {
+        switch (dir) {
+            case 'rtl':
+            case 'ltr':
+                this.doc.dir = dir;
+                break;
+        }
+
+        return this;
+    }
+
+    setTitle(title) {
+        this.doc.title = title;
+        return this;
     }
 });

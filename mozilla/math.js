@@ -22,7 +22,6 @@
 
 
 /*****
- * TODO
 *****/
 register('', class MathElement extends DocElement {
     constructor(arg) {
