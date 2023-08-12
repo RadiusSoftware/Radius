@@ -29,87 +29,6 @@
  * aggregates: ObjectCache and ArrayCache.  Each of these classes have been
  * written to work with the underlying data aggregate type.
 *****/
-register('', class ObjectCache extends Emitter {
-    constructor() {
-        super();
-        this.properties = {};
-    }
-
-    clear(key) {
-        if (typeof key == 'string') {
-            if (key in this.properties) {
-                let previousValue = this.properties[key];
-                delete this.properties[key];
-
-                this.send({
-                    name: 'CacheUpdate',
-                    type: 'CLEARED',
-                    sender: this,
-                    property: key,
-                    previousValue: previousValue,
-                });
-            }
-        }
-
-        return this;
-    }
-
-    get(key) {
-        if (typeof key == 'string') {
-            if (key in this.properties) {
-                return this.properties(key);
-            }
-        }
-        else {
-            return Data.clone(this.elements);
-        }
-    }
-
-    set(key, value) {
-        if (typeof key == 'string' && typeof value != 'undefined') {
-            if (key in this.properties) {
-                let previousValue = this.properties[key];
-                this.properties[key] = value;
-
-                if (previousValue != value) {
-                    this.send({
-                        name: 'CacheUpdate',
-                        type: 'CHANGED',
-                        sender: this,
-                        property: key,
-                        previousValue: previousValue,
-                        newValue: value,
-                    });
-                }
-
-                return this;
-            }
-            else {
-                this.properties[key] = value;
-
-                this.send({
-                    name: 'CacheUpdate',
-                    type: 'ADDED',
-                    sender: this,
-                    property: key,
-                    newValue: value,
-                });
-            }
-        }
-
-        return this;
-    }
-});
-
-
-/*****
- * A cache is a data storage object that notifies listeners when it's been
- * modified.  This makes the cache a nexux for communications between some sort
- * of algorithm, a background task, or an asyncronous event and other objects
- * that are handling those events as they occur.  There are two types of Cache
- * aggregates: ObjectCache and ArrayCache.  Each of these classes have been
- * written to work with the underlying data aggregate type.
-*****/
 register('', class ArrayCache extends Emitter {
     constructor() {
         super();
@@ -130,7 +49,7 @@ register('', class ArrayCache extends Emitter {
 
                 this.send({
                     name: 'CacheUpdate',
-                    type: 'DELETE',
+                    type: 'delete',
                     sender: this,
                     index: index,
                     count: sliceCount,
@@ -166,7 +85,7 @@ register('', class ArrayCache extends Emitter {
 
                     this.send({
                         name: 'CacheUpdate',
-                        type: 'INSERT',
+                        type: 'insert',
                         sender: this,
                         index: index,
                         newValue: value,
@@ -185,7 +104,7 @@ register('', class ArrayCache extends Emitter {
 
                 this.send({
                     name: 'CacheUpdate',
-                    type: 'POP',
+                    type: 'pop',
                     sender: this,
                     previousValue: previousValue,
                 });
@@ -201,7 +120,7 @@ register('', class ArrayCache extends Emitter {
 
             this.send({
                 name: 'CacheUpdate',
-                type: 'PUSH',
+                type: 'push',
                 sender: this,
                 index: this.elements.length - 1,
                 newValue: value,
@@ -220,13 +139,94 @@ register('', class ArrayCache extends Emitter {
                 if (previousValue != value) {
                     this.send({
                         name: 'CacheUpdate',
-                        type: 'CHANGE',
+                        type: 'change',
                         sender: this,
                         index: index,
                         previousValue: previousValue,
                         newValue: value,
                     });
                 }
+            }
+        }
+
+        return this;
+    }
+});
+
+
+/*****
+ * A cache is a data storage object that notifies listeners when it's been
+ * modified.  This makes the cache a nexux for communications between some sort
+ * of algorithm, a background task, or an asyncronous event and other objects
+ * that are handling those events as they occur.  There are two types of Cache
+ * aggregates: ObjectCache and ArrayCache.  Each of these classes have been
+ * written to work with the underlying data aggregate type.
+*****/
+register('', class ObjectCache extends Emitter {
+    constructor() {
+        super();
+        this.properties = {};
+    }
+
+    clear(key) {
+        if (typeof key == 'string') {
+            if (key in this.properties) {
+                let previousValue = this.properties[key];
+                delete this.properties[key];
+
+                this.send({
+                    name: 'CacheUpdate',
+                    type: 'clear',
+                    sender: this,
+                    property: key,
+                    previousValue: previousValue,
+                });
+            }
+        }
+
+        return this;
+    }
+
+    get(key) {
+        if (typeof key == 'string') {
+            if (key in this.properties) {
+                return this.properties(key);
+            }
+        }
+        else {
+            return Data.clone(this.elements);
+        }
+    }
+
+    set(key, value) {
+        if (typeof key == 'string' && typeof value != 'undefined') {
+            if (key in this.properties) {
+                let previousValue = this.properties[key];
+                this.properties[key] = value;
+
+                if (previousValue != value) {
+                    this.send({
+                        name: 'CacheUpdate',
+                        type: 'change',
+                        sender: this,
+                        property: key,
+                        previousValue: previousValue,
+                        newValue: value,
+                    });
+                }
+
+                return this;
+            }
+            else {
+                this.properties[key] = value;
+
+                this.send({
+                    name: 'CacheUpdate',
+                    type: 'add',
+                    sender: this,
+                    property: key,
+                    newValue: value,
+                });
             }
         }
 

@@ -33,6 +33,11 @@
  * has an owingWidget() method that returns either the widget or null if not part
  * of a widget.
 *****/
+register('', class Widget {
+    constructor() {
+    }
+});
+/*
 (() => {
     let nextId = 1;
     let nextHandlerId = 1;
@@ -650,3 +655,4 @@
         }
     });
 })();
+*/

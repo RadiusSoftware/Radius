@@ -336,7 +336,7 @@
         }
 
         [Symbol.iterator]() {
-            return this.children()[Symbol.iterator]();
+            return this.getChildren()[Symbol.iterator]();
         }
     });
 

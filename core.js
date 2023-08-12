@@ -45,7 +45,7 @@
      * the entire chain: obj1.obj2.obj3.   The returned value is the object that
      * represents the namespace argument, which is a string: 'obj1.obj2.obj3'.
     *****/
-    function ensureNamespace(namespace) {
+    global.ensureNamespace = (namespace) => {
         if (typeof namespace == 'string') {
             let ns = global;
 

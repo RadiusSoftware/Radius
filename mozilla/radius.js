@@ -55,6 +55,8 @@
         'mozilla/widget.js',
         'mozilla/styleSheet.js',
         'mozilla/ctl.js',
+        'mozilla/assimilator.js',
+        'mozilla/entangle.js',
     ];
 
     let index = 0;
@@ -73,7 +75,7 @@
 
         htmlElement.addEventListener('load', event => {
             if (index >= sourceFileNames.length) {
-                wrapDocument();
+                finalize();
             }
             else {
                 loadNext();
@@ -81,11 +83,11 @@
         });
     };
 
-    async function wrapDocument() {
+    async function finalize() {
         await onSingletons();
         global.win = mkWin();
         global.doc = mkDoc();
-        // TODO -- complete wrapping of the remaining document.
+        await mkAssimilator(doc.getHtml()).assimilate();
         typeof bootstrap == 'function' ? bootstrap() : false;
     }
 
