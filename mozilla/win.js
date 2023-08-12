@@ -31,7 +31,7 @@
 register('', class Win extends Emitter {  
     constructor(win) {
         super();
-        this.win = win;
+        this.win = win ? wind : window;
 
         [
             'afterprint',
@@ -208,6 +208,10 @@ register('', class Win extends Emitter {
 
     getToolBar() {
         return this.win.toolbar;
+    }
+
+    getTop() {
+        return this.win.top;
     }
 
     isClosed() {

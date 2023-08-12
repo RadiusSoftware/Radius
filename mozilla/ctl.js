@@ -22,10 +22,18 @@
 
 
 /*****
- * Idle Callbacks
- * setImmediate, clearImmediate
+ * Create a task to be executed when the browser is idle and doesn't any CPU.
+ * The func argument is the callback to be executed during idle periods on
+ * the browser.  opts is an object with a single options value, timeout.
+ * If the number of milliseconds represented by this parameter has elapsed and
+ * the callback has not already been called, then a task to execute the callback
+ * is queued in the event loop (even if doing so risks causing a negative
+ * performance impact). timeout must be a positive value or it is ignored.
 *****/
-singleton('', class Execution {
-    constructor() {
-    }
-});
+Ctl.setIdleTask = (func, opts) => {
+    return win.win.requestIdleCallback(fund, opts);
+}
+
+Ctl.clearIdleTask = (handle) => {
+    this.win.win.cancelIdleCallback(handle);
+}

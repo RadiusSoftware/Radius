@@ -82,7 +82,7 @@
             return arg;
         }
         else {
-            return document.createTextNode(arg.toString());
+            return doc.doc.createTextNode(arg.toString());
         }
     });
 
@@ -98,8 +98,6 @@
         constructor(node) {
             super();
             this.node = node;
-            this.flags = {};
-            this.pinned = {};
 
             if (!(nodeKey in node)) {
                 this.node[nodeKey] = this;
@@ -114,21 +112,31 @@
             return this;
         }
 
-        assignFlag(name, bool) {
-            if (typeof bool == 'boolean') {
-                this.flags[name] = bool;
-            }
-
+        clear() {
+            this.node.replaceChildren();
             return this;
         }
 
-        childAt(index) {
+        contains(arg) {
+            return this.node.contains(unwrapDocNode(arg));
+        }
+
+        dir() {
+            console.dir(this.node);
+            return this;
+        }
+
+        getChildAt(index) {
             if (index >= 0 && index < this.node.childNodes.length) {
                 return wrapDocNode(this.node.childNodes.item(index));
             }
         }
 
-        children() {
+        getChildCount() {
+            return this.node.childNodes.length;
+        }
+
+        getChildren() {
             let children = [];
 
             for (let i = 0; i < this.node.childNodes.length; i++) {
@@ -138,26 +146,7 @@
             return children;
         }
 
-        clear() {
-            this.node.replaceChildren();
-            return this;
-        }
-
-        clearFlag(name) {
-            delete this.flags[name];
-            return this;
-        }
-
-        clearPinned(name) {
-            delete this.pinned[name];
-            return this;
-        }
-
-        contains(docNode) {
-            return this.node.contains(docNode.node);
-        }
-
-        descendants() {
+        getDescendants() {
             let stack = this.children();
             let descendants = [];
 
@@ -170,31 +159,66 @@
             return descendants;
         }
 
-        dir() {
-            console.dir(this.node);
-            return this;
-        }
-
-        doc() {
+        getDoc() {
             let owner = this.node.ownerDocument;
 
             if (owner) {
                 return mkDoc(owner);
             }
+
+            return null;
         }
 
-        firstChild() {
+        GetFirstChild() {
             if (this.node.firstChild) {
                 return wrapDocNode(this.node.firstChild);
             }
         }
 
-        getFlag(name) {
-            return name in this.flags ? this.flags[name] : false;
+        getLastChild() {
+            if (this.node.lastChild) {
+                return wrapDocNode(this.node.lastChild);
+            }
         }
 
-        getPinned(name) {
-            return this.pinned[name];
+        getName() {
+            return this.node.nodeName.toLowerCase();
+        }
+      
+        getNextSibling() {
+            if (this.node.nextSibling) {
+                return wrapDocNode(this.node.nextSibling);
+            }
+        }
+
+        getNodeName() {
+            return this.node.nodeName;
+        }
+
+        getNodeType() {
+            return this.node.nodeType;
+        }
+
+        getNodeValue() {
+            return this.node.nodeValue;
+        }
+      
+        getParent() {
+            if (this.node.parentNode) {
+                return wrapDocNode(this.node.parentNode);
+            }
+        }
+      
+        getParentElement() {
+            if (this.node.parentElement) {
+                return wrapDocNode(this.node.parentElement);
+            }
+        }
+      
+        getPrevSibling() {
+            if (this.node.previousSibling) {
+                return wrapDocNode(this.node.previousSibling);
+            }
         }
 
         getTextContent() {
@@ -203,14 +227,6 @@
 
         hasChildNodes() {
             return this.node.hasChildNodes;
-        }
-
-        hasFlag(name) {
-            return name in this.flags;
-        }
-
-        hasPinned(name) {
-            return name in this.pinned;
         }
 
         insertAfter(...args) {
@@ -242,87 +258,29 @@
             return this;
         }
 
-        invoke(func, ...args) {
-            Reflect.apply(func, null, [this].concat(args));
-            return this;
-        }
-
         isConnected() {
             return this.node.isConnected;
         }
 
         isElement() {
-            return this instanceof DocElement;
+            return this.node instanceof Element;
         }
 
         isHtmlElement() {
-            return this instanceof HtmlElement;
+            return this.node instanceof HTMLElement
         }
       
         isSame(arg) {
-            return unwrapDocNode(arg) === this.node;
+            return unwrapDocNode(arg).isSameNode(this.node);
         }
 
         isText() {
             return this.node instanceof Text;
         }
 
-        isWidget() {
-            return this.node instanceof Widget;
-        }
-
-        lastChild() {
-            if (this.node.lastChild) {
-                return wrapDocNode(this.node.lastChild);
-            }
-        }
-
-        length() {
-            return this.node.childNodes.length;
-        }
-
         log() {
             console.log(this.node);
             return this;
-        }
-
-        logFlags() {
-            console.log(this.flags);
-            return this;
-        }
-
-        name() {
-            return this.node.nodeName.toLowerCase();
-        }
-      
-        nextSibling() {
-            if (this.node.nextSibling) {
-                return wrapDocNode(this.node.nextSibling);
-            }
-        }
-
-        nodeName() {
-            return this.node.nodeName;
-        }
-
-        nodeType() {
-            return this.node.nodeType;
-        }
-
-        nodeValue() {
-            return this.node.nodeValue;
-        }
-      
-        parent() {
-            if (this.node.parentNode) {
-                return wrapDocNode(this.node.parentNode);
-            }
-        }
-      
-        parentElement() {
-            if (this.node.parentElement) {
-                return wrapDocNode(this.node.parentElement);
-            }
         }
 
         prepend(...args) {
@@ -339,16 +297,6 @@
                 }
             }
 
-            return this;
-        }
-      
-        prevSibling() {
-            if (this.node.previousSibling) {
-                return wrapDocNode(this.node.previousSibling);
-            }
-        }
-
-        async refresh() {
             return this;
         }
 
@@ -382,25 +330,6 @@
             return this;
         }
 
-        resetFlag(name) {
-            this.flags[name] = false;
-            return this;
-        }
-
-        revert() {
-            return this;
-        }
-
-        setFlag(name) {
-            this.flags[name] = true;
-            return this;
-        }
-
-        setPinned(name, value) {
-            this.pinned[name] = value;
-            return this;
-        }
-
         setTextContent(content) {
             this.node.textContent = content;
             return this;
@@ -408,17 +337,6 @@
 
         [Symbol.iterator]() {
             return this.children()[Symbol.iterator]();
-        }
-
-        toggleFlag(name) {
-            if (name in this.flags) {
-                this.flags[name] = !this.flags[name];
-            }
-            else {
-                this.flags[name] = true;
-            }
-
-            return this;
         }
     });
 
@@ -470,12 +388,12 @@
             return this[eventKey].composedPath(...args);
         }
 
-        preventDefault(...args) {
-            return this[eventKey].preventDefault(...args);
+        getEvent() {
+            return this[eventKey];
         }
 
-        rawEvent() {
-            return this[eventKey];
+        preventDefault(...args) {
+            return this[eventKey].preventDefault(...args);
         }
 
         stopImmediatePropagation(...args) {
@@ -520,50 +438,13 @@
             return this;
         }
 
-        clientHeight() {
-            return this.node.clientHeight;
-        }
-
-        clientLeft() {
-            return this.node.clientLeft;
-        }
-
-        clientTop() {
-            return this.node.clientTop;
-        }
-
-        clientWidth() {
-            return this.node.clientWidth;
-        }
-
-        disable() {
-            this.setAttribute('disabled');
-            return this;
-        }
-
         disablePropagation(eventName) {
             this.propagation.clear(eventName);
             return this;
         }
 
-        enable() {
-            this.clearAttribute('disabled');
-            return this;
-        }
-
         enablePropagation(eventName) {
             this.propagation.set(eventName);
-            return this;
-        }
-
-        firstElementChild() {
-            if (this.node.firstElementChild) {
-                return wrapDocNode(this.node.firstElementChild);
-            }
-        }
-
-        focus() {
-            setTimeout(() => this.node.focus(), 10);
             return this;
         }
 
@@ -603,16 +484,64 @@
             return set;
         }
 
+        getClientLeft() {
+            return this.node.clientLeft;
+        }
+
+        getClientHeight() {
+            return this.node.clientHeight;
+        }
+
+        getClientTop() {
+            return this.node.clientTop;
+        }
+
+        getClientWidth() {
+            return this.node.clientWidth;
+        }
+
         getComputedStyle(pseudoElement) {
             return window.getComputedStyle(this.node, pseudoElement);
+        }
+
+        getFirstElementChild() {
+            if (this.node.firstElementChild) {
+                return wrapDocNode(this.node.firstElementChild);
+            }
+
+            return null;
+        }
+
+        getLastElementChild() {
+            if (this.node.lastElementChild) {
+                return wrapDocNode(this.node.lastElementChild);
+            }
+
+            return null;
         }
 
         getInnerHtml() {
             return this.node.innerHTML;
         }
+      
+        getNextextElementSibling() {
+            if (this.node.nextElementSibling) {
+                return wrapDocNode(this.node.nextSElementibling);
+            }
+
+            return null
+        }
 
         getOuterHtml() {
             return this.node.outerHTML;
+        }
+      
+        getPrevElementSibling() {
+            if (this.node.previousElementSibling) {
+                return wrapDocNode(this.node.previousSElementibling);
+            }
+
+            return null;
         }
 
         getScrollHeight() {
@@ -629,6 +558,10 @@
 
         getScrollWidth() {
             return this.node.scrollWidth;
+        }
+
+        getTagName() {
+            return this.node.tagName.toLowerCase();
         }
 
         hasAttribute(name) {
@@ -648,34 +581,14 @@
             return this;
         }
 
-        insertAdjacentHtml(position, text) {
-            this.node.insertAdjacentHTML(position, text);
+        insertAdjacentHtml(position, htmlk) {
+            this.node.insertAdjacentHTML(position, html);
             return this;
         }
 
         insertAdjacentHtml(where, data) {
             this.node.insertAdjacentText(where, data);
             return this;
-        }
-
-        isDisabled() {
-            return this.hasAttribute('disabled');
-        }
-
-        isEnabled() {
-            return !this.hasAttribute('disabled');
-        }
-
-        lastElementChild() {
-            if (this.node.lastElementChild) {
-                return wrapDocNode(this.node.lastElementChild);
-            }
-        }
-      
-        nextElementSibling() {
-            if (this.node.nextElementSibling) {
-                return wrapDocNode(this.node.nextSElementibling);
-            }
         }
 
         off(messageName, handler) {
@@ -726,12 +639,6 @@
             super.once(messageName, handler, filter);
             return this;
         }
-      
-        prevElementSibling() {
-            if (this.node.previousElementSibling) {
-                return wrapDocNode(this.node.previousSElementibling);
-            }
-        }
 
         queryAll(selector) {
             let selected = [];
@@ -757,22 +664,6 @@
             }
 
             return null;
-        }
-
-        async refresh() {
-            for (let child of this) {
-                await child.refresh();
-            }
-
-            return this;
-        }
-
-        revert() {
-            for (let child of this) {
-                child.revert();
-            }
-
-            return this;
         }
 
         setAttribute(name, value) {
@@ -825,10 +716,6 @@
         setScrollTop(value) {
             this.node.scrollTop = value;
             return this;
-        }
-
-        tagName() {
-            return this.node.tagName.toLowerCase();
         }
     });
 
@@ -886,6 +773,16 @@
             return this;
         }
 
+        disable() {
+            this.setAttribute('disabled');
+            return this;
+        }
+
+        enable() {
+            this.clearAttribute('disabled');
+            return this;
+        }
+
         focus() {
             setTimeout(() => this.node.focus(), 10);
             return this;
@@ -897,10 +794,6 @@
 
         getId() {
             return this.node.id;
-        }
-
-        getInnerHtml() {
-            return this.node.innerHTML;
         }
 
         getOffset() {
@@ -944,10 +837,6 @@
             return this.node.offsetWidth;
         }
 
-        getOuterHtml() {
-            return this.node.outerHTML;
-        }
-
         getStyle(arg) {
             if (arg) {
                 return this.node.style[arg];
@@ -974,6 +863,14 @@
 
         hasData(key) {
             return key in this.node.dataset;
+        }
+
+        isDisabled() {
+            return this.hasAttribute('disabled');
+        }
+
+        isEnabled() {
+            return !this.hasAttribute('disabled');
         }
 
         setData(name, value) {

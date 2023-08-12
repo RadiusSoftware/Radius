@@ -29,7 +29,7 @@
 register('', class Doc extends Emitter {
     constructor(doc) {
         super();
-        this.doc = doc;
+        this.doc = doc ? doc : document;
 
         [
             'animationcancel',

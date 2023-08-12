@@ -36,7 +36,7 @@
 (async () => {
     const sourceFileNames = [
         '../core.js',
-        '../flow.js',
+        '../ctl.js',
         '../buffer.js',
         '../data.js',
         '../emitter.js',

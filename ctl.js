@@ -21,7 +21,7 @@
 *****/
 
 
-singleton('', class Flow {
+singleton('', class Ctl {
     /*****
      * In some cases, developers may find that they don't know whether a value
      * is a promise or a regular objevt.  The function handles that by returning

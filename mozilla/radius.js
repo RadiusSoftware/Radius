@@ -35,7 +35,7 @@
 (async () => {
     const sourceFileNames = [
         'core.js',
-        'flow.js',
+        'ctl.js',
         'buffer.js',
         'data.js',
         'emitter.js',
@@ -54,6 +54,7 @@
         'mozilla/math.js',
         'mozilla/widget.js',
         'mozilla/styleSheet.js',
+        'mozilla/ctl.js',
     ];
 
     let index = 0;
@@ -82,8 +83,8 @@
 
     async function wrapDocument() {
         await onSingletons();
-        global.win = mkWin(window);
-        global.doc = mkDoc(document);
+        global.win = mkWin();
+        global.doc = mkDoc();
         // TODO -- complete wrapping of the remaining document.
         typeof bootstrap == 'function' ? bootstrap() : false;
     }
