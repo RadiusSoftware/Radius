@@ -39,7 +39,7 @@
         'buffer.js',
         'data.js',
         'emitter.js',
-        'cache.js',
+        'active.js',
         'json.js',
         'language.js',
         'stringSet.js',
