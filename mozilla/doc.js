@@ -81,7 +81,7 @@ register('', class Doc extends Emitter {
             'wheel',
         ].forEach(eventName => this.doc.addEventListener(eventName, event => {
             this.send({
-                messageName: `dom.${eventName}`,
+                messageName: `${eventName}`,
                 event: mkElementEvent(event)
             });
         }));

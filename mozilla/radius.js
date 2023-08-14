@@ -33,6 +33,82 @@
  * used for loading in developer application code, CSS, and HTML framents.
 *****/
 (async () => {
+    const registerRadius = () => {
+        const attributes = {
+            /*****
+             *****/
+            'radius-controller': info => {
+                let ns;
+                let controller;
+                let segments = info.attribute.value.split('.');
+
+                if (segments.length) {
+                    if (segments.length == 1) {
+                        ns = global;
+
+                        if (ns[segments[0]]) {
+                            controller = ns[segments[0]];
+                        }
+                        else {
+                            controller = ns[segments[0]] = mkController(); 
+                        }
+                    }
+                    else {
+                        ns = ensureNamespace(segments.slice(0, segments.length-1).join('.'));
+
+                        if (ns[segments[segments.length-1]]) {
+                            controller = ns[segments[segments.length-1]];
+                        }
+                        else {
+                            controller = ns[segments[segments.length-1]] = mkController(); 
+                        }
+                    }
+
+                    controller.addElement(info.element);
+                    info.element.setController(controller);
+                }
+            },
+
+            /*****
+             *****/
+            'radius-attribute': info => {
+            },
+
+            /*****
+             *****/
+            'radius-innerhtml': info => {
+            },
+        };
+
+        const processElement = element => {
+            for (let attribute of element.getAttributes()) {
+                if (attribute.name.startsWith('radius-')) {
+                    if (attribute.name in attributes) {
+                        attributes[attribute.name]({
+                            element: element,
+                            attribute: attribute,
+                        });
+                    }
+                }
+            }
+        }
+
+        register('', function radius(...args) {
+            for (let arg of args) {
+                let stack = [ arg ];
+
+                while (stack.length) {
+                    let docNode = wrapDocNode(stack.pop());
+
+                    if (docNode.isElement()) {
+                        processElement(docNode);
+                        docNode.getChildren().reverse().forEach(el => stack.push(el));
+                    }
+                }
+            }
+        });
+    };
+
     const sourceFileNames = [
         'core.js',
         'ctl.js',
@@ -55,8 +131,7 @@
         'mozilla/widget.js',
         'mozilla/styleSheet.js',
         'mozilla/ctl.js',
-        'mozilla/assimilator.js',
-        'mozilla/entangle.js',
+        'mozilla/controller.js',
     ];
 
     let index = 0;
@@ -87,7 +162,8 @@
         await onSingletons();
         global.win = mkWin();
         global.doc = mkDoc();
-        await mkAssimilator(doc.getHtml()).assimilate();
+        registerRadius();
+        radius(doc.getHtml());
         typeof bootstrap == 'function' ? bootstrap() : false;
     }
 

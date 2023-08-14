@@ -21,11 +21,63 @@
 *****/
 
 
-(() => {
-    /*****
-    *****/
-    singleton('', class Entangle {
-        entangleAtributeCache(node, name, cache, key) {
+/*****
+*****/
+register('', class Controller {
+    constructor() {
+        this.data = mkActive().on(message => this.onUpdate(message));
+        this.elements = [];
+        return this;
+    }
+
+    addElement(element) {
+        if (!this.has(element)) {
+            this.elements.push(element);
         }
-    });
-})();
+
+        return this;
+    }
+
+    has(queryElement) {
+        for (let element of this.elements) {
+            if (Object.is(element, queryElement)) {
+                return true;
+            }
+        }
+
+        false;
+    }
+
+    off(handler) {
+        this.active.off('Update', handler);
+        return this;
+    }
+
+    on(handler) {
+        this.active.on('Update', handler);
+        return this;
+    }
+
+    onUpdate(message) {
+    }
+
+    once(handler) {
+        this.active.once('Update', handler);
+        return this;
+    }
+
+    removeElement(element) {
+        for (let i = 0; i < this.elements.length; i++) {
+            if (Object.is(this.elements[i]), element) {
+                this.elements.splice(i, 1);
+                break;
+            }
+        }
+
+        return this;
+    }
+
+    value() {
+        return this.active;
+    }
+});

@@ -416,6 +416,7 @@
         constructor(node) {
             super(node);
             this.listeners = {};
+            this.contoller = null;
             this.propagation = mkStringSet();
         }
 
@@ -502,6 +503,20 @@
 
         getComputedStyle(pseudoElement) {
             return window.getComputedStyle(this.node, pseudoElement);
+        }
+
+        getController() {
+            let docNode = this;
+
+            while (docNode) {
+                if (docNode.controller) {
+                    return docNode.controller;
+                }
+
+                docNode = docNode.getParent();
+            }
+
+            return null;
         }
 
         getFirstElementChild() {
@@ -688,6 +703,14 @@
         setClassNames(classNames) {
             if (classNames) {
                 this.node.className = classNames;
+            }
+
+            return this;
+        }
+
+        setController(controller) {
+            if (!this.controller) {
+                this.controller = controller;
             }
 
             return this;

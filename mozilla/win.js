@@ -75,7 +75,7 @@ register('', class Win extends Emitter {
             'unload',
         ].forEach(eventName => this.win.addEventListener(eventName, event => {
             this.send({
-                messageName: `dom.${eventName}`,
+                messageName: `${eventName}`,
                 event: event
             });
         }));

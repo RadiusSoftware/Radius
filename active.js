@@ -28,7 +28,7 @@
      * active instance itself.
     *****/
    const byProxy = new WeakMap();
-   const byActive = new WeakMap();
+   const byValue = new WeakMap();
 
 
     /*****
@@ -39,14 +39,14 @@
      * and ArrayCache objects active or dynamic.
     *****/
     const handler = {
-        deleteProperty(active, key) {
-            const internal = byActive.get(active);
+        deleteProperty(obj, key) {
+            const internal = byValue.get(obj);
 
             if (key in internal.value) {
                 const previous = internal.value[key];
                 delete internal.value[key];
 
-                internal.emitter.send({
+                internal.active.send({
                     name: 'Update',
                     active: internal.proxy,
                     updateType: 'delete',
@@ -56,20 +56,25 @@
             }
         },
  
-        get(active, key) {
-            const internal = byActive.get(active);
-            return internal.value[key];
+        get(obj, key) {
+            const internal = byValue.get(obj);
+
+            if (key in internal.value && typeof internal.value[key] != 'function') {
+                return internal.value[key];
+            }
+            else if (key in internal.active) {
+                return internal.active[key];
+            }
         },
  
-        set(active, key, value) {
-            const internal = byActive.get(active);
+        set(obj, key, value) {
+            const internal = byValue.get(obj);
             const previous = internal.value[key];
+            internal.value[key] = value;
 
             if (typeof previous != 'undefined') {
                 if (!Data.areEqual(previous, value)) {
-                    internal.value[key] = value;
-
-                    internal.emitter.send({
+                    internal.active.send({
                         name: 'Update',
                         active: internal.proxy,
                         updateType: 'change',
@@ -81,15 +86,8 @@
                     return;
                 }
             }
-            
-            if (Array.isArray(internal.value)) {
-                internal.value.push(value);
-            }
-            else {
-                internal.value[key] = value;
-            }
 
-            internal.emitter.send({
+            internal.active.send({
                 name: 'Update',
                 active: internal.proxy,
                 updateType: 'add',
@@ -108,21 +106,20 @@
      * elegant mechanism for controlling values and the display of values by the
      * mechanism of entangling them with each other.
     *****/
-    register('', class Active {
+    register('', class Active extends Emitter {
         constructor(init) {
-            const proxy = new Proxy(this, handler);
-            const emitter = mkEmitter();
+            super();
             const value = Array.isArray(init) ? new Array() : new Object();
+            const proxy = new Proxy(value, handler);
 
             const internal = {
                 active: this,
                 value: value,
                 proxy: proxy,
-                emitter: emitter,
             }
 
             byProxy.set(proxy, internal);
-            byActive.set(this, internal);
+            byValue.set(value, internal);
 
             if (Array.isArray(init)) {
                 for (let element of init) {
@@ -138,59 +135,180 @@
             return proxy;
         }
 
-        static getValue(proxy) {
-            return byProxy.get(proxy).value;
-        }
-
-        static off(proxy, handler) {
-            let internal = byProxy.get(proxy);
-            internal.emitter.off('Update', handler);
-        }
-
-        static on(proxy, handler) {
-            let internal = byProxy.get(proxy);
-            internal.emitter.on('Update', handler);
-        }
-
-        static once(proxy, handler) {
-            let internal = byProxy.get(proxy);
-            internal.emitter.once('Update', handler);
-        }
-
-        static pop(proxy, value) {
-            let internal = byProxy.get(proxy);
+        append(...args) {
+            let internal = byProxy.get(this);
 
             if (Array.isArray(internal.value)) {
-                if (internal.value.length) {
-                    let popped = internal.value.push(value);
-
-                    internal.emitter.send({
-                        name: 'Update',
-                        active: internal.proxy,
-                        updateType: 'pop',
-                        length: internal.value.length,
-                        value: popped,
-                    });
-
-                    return popped;
+                for (let arg of args) {
+                    if (Array.isArray(arg)) {
+                        for (let element of arg) {
+                            internal.value.push(element);
+                        }
+                    }
                 }
             }
+
+            return internal.proxy;
         }
 
-        static push(proxy, value) {
-            let internal = byProxy.get(proxy);
+        forEach(func) {
+            let internal = byProxy.get(this);
 
             if (Array.isArray(internal.value)) {
-                internal.value.push(value);
-
-                internal.emitter.send({
-                    name: 'Update',
-                    active: internal.proxy,
-                    updateType: 'push',
-                    length: internal.value.length,
-                    value: value,
-                });
+                internal.value.forEach(element => func(element));
             }
+
+            return internal.proxy;
+        }
+
+        map(func) {
+            let internal = byProxy.get(this);
+
+            if (Array.isArray(internal.value)) {
+                return internal.value.map(element => func(element));
+            }
+        }
+
+        notify(internal, updateType, key, value) {
+            let message = {
+                name: 'Update',
+                active: internal.proxy,
+                updateType: updateType,
+            };
+
+            key ? message.key = key : null;
+            value ? message.value = value : null;
+            internal.active.send(message);
+        }
+
+        off(handler) {
+            super.off('Update', handler);
+            return byProxy.get(this).proxy;
+        }
+
+        on(handler) {
+            super.on('Update', handler);
+            return byProxy.get(this).proxy;
+        }
+
+        once(handler) {
+            super.once('Update', handler);
+            return byProxy.get(this).proxy;
+        }
+
+        push(...args) {
+            let internal = byProxy.get(this);
+
+            if (Array.isArray(internal.value)) {
+                for (let arg of args) {
+                    internal.value.push(arg);
+                    this.notify(internal, 'push', internal.value.length -1, arg);
+                }
+            }
+
+            return internal.proxy;
+        }
+
+        pop() {
+            let internal = byProxy.get(this);
+
+            if (Array.isArray(internal.value)) {
+                const popped = internal.value.pop();
+                this.notify(internal, 'push', internal.value.length, popped);
+                return popped;
+            }
+        }
+
+        refresh() {
+            let internal = byProxy.get(this);
+            this.notify(internal, 'refresh');
+            return internal.proxy;
+        }
+
+        reverse() {
+            let internal = byProxy.get(this);
+
+            if (Array.isArray(internal.value)) {
+                internal.value.reverse();
+                this.notify(internal, 'refresh');
+            }
+
+            return internal.proxy;
+        }
+
+        set(obj) {
+            let internal = byProxy.get(this);
+
+            for (let key in obj) {
+                internal.value[key] = obj[key];
+            }
+
+            this.notify(internal, 'refresh');
+            return internal.proxy;
+        }
+
+        shift() {
+            let internal = byProxy.get(this);
+
+            if (Array.isArray(internal.value)) {
+                const shifted = internal.value.shift();
+                this.notify(internal, 'shift', 0, shifted);
+                return shifted;
+            }
+        }
+
+        slice(start, end) {
+            let internal = byProxy.get(this);
+
+            if (Array.isArray(internal.value)) {
+                return internal.value.slice(start, end);
+            }
+        }
+
+        sort(compareFunc) {
+            let internal = byProxy.get(this);
+
+            if (Array.isArray(internal.value)) {
+                internal.value.sort(compareFunc);
+                this.notify(internal, 'refresh');
+            }
+
+            return internal.proxy;
+        }
+
+        splice(...args) {
+            let internal = byProxy.get(this);
+
+            if (Array.isArray(internal.value)) {
+                internal.value.splice(...args);
+                this.notify(internal, 'refresh');
+            }
+
+            return internal.proxy;
+        }
+
+        [Symbol.iterator]() {
+            let internal = byProxy.get(this);
+
+            if (Array.isArray(internal.value)) {
+                return internal.value[Symbol.iterator]();
+            }
+            else {
+                return Object.entries(internal.value)[Symbol.iterator]();
+            }
+        }
+
+        unshift(...args) {
+            let internal = byProxy.get(this);
+
+            if (Array.isArray(internal.value)) {
+                for (let arg of args) {
+                    internal.value.unshift(arg);
+                    this.notify(internal, 'unshift', 0, arg);
+                }
+            }
+
+            return internal.proxy;
         }
     });
 })();
