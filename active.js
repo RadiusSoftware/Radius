@@ -59,11 +59,11 @@
         get(obj, key) {
             const internal = byValue.get(obj);
 
-            if (key in internal.value && typeof internal.value[key] != 'function') {
-                return internal.value[key];
-            }
-            else if (key in internal.active) {
+            if (key in internal.active) {
                 return internal.active[key];
+            }
+            else if (key in internal.value) {
+                return internal.value[key];
             }
         },
  
@@ -107,9 +107,32 @@
      * mechanism of entangling them with each other.
     *****/
     register('', class Active extends Emitter {
-        constructor(init) {
+        constructor(init, extended) {
             super();
-            const value = Array.isArray(init) ? new Array() : new Object();
+            let value;
+            this.state = {};
+
+            if (Array.isArray(init)) {
+                value = new Array();
+
+                for (let element of init) {
+                    value.push(element);
+                }
+            }
+            else if (init === 'array') {
+                value = new Array();
+            }
+            else if (typeof init == 'object') {
+                value = new Object(); 
+                
+                for (let key in init) {
+                    value[key] = value[key];
+                }  
+            }
+            else {
+                value = new Object();
+            }
+
             const proxy = new Proxy(value, handler);
 
             const internal = {
@@ -120,18 +143,6 @@
 
             byProxy.set(proxy, internal);
             byValue.set(value, internal);
-
-            if (Array.isArray(init)) {
-                for (let element of init) {
-                    value.push(element);
-                }
-            }
-            else if (typeof init == 'object') {
-                for (let key in init) {
-                    value[key] = value[key];
-                }
-            }
-
             return proxy;
         }
 
@@ -159,6 +170,18 @@
             }
 
             return internal.proxy;
+        }
+
+        getActive() {
+            return this;
+        }
+
+        getProxy() {
+            return byProxy.get(this).proxy;
+        }
+
+        getValue() {
+            return byProxy.get(this).value;
         }
 
         map(func) {

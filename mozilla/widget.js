@@ -22,19 +22,9 @@
 
 
 /*****
- * From a framework perspective, the widget is the fundamental building block for
- * the GUI.  Widgets wrap HTML element, events, data, and other programming logic
- * into functional GUI units.  This base class, Widget, should be considered
- * to be abstract, although it can technically used on its own.  The basic widget
- * requires external logic to dynamically populate the Widgets components.  We
- * prefer to subclass and add features within the subclass to encapsulate the
- * needed GUI features.  HTML Elements belonging to a widget are braned with a
- * symbol property that refers back to the owning widget.  The HtmlElement class
- * has an owingWidget() method that returns either the widget or null if not part
- * of a widget.
 *****/
 register('', class Widget {
-    constructor() {
+    constructor(tagName) {
     }
 });
 /*

@@ -23,45 +23,8 @@
 
 /*****
 *****/
-register('', class Controller extends Active {
-    static controllers = new WeakMap();
-
-    constructor(element) {
+register('', class Validator extends Emitter {
+    constructor() {
         super();
-        this.state.element = element;
-        this.state.element.setController(this.getProxy());
-        this.on(message => this.onUpdate(message));
-    }
-
-    entangleAttribute(docElement, attribute, key) {
-    }
-
-    entangleElement(docElement, key) {
-    }
-
-    entangleStyle(docElement, key) {
-    }
-
-    entangleTextNode(docText, key) {
-    }
-    
-    getElement() {
-        return this.state.element;
-    }
-
-    onUpdate(message) {
-    }
-});
-
-
-/*****
-*****/
-register('myns', class MyController extends Controller {
-    constructor(element) {
-        super(element);
-    }
-
-    onUpdate(message) {
-        console.log(message);
     }
 });

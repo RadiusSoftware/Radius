@@ -45,7 +45,7 @@
      * the entire chain: obj1.obj2.obj3.   The returned value is the object that
      * represents the namespace argument, which is a string: 'obj1.obj2.obj3'.
     *****/
-    global.ensureNamespace = (namespace) => {
+    global.ensureNamespace = namespace => {
         if (typeof namespace == 'string') {
             let ns = global;
 
@@ -64,7 +64,37 @@
         else if (typeof namespace == 'object') {
             return namespace;
         }
-    }
+    };
+
+
+    /*****
+     * Useful core utility that's required for loading and launching the Radius
+     * application framework.  It parses a string that looks like a series of
+     * javascript property references:  ns1.ns2.ns3.name.  Our job is to break
+     * this down into a namespace object and a string name.  To resolve the name
+     * space object, use the ensureNamespace() function to make it real.
+    *****/
+    global.parseNamespaceString = nsString => {
+        let ns = null;
+        let name = '';
+        let segments = nsString.split('.').map(segment => segment.trim());
+
+        if (segments.length) {
+            if (segments.length == 1) {
+                ns = global;
+                name = segments[0];
+            }
+            else {
+                ns = ensureNamespace(segments.slice(0, segments.length-1).join('.'));
+                name = segments[segments.length-1];
+            }
+        }
+
+        return {
+            ns: ns,
+            name: name,
+        };
+    };
 
 
     /*****
@@ -75,7 +105,7 @@
         }
         else if (platform == 'nodejs') {
         }
-    }
+    };
 
 
     /*****
@@ -86,7 +116,7 @@
         }
         else if (platform == 'nodejs') {
         }
-    }
+    };
 
 
     /*****
@@ -97,7 +127,7 @@
         }
         else if (platform == 'nodejs') {
         }
-    }
+    };
 
 
     /*****
@@ -107,7 +137,7 @@
      * that will be unfulfilled until all initializing singletons have completed
      * that process.
     *****/
-    global.onSingletons = (arg) => {
+    global.onSingletons = arg => {
         return new Promise((ok, fail) => {
             if (initializingSingletonCount > 0) {
                 initializingSingletonWaiting.push(ok);
@@ -170,7 +200,7 @@
         else {
             throw new Error(`register(), name already exists in container: ${arg.name}`);
         }
-    }
+    };
 
 
     /*****
@@ -222,5 +252,5 @@
         else {
             throw new Error(`register(), name already exists in container: ${arg.name}`);
         }
-    }
+    };
 })();

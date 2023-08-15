@@ -48,6 +48,7 @@
         '../mime.js',
         '../textTemplate.js',
         '../textUtils.js',
+        '../validator.js',
     ];
 
     const Path = require('path');

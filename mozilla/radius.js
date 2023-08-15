@@ -35,63 +35,45 @@
 (async () => {
     const registerRadius = () => {
         const attributes = {
-            /*****
-             *****/
-            'radius-controller': info => {
-                let ns;
-                let controller;
-                let segments = info.attribute.value.split('.');
-
-                if (segments.length) {
-                    if (segments.length == 1) {
-                        ns = global;
-
-                        if (ns[segments[0]]) {
-                            controller = ns[segments[0]];
-                        }
-                        else {
-                            controller = ns[segments[0]] = mkController(); 
-                        }
-                    }
-                    else {
-                        ns = ensureNamespace(segments.slice(0, segments.length-1).join('.'));
-
-                        if (ns[segments[segments.length-1]]) {
-                            controller = ns[segments[segments.length-1]];
-                        }
-                        else {
-                            controller = ns[segments[segments.length-1]] = mkController(); 
-                        }
-                    }
-
-                    controller.addElement(info.element);
-                    info.element.setController(controller);
-                }
+            'rad-attr': opts => {
             },
-
-            /*****
-             *****/
-            'radius-attribute': info => {
+            
+            'rad-ctl': opts => {
+                const fqcn = parseNamespaceString(opts.parameters[0]);
+                const fqon = parseNamespaceString(opts.parameters[1]);
+                fqon.ns[fqon.name] = fqcn.ns[`mk${fqcn.name}`](opts.element, ...(opts.parameters.slice(2)));
             },
-
-            /*****
-             *****/
-            'radius-innerhtml': info => {
+            
+            'rad-inner': opts => {
+            },
+            
+            'rad-style': opts => {
+            },
+            
+            'rad-widget': opts => {
             },
         };
 
         const processElement = element => {
             for (let attribute of element.getAttributes()) {
-                if (attribute.name.startsWith('radius-')) {
-                    if (attribute.name in attributes) {
+                if (attribute.name in attributes) {
+                    let parameters = attribute.value.split(',').map(arg => arg.trim());
+
+                    try {
                         attributes[attribute.name]({
                             element: element,
-                            attribute: attribute,
+                            parameters: parameters,
                         });
+                    }
+                    catch (e) {
+                        console.log(e);
                     }
                 }
             }
         }
+
+        const processInnerHtml = element => {
+        };
 
         register('', function radius(...args) {
             for (let arg of args) {
@@ -123,13 +105,14 @@
         'mime.js',
         'textTemplate.js',
         'textUtils.js',
+        'validator.js',
         'mozilla/win.js',
         'mozilla/doc.js',
         'mozilla/element.js',
         'mozilla/svg.js',
         'mozilla/math.js',
         'mozilla/widget.js',
-        'mozilla/styleSheet.js',
+        'mozilla/style.js',
         'mozilla/ctl.js',
         'mozilla/controller.js',
     ];
