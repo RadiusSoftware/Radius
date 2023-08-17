@@ -114,10 +114,12 @@ register('', class Controller extends Active {
 
     constructor(element) {
         super();
+        this.state.nextId = 1;
         this.state.element = element;
+        this.setControllerId(element);
         this.state.element.setController(this.getProxy());
-        this.state.entanglementsByKey = new Object();
-        this.state.entanglementsByNode = new WeakMap();
+        this.state.entanglementsByKey = {};
+        this.state.entanglementsByNode = {};
         this.on(message => this.onKeyChanged(message));
     }
 
@@ -131,13 +133,13 @@ register('', class Controller extends Active {
     }
 
     ensureEntry(node, key) {
-        let byNode = this.state.entanglementsByNode.get(node);
+        let byNode = this.state.entanglementsByNode[node.ctlId];
 
         if (!byNode) {
-            this.state.entanglementsByNode.set(node, {
+            this.state.entanglementsByNode[node.ctlId] = {
                 node: node,
                 keys: {},
-            });
+            };
         }
 
         if (key) {
@@ -146,7 +148,7 @@ register('', class Controller extends Active {
             if (!byKey) {
                 this.state.entanglementsByKey[key] = {
                     key: key,
-                    nodes: new WeakMap(),
+                    nodes: {},
                 };
             }
         }
@@ -154,20 +156,21 @@ register('', class Controller extends Active {
 
     entangle(entanglement) {
         if (!this.hasEntanglement(entanglement)) {
+            this.setControllerId(entanglement.getNode());
             this.ensureEntry(entanglement.getNode(), entanglement.getKey());
             const byKey = this.state.entanglementsByKey[entanglement.getKey()];
-            const byNode = this.state.entanglementsByNode.get(entanglement.getNode());
+            const byNode = this.state.entanglementsByNode[entanglement.getNode().ctlId];
             
             if (!(entanglement.getKey() in byNode.keys)) {
                 byNode.keys[entanglement.getKey()] = [];
             }
     
-            if (!byKey.nodes.has(entanglement.getNode())) {
-                byKey.nodes.set(entanglement.getNode(), []);
+            if (!(entanglement.getNode() in byKey.nodes)) {
+                byKey.nodes[entanglement.getNode().ctlId] = [];
             }
 
             byNode.keys[entanglement.getKey()].push(entanglement);
-            byKey.nodes.get(entanglement.getNode()).push(entanglement);
+            byKey.nodes[entanglement.getNode().ctlId].push(entanglement);
             entanglement.getKey() in this ? false : this[entanglement.getKey()] = 'midnight' ;
             entanglement.setNode();
         }
@@ -180,7 +183,7 @@ register('', class Controller extends Active {
     }
 
     getEntanglement(entanglement) {
-        const nodeEntry = this.state.entanglementsByNode.get(entanglement.getNode());
+        const nodeEntry = this.state.entanglementsByNode[entanglement.getNode().ctlId];
 
         if (nodeEntry) {
             const keyEntry = nodeEntry.keys[entanglement.getKey()];
@@ -198,13 +201,16 @@ register('', class Controller extends Active {
     }
 
     getKeyEntanglements(key) {
+        let array = [];
         const byKey = this.state.entanglementsByKey[key];
 
         if (byKey) {
-            console.log(byKey);
+            for (let entanglementsArray of Object.values(byKey.nodes)) {
+                array = array.concat(entanglementsArray);
+            }
         }
 
-        return [];
+        return array;
     }
 
     getNodeEntanglements(node) {
@@ -220,11 +226,19 @@ register('', class Controller extends Active {
     onKeyChanged(message) {
         if (message.updateType == 'change') {
             for (let entanglement of this.getKeyEntanglements(message.key)) {
-                console.log(entanglement);
+                entanglement.setNode();
             }
         }
         else if (message.updateType == 'delete') {
         }
+    }
+
+    setControllerId(node) {
+        if (node.ctlId === undefined) {
+            node.ctlId = `ctl${this.state.nextId++}`;
+        }
+
+        return this;
     }
 });
 
