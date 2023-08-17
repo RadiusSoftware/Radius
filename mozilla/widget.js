@@ -25,6 +25,7 @@
 *****/
 register('', class Widget {
     constructor(tagName) {
+        console.log('SHADOW DOM??');
     }
 });
 /*

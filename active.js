@@ -54,6 +54,8 @@
                     value: previous,
                 });
             }
+
+            return true;
         },
  
         get(obj, key) {
@@ -65,6 +67,21 @@
             else if (key in internal.value) {
                 return internal.value[key];
             }
+
+            return null;
+        },
+ 
+        has(obj, key) {
+            const internal = byValue.get(obj);
+
+            if (key in internal.active) {
+                return true;
+            }
+            else if (key in internal.value) {
+                return true;
+            }
+
+            return false;
         },
  
         set(obj, key, value) {
@@ -83,7 +100,7 @@
                         previous: previous,
                     });
 
-                    return;
+                    return true;
                 }
             }
 
@@ -94,6 +111,8 @@
                 key: key,
                 value: value,
             });
+
+            return true;
         },
     };
 

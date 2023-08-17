@@ -351,8 +351,21 @@
             super(typeof arg == 'string' ? document.createTextNode(arg) : unwrapDocNode(arg));
         }
       
-        text() {
+        getText() {
             return this.node.wholeText;
+        }
+
+        setText(text) {
+            let oldNode = this.node;
+            let newNode = new Text(text);
+            newNode[nodeKey] = this;
+            this.node = newNode;
+
+            if (this.getParent()) {
+                this.getParent().node.replaceChild(newNode, oldNode);
+            }
+
+            return this;
         }
     });
 

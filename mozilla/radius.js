@@ -36,6 +36,13 @@
     const registerRadius = () => {
         const attributes = {
             'rad-attr': opts => {
+                mkEntanglement(
+                    opts.element.getController(),
+                    opts.element,
+                    opts.parameters[1],
+                    'attr',
+                    opts.parameters[0],
+                ).entangle();
             },
             
             'rad-ctl': opts => {
