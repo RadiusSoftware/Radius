@@ -38,63 +38,98 @@
         global.platform = 'nodejs';
     }
 
-
+    
     /*****
-     * Feature to ensure that a specified namespace has been created and is
-     * available.  If the namespace requires a chain of objects, this will create
-     * the entire chain: obj1.obj2.obj3.   The returned value is the object that
-     * represents the namespace argument, which is a string: 'obj1.obj2.obj3'.
+     * This class provides support for managing namespaces and fully qualified
+     * names, fqn.  We're using the framework registration due to dependencies.
+     * This class and the subsequent mkFqn() function are used by the core
+     * framework to register classes, functions, and singletons.  While providing
+     * FQN services to the framework, it's also a globally available for use
+     * as part of the core framework.
     *****/
-    global.ensureNamespace = namespace => {
-        if (typeof namespace == 'string') {
-            let ns = global;
-
-            if (namespace) {
-                for (let name of namespace.trim().split('.')) {
-                    if (!(name in ns)) {
-                        ns[name] = new Object();
-                    }
-
-                    ns = ns[name];
-                }
-            }
-
-            return ns;
-        }
-        else if (typeof namespace == 'object') {
-            return namespace;
-        }
-    };
-
-
-    /*****
-     * Useful core utility that's required for loading and launching the Radius
-     * application framework.  It parses a string that looks like a series of
-     * javascript property references:  ns1.ns2.ns3.name.  Our job is to break
-     * this down into a namespace object and a string name.  To resolve the name
-     * space object, use the ensureNamespace() function to make it real.
-    *****/
-    global.parseNamespaceString = nsString => {
-        let ns = null;
-        let name = '';
-        let segments = nsString.split('.').map(segment => segment.trim());
-
-        if (segments.length) {
-            if (segments.length == 1) {
-                ns = global;
-                name = segments[0];
+    class Fqn {
+        constructor(fqn) {
+            if (typeof fqn == 'string') {
+                this.segments = fqn.split('.').map(segment => segment.trim());
             }
             else {
-                ns = ensureNamespace(segments.slice(0, segments.length-1).join('.'));
-                name = segments[segments.length-1];
+                this.segments = [];
+            }
+
+            this.object = global;
+
+            for (let segment of this.getNamespaceSegments()) {
+                if (!(segment in this.object)) {
+                    this.object[segment] = new Object();
+                }
+
+                this.object = this.object[segment];
             }
         }
 
-        return {
-            ns: ns,
-            name: name,
-        };
-    };
+        getFqn() {
+            return this.segments.join('.');
+        }
+
+        getFqnSegments() {
+            return this.segments;
+        }
+
+        getName() {
+            if (this.segments.length > 0) {
+                return this.segments[this.segments.length - 1];
+            }
+            else {
+                return '';
+            }
+        }
+
+        getNamespace() {
+            if (this.segments.length > 1) {
+                return this.segments.slice(0, this.segments.length - 1).join('.');
+            }
+            else {
+                return '';
+            }
+        }
+
+        getNamespaceSegments() {
+            if (this.segments.length > 1) {
+                return this.segments.slice(0, this.segments.length - 1);
+            }
+            else {
+                return [];
+            }
+        }
+
+        getObject() {
+            return this.object;
+        }
+
+        getValue() {
+            return this.object[this.getName()];
+        }
+
+        setValue(value) {
+            this.object[this.getName()] = value;
+            return this;
+        }
+
+        [Symbol.iterator]() {
+            let objs = [ global ];
+            let obj = global;
+
+            for (let segment of this.getNamespaceSegments()) {
+                obj = obj[segment];
+                objs.push(obj);
+            }
+
+            objs.push(obj[this.getName()]);
+            return objs[Symbol.iterator]();
+        }
+    }
+    
+    global.mkFqn = fqn => new Fqn(fqn);
 
 
     /*****
@@ -159,46 +194,46 @@
      * a ctor added to the namespace.
     *****/
     global.register = (ns, arg) => {
-        let namespace = ensureNamespace(ns);
+        if (typeof arg == 'function' && arg.name) {
+            let fqn = ns ? mkFqn(`${ns}.${arg.name}`) : mkFqn(arg.name);
+            let obj = fqn.getObject();
 
-        if (arg.name && !(arg.name in namespace)) {
-            arg[namespace] = namespace;
+            if (!(arg.name in obj)) {
+                if (arg.toString().startsWith('class')) {
+                    if (arg.name.match(/^[A-Z]/)) {
+                        let makerName = `mk${arg.name}`;
 
-            if (arg.toString().startsWith('class')) {
-                if (arg.name.match(/^[A-Z]/)) {
-                    let makerName = `mk${arg.name}`;
+                        let makerFunc;
+                        eval(`makerFunc = function ${makerName}(...args) {
+                            let made = Reflect.construct(arg, args);
+                            return made;
+                        };`);
 
-                    let makerFunc;
-                    eval(`makerFunc = function ${makerName}(...args) {
-                        let made = Reflect.construct(arg, args);
-                        return made;
-                    };`);
-
-                    namespace[makerName] = makerFunc;
-                    namespace[makerName]['#NS'] = ns;
-                    namespace[arg.name] = arg;
-                    namespace[arg.name]['#NAMESPACE'] = ns;
-                    return makerFunc;
+                        obj[makerName] = makerFunc;
+                        obj[makerName]['#NS'] = ns;
+                        obj[arg.name] = arg;
+                        obj[arg.name]['#NAMESPACE'] = ns;
+                    }
+                    else {
+                        throw new Error(`register(), class name must start with an upper-case letter: ${arg.name}`);
+                    }
                 }
                 else {
-                    throw new Error(`register(), class name must start with an upper-case letter: ${arg.name}`);
+                    if (arg.name.match(/^[a-z]/)) {
+                        obj[arg.name] = (...args) => {
+                            return Reflect.apply(arg, obj, args);
+                        };
+                        
+                        obj[arg.name].code = arg.toString();
+                    }
+                    else {
+                        throw new Error(`register(), function name must start with an lower-case letter: ${arg.name}`);
+                    }
                 }
             }
-            else if (arg.name) {
-                if (arg.name.match(/^[a-z]/)) {
-                    namespace[arg.name] = (...args) => {
-                        return Reflect.apply(arg, namespace, args);
-                    };
-                    
-                    namespace[arg.name].code = arg.toString();
-                }
-                else {
-                    throw new Error(`register(), function name must start with an lower-case letter: ${arg.name}`);
-                }
+            else {
+                throw new Error(`register(), name already exists in container: ${arg.name}`);
             }
-        }
-        else {
-            throw new Error(`register(), name already exists in container: ${arg.name}`);
         }
     };
 
@@ -213,44 +248,42 @@
     let initializingSingletonWaiting = [];
 
     global.singleton = async (ns, arg, ...args) => {
-        let namespace = ensureNamespace(ns);
+        if (typeof arg == 'function' && arg.name) {
+            let fqn = ns ? mkFqn(`${ns}.${arg.name}`) : mkFqn(arg.name);
+            let obj = fqn.getObject();
 
-        if (arg.name && !(arg.name in namespace)) {
-            arg[namespace] = namespace;
-
-            if (arg.toString().startsWith('class')) {
-                if (arg.name.match(/^[A-Z]/)) {
-                    const obj = Reflect.construct(arg, args);
-                    namespace[arg.name] = obj;
-                    const proto = Reflect.getPrototypeOf(obj);
-
-                    if (typeof proto.init == 'function') {
-                        let value = proto.init();
-
-                        if (value instanceof Promise) {
-                            (async () => {
-                                initializingSingletonCount++;
-                                await value;
-                                initializingSingletonCount--;
-
-                                if (initializingSingletonCount == 0) {
-                                    for (let waiting of initializingSingletonWaiting) {
-                                        waiting();
+            if (!(arg.name in obj)) {
+                if (arg.toString().startsWith('class')) {
+                    if (arg.name.match(/^[A-Z]/)) {
+                        obj[arg.name] = Reflect.construct(arg, args);
+                        const proto = Reflect.getPrototypeOf(obj[arg.name]);
+    
+                        if (typeof proto.init == 'function') {
+                            let value = proto.init();
+    
+                            if (value instanceof Promise) {
+                                (async () => {
+                                    initializingSingletonCount++;
+                                    await value;
+                                    initializingSingletonCount--;
+    
+                                    if (initializingSingletonCount == 0) {
+                                        for (let waiting of initializingSingletonWaiting) {
+                                            waiting();
+                                        }
                                     }
-                                }
-                            })();
+                                })();
+                            }
                         }
                     }
-
-                    return obj;
-                }
-                else {
-                    throw new Error(`register(), class name must start with an upper-case letter: ${arg.name}`);
+                    else {
+                        throw new Error(`singleton(), class name must start with an upper-case letter: ${arg.name}`);
+                    }
                 }
             }
-        }
-        else {
-            throw new Error(`register(), name already exists in container: ${arg.name}`);
+            else {
+                throw new Error(`singleton(), name already exists in container: ${fqn.getNamespace()}`);
+            }
         }
     };
 })();

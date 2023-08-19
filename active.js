@@ -282,7 +282,7 @@
             let internal = byProxy.get(this);
 
             for (let key in obj) {
-                internal.value[key] = obj[key];
+                internal.proxy[key] = obj[key];
             }
 
             this.notify(internal, 'refresh');

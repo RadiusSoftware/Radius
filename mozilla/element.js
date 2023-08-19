@@ -367,6 +367,10 @@
 
             return this;
         }
+
+        toString() {
+            return this.node.wholeText;
+        }
     });
 
 

@@ -22,20 +22,44 @@
 "use strict";
 
 
-/*****
- * This is the client bootstrapper or client loader for the Radius Software
- * development framework.  It's loaded within the HEAD element of the HTML
- * document supported with Radius.  It's primary job is to load in each of
- * the specified framework script files and wait for each file to be fully
- * compiled before moving on to the next script file.  This is importatn
- * because the order of evaluation is critical due to dependencies.  Note that
- * this script only loads the framework.  Once loaded, the framework will be
- * used for loading in developer application code, CSS, and HTML framents.
-*****/
 (async () => {
-    const registerRadius = () => {
-        const attributes = {
-            'rad-attr': opts => {
+    /*****
+     * The Radius class is dependent on the entire core and Mozilla framework
+     * being loaded and initialized.  Hence, the registration of the Radius class
+     * is encapsualted within a function that's called after the core framework
+     * component have been loaded.
+     * 
+     * The Radius class is called to assimilate DocElements into the Radius
+     * framework.  The first task at hand is to ensure that each assimilated doc
+     * element has been wrapped so that Radius can exploit those features.  Once
+     * wrapped, the assimilation elements are processed one at a time, include
+     * each element's entire tree of descendents.
+    *****/
+    function registerRadius() {
+        register('', class Radius {
+            constructor(...elements) {
+                this['radius-attr'] = opts => this.processAttr(opts);
+                this['radius-controller'] = opts => this.processController(opts);
+                this['radius-depot'] = opts => this.processDepot(opts);
+                this['radius-inner'] = opts => this.processInnerHtml(opts);
+                this['radius-style'] = opts => this.processStyle(opts);
+
+                for (let element of elements) {
+                    let stack = [ element ];
+    
+                    while (stack.length) {
+                        let docNode = wrapDocNode(stack.pop());
+    
+                        if (docNode.isElement()) {
+                            this.processElement(docNode);
+                            docNode.getChildren().reverse().forEach(el => stack.push(el));
+                        }
+                    }
+                }
+            }
+
+            processAttr(opts) {
+                /*
                 mkEntanglement(
                     opts.element.getController(),
                     opts.element,
@@ -43,61 +67,180 @@
                     'attr',
                     opts.parameters[0],
                 ).entangle();
-            },
-            
-            'rad-ctl': opts => {
+                */
+            }
+
+            processController(opts) {
+                /*
                 const fqcn = parseNamespaceString(opts.parameters[0]);
                 const fqon = parseNamespaceString(opts.parameters[1]);
                 fqon.ns[fqon.name] = fqcn.ns[`mk${fqcn.name}`](opts.element, ...(opts.parameters.slice(2)));
-            },
-            
-            'rad-inner': opts => {
-            },
-            
-            'rad-style': opts => {
-            },
-            
-            'rad-widget': opts => {
-            },
-        };
+                */
+            }
 
-        const processElement = element => {
-            for (let attribute of element.getAttributes()) {
-                if (attribute.name in attributes) {
-                    let parameters = attribute.value.split(',').map(arg => arg.trim());
+            processDepot(opts) {
+            }
 
-                    try {
-                        attributes[attribute.name]({
-                            element: element,
-                            parameters: parameters,
-                        });
+            processElement(element) {
+                return;
+                for (let attribute of element.getAttributes()) {
+                    if (attribute.name in this) {
+                        let parameters = attribute.value.split(',').map(arg => arg.trim());
+    
+                        try {
+                            attributes[attribute.name]({
+                                element: element,
+                                parameters: parameters,
+                            });
+                        }
+                        catch (e) {
+                            console.log(e);
+                        }
                     }
-                    catch (e) {
-                        console.log(e);
+                }
+                
+                if (!(element.getTagName() in {script:0, style:0})) {
+                    for (let childNode of element) {
+                        if (childNode instanceof DocText) {
+                            processTextNode(element.getController(), childNode);
+                        }
                     }
                 }
             }
-        }
 
-        const processInnerHtml = element => {
-        };
+            processInnerHtml(opts) {
+                /*
+                mkEntanglement(
+                    opts.element.getController(),
+                    opts.element,
+                    opts.parameters[0],
+                    'inner',
+                ).entangle();
+                */
+            }
 
-        register('', function radius(...args) {
-            for (let arg of args) {
-                let stack = [ arg ];
+            processStyle(opts) {
+            }
 
-                while (stack.length) {
-                    let docNode = wrapDocNode(stack.pop());
-
-                    if (docNode.isElement()) {
-                        processElement(docNode);
-                        docNode.getChildren().reverse().forEach(el => stack.push(el));
+            processTextNode(element, textNode) {
+                const blocks = [];
+                const exprFlags = [];
+                let hasExpr = false;
+    
+                let exprString = [];
+                let blockString = [];
+    
+                let state = 0;
+                let wholeText = textNode.toString();
+                
+                for (let i = 0; i < wholeText.length; i++) {
+                    const chr = wholeText[i];
+    
+                    if (state == 0) {
+                        if (chr == '$') {
+                            state = 1;
+                        }
+                        else {
+                            blockString.push(chr);
+                        }
                     }
+                    else if (state == 1) {
+                        if (chr == '{') {
+                            state = 2;
+                        }
+                        else {
+                            state = 0;
+                            blockString.push('$');
+                            blockString.push(chr);
+                        }
+                    }
+                    else if (state == 2) {
+                        if (chr == '{') {
+                            state = 3;
+    
+                            if (blockString.length) {
+                                blocks.push(blockString.join(''));
+                                exprFlags.push(false);
+                                blockString = [];
+                            }
+                        }
+                        else {
+                            state = 0;
+                            blockString.push('$');
+                            blockString.push('{');
+                            blockString.push(chr);
+                        }
+                    }
+                    else if (state == 3) {
+                        if (chr == '}') {
+                            state = 4;
+                        }
+                        else {
+                            exprString.push(chr);
+                        }
+                    }
+                    else if (state == 4) {
+                        if (chr == '}') {
+                            state = 0;
+                            blocks.push(exprString.join(''));
+                            exprFlags.push(true);
+                            hasExpr = true;
+                            exprString = [];
+                        }
+                        else {
+                            exprString.push('}');
+                            exprStriing.push(chr);
+                        }
+                    }
+                }
+    
+                if (state == 0 && blockString.length) {
+                    blocks.push(blockString.join(''));
+                    exprFlags.push(false);
+                }
+                
+                if (hasExpr) {
+                    let nodes = [];
+    
+                    for (let i = 0; i < exprFlags.length; i++) {
+                        if (exprFlags[i]) {
+                            let tn = mkDocText();
+                            nodes.push(tn);
+                            /*
+                            nodes.push(mkDocText(`---${blocks[i]}---`));
+    
+                            mkEntanglement(
+                                controller,
+                                tn,
+                                null,
+                                'attr',
+                                opts.parameters[0],
+                            ).entangle();
+                            // TODO -- reflect active, iterate through dependencies
+                            //         and make entanglements for all dependencies.
+                            */
+                        }
+                        else {
+                            nodes.push(mkDocText(blocks[i]));
+                        }
+                    }
+    
+                    textNode.replace(...nodes);
                 }
             }
         });
-    };
+    }
 
+
+    /*****
+     * This is where we bootstrap the client framework.  In the development
+     * version, each file is downloaded individually into the browser.  In the
+     * release version, this code is replaced to download a compactified frame
+     * work in one single blow.  That however is left to the independent promote
+     * program used for promoting radius from a development version to a live
+     * version.  Once all of the javascript files have been loaded, finalize()
+     * is called to boot the framework and get things started.
+    *****/
     const sourceFileNames = [
         'core.js',
         'ctl.js',
@@ -152,8 +295,9 @@
         await onSingletons();
         global.win = mkWin();
         global.doc = mkDoc();
+        console.log('*** Encapsulate stylesheets');
         registerRadius();
-        radius(doc.getHtml());
+        mkRadius(doc.getHtml());
         typeof bootstrap == 'function' ? bootstrap() : false;
     }
 

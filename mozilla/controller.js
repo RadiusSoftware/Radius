@@ -89,16 +89,35 @@ register('', class Entanglement {
 
     setNode() {
         if (this.type == 'attr') {
-            if (this.node instanceof DocElement) {
+            if (this.key in this.controller) {
                 this.node.setAttribute(this.attr, this.controller[this.key]);
+            }
+            else {
+                this.node.setAttribute(this.attr, '');
             }
         }
         else if (this.type == 'inner') {
+            if (this.key in this.controller) {
+                this.node.setInnerHtml(this.controller[this.key]);
+            }
+            else {
+                this.node.setInnerHtml('');
+            }
         }
         else if (this.type == 'style') {
+            if (this.key in this.controller) {
+                this.node.setStyle(this.attr, this.controller[this.key]);
+            }
+            else {
+                this.node.setStyle(this.attr, '');
+            }
         }
         else if (this.type == 'text') {
-            if (this.node instanceof DocText) {
+            if (this.key in this.controller) {
+                this.node.setText(this.controller[this.key]);
+            }
+            else {
+                this.node.setText('');
             }
         }
 
@@ -124,12 +143,19 @@ register('', class Controller extends Active {
     }
 
     disentangle(entanglement) {
+        // TODO
+    }
+
+    disentangleFunction(key) {
+        // TODO
     }
 
     disentangleKey(key) {
+        // TODO
     }
 
     disentangleNode(node) {
+        // TODO
     }
 
     ensureEntry(node, key) {
@@ -171,11 +197,17 @@ register('', class Controller extends Active {
 
             byNode.keys[entanglement.getKey()].push(entanglement);
             byKey.nodes[entanglement.getNode().ctlId].push(entanglement);
-            entanglement.getKey() in this ? false : this[entanglement.getKey()] = 'midnight' ;
+            entanglement.getKey() in this ? false : this[entanglement.getKey()] = '' ;
             entanglement.setNode();
         }
         
         return this;
+    }
+
+    entangleFunction(func) {
+        // TODO
+        console.log('entangleFunction()');
+        console.log(func);
     }
     
     getElement() {
@@ -214,6 +246,7 @@ register('', class Controller extends Active {
     }
 
     getNodeEntanglements(node) {
+        // TODO
     }
 
     hasEntanglement(entanglement) {
@@ -221,15 +254,16 @@ register('', class Controller extends Active {
     }
 
     onInputChanged(message) {
+        // TODO
+        console.log('\nonInputChanged()');
+        console.log(message);
     }
 
     onKeyChanged(message) {
-        if (message.updateType == 'change') {
+        if (message.updateType in { add:0, change:0, delete:0 }) {
             for (let entanglement of this.getKeyEntanglements(message.key)) {
                 entanglement.setNode();
             }
-        }
-        else if (message.updateType == 'delete') {
         }
     }
 

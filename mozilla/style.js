@@ -21,377 +21,379 @@
 *****/
 
 
+(() => {
 /*****
- * A dynamic wrapper for a single DOM stylesheet object.  Like all other wrappers,
- * when a value is returned, such as a rules list, the return value is also a
- * wrapper object.  Our mission here is to allow application developers to cleanly
- * analyze and modify stylesheets from within application code.
-*****/
-register('',class CssStyleSheet {
-    constructor(cssStyleSheet) {
-        this.cssGroup = cssStyleSheet;
-    }
+     * A dynamic wrapper for a single DOM stylesheet object.  Like all other wrappers,
+     * when a value is returned, such as a rules list, the return value is also a
+     * wrapper object.  Our mission here is to allow application developers to cleanly
+     * analyze and modify stylesheets from within application code.
+    *****/
+    register('',class CssStyleSheet {
+        constructor(cssStyleSheet) {
+            this.cssGroup = cssStyleSheet;
+        }
 
-    createRule(cssText, index) {
-        let ruleList = mkCssRuleList(this.cssGroup, this.cssGroup.cssRules);
-        let ruleIndex = this.cssGroup.insertRule(cssText, index ? index : ruleList.length());
-        let cssRule = this.cssGroup.cssRules.item(ruleIndex);
-        let ctor = Reflect.getPrototypeOf(cssRule).constructor;
-        return CssMakers.get(ctor)(this.cssGroup, cssRule);
-    }
+        createRule(cssText, index) {
+            let ruleList = mkCssRuleList(this.cssGroup, this.cssGroup.cssRules);
+            let ruleIndex = this.cssGroup.insertRule(cssText, index ? index : ruleList.length());
+            let cssRule = this.cssGroup.cssRules.item(ruleIndex);
+            let ctor = Reflect.getPrototypeOf(cssRule).constructor;
+            return CssMakers.get(ctor)(this.cssGroup, cssRule);
+        }
 
-    enabled() {
-        return !this.cssGroup.disable;
-    }
+        getHref() {
+            return this.cssGroup.href;
+        }
 
-    href() {
-        return this.cssGroup.href;
-    }
+        getLanguage() {
+            return this.cssGroup.type();
+        }
 
-    language() {
-        return this.cssGroup.type();
-    }
+        getMedia() {
+            return this.cssGroup.media;
+        }
 
-    media() {
-        return this.cssGroup.media;
-    }
+        getOwnerNode() {
+            return this.cssGroup.ownerNode;
+        }
 
-    ownerNode() {
-        return this.cssGroup.ownerNode;
-    }
+        getParentStyleSheet() {
+            return mkCssStyleSheet(this.cssGroup.parentStyleSheet);
+        }
 
-    parentStyleSheet() {
-        return mkCssStyleSheet(this.cssGroup.parentStyleSheet);
-    }
+        getRule(index) {
+            return mkCssRuleList(this.cssGroup, this.cssGroup.cssRules).item(index);
+        }
 
-    rule(index) {
-        return mkCssRuleList(this.cssGroup, this.cssGroup.cssRules).item(index);
-    }
+        getRules() {
+            return mkCssRuleList(this.cssGroup, this.cssGroup.cssRules);
+        }
 
-    rules() {
-        return mkCssRuleList(this.cssGroup, this.cssGroup.cssRules);
-    }
+        getTitle() {
+            return this.cssGroup.title;
+        }
 
-    search(selector) {
-        for (let styleRule of this) {
-            if (styleRule.type() == 'CssStyleRule') {
-                if (styleRule.selector() == selector) {
-                    return styleRule;
+        isEnabled() {
+            return !this.cssGroup.disable;
+        }
+
+        search(selector) {
+            for (let styleRule of this) {
+                if (styleRule.type() == 'CssStyleRule') {
+                    if (styleRule.selector() == selector) {
+                        return styleRule;
+                    }
                 }
             }
         }
-    }
 
-    [Symbol.iterator]() {
-        return mkCssRuleList(this.cssGroup, this.cssGroup.cssRules)[Symbol.iterator]();
-    }
-
-    title() {
-        return this.cssGroup.title;
-    }
-});
+        [Symbol.iterator]() {
+            return mkCssRuleList(this.cssGroup, this.cssGroup.cssRules)[Symbol.iterator]();
+        }
+    });
 
 
-/*****
- * A rule list contains a list of style rules of various types.  Some rules are
- * singular while other rules may be groupiing rules that contain their own rule
- * list in a recursive fashion.  Note that we also have the means here to 
-*****/
-register('', class CssRuleList {
-    constructor(cssGroup, cssRuleList) {
-        this.cssGroup = cssGroup;
-        this.cssRuleList = cssRuleList;
-    }
-
-    item(index) {
-        let cssRule = this.cssRuleList.item(index);
-        let ctor = Reflect.getPrototypeOf(cssRule).constructor;
-        return CssMakers.get(ctor)(this.cssGroup, cssRule);
-    }
-
-    length() {
-        return this.cssRuleList.length;
-    }
-
-    [Symbol.iterator]() {
-        let rulesArray = [];
-
-        for (let cssRule of this.cssRuleList) {
-            let ctor = Reflect.getPrototypeOf(cssRule).constructor;
-            let rule = CssMakers.get(ctor)(this, cssRule);
-            rulesArray.push(rule);
+    /*****
+     * A rule list contains a list of style rules of various types.  Some rules are
+     * singular while other rules may be groupiing rules that contain their own rule
+     * list in a recursive fashion.  Note that we also have the means here to 
+    *****/
+    register('', class CssRuleList {
+        constructor(cssGroup, cssRuleList) {
+            this.cssGroup = cssGroup;
+            this.cssRuleList = cssRuleList;
         }
 
-        return rulesArray[Symbol.iterator]();
-    }
-});
+        getItem(index) {
+            let cssRule = this.cssRuleList.item(index);
+            let ctor = Reflect.getPrototypeOf(cssRule).constructor;
+            return CssMakers.get(ctor)(this.cssGroup, cssRule);
+        }
+
+        getLength() {
+            return this.cssRuleList.length;
+        }
+
+        [Symbol.iterator]() {
+            let rulesArray = [];
+
+            for (let cssRule of this.cssRuleList) {
+                let ctor = Reflect.getPrototypeOf(cssRule).constructor;
+                let rule = CssMakers.get(ctor)(this, cssRule);
+                rulesArray.push(rule);
+            }
+
+            return rulesArray[Symbol.iterator]();
+        }
+    });
 
 
-/*****
- * The fundamental interface is the base class for all of the CSS rule classes,
- * and provides common features that are applicable to all of derived or CSS
- * style subclasses.  
-*****/
-register('', class CssRule {
-    constructor(cssGroup, cssRule) {
-        this.cssGroup = cssGroup;
-        this.cssRule = cssRule;
-    }
+    /*****
+     * The fundamental interface is the base class for all of the CSS rule classes,
+     * and provides common features that are applicable to all of derived or CSS
+     * style subclasses.  
+    *****/
+    register('', class CssRule {
+        constructor(cssGroup, cssRule) {
+            this.cssGroup = cssGroup;
+            this.cssRule = cssRule;
+        }
 
-    cssText() {
-        return this.cssRule.cssText;
-    }
+        getCssText() {
+            return this.cssRule.cssText;
+        }
 
-    index() {
-        for (let i = 0; i < this.cssGroup.length; i++) {
-            if (Object.is(this.cssRule, this.cssGroup.item(i))) {
-                return i;
+        getIndex() {
+            for (let i = 0; i < this.cssGroup.length; i++) {
+                if (Object.is(this.cssRule, this.cssGroup.item(i))) {
+                    return i;
+                }
             }
         }
-    }
 
-    parent() {
-        this.cssRule.parentRule;
-    }
-
-    remove() {
-        this.cssGroup.deleteRule(this.index());
-    }
-
-    ruleList() {
-        return this.ruleList;
-    }
-
-    styleSheet() {
-        return this.ruleList.styleSheet;
-    }
-});
-
-
-/*****
- * A grouping rule is a CSS rule that behaves in a manner similar to the style
- * sheet itself.  It has its own rules list and has been made to be iterable to
- * make scanning and searching rules simple then it would be otherwise.  Rules
- * may also be accessed by index but the catch with that is you need to know the
- * index, which requires a sweep through the group's rules to ascertain what that
- * index is.
-*****/
-register('', class CssGroupingRule extends CssRule {
-    constructor(cssGroup, cssRule) {
-        super(cssGroup, cssRule);
-    }
-
-    createRule(cssText, index) {
-        let ruleList = mkCssRuleList(this.cssGroup, this.cssGroup.cssRules);
-        let ruleIndex = this.cssGroup.insertRule(cssText, index);
-        let cssRule = this.cssGroup.cssRules.item(ruleIndex);
-        let ctor = Reflect.getPrototypeOf(cssRule).constructor;
-        return CssMakers.get(ctor)(this.cssGroup, cssRule);
-    }
-
-    parentStyleSheet() {
-        return mkCssStyleSheet(this.cssGroup.parentStyleSheet);
-    }
-
-    rule(index) {
-        return mkCssRuleList(this.cssGroup, this.cssRule.cssRules).item(index);
-    }
-
-    rules() {
-        return mkCssRuleList(this.cssGroup, this.cssRule.cssRules);
-    }
-
-    [Symbol.iterator]() {
-        return mkCssRuleList(this.cssGroup, this.cssRule.cssRules)[Symbol.iterator]();
-    }
-});
-
-
-/*****
- * A condition rule is one that uses specific rules to determine whether rules
- * contained within the condition rule should be active.  Notice that condition
- * rule extends grouping rule.  There are no rule classes that are a condition
- * rule without being a grouping rule.
-*****/
-register('', class CssConditionRule extends CssGroupingRule {
-    constructor(cssGroup, cssRule) {
-        super(cssGroup, cssRule);
-    }
-
-    conditionText() {
-        return this.cssRule.conditionText;
-    }
-});
-
-
-/*****
- * These are the specific CSS rules instances that are created by the browser.
- * They have one of either two differing base rules, either CssRule or the
- * more interestng CssConditionRule.  Rules derived from CssConditionRule are
- * also CssGroupingRules and consequently are CSS rule containers.
-*****/
-register('', class CssFontFaceRule extends CssRule {
-    constructor(cssGroup, cssRule) {
-        super(cssGroup, cssRule);
-    }
-
-    type() {
-        return 'CssFontFaceRule';
-    }
-});
-
-register('', class CssImportRule extends CssRule {
-    constructor(cssGroup, cssRule) {
-        super(cssGroup, cssRule);
-    }
-
-    type() {
-        return 'CssImportRule';
-    }
-});
-
-register('', class CssKeyframeRule extends CssRule {
-    constructor(cssGroup, cssRule) {
-        super(cssGroup, cssRule);
-    }
-
-    keyText() {
-        return this.cssRule.keyText;
-    }
-
-    type() {
-        return 'CssKeyframeRule';
-    }
-});
-
-register('', class CssKeyframesRule extends CssRule {
-    constructor(cssGroup, cssRule) {
-        super(cssGroup, cssRule);
-    }
-
-    rules() {
-        return mkCssRuleList(this.cssRule, this.cssRule.cssRules);
-    }
-
-    name() {
-        return this.cssRule.name;
-    }
-
-    type() {
-        return 'CssKeyframesRule';
-    }
-});
-
-register('', class CssMediaRule extends CssConditionRule {
-    constructor(cssGroup, cssRule) {
-        super(cssGroup, cssRule);
-    }
-
-    media() {
-        return this.cssRule.media;
-    }
-
-    type() {
-        return 'CssMediaRule';
-    }
-});
-
-register('', class CssNamespaceRule extends CssRule {
-    constructor(cssGroup, cssRule) {
-        super(cssGroup, cssRule);
-    }
-
-    namespaceURI() {
-        return this.cssRule.namespaceURI;
-    }
-
-    prefix() {
-        return this.cssRule.prefix;
-    }
-
-    type() {
-        return 'CssNamespaceRule';
-    }
-});
-
-register('', class CssPageRule extends CssRule {
-    constructor(cssGroup, cssRule) {
-        super(cssGroup, cssRule);
-    }
-
-    selector() {
-        return this.cssRule.selectorText;
-    }
-
-    type() {
-        return 'CssPageRule';
-    }
-});
-
-register('', class CssStyleRule extends CssRule {
-    constructor(cssGroup, cssRule) {
-        super(cssGroup, cssRule);
-    }
-
-    change(values) {
-        for (let entry of Object.entries(values)) {
-            let [ name, value ] = entry;
-            this.cssRule.style[name] = value;
+        getParent() {
+            this.cssRule.parentRule;
         }
 
-        return this;
-    }
-
-    clear() {
-        while (this.cssRule.style.length) {
-            let property = this.cssRule.style.item(0);
-            this.cssRule.style.removeProperty(property);
+        getRuleList() {
+            return this.ruleList;
         }
 
-        return this;
-    }
+        getStyleSheet() {
+            return this.ruleList.styleSheet;
+        }
 
-    selector() {
-        return this.cssRule.selectorText;
-    }
-
-    set(values) {
-        this.clear();
-        return this.change(values);
-    }
-
-    settings(values) {
-        return this.cssRule.style;
-    }
-
-    type() {
-        return 'CssStyleRule';
-    }
-});
-
-register('', class CssSupportsRule extends CssConditionRule {
-    constructor(cssGroup, cssRule) {
-        super(cssGroup, cssRule);
-    }
-
-    type() {
-        return 'CssSupportsRule';
-    }
-});
+        remove() {
+            this.cssGroup.deleteRule(this.index());
+        }
+    });
 
 
-/*****
- * This weak map is used for finding maker function, e.g., mkMediaRul(), based on
- * a given DOM CSS class type.  This is the complete enumeration of all CSS rule
- * types supported by the DOM specification and by this software.
-*****/
-const CssMakers = new WeakMap();
-CssMakers.set(CSSFontFaceRule, mkCssFontFaceRule);
-CssMakers.set(CSSImportRule, mkCssImportRule);
-CssMakers.set(CSSKeyframeRule, mkCssKeyframeRule);
-CssMakers.set(CSSKeyframesRule, mkCssKeyframesRule);
-CssMakers.set(CSSMediaRule, mkCssMediaRule);
-CssMakers.set(CSSNamespaceRule, mkCssNamespaceRule);
-CssMakers.set(CSSPageRule, mkCssPageRule);
-CssMakers.set(CSSStyleRule, mkCssStyleRule);
-CssMakers.set(CSSSupportsRule, mkCssSupportsRule);
+    /*****
+     * A grouping rule is a CSS rule that behaves in a manner similar to the style
+     * sheet itself.  It has its own rules list and has been made to be iterable to
+     * make scanning and searching rules simple then it would be otherwise.  Rules
+     * may also be accessed by index but the catch with that is you need to know the
+     * index, which requires a sweep through the group's rules to ascertain what that
+     * index is.
+    *****/
+    register('', class CssGroupingRule extends CssRule {
+        constructor(cssGroup, cssRule) {
+            super(cssGroup, cssRule);
+        }
+
+        createRule(cssText, index) {
+            let ruleList = mkCssRuleList(this.cssGroup, this.cssGroup.cssRules);
+            let ruleIndex = this.cssGroup.insertRule(cssText, index);
+            let cssRule = this.cssGroup.cssRules.item(ruleIndex);
+            let ctor = Reflect.getPrototypeOf(cssRule).constructor;
+            return CssMakers.get(ctor)(this.cssGroup, cssRule);
+        }
+
+        getParentStyleSheet() {
+            return mkCssStyleSheet(this.cssGroup.parentStyleSheet);
+        }
+
+        getRule(index) {
+            return mkCssRuleList(this.cssGroup, this.cssRule.cssRules).item(index);
+        }
+
+        getRules() {
+            return mkCssRuleList(this.cssGroup, this.cssRule.cssRules);
+        }
+
+        [Symbol.iterator]() {
+            return mkCssRuleList(this.cssGroup, this.cssRule.cssRules)[Symbol.iterator]();
+        }
+    });
+
+
+    /*****
+     * A condition rule is one that uses specific rules to determine whether rules
+     * contained within the condition rule should be active.  Notice that condition
+     * rule extends grouping rule.  There are no rule classes that are a condition
+     * rule without being a grouping rule.
+    *****/
+    register('', class CssConditionRule extends CssGroupingRule {
+        constructor(cssGroup, cssRule) {
+            super(cssGroup, cssRule);
+        }
+
+        getConditionText() {
+            return this.cssRule.conditionText;
+        }
+    });
+
+
+    /*****
+     * These are the specific CSS rules instances that are created by the browser.
+     * They have one of either two differing base rules, either CssRule or the
+     * more interestng CssConditionRule.  Rules derived from CssConditionRule are
+     * also CssGroupingRules and consequently are CSS rule containers.
+    *****/
+    register('', class CssFontFaceRule extends CssRule {
+        constructor(cssGroup, cssRule) {
+            super(cssGroup, cssRule);
+        }
+
+        getType() {
+            return 'CssFontFaceRule';
+        }
+    });
+
+    register('', class CssImportRule extends CssRule {
+        constructor(cssGroup, cssRule) {
+            super(cssGroup, cssRule);
+        }
+
+        getType() {
+            return 'CssImportRule';
+        }
+    });
+
+    register('', class CssKeyframeRule extends CssRule {
+        constructor(cssGroup, cssRule) {
+            super(cssGroup, cssRule);
+        }
+
+        getKeyText() {
+            return this.cssRule.keyText;
+        }
+
+        gettType() {
+            return 'CssKeyframeRule';
+        }
+    });
+
+    register('', class CssKeyframesRule extends CssRule {
+        constructor(cssGroup, cssRule) {
+            super(cssGroup, cssRule);
+        }
+
+        getRules() {
+            return mkCssRuleList(this.cssRule, this.cssRule.cssRules);
+        }
+
+        getName() {
+            return this.cssRule.name;
+        }
+
+        getType() {
+            return 'CssKeyframesRule';
+        }
+    });
+
+    register('', class CssMediaRule extends CssConditionRule {
+        constructor(cssGroup, cssRule) {
+            super(cssGroup, cssRule);
+        }
+
+        getMedia() {
+            return this.cssRule.media;
+        }
+
+        getType() {
+            return 'CssMediaRule';
+        }
+    });
+
+    register('', class CssNamespaceRule extends CssRule {
+        constructor(cssGroup, cssRule) {
+            super(cssGroup, cssRule);
+        }
+
+        getNamespaceURI() {
+            return this.cssRule.namespaceURI;
+        }
+
+        getPrefix() {
+            return this.cssRule.prefix;
+        }
+
+        getType() {
+            return 'CssNamespaceRule';
+        }
+    });
+
+    register('', class CssPageRule extends CssRule {
+        constructor(cssGroup, cssRule) {
+            super(cssGroup, cssRule);
+        }
+
+        getSelector() {
+            return this.cssRule.selectorText;
+        }
+
+        getType() {
+            return 'CssPageRule';
+        }
+    });
+
+    register('', class CssStyleRule extends CssRule {
+        constructor(cssGroup, cssRule) {
+            super(cssGroup, cssRule);
+        }
+
+        change(values) {
+            for (let entry of Object.entries(values)) {
+                let [ name, value ] = entry;
+                this.cssRule.style[name] = value;
+            }
+
+            return this;
+        }
+
+        clear() {
+            while (this.cssRule.style.length) {
+                let property = this.cssRule.style.item(0);
+                this.cssRule.style.removeProperty(property);
+            }
+
+            return this;
+        }
+
+        getSelector() {
+            return this.cssRule.selectorText;
+        }
+
+        getSettings(values) {
+            return this.cssRule.style;
+        }
+
+        getType() {
+            return 'CssStyleRule';
+        }
+
+        set(values) {
+            this.clear();
+            return this.change(values);
+        }
+    });
+
+    register('', class CssSupportsRule extends CssConditionRule {
+        constructor(cssGroup, cssRule) {
+            super(cssGroup, cssRule);
+        }
+
+        getType() {
+            return 'CssSupportsRule';
+        }
+    });
+
+
+    /*****
+     * This weak map is used for finding maker function, e.g., mkMediaRul(), based on
+     * a given DOM CSS class type.  This is the complete enumeration of all CSS rule
+     * types supported by the DOM specification and by this software.
+    *****/
+    const CssMakers = new WeakMap();
+    CssMakers.set(CSSFontFaceRule, mkCssFontFaceRule);
+    CssMakers.set(CSSImportRule, mkCssImportRule);
+    CssMakers.set(CSSKeyframeRule, mkCssKeyframeRule);
+    CssMakers.set(CSSKeyframesRule, mkCssKeyframesRule);
+    CssMakers.set(CSSMediaRule, mkCssMediaRule);
+    CssMakers.set(CSSNamespaceRule, mkCssNamespaceRule);
+    CssMakers.set(CSSPageRule, mkCssPageRule);
+    CssMakers.set(CSSStyleRule, mkCssStyleRule);
+    CssMakers.set(CSSSupportsRule, mkCssSupportsRule);
+})();
