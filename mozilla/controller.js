@@ -128,9 +128,7 @@ register('', class Entanglement {
 
 /*****
 *****/
-register('', class Controller extends Active {
-    static controllers = new WeakMap();
-
+register('', class Controller extends Depot {
     constructor(element) {
         super();
         this.state.nextId = 1;

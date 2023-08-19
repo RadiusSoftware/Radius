@@ -41,7 +41,7 @@
                 this['radius-attr'] = opts => this.processAttr(opts);
                 this['radius-controller'] = opts => this.processController(opts);
                 this['radius-depot'] = opts => this.processDepot(opts);
-                this['radius-inner'] = opts => this.processInnerHtml(opts);
+                this['radius-inner'] = opts => this.processInner(opts);
                 this['radius-style'] = opts => this.processStyle(opts);
 
                 for (let element of elements) {
@@ -98,7 +98,7 @@
                         }
                     }
                 }
-                
+                /*
                 if (!(element.getTagName() in {script:0, style:0})) {
                     for (let childNode of element) {
                         if (childNode instanceof DocText) {
@@ -106,9 +106,10 @@
                         }
                     }
                 }
+                */
             }
 
-            processInnerHtml(opts) {
+            processInner(opts) {
                 /*
                 mkEntanglement(
                     opts.element.getController(),
@@ -247,7 +248,7 @@
         'buffer.js',
         'data.js',
         'emitter.js',
-        'active.js',
+        'depot.js',
         'json.js',
         'language.js',
         'stringSet.js',

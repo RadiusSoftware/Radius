@@ -23,20 +23,21 @@
 
 (() => {
     /*****
-     * For Active instances, all of the relevant data are stored in both of these
+     * For Depot instances, all of the relevant data are stored in both of these
      * WeakMaps.  Once is indexed by the proxy while the other is index by the
-     * active instance itself.
+     * Depot instance itself.
     *****/
    const byProxy = new WeakMap();
    const byValue = new WeakMap();
 
 
     /*****
-     * The expected standard proxy functions that are normally expected.  Each
-     * of these functions are shared by both Array and Object caches.  The proxies
-     * not only perform the requested operation, but also emit a message when
-     * relevant to the requested operation.  That's what makes our ObjectCache
-     * and ArrayCache objects active or dynamic.
+     * This is the proxy that makes the Depot instances become an active emitter.
+     * Moreover, theis proxy handler is central to providing the reflect feature,
+     * which is used to determine Depot dependencies for an expression.  With
+     * Depot.reflect(), an expression is analyzed so that other code can them
+     * entangle the reflected expression with the values in one or more Depots,
+     * on which that expression depends.
     *****/
     const handler = {
         deleteProperty(obj, key) {
@@ -46,9 +47,9 @@
                 const previous = internal.value[key];
                 delete internal.value[key];
 
-                internal.active.send({
+                internal.depot.send({
                     name: 'Update',
-                    active: internal.proxy,
+                    depot: internal.proxy,
                     updateType: 'delete',
                     key: key,
                     value: previous,
@@ -61,8 +62,18 @@
         get(obj, key) {
             const internal = byValue.get(obj);
 
-            if (key in internal.active) {
-                return internal.active[key];
+            if (reflecting) {
+                let reflectionId = `${internal.depot.state.id}-${key}`;
+
+                reflection[reflectionId] = {
+                    depot: Depot.getDepot(internal.depot.state.id),
+                    key: key,
+                };
+
+                return '';
+            }
+            else if (key in internal.depot) {
+                return internal.depot[key];
             }
             else if (key in internal.value) {
                 return internal.value[key];
@@ -74,7 +85,7 @@
         has(obj, key) {
             const internal = byValue.get(obj);
 
-            if (key in internal.active) {
+            if (key in internal.depot) {
                 return true;
             }
             else if (key in internal.value) {
@@ -91,9 +102,9 @@
 
             if (typeof previous != 'undefined') {
                 if (!Data.areEqual(previous, value)) {
-                    internal.active.send({
+                    internal.depot.send({
                         name: 'Update',
-                        active: internal.proxy,
+                        depot: internal.proxy,
                         updateType: 'change',
                         key: key,
                         value: value,
@@ -104,9 +115,9 @@
                 }
             }
 
-            internal.active.send({
+            internal.depot.send({
                 name: 'Update',
-                active: internal.proxy,
+                depot: internal.proxy,
                 updateType: 'add',
                 key: key,
                 value: value,
@@ -125,11 +136,16 @@
      * elegant mechanism for controlling values and the display of values by the
      * mechanism of entangling them with each other.
     *****/
-    register('', class Active extends Emitter {
+    let nextId = 1;
+    let reflection = {};
+    let reflecting = false;
+    const depots = {};
+
+    register('', class Depot extends Emitter {
         constructor(init, extended) {
             super();
             let value;
-            this.state = {};
+            this.state = { id: `depot_${nextId++}` };
 
             if (Array.isArray(init)) {
                 value = new Array();
@@ -145,7 +161,7 @@
                 value = new Object(); 
                 
                 for (let key in init) {
-                    value[key] = value[key];
+                    value[key] = init[key];
                 }  
             }
             else {
@@ -155,13 +171,14 @@
             const proxy = new Proxy(value, handler);
 
             const internal = {
-                active: this,
+                depot: this,
                 value: value,
                 proxy: proxy,
             }
 
             byProxy.set(proxy, internal);
             byValue.set(value, internal);
+            depots[this.state.id] = proxy;
             return proxy;
         }
 
@@ -191,8 +208,12 @@
             return internal.proxy;
         }
 
-        getActive() {
+        getDepot() {
             return this;
+        }
+
+        static getDepot(did) {
+            return depots[did];
         }
 
         getProxy() {
@@ -214,13 +235,13 @@
         notify(internal, updateType, key, value) {
             let message = {
                 name: 'Update',
-                active: internal.proxy,
+                depot: internal.proxy,
                 updateType: updateType,
             };
 
             key ? message.key = key : null;
             value ? message.value = value : null;
-            internal.active.send(message);
+            internal.depot.send(message);
         }
 
         off(handler) {
@@ -258,6 +279,20 @@
                 const popped = internal.value.pop();
                 this.notify(internal, 'push', internal.value.length, popped);
                 return popped;
+            }
+        }
+  
+        static reflect(func) {
+            reflection = {};
+            reflecting = true;
+    
+            try {
+                func();
+            }
+            catch (e) {}
+            finally {
+                reflecting = false;
+                return Object.values(reflection);
             }
         }
 
