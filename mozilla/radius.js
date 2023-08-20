@@ -42,6 +42,7 @@
                 this['radius-controller'] = (element, ...args) => this.processController(element, ...args);
                 this['radius-depot'] = (element, ...args) => this.processDepot(element, ...args);
                 this['radius-inner'] = (element, ...args) => this.processInner(element, ...args);
+                this['radius-input'] = (element, ...args) => this.processInput(element, ...args);
                 this['radius-style'] = (element, ...args) => this.processStyle(element, ...args);
 
                 for (let element of elements) {
@@ -89,28 +90,21 @@
                         catch (e) {}
                     }
                 }
-                /*
-                if (!(element.getTagName() in {script:0, style:0})) {
-                    for (let childNode of element) {
-                        if (childNode instanceof DocText) {
-                            processTextNode(element.getController(), childNode);
-                        }
+                
+                for (let childNode of element) {
+                    if (childNode instanceof DocText) {
+                        this.processTextNode(element, childNode);
                     }
                 }
-                */
             }
 
-            processInner(element, ...args) {
+            processInner(element, expr) {
+                element.getController().getEntanglements().entangleInner(element, expr);
+            }
+
+            processIput(element, expr) {
                 /*
-                console.log('processInner()');
-                console.log(args);
-                /*
-                mkEntanglement(
-                    opts.element.getController(),
-                    opts.element,
-                    opts.parameters[0],
-                    'inner',
-                ).entangle();
+                element.getController().getEntanglements().entangleInput(element, expr);
                 */
             }
 
@@ -122,7 +116,6 @@
             }
 
             processTextNode(element, textNode) {
-                /*
                 const blocks = [];
                 const exprFlags = [];
                 let hasExpr = false;
@@ -202,21 +195,14 @@
                 if (hasExpr) {
                     let nodes = [];
     
+                    console.log(blocks);
+                    return;
                     for (let i = 0; i < exprFlags.length; i++) {
                         if (exprFlags[i]) {
                             let tn = mkDocText();
                             nodes.push(tn);
                             nodes.push(mkDocText(`---${blocks[i]}---`));
-    
-                            mkEntanglement(
-                                controller,
-                                tn,
-                                null,
-                                'attr',
-                                opts.parameters[0],
-                            ).entangle();
-                            // TODO -- reflect active, iterate through dependencies
-                            //         and make entanglements for all dependencies.
+                            element.getController().getEntanglements().entangleTextNode(element, expr);
                         }
                         else {
                             nodes.push(mkDocText(blocks[i]));
@@ -224,7 +210,7 @@
                     }
     
                     textNode.replace(...nodes);
-                }*/
+                }
             }
         });
     }

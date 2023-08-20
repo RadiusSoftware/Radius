@@ -289,7 +289,11 @@
             try {
                 func();
             }
-            catch (e) {}
+            catch (e) {
+                console.log('Depot Reflection Error');
+                console.log(`func = ${func}`);
+                console.log(e);
+            }
             finally {
                 reflecting = false;
                 return Object.values(reflection);
