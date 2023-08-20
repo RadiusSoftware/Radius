@@ -58,41 +58,23 @@
                 }
             }
 
-            processAttr(element, attrName, expr) {
-                let func;
-                eval(`func = () => { return ( ${expr} )}`);
-                let dependencies = Depot.reflect(func);
-                
-                for (let dependency of dependencies) { 
-                    /*
-                    mkEntanglement(
-                        opts.element.getController(),
-                        opts.element,
-                        opts.parameters[1],
-                        'attr',
-                        opts.parameters[0],
-                    ).entangle();
-                    */
-                    //console.log(dependency);
+            processAttr(element, attributeName, expr) {
+                element.getController().getEntanglements().entangleAttribute(element, attributeName, expr);
+            }
+
+            processController(element, fqClassName, fqObjectName, ...depotNames) {
+                let fqcn = mkFqn(fqClassName);
+                let controller = fqcn.getObject()[`mk${fqcn.getName()}`](element, fqObjectName);
+
+                for (let depotName of depotNames) {
+                    controller.createDepot(depotName)
                 }
             }
 
-            processController(element, ...args) {
-                if (args.length >= 1) {
-                    let fqcn = mkFqn(args[0]);
-                    let controller = fqcn.getObject()[`mk${fqcn.getName()}`](element);
-
-                    if (args.length >= 2) {
-                        let fqon = mkFqn(args[1]);
-                        fqon.setValue(controller.depot);                     
-                    }
-                }
-            }
-
-            processDepot(element, ...args) {
-                if (args.length >= 1) {
-                    let fqon = mkFqn(args[0]);
-                    fqon.setValue(mkDepot());
+            processDepot(element, ...fqDepotNames) {
+                for (let fqDepotName of fqDepotNames) {
+                    let fqdn = mkFqn(fqDepotName);
+                    fqdn.setValue(mkDepot());
                 }
             }
 
@@ -104,7 +86,7 @@
                         try {
                             this[attribute.name](element, ...args);
                         }
-                        catch (e) { console.log(e) }
+                        catch (e) {}
                     }
                 }
                 /*
@@ -280,6 +262,7 @@
         'mozilla/widget.js',
         'mozilla/style.js',
         'mozilla/ctl.js',
+        'mozilla/entanglements.js',
         'mozilla/controller.js',
     ];
 
