@@ -24,25 +24,31 @@
 /*****
 *****/
 register('', class Entanglement {
-    constructor(controller, node, key, type, attr) {
-        this.controller = controller;
-        this.node = node;
+    constructor(opts) {
+        this.func = func;
         this.key = key;
-        this.type = type;
+        this.depot = depot;
+        this.node = node;
         this.attr = attr;
+        this.attrKey = attrKey;
     }
 
     disentangle() {
+        /*
         this.controller.disentangle(this);
         return this;
+        */
     }
 
     entangle() {
+        /*
         this.controller.entangle(this);
         return this;
+        */
     }
 
     equivalentTo(entanglement) {
+        /*
         if (Object.is(entanglement.controller, this.controller)) {
             if (Object.is(entanglement.node, this.node)) {
                 if (entanglement.key == this.key) {
@@ -54,12 +60,17 @@ register('', class Entanglement {
                 }
             }
         }
+        */
 
         return;
     }
 
     getAttr() {
         return this.attr;
+    }
+
+    getController() {
+        return this.controller;
     }
 
     getKey() {
@@ -128,16 +139,14 @@ register('', class Entanglement {
 
 /*****
 *****/
-register('', class Controller extends Depot {
+register('', class Controller extends Emitter {
     constructor(element) {
         super();
-        this.state.nextId = 1;
-        this.state.element = element;
-        this.setControllerId(element);
-        this.state.element.setController(this.getProxy());
-        this.state.entanglementsByKey = {};
-        this.state.entanglementsByNode = {};
-        this.on(message => this.onKeyChanged(message));
+        this.element = element;
+        this.element.controller = this;
+        this.entanglementsByKey = {};
+        this.entanglementsByNode = {};
+        this.depot = mkDepot();
     }
 
     disentangle(entanglement) {
@@ -157,33 +166,36 @@ register('', class Controller extends Depot {
     }
 
     ensureEntry(node, key) {
-        let byNode = this.state.entanglementsByNode[node.ctlId];
+        /*
+        let byNode = this.entanglementsByNode[node.ctlId];
 
         if (!byNode) {
-            this.state.entanglementsByNode[node.ctlId] = {
+            this.entanglementsByNode[node.ctlId] = {
                 node: node,
                 keys: {},
             };
         }
 
         if (key) {
-            let byKey = this.state.entanglementsByKey[key];
+            let byKey = this.entanglementsByKey[key];
 
             if (!byKey) {
-                this.state.entanglementsByKey[key] = {
+                this.entanglementsByKey[key] = {
                     key: key,
                     nodes: {},
                 };
             }
         }
+        */
     }
 
     entangle(entanglement) {
+        /*
         if (!this.hasEntanglement(entanglement)) {
             this.setControllerId(entanglement.getNode());
             this.ensureEntry(entanglement.getNode(), entanglement.getKey());
-            const byKey = this.state.entanglementsByKey[entanglement.getKey()];
-            const byNode = this.state.entanglementsByNode[entanglement.getNode().ctlId];
+            const byKey = this.entanglementsByKey[entanglement.getKey()];
+            const byNode = this.entanglementsByNode[entanglement.getNode().ctlId];
             
             if (!(entanglement.getKey() in byNode.keys)) {
                 byNode.keys[entanglement.getKey()] = [];
@@ -198,22 +210,18 @@ register('', class Controller extends Depot {
             entanglement.getKey() in this ? false : this[entanglement.getKey()] = '' ;
             entanglement.setNode();
         }
+        */
         
         return this;
     }
-
-    entangleFunction(func) {
-        // TODO
-        console.log('entangleFunction()');
-        console.log(func);
-    }
     
     getElement() {
-        return this.state.element;
+        return this.element;
     }
 
     getEntanglement(entanglement) {
-        const nodeEntry = this.state.entanglementsByNode[entanglement.getNode().ctlId];
+        /*
+        const nodeEntry = this.entanglementsByNode[entanglement.getNode().ctlId];
 
         if (nodeEntry) {
             const keyEntry = nodeEntry.keys[entanglement.getKey()];
@@ -226,19 +234,22 @@ register('', class Controller extends Depot {
                 }
             }
         }
+        */
 
         return undefined;
     }
 
     getKeyEntanglements(key) {
+        /*
         let array = [];
-        const byKey = this.state.entanglementsByKey[key];
+        const byKey = this.entanglementsByKey[key];
 
         if (byKey) {
             for (let entanglementsArray of Object.values(byKey.nodes)) {
                 array = array.concat(entanglementsArray);
             }
         }
+        */
 
         return array;
     }
@@ -248,37 +259,20 @@ register('', class Controller extends Depot {
     }
 
     hasEntanglement(entanglement) {
-        return this.getEntanglement(entanglement) !== undefined;
+        //return this.getEntanglement(entanglement) !== undefined;
     }
 
     onInputChanged(message) {
         // TODO
-        console.log('\nonInputChanged()');
-        console.log(message);
     }
 
     onKeyChanged(message) {
+        /*
         if (message.updateType in { add:0, change:0, delete:0 }) {
             for (let entanglement of this.getKeyEntanglements(message.key)) {
                 entanglement.setNode();
             }
         }
-    }
-
-    setControllerId(node) {
-        if (node.ctlId === undefined) {
-            node.ctlId = `ctl${this.state.nextId++}`;
-        }
-
-        return this;
-    }
-});
-
-
-/*****
-*****/
-register('myns', class MyController extends Controller {
-    constructor(element) {
-        super(element);
+        */
     }
 });

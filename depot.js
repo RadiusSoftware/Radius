@@ -63,10 +63,10 @@
             const internal = byValue.get(obj);
 
             if (reflecting) {
-                let reflectionId = `${internal.depot.state.id}-${key}`;
+                let reflectionId = `${internal.depot.state.depotId}-${key}`;
 
                 reflection[reflectionId] = {
-                    depot: Depot.getDepot(internal.depot.state.id),
+                    depot: Depot.getDepot(internal.depot.state.depotId),
                     key: key,
                 };
 
@@ -145,7 +145,7 @@
         constructor(init, extended) {
             super();
             let value;
-            this.state = { id: `depot_${nextId++}` };
+            this.state = { depotId: `depot_${nextId++}` };
 
             if (Array.isArray(init)) {
                 value = new Array();
@@ -178,7 +178,7 @@
 
             byProxy.set(proxy, internal);
             byValue.set(value, internal);
-            depots[this.state.id] = proxy;
+            depots[this.state.depotId] = proxy;
             return proxy;
         }
 
@@ -212,8 +212,8 @@
             return this;
         }
 
-        static getDepot(did) {
-            return depots[did];
+        static getDepot(depotId) {
+            return depots[depotId];
         }
 
         getProxy() {

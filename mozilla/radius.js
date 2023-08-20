@@ -38,11 +38,11 @@
     function registerRadius() {
         register('', class Radius {
             constructor(...elements) {
-                this['radius-attr'] = opts => this.processAttr(opts);
-                this['radius-controller'] = opts => this.processController(opts);
-                this['radius-depot'] = opts => this.processDepot(opts);
-                this['radius-inner'] = opts => this.processInner(opts);
-                this['radius-style'] = opts => this.processStyle(opts);
+                this['radius-attr'] = (element, ...args) => this.processAttr(element, ...args);
+                this['radius-controller'] = (element, ...args) => this.processController(element, ...args);
+                this['radius-depot'] = (element, ...args) => this.processDepot(element, ...args);
+                this['radius-inner'] = (element, ...args) => this.processInner(element, ...args);
+                this['radius-style'] = (element, ...args) => this.processStyle(element, ...args);
 
                 for (let element of elements) {
                     let stack = [ element ];
@@ -58,44 +58,53 @@
                 }
             }
 
-            processAttr(opts) {
-                /*
-                mkEntanglement(
-                    opts.element.getController(),
-                    opts.element,
-                    opts.parameters[1],
-                    'attr',
-                    opts.parameters[0],
-                ).entangle();
-                */
+            processAttr(element, attrName, expr) {
+                let func;
+                eval(`func = () => { return ( ${expr} )}`);
+                let dependencies = Depot.reflect(func);
+                
+                for (let dependency of dependencies) { 
+                    /*
+                    mkEntanglement(
+                        opts.element.getController(),
+                        opts.element,
+                        opts.parameters[1],
+                        'attr',
+                        opts.parameters[0],
+                    ).entangle();
+                    */
+                    //console.log(dependency);
+                }
             }
 
-            processController(opts) {
-                /*
-                const fqcn = parseNamespaceString(opts.parameters[0]);
-                const fqon = parseNamespaceString(opts.parameters[1]);
-                fqon.ns[fqon.name] = fqcn.ns[`mk${fqcn.name}`](opts.element, ...(opts.parameters.slice(2)));
-                */
+            processController(element, ...args) {
+                if (args.length >= 1) {
+                    let fqcn = mkFqn(args[0]);
+                    let controller = fqcn.getObject()[`mk${fqcn.getName()}`](element);
+
+                    if (args.length >= 2) {
+                        let fqon = mkFqn(args[1]);
+                        fqon.setValue(controller.depot);                     
+                    }
+                }
             }
 
-            processDepot(opts) {
+            processDepot(element, ...args) {
+                if (args.length >= 1) {
+                    let fqon = mkFqn(args[0]);
+                    fqon.setValue(mkDepot());
+                }
             }
 
             processElement(element) {
-                return;
                 for (let attribute of element.getAttributes()) {
                     if (attribute.name in this) {
-                        let parameters = attribute.value.split(',').map(arg => arg.trim());
+                        let args = attribute.value.split(',').map(arg => arg.trim());
     
                         try {
-                            attributes[attribute.name]({
-                                element: element,
-                                parameters: parameters,
-                            });
+                            this[attribute.name](element, ...args);
                         }
-                        catch (e) {
-                            console.log(e);
-                        }
+                        catch (e) { console.log(e) }
                     }
                 }
                 /*
@@ -109,7 +118,10 @@
                 */
             }
 
-            processInner(opts) {
+            processInner(element, ...args) {
+                /*
+                console.log('processInner()');
+                console.log(args);
                 /*
                 mkEntanglement(
                     opts.element.getController(),
@@ -120,10 +132,15 @@
                 */
             }
 
-            processStyle(opts) {
+            processStyle(element, ...args) {
+                /*
+                console.log('processStyle()');
+                console.log(args);
+                */
             }
 
             processTextNode(element, textNode) {
+                /*
                 const blocks = [];
                 const exprFlags = [];
                 let hasExpr = false;
@@ -207,7 +224,6 @@
                         if (exprFlags[i]) {
                             let tn = mkDocText();
                             nodes.push(tn);
-                            /*
                             nodes.push(mkDocText(`---${blocks[i]}---`));
     
                             mkEntanglement(
@@ -219,7 +235,6 @@
                             ).entangle();
                             // TODO -- reflect active, iterate through dependencies
                             //         and make entanglements for all dependencies.
-                            */
                         }
                         else {
                             nodes.push(mkDocText(blocks[i]));
@@ -227,7 +242,7 @@
                     }
     
                     textNode.replace(...nodes);
-                }
+                }*/
             }
         });
     }
