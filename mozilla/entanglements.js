@@ -22,6 +22,15 @@
 
 
 /*****
+ * Like the quantum physics principle of entabled particles, and Entanglement
+ * is where one or more Depot properties are tied with a DocNode in a weird and
+ * spooky way.  In reality, an entanglement means that a node is automatically
+ * bound to a Depot property, and in the case of input elements, that property
+ * can also be bound to the input value.  There are multiple classes of the
+ * Entanglement "interface", which are used to deal with the specifics of each
+ * type of implemented entanglement.  Keep in mind that a set of entanglements
+ * are bound to a specific controller, which is the controller that's responsible
+ * for the bound DocNode or CssStyleSheet.
 *****/
 register('', class Entanglements {
     constructor(controller) {
@@ -154,9 +163,11 @@ register('', class Entanglements {
     }
 
     getEntanblementsByDepot(depot) {
+        // TODO ***********************
     }
 
     getEntanblementsByKey(depot, key) {
+        // TODO ***********************
     }
 
     reflect(expr) {
@@ -205,6 +216,8 @@ register('', class Entanglements {
 
 
 /*****
+ * The entanglement of and element's attribute with an expression, denoted as
+ * "expr".
 *****/
 register('', class AttributeEntanglement {
     constructor(element, attribute, depot, key, func) {
