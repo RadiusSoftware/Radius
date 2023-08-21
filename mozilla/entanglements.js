@@ -79,12 +79,27 @@ register('', class Entanglements {
         }
     }
 
-    entangleIput(element, expr) {
-        // TODO ***********************
+    entangleInput(element, fqDepotName, key) {
+        let entanglement = mkInputEntanglement(element, fqDepotName, key);
+        this.setEntanglement(entanglement);
+        entanglement.push();
     }
 
-    entangleStyle(name, expr) {
-        // TODO ***********************
+    entangleStyle(element, styleProperty, expr) {
+        let reflection = this.reflect(expr);
+
+        for (let dependency of reflection.dependencies) {
+            let entanglement = mkStyleEntanglement(
+                element,
+                styleProperty,
+                dependency.depot,
+                dependency.key,
+                reflection.func,
+            );
+
+            this.setEntanglement(entanglement);
+            entanglement.push();
+        }
     }
 
     entangleTextNode(docText, expr) {
@@ -227,13 +242,33 @@ register('', class InnerEntanglement {
 /*****
 *****/
 register('', class InputEntanglement {
-    constructor(element, depot, key, func) {
+    constructor(element, fqDepotName, key) {
+        this.element = element;
+        this.depot = mkFqn(fqDepotName).getValue(),
+        this.key = key;
+        this.depot.on(message => this.push());
+        this.element.on('input', message => this.pull());
     }
 
     pull() {
+        if (this.element.node.type == 'select-multiple') {
+            let length = this.element.node.selectedOptions.length;
+
+            if (length == 0) {
+                this.depot[this.key] = '';
+            }
+            else if (length == 1) {
+                this.depot[this.key] = this.element.node.value;
+            }
+
+            return;
+        }
+        
+        this.depot[this.key] = this.element.node.value;
     }
 
     push() {
+        this.element.node.value = this.depot[this.key];
     }
 });
 
@@ -241,10 +276,17 @@ register('', class InputEntanglement {
 /*****
 *****/
 register('', class StyleEntanglement {
-    constructor(element, property, depot, key, func) {
+    constructor(element, styleProperty, depot, key, func) {
+        this.element = element;
+        this.styleProperty = styleProperty;
+        this.depot = depot;
+        this.key = key;
+        this.func = func;
+        this.depot.on(message => this.push());
     }
 
     push() {
+        this.element.setStyle(this.styleProperty, this.func());
     }
 });
 

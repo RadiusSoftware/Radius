@@ -632,16 +632,16 @@
             return this;
         }
 
-        off(messageName, handler) {
-            super.off(messageName, handler);
+        off(name, handler) {
+            super.off(name, handler);
             return this;
         }
 
-        on(messageName, handler, filter) {
-            if (!(messageName in this.listeners)) {
-                this.node.addEventListener(messageName.substr(4), event => {
+        on(name, handler, filter) {
+            if (!(name in this.listeners)) {
+                this.node.addEventListener(name, event => {
                     this.send({
-                        messageName: messageName,
+                        name: name,
                         htmlElement: this,
                         event: mkElementEvent(event),
                     });
@@ -655,15 +655,15 @@
                 });
             }
 
-            super.on(messageName, handler, filter);
+            super.on(name, handler, filter);
             return this;
         }
 
-        once(messageName, handler, filter) {
-            if (!(messageName in this.listeners)) {
-                this.node.addEventListener(messageName.substr(4), event => {
+        once(name, handler, filter) {
+            if (!(name in this.listeners)) {
+                this.node.addEventListener(name, event => {
                     this.send({
-                        messageName: messageName,
+                        name: name,
                         htmlElement: this,
                         event: mkElementEvent(event),
                     });
@@ -677,7 +677,7 @@
                 });
             }
 
-            super.once(messageName, handler, filter);
+            super.once(name, handler, filter);
             return this;
         }
 

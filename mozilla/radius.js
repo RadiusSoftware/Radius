@@ -45,6 +45,12 @@
                 this['radius-input'] = (element, ...args) => this.processInput(element, ...args);
                 this['radius-style'] = (element, ...args) => this.processStyle(element, ...args);
 
+                this.inputTags = mkStringSet(
+                    'input',
+                    'textarea',
+                    'select'
+                );
+
                 for (let element of elements) {
                     let stack = [ element ];
     
@@ -102,17 +108,26 @@
                 element.getController().getEntanglements().entangleInner(element, expr);
             }
 
-            processIput(element, expr) {
-                /*
-                element.getController().getEntanglements().entangleInput(element, expr);
-                */
+            processInput(element, depot, key) {
+                if (element instanceof HtmlElement) {
+                    if (this.inputTags.has(element.getTagName()))
+                    element.getController().getEntanglements().entangleInput(element, depot, key);
+                }
             }
 
             processStyle(element, ...args) {
-                /*
-                console.log('processStyle()');
-                console.log(args);
-                */
+                if (element instanceof HtmlElement) {
+
+                    for (let arg of args) {
+                        let parts = arg.split(';');
+
+                        if (parts.length == 2) {
+                            let styleProperty = parts[0].trim();
+                            let expr = parts[1].trim();
+                            element.getController().getEntanglements().entangleStyle(element, styleProperty, expr);
+                        }
+                    }
+                }
             }
 
             processTextNode(element, textNode) {
