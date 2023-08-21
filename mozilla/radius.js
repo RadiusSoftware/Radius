@@ -66,7 +66,7 @@
             }
 
             processAttr(element, attributeName, expr) {
-                element.getController().getEntanglements().entangleAttribute(element, attributeName, expr);
+                element.getController().entangleAttribute(element, attributeName, expr);
             }
 
             processController(element, fqClassName, fqObjectName, ...depotNames) {
@@ -105,13 +105,13 @@
             }
 
             processInner(element, expr) {
-                element.getController().getEntanglements().entangleInner(element, expr);
+                element.getController().entangleInner(element, expr);
             }
 
             processInput(element, depot, key) {
                 if (element instanceof HtmlElement) {
                     if (this.inputTags.has(element.getTagName()))
-                    element.getController().getEntanglements().entangleInput(element, depot, key);
+                    element.getController().entangleInput(element, depot, key);
                 }
             }
 
@@ -124,7 +124,7 @@
                         if (parts.length == 2) {
                             let styleProperty = parts[0].trim();
                             let expr = parts[1].trim();
-                            element.getController().getEntanglements().entangleStyle(element, styleProperty, expr);
+                            element.getController().entangleStyle(element, styleProperty, expr);
                         }
                     }
                 }
@@ -217,7 +217,6 @@
                                     element
                                     .getController()
                                     .getEntanglements()
-                                    .entangleTextNode(docText, blocks[i]);
                                 });
                             }
                             else {

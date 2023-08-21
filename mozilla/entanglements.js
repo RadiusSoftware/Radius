@@ -33,26 +33,9 @@
  * for the bound DocNode or CssStyleSheet.
 *****/
 register('', class Entanglements {
-    constructor(controller) {
-        this.controller = controller;
+    constructor() {
         this.depots = {};
         this.entanglements = [];
-    }
-
-    disentangle(entanglement) {
-        // TODO ***********************
-    }
-
-    disentangleAll() {
-        // TODO ***********************
-    }
-
-    disentangleDepot(depot) {
-        // TODO ***********************
-    }
-
-    disentangleKey(depot, key) {
-        // TODO ***********************
     }
 
     entangleAttribute(element, name, expr) {
@@ -163,11 +146,33 @@ register('', class Entanglements {
     }
 
     getEntanblementsByDepot(depot) {
-        // TODO ***********************
+        let matching = [];
+
+        if (depot.state.depotId in this.depots) {
+            let depotObject = this.depots[depot.state.depotId];
+
+            Object.values(depotObject)
+            .forEach(array => {
+                matching = matching.concat(array);
+            });
+        }
+
+        return matching;
     }
 
-    getEntanblementsByKey(depot, key) {
-        // TODO ***********************
+    getEntanblementsByDepotKey(depot, key) {
+        let matching = [];
+
+        if (depot.state.depotId in this.depots) {
+            let depotObject = this.depots[depot.state.depotId];
+
+            Object.values(depotObject)
+            .forEach(array => {
+                matching = matching.concat(array.filter(el => el.key == key));
+            });
+        }
+
+        return matching;
     }
 
     reflect(expr) {
@@ -216,8 +221,9 @@ register('', class Entanglements {
 
 
 /*****
- * The entanglement of and element's attribute with an expression, denoted as
- * "expr".
+ * The entanglement of an element's attribute with an expression, denoted as
+ * "expr".  Note that the caller, the Entanglements object, has already reflected
+ * the expr to build it into a function and to determine its dependencies.
 *****/
 register('', class AttributeEntanglement {
     constructor(element, attribute, depot, key, func) {
@@ -236,6 +242,9 @@ register('', class AttributeEntanglement {
 
 
 /*****
+ * The entanglement of an element's inner HTML with an expression, denoted as
+ * "expr".  Note that the caller, the Entanglements object, has already reflected
+ * the expr to build it into a function and to determine its dependencies.
 *****/
 register('', class InnerEntanglement {
     constructor(element, depot, key, func) {
@@ -253,6 +262,10 @@ register('', class InnerEntanglement {
 
 
 /*****
+ * The entanglement of an input element with a Depot key, denoted as
+ * "fqDepotName" and "key".  Note that the caller, the Entanglements object,
+ * has already reflected the expr to build it into a function and to determine
+ * its dependencies.
 *****/
 register('', class InputEntanglement {
     constructor(element, fqDepotName, key) {
@@ -287,6 +300,9 @@ register('', class InputEntanglement {
 
 
 /*****
+ * The entanglement of an element's style value with an expression, denoted as
+ * "expr".  Note that the caller, the Entanglements object, has already reflected
+ * the expr to build it into a function and to determine its dependencies.
 *****/
 register('', class StyleEntanglement {
     constructor(element, styleProperty, depot, key, func) {
@@ -305,6 +321,9 @@ register('', class StyleEntanglement {
 
 
 /*****
+ * The entanglement of TextNode's inner HTML with an expression, denoted as
+ * "expr".  Note that the caller, the Entanglements object, has already reflected
+ * the expr to build it into a function and to determine its dependencies.
 *****/
 register('', class TextNodeEntanglement {
     constructor(docText, depot, key, func) {

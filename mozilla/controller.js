@@ -22,12 +22,17 @@
 
 
 /*****
+ * The Controller, which extends the Entanglements class, owns chunk of real
+ * estate on the screen, mean that it contains the display acton logic pertaining
+ * to an Element and some or all of its descendents.  Any descentent with its
+ * own Controller is treated as a single Element with respect to the Element and
+ * its Controller.
 *****/
-register('', class Controller {
+register('', class Controller extends Entanglements {
     constructor(element, fqObjectName) {
+        super();
         this.element = element;
         this.depots = {};
-        this.entanglements = mkEntanglements(this);
         this.element.setController(this);
         this.fqon = mkFqn(fqObjectName);
         this.fqon.getObject()[this.fqon.getName()] = this;
@@ -50,10 +55,6 @@ register('', class Controller {
 
     getElement() {
         return this.element;
-    }
-
-    getEntanglements() {
-        return this.entanglements;
     }
 
     [Symbol.iterator]() {
