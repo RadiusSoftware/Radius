@@ -82,7 +82,7 @@
             return arg;
         }
         else {
-            return doc.doc.createTextNode(arg.toString());
+            return document.createTextNode(typeof arg == 'undefined' ? '' : arg);
         }
     });
 
@@ -313,12 +313,12 @@
                 let inserted;
 
                 if (args.length) {
-                    inserted = unwrapDocNode(args[0]);
-                    this.node.parentNode.replaceChild(inserted, this.node);
+                    inserted = wrapDocNode(args[0]);
+                    this.node.parentNode.replaceChild(unwrapDocNode(inserted), this.node);
 
                     for (let i = 1; i < args.length; i++) {
-                        let node = unwrapDocNode(args[i]);
-                        inserted.insertAfter(node, inserted);
+                        let node = wrapDocNode(args[i]);
+                        inserted.insertAfter(node);
                         inserted = node;
                     }
                 }
@@ -355,15 +355,24 @@
             return this.node.wholeText;
         }
 
-        setText(text) {
+        setText(arg) {
+            let text;
+
+            if (typeof arg == 'undefined' || arg === null) {
+                text = '';
+            }
+            else if (typeof arg == 'string') {
+                text = arg;
+            }
+            else {
+                text = arg.toString();
+            }
+
             let oldNode = this.node;
             let newNode = new Text(text);
             newNode[nodeKey] = this;
+            oldNode.parentNode.replaceChild(newNode, oldNode);
             this.node = newNode;
-
-            if (this.getParent()) {
-                this.getParent().node.replaceChild(newNode, oldNode);
-            }
 
             return this;
         }

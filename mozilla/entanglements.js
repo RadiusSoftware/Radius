@@ -87,20 +87,34 @@ register('', class Entanglements {
         // TODO ***********************
     }
 
-    entangleTextNode(expr) {
-        // TODO ***********************
+    entangleTextNode(docText, expr) {
+        let reflection = this.reflect(expr);
+
+        for (let dependency of reflection.dependencies) {
+            let entanglement = mkTextNodeEntanglement(
+                docText,
+                dependency.depot,
+                dependency.key,
+                reflection.func,
+            );
+
+            this.setEntanglement(entanglement);
+            entanglement.push();
+        }
     }
 
-    findEntanglement(entaglement) {
-        for (let i = 0; i < this.entanglements.length; i++) {
-            let prototype = Reflect.getPrototypeOf(entanglement);
+    findEntanglement(entanglement) {
+        let prototype = Reflect.getPrototypeOf(entanglement);
 
-            if (Object.is(Reflect.getPrototypeOf(this.entanglements[i]), prototype)) {
+        for (let i = 0; i < this.entanglements.length; i++) {
+            let entangled = this.entanglements[i];
+
+            if (Object.is(Reflect.getPrototypeOf(entangled), prototype)) {
                 let equal = true;
 
                 for (let key of Object.keys(entanglement)) {
                     if (key != 'func') {
-                        if (entangle[key] != entanglement[key]) {
+                        if (entangled[key] != entanglement[key]) {
                             equal = false;
                             break;
                         }
@@ -239,8 +253,14 @@ register('', class StyleEntanglement {
 *****/
 register('', class TextNodeEntanglement {
     constructor(docText, depot, key, func) {
+        this.docText = docText;
+        this.depot = depot;
+        this.key = key;
+        this.func = func;
+        this.depot.on(message => this.push());
     }
 
     push() {
+        this.docText.setText(this.func());
     }
 });

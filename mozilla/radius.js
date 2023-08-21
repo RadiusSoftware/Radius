@@ -87,7 +87,7 @@
                         try {
                             this[attribute.name](element, ...args);
                         }
-                        catch (e) {}
+                        catch (e) { console.log(e) }
                     }
                 }
                 
@@ -117,10 +117,7 @@
 
             processTextNode(element, textNode) {
                 const blocks = [];
-                const exprFlags = [];
-                let hasExpr = false;
-    
-                let exprString = [];
+                let exprFlags = [];
                 let blockString = [];
     
                 let state = 0;
@@ -152,7 +149,7 @@
                             state = 3;
     
                             if (blockString.length) {
-                                blocks.push(blockString.join(''));
+                                blocks.push(`${blockString.join('')}`);
                                 exprFlags.push(false);
                                 blockString = [];
                             }
@@ -169,47 +166,53 @@
                             state = 4;
                         }
                         else {
-                            exprString.push(chr);
+                            blockString.push(chr);
                         }
                     }
                     else if (state == 4) {
                         if (chr == '}') {
                             state = 0;
-                            blocks.push(exprString.join(''));
+                            blocks.push(`${blockString.join('')}`);
                             exprFlags.push(true);
-                            hasExpr = true;
-                            exprString = [];
+                            blockString = [];
                         }
                         else {
-                            exprString.push('}');
+                            blockString.push('}');
                             exprStriing.push(chr);
                         }
                     }
                 }
     
-                if (state == 0 && blockString.length) {
+                if (blockString.length) {
                     blocks.push(blockString.join(''));
                     exprFlags.push(false);
                 }
                 
-                if (hasExpr) {
+                if (exprFlags.filter(el => el).length) {
                     let nodes = [];
+                    let entanglements = [];
     
-                    console.log(blocks);
-                    return;
                     for (let i = 0; i < exprFlags.length; i++) {
-                        if (exprFlags[i]) {
-                            let tn = mkDocText();
-                            nodes.push(tn);
-                            nodes.push(mkDocText(`---${blocks[i]}---`));
-                            element.getController().getEntanglements().entangleTextNode(element, expr);
-                        }
-                        else {
-                            nodes.push(mkDocText(blocks[i]));
+                        if (blocks[i] !== '') {
+                            if (exprFlags[i]) {
+                                let docText = mkDocText();
+                                nodes.push(docText);
+
+                                entanglements.push(() => {
+                                    element
+                                    .getController()
+                                    .getEntanglements()
+                                    .entangleTextNode(docText, blocks[i]);
+                                });
+                            }
+                            else {
+                                nodes.push(mkDocText(blocks[i]));
+                            }
                         }
                     }
     
                     textNode.replace(...nodes);
+                    entanglements.forEach(entanglement => entanglement());
                 }
             }
         });
