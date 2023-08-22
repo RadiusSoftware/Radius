@@ -94,6 +94,18 @@ register('', class Entanglements {
         }
     }
 
+    entangleStyleRule(cssStyleRule, styleProperty, depot, key) {
+        let entanglement = mkStyleRuleEntanglement(
+            cssStyleRule,
+            styleProperty,
+            depot,
+            key,
+        );
+
+        this.setEntanglement(entanglement);
+        entanglement.push();
+    }
+
     entangleTextNode(docText, expr) {
         let reflection = this.reflect(expr);
 
@@ -316,6 +328,26 @@ register('', class StyleEntanglement {
 
     push() {
         this.element.setStyle(this.styleProperty, this.func());
+    }
+});
+
+
+/*****
+ * The entanglement of an cssStyleRule value with an expression, denoted as
+ * "expr".  Note that the caller, the Entanglements object, has already reflected
+ * the expr to build it into a function and to determine its dependencies.
+*****/
+register('', class StyleRuleEntanglement {
+    constructor(cssStyleRule, styleProperty, depot, key) {
+        this.cssStyleRule = cssStyleRule;
+        this.styleProperty = styleProperty;
+        this.depot = depot;
+        this.key = key;
+        this.depot.on(message => this.push());
+    }
+
+    push() {
+        this.cssStyleRule.cssRule.style[this.styleProperty] = this.depot[this.key];
     }
 });
 

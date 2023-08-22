@@ -52,14 +52,16 @@
                 );
 
                 for (let element of elements) {
-                    let stack = [ element ];
-    
-                    while (stack.length) {
-                        let docNode = wrapDocNode(stack.pop());
-    
-                        if (docNode.isElement()) {
-                            this.processElement(docNode);
-                            docNode.getChildren().reverse().forEach(el => stack.push(el));
+                    if (element instanceof DocElement) {
+                        let stack = [ element ];
+        
+                        while (stack.length) {
+                            let docNode = wrapDocNode(stack.pop());
+        
+                            if (docNode.isElement()) {
+                                this.processElement(docNode);
+                                docNode.getChildren().reverse().forEach(el => stack.push(el));
+                            }
                         }
                     }
                 }
@@ -297,7 +299,6 @@
         await onSingletons();
         global.win = mkWin();
         global.doc = mkDoc();
-        console.log('*** Encapsulate stylesheets');
         registerRadius();
         mkRadius(doc.getHtml());
         typeof bootstrap == 'function' ? bootstrap() : false;

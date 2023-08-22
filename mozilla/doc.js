@@ -315,7 +315,7 @@ register('', class Doc extends Emitter {
         let styleSheets = [];
 
         for (let i = 0; i < this.doc.styleSheets.length; i++) {
-            styleSheets.push(wrapDocNode(this.doc.styleSheets.item(i)));
+            styleSheets.push(mkCssStyleSheet(this.doc.styleSheets.item(i)));
         }
 
         return styleSheets;       

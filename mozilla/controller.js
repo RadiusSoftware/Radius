@@ -36,6 +36,15 @@ register('', class Controller extends Entanglements {
         this.element.setController(this);
         this.fqon = mkFqn(fqObjectName);
         this.fqon.getObject()[this.fqon.getName()] = this;
+
+        this.observer = new MutationObserver((records, observer) => {
+            this.onDomChange(records, observer);
+        });
+
+        this.observer.observe(this.element.node, {
+            childList: true,
+            subtree: true,
+        })
     }
 
     createDepot(depotName, value) {
@@ -55,6 +64,16 @@ register('', class Controller extends Entanglements {
 
     getElement() {
         return this.element;
+    }
+
+    onDomChange(mutationRecords, observer) {
+        for (let mutationRecord of mutationRecords) {
+            let docNode = wrapDocNode(mutationRecord.target);
+
+            if (Object.is(docNode.getController(), this)) {
+                //console.log(mutationRecord);
+            }
+        }
     }
 
     [Symbol.iterator]() {
