@@ -48,7 +48,7 @@
      * as part of the core framework.
     *****/
     class Fqn {
-        constructor(fqn) {
+        constructor(fqn, value) {
             if (typeof fqn == 'string') {
                 this.segments = fqn.split('.').map(segment => segment.trim());
             }
@@ -64,6 +64,10 @@
                 }
 
                 this.object = this.object[segment];
+            }
+
+            if (value) {
+                this.setValue(value);
             }
         }
 
@@ -129,7 +133,7 @@
         }
     }
     
-    global.mkFqn = fqn => new Fqn(fqn);
+    global.mkFqn = (fqn, value) => new Fqn(fqn, value);
 
 
     /*****

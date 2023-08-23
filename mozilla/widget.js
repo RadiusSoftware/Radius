@@ -25,7 +25,20 @@
 *****/
 register('', class Widget {
     constructor(tagName) {
-        console.log('SHADOW DOM??');
+        this.tagName = `widget-${tagname}`;
+    }
+
+    getInnerHtml() {
+        return this.element.getInnerHtml();
+    }
+
+    getTagName() {
+        return this.tagName;
+    }
+
+    setInnerHtml(html) {
+        this.element.setInnerHtml(html);
+        return this;
     }
 });
 /*

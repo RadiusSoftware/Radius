@@ -188,7 +188,7 @@ register('', class Time extends Date {
     }
 
     isGT(arg) {
-        return this.valueOf() > date.valueOf();
+        return this.valueOf() > arg.valueOf();
     }
 
     isLE(arg) {
@@ -326,9 +326,9 @@ register('', class Time extends Date {
         let thisYearBegins = new mkTime(thisWeekBegins.year(), 0, 1);
   
         let weekBegins = mkTime(
-            this.YearBegins.date.getUTCFullYear(),
-            this.YearBegins.date.getUTCMonth(),
-            this.YearBegins.date.getUTCDate() + 7 - thisYearBegins.dayOfWeek().index,
+            this.YearBegins.getUTCFullYear(),
+            this.YearBegins.getUTCMonth(),
+            this.YearBegins.getUTCDate() + 7 - thisYearBegins.dayOfWeek().index,
         );
 
         for (var week = 0; weekBegins.isLT(thisWeekBegins); week++) {

@@ -82,8 +82,7 @@
 
             processDepot(element, ...fqDepotNames) {
                 for (let fqDepotName of fqDepotNames) {
-                    let fqdn = mkFqn(fqDepotName);
-                    fqdn.setValue(mkDepot());
+                    mkFqn(fqDepotName, mkDepot());
                 }
             }
 
@@ -244,7 +243,7 @@
      * version.  Once all of the javascript files have been loaded, finalize()
      * is called to boot the framework and get things started.
     *****/
-    const sourceFileNames = [
+    const frameworkFiles = [
         'core.js',
         'ctl.js',
         'buffer.js',
@@ -270,39 +269,67 @@
         'mozilla/entanglements.js',
         'mozilla/controller.js',
     ];
-
-    let index = 0;
+    
     const scripts = [];
     const scriptElement = document.currentScript;
     const radiusUrl = scriptElement.src.substring(0, scriptElement.src.indexOf('/mozilla/radius.js'));
 
-    const loadNext = () => {
-        let fileName = sourceFileNames[index++];
-        let htmlElement = document.createElement('script');
-        htmlElement.setAttribute('defer', true);
-        htmlElement.setAttribute('async', false);
-        htmlElement.setAttribute('src', `${radiusUrl}/${fileName}`);
-        scripts.push(htmlElement);
-        document.head.append(htmlElement);
-
-        htmlElement.addEventListener('load', event => {
-            if (index >= sourceFileNames.length) {
-                finalize();
-            }
-            else {
-                loadNext();
-            }
-        });
-    };
-
-    async function finalize() {
+    document.addEventListener('DOMContentLoaded', async event => {
+        await loadFramework();
         await onSingletons();
+        await loadApplication();
+        await onSingletons();
+
+        for (let scriptElement of scripts) {
+            wrapDocNode(scriptElement).remove();
+        }
+
         global.win = mkWin();
         global.doc = mkDoc();
         registerRadius();
         mkRadius(doc.getHtml());
-        typeof bootstrap == 'function' ? bootstrap() : false;
+
+        for (let controller of Controller.controllers) {
+            await controller.init();
+        }
+    });
+
+    async function loadApplication() {
+        if (Array.isArray(window.applicationFiles)) {
+            let rootUrl = document.URL.substring(0, document.URL.lastIndexOf('/'));
+
+            for (let fileName of window.applicationFiles) {
+                await loadScript(`${rootUrl}/${fileName}`);
+            }
+
+            delete window.applicationFiles;
+        }
+    };
+
+    async function loadFramework() {
+        for (let filePath of frameworkFiles) {
+            await loadScript(`${radiusUrl}/${filePath}`);
+        }
     }
 
-    loadNext();
+    async function loadScript(url) {
+        let fulfill;
+
+        let promise = new Promise((ok, fail) => {
+            fulfill = () => ok();
+        });
+
+        let htmlElement = document.createElement('script');
+        htmlElement.setAttribute('defer', false);
+        htmlElement.setAttribute('async', false);
+        htmlElement.setAttribute('src', url);
+
+        htmlElement.addEventListener('load', () => {
+            fulfill();
+        });
+
+        document.head.append(htmlElement);
+        scripts.push(htmlElement);
+        return promise;
+    }
 })();

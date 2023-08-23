@@ -29,13 +29,15 @@
  * its Controller.
 *****/
 register('', class Controller extends Entanglements {
+    static controllers = [];
+
     constructor(element, fqObjectName) {
         super();
         this.element = element;
         this.depots = {};
         this.element.setController(this);
-        this.fqon = mkFqn(fqObjectName);
-        this.fqon.getObject()[this.fqon.getName()] = this;
+        this.fqon = mkFqn(fqObjectName, this);
+        Controller.controllers.push(this);
 
         this.observer = new MutationObserver((records, observer) => {
             this.onDomChange(records, observer);
@@ -50,6 +52,7 @@ register('', class Controller extends Entanglements {
     createDepot(depotName, value) {
         let depot = mkDepot(value);
         this.depots[depotName] = depot;
+        this[depotName] = depot;
         this.fqon.getObject()[depotName] = depot;
         return depot;
     }
@@ -64,6 +67,9 @@ register('', class Controller extends Entanglements {
 
     getElement() {
         return this.element;
+    }
+
+    async init() {
     }
 
     onDomChange(mutationRecords, observer) {
