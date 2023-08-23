@@ -46,7 +46,15 @@
             return arg;
         }
         else if (arg instanceof HTMLElement) {
-            return arg[nodeKey] ? arg[nodeKey] : mkHtmlElement(arg);
+            if (arg.tagName.toLowerCase().startsWith('widget-')) {
+                return arg[nodeKey] ? arg[nodeKey] :  mkWidget(arg);
+            }
+            else {
+                return arg[nodeKey] ? arg[nodeKey] : mkHtmlElement(arg);
+            }
+        }
+        else if (arg instanceof Widget) {
+            return arg;
         }
         else if (arg instanceof HtmlElement) {
             return arg;

@@ -80,10 +80,6 @@ register('', class Controller extends Entanglements {
     }
 
     onChildListChanged(mutation) {
-
-    }
-
-    onInputChanged(docElement, ) {
     }
 
     onMutation(mutationRecords, observer) {
