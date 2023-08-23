@@ -263,11 +263,11 @@
         'mozilla/element.js',
         'mozilla/svg.js',
         'mozilla/math.js',
-        'mozilla/widget.js',
         'mozilla/style.js',
         'mozilla/ctl.js',
         'mozilla/entanglements.js',
         'mozilla/controller.js',
+        'mozilla/widget.js',
     ];
     
     const scripts = [];

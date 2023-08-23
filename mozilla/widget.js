@@ -23,22 +23,24 @@
 
 /*****
 *****/
-register('', class Widget {
+register('', class Widget extends Element {
     constructor(tagName) {
-        this.tagName = `widget-${tagname}`;
+        super(`widget-${tagname}` );
+        this.isInput = false;
+        this.controller = mkWidgetController();
     }
 
-    getInnerHtml() {
-        return this.element.getInnerHtml();
+    isInput() {
+        return this.isInput;
     }
+});
 
-    getTagName() {
-        return this.tagName;
-    }
 
-    setInnerHtml(html) {
-        this.element.setInnerHtml(html);
-        return this;
+/*****
+*****/
+register('', class WidgetController extends Controller {
+    constructor(element) {
+        super(element);
     }
 });
 /*
