@@ -47,7 +47,20 @@
         }
         else if (arg instanceof HTMLElement) {
             if (arg.tagName.toLowerCase().startsWith('widget-')) {
-                return arg[nodeKey] ? arg[nodeKey] :  mkWidget(arg);
+                if (arg[nodeKey]) {
+                    return arg[nodeKey];
+                }
+                else {
+                    let attr = arg.getAttribute('radius-widget');
+                    let args = attr ? attr.split(',').map(text => text.trim()) : [];
+                    let widget = mkWidget(arg, args[0]);
+
+                    if (args.length >= 2) {
+                        mkFqn(args[1], widget.getController());
+                    }
+
+                    return widget;
+                }
             }
             else {
                 return arg[nodeKey] ? arg[nodeKey] : mkHtmlElement(arg);

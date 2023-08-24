@@ -43,7 +43,7 @@
     /*****
     *****/
     register('', class Widget extends HtmlElement {
-        constructor(arg) {
+        constructor(arg, controllerFqcn) {
             if (arg instanceof HTMLElement) {
                 super(arg);
             }
@@ -53,8 +53,15 @@
             else {
                 super('widget-badtagname');
             }
-            
-            this.controller = mkWidgetController(this);
+
+            if (controllerFqcn) {
+                let fqcn = mkFqn(controllerFqcn);
+                this.controller = fqcn.getObject()[`mk${fqcn.getName()}`](this);
+            }
+            else {
+                this.controller = mkWidgetController(this);
+            }
+
             this.setInnerHtml(`<h1>${this.getTagName()}</h1>`);
         }
     });

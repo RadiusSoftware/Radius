@@ -71,12 +71,12 @@
                 element.getController().entangleAttribute(element, attributeName, expr);
             }
 
-            processController(element, fqClassName, fqObjectName, ...depotNames) {
+            processController(element, fqClassName, fqObjectName) {
                 let fqcn = mkFqn(fqClassName);
-                let controller = fqcn.getObject()[`mk${fqcn.getName()}`](element, fqObjectName);
-
-                for (let depotName of depotNames) {
-                    controller.createDepot(depotName)
+                let controller = fqcn.getObject()[`mk${fqcn.getName()}`](element);
+                
+                if (fqObjectName) {
+                    mkFqn(fqObjectName, controller);
                 }
             }
 
@@ -111,8 +111,9 @@
 
             processInput(element, depot, key) {
                 if (element instanceof HtmlElement) {
-                    if (this.inputTags.has(element.getTagName()))
-                    element.getController().entangleInput(element, depot, key);
+                    if (this.inputTags.has(element.getTagName())) {
+                        element.getController().entangleInput(element, depot, key);
+                    }
                 }
             }
 

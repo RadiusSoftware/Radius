@@ -33,12 +33,10 @@
 register('', class Controller extends Entanglements {
     static controllers = [];
 
-    constructor(element, fqObjectName) {
+    constructor(element) {
         super();
         this.element = element;
-        this.depots = {};
         this.element.setController(this);
-        this.fqon = mkFqn(fqObjectName, this);
         Controller.controllers.push(this);
 
         this.observer = new MutationObserver((records, observer) => {
@@ -51,22 +49,6 @@ register('', class Controller extends Entanglements {
             subtree: true,
             attributeOldValue: true,
         })
-    }
-
-    createDepot(depotName, value) {
-        let depot = mkDepot(value);
-        this.depots[depotName] = depot;
-        this[depotName] = depot;
-        this.fqon.getObject()[depotName] = depot;
-        return depot;
-    }
-
-    getDepot(depotName) {
-        return this.depots[depotName];
-    }
-
-    getDepots() {
-        return Object.values(this.depots);
     }
 
     getElement() {
