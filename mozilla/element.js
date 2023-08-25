@@ -51,14 +51,17 @@
                     return arg[nodeKey];
                 }
                 else {
-                    let attr = arg.getAttribute('radius-widget');
-                    let args = attr ? attr.split(',').map(text => text.trim()) : [];
-                    let widget = mkWidget(arg, args[0]);
+                    let widget;
+                    let fqcn = mkFqn(arg.getAttribute('radius-widgetclass'));
 
-                    if (args.length >= 2) {
-                        mkFqn(args[1], widget.getController());
+                    if (fqcn.getNamespaceSegments().length) {
+                        widget = fqcn.getObject()[`${fqcn.getNamespace()}mk${fqcn.getName()}`](arg);
+                    }
+                    else {
+                        widget = fqcn.getObject()[`mk${fqcn.getName()}`](arg);
                     }
 
+                    widget.setFqcn(fqcn);
                     return widget;
                 }
             }

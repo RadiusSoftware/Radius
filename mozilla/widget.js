@@ -23,6 +23,11 @@
 
 (() => {
     /*****
+     * A simplistic function responsible for massaging tag names as the widget
+     * tags are processed.  We just want to enforce that there's only one hypen
+     * in the tagname and that it starts with "widget-".  If it fails in any
+     * way, we'll set a tagname of wdget-badtagname, which should get the 
+     * attention of the developer.
     *****/
     function fixTagName(tagName) {
         let parts = tagName
@@ -41,9 +46,15 @@
 
 
     /*****
+     * A new Widget can be construted and/or made using the maker of the Widget
+     * subclass.  The argument to the subclass can be either an HTML Element or
+     * string with the tagName.  If the argument is a string, we have the chance
+     * to fix the tagName before constructing the HTML Element object.   Once
+     * construction is done, the creator of the object will call setFqcn() to
+     * set both the internal fqcn value and the widget's controller.
     *****/
     register('', class Widget extends HtmlElement {
-        constructor(arg, controllerFqcn) {
+        constructor(arg) {
             if (arg instanceof HTMLElement) {
                 super(arg);
             }
@@ -53,26 +64,17 @@
             else {
                 super('widget-badtagname');
             }
+        }
 
-            if (controllerFqcn) {
-                let fqcn = mkFqn(controllerFqcn);
-                this.controller = fqcn.getObject()[`mk${fqcn.getName()}`](this);
+        setFqcn(fqcn) {
+            this.fqcn = fqcn;
+
+            if (fqcn.getNamespaceSegments().length) {
+                this.controller = fqcn.getObject()[`${fqcn.getNamespace()}mk${fqcn.getName()}Controller`](this);
             }
             else {
-                this.controller = mkWidgetController(this);
+                this.controller = fqcn.getObject()[`mk${fqcn.getName()}Controller`](this);
             }
-
-            this.setInnerHtml(`<h1>${this.getTagName()}</h1>`);
-        }
-    });
-
-
-    /*****
-    *****/
-    register('', class WidgetController extends Controller {
-        constructor(element) {
-            super(element);
-            setTimeout(() => this.element.setInnerHtml('Not another bite!!'), 3000);
         }
     });
 })();
