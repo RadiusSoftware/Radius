@@ -40,7 +40,7 @@
         '../buffer.js',
         '../data.js',
         '../emitter.js',
-        '../active.js',
+        '../depot.js',
         '../json.js',
         '../language.js',
         '../stringSet.js',
@@ -51,11 +51,13 @@
         '../validator.js',
     ];
 
-    const Path = require('path');
+    const { join } = require('path');
 
     for (let sourceFileName of sourceFileNames) {
-        require(Path.join(__dirname, sourceFileNames));
+        require(join(__dirname, sourceFileName));
     }
 
-    Message.send({ name: 'RadiusReady' })
+    Message.on('RadiusLoaded', message => console.log(message));
+
+    Message.send({ name: 'RadiusLoaded' })
 })();

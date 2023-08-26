@@ -269,6 +269,8 @@
         'mozilla/entanglements.js',
         'mozilla/controller.js',
         'mozilla/widget.js',
+        'mozilla/http.js',
+        'mozilla/websocket.js',
     ];
     
     const scripts = [];
