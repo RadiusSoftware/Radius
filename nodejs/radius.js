@@ -1,5 +1,4 @@
 /*****
- * 
  * Copyright (c) 2023 Radius Software
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -49,6 +48,11 @@
         '../textTemplate.js',
         '../textUtils.js',
         '../validator.js',
+        './env.js',
+        './compression.js',
+        './crypto.js',
+        './jose.js',
+        './acme.js',
     ];
 
     const { join } = require('path');
@@ -57,7 +61,7 @@
         require(join(__dirname, sourceFileName));
     }
 
-    Message.on('RadiusLoaded', message => console.log(message));
-
-    Message.send({ name: 'RadiusLoaded' })
+    let aes = await Crypto.generateKey('aes', 256);
+    let { b64, iv } = await aes.encrypt('cbc', 'hello world.  do you know what i am saying?');
+    console.log(await aes.decrypt('cbc', iv, b64));
 })();

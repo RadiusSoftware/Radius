@@ -156,6 +156,10 @@ register('', class Mime {
         return this.type;
     }
 
+    is(mimeCode) {
+        return mimeCode.trim().toLowerCase() == this.code;
+    }
+
     isBinary() {
         return this.type == 'binary';
     }

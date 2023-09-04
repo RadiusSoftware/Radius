@@ -159,17 +159,6 @@
 
 
     /*****
-    *****/
-    global.logError = (ok, reason) => {
-        if (platform == 'mozilla') {
-            console.log(reason);
-        }
-        else if (platform == 'nodejs') {
-        }
-    };
-
-
-    /*****
      * Singletons may have init() methods, and the init() methods may be async.
      * When async, it may be necessary to wait on the singleton's initialization
      * before proceeding with additional code.  The function returns a promise
