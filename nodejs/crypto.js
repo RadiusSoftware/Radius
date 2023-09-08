@@ -24,58 +24,100 @@ const crypto = require('node:crypto');
 
 (() => {
     /*****
+     * Exports a KeyObject value to one of four formats: pem, der, jwk or simple
+     * buffer in the case of a symmetric key.  Private keys can be optionally
+     * protected by encrypting them with a provided cipher and a passphrase.
+     * This function supports public keys, private keys, and secret keys, of
+     * which AES and HMAC are supported at this time.  Hence, this function is
+     * called for both Asymmetric and Symmetric keys.  The exported format is
+     * called a Radius KeyBlob, which is an object contain all that's required
+     * to restore the key to it's former value by the Radius framework using
+     * a single call to Crypto.importKey().
     *****/
     function exportKey(key, format, type, cipher, passphrase) {
         type = typeof type == 'string' ? type : 'pkcs1';
 
         if (typeof cipher == 'string' && typeof passphrase == 'string') {
             if (key.keyObj.type == 'private') {
-                return key.keyObj.export({
-                    type: type,
+                return {
+                    key: key.keyObj.export({
+                        type: type,
+                        format: format,
+                        cipher: cipher,
+                        passphrase: passphrase,
+                    }),
+                    keyType: key.keyObj.type,
                     format: format,
+                    type: type,
                     cipher: cipher,
-                    passphrase: passphrase,
-                });
+                    passpharse: passphrase,
+                };
             }
         }
 
-        return key.keyObj.export({
-            type: type,
-            format: format,
-        });
+        if (format == 'buffer') {
+            return {
+                key: key.keyObj.export({
+                    type: type,
+                    format: format,
+                }),
+                keyType: key.keyObj.type,
+                format: format,
+            };
+        }
+        else {
+            return {
+                key: key.keyObj.export({
+                    type: type,
+                    format: format,
+                }),
+                keyType: key.keyObj.type,
+                format: format,
+                type: type,
+            };
+        }
     }
 
 
     /*****
-    *****/
-    function keyFromDer(der) {
-        console.log(der);
-    }
-
-
-    /*****
-    *****/
-    function keyFromJwk(jwk) {
-        console.log(jwk);
-    }
-
-
-    /*****
-    *****/
-    function keyFromPem(pem) {
-        console.log(pem);
-    }
-
-
-    /*****
+     * An asymmetic key is either a public or private key, and is often generate
+     * by the RSA algorithm.  An asymmetric needs to be paired up with its
+     * counterpart in order to be useful.  Asymmetric keys can be exported in
+     * either PEM, DER, and/or as a JWK object.
     *****/
     class AsymmetricKey {
         constructor(keyObj) {
             this.keyObj = keyObj;
         }
 
+        decrypt(buffer) {
+            if (this.getType() == 'public') {
+                return crypto.publicDecrypt(this.keyObj, buffer);
+            }
+            else {
+                return crypto.privateDecrypt(this.keyObj, buffer);
+            }
+        }
+
+        encrypt(buffer) {
+            if (this.getType() == 'public') {
+                return crypto.publicEncrypt({
+                    key: this.keyObj,
+                }, buffer);
+            }
+            else {
+                return crypto.privateEncrypt({
+                    key: this.keyObj,
+                }, buffer);
+            }
+        }
+
         getType() {
             return this.keyObj.type;
+        }
+
+        sign() {
+            // TODO
         }
 
         toDer(cipher, passphrase) {
@@ -89,10 +131,20 @@ const crypto = require('node:crypto');
         toPem(cipher, passphrase) {
             return exportKey(this, 'pem', cipher, passphrase);
         }
+
+        verify() {
+            // TODO
+        }
     }
 
 
     /*****
+     * A symmetric or secret key is the shared secret used by partners, Bob and
+     * Alice, when securely exchaning data.  The symmetric key provides the
+     * ability to encrypt and decrypt data using the shared key supported with
+     * the methods in this class.  Supported encryption algorithms, e.g., AES,
+     * are employed as expected.  Other algorithms, such as HMAC, are used for
+     * signature and verification purposes.
     *****/
     class SymmetricKey {
         constructor(keyObj, algorithm) {
@@ -100,7 +152,7 @@ const crypto = require('node:crypto');
             this.algorithm = algorithm;
         }
 
-        decrypt(mode, iv, encrypted) {
+        decrypt(mode, vector, buffer) {
             return new Promise(async (ok, fail) => {
                 if (mode in { cbc:0 }) {
                     let chunks = [];
@@ -108,7 +160,7 @@ const crypto = require('node:crypto');
                     let decipher = crypto.createDecipheriv(
                         `${this.algorithm}-${this.keyObj.symmetricKeySize*8}-${mode}`,
                         this.keyObj,
-                        iv,
+                        vector,
                     );
 
                     decipher.on('readable', () => {
@@ -120,10 +172,10 @@ const crypto = require('node:crypto');
                     });
 
                     decipher.on('end', () => {
-                        ok(Buffer.concat(chunks).toString('utf8'));
+                        ok(Buffer.concat(chunks));
                     });
 
-                    decipher.write(encrypted, 'base64');
+                    decipher.write(buffer);
                     decipher.end();
                 }
                 else {
@@ -132,16 +184,16 @@ const crypto = require('node:crypto');
             });
         }
 
-        encrypt(mode, clear) {
+        encrypt(mode, buffer) {
             return new Promise(async (ok, fail) => {
                 if (mode in { cbc:0 }) {
                     let chunks = [];
-                    const iv = await Crypto.generateRandomArray(this.keyObj.symmetricKeySize/2);
+                    const vector = await Crypto.generateRandomArray(this.keyObj.symmetricKeySize/2);
 
                     let cipher = crypto.createCipheriv(
                         `${this.algorithm}-${this.keyObj.symmetricKeySize*8}-${mode}`,
                         this.keyObj,
-                        iv,
+                        vector,
                     );
 
                     cipher.on('data', chunk => {
@@ -150,12 +202,12 @@ const crypto = require('node:crypto');
 
                     cipher.on('end', () => {
                         ok({
-                            b64: Buffer.concat(chunks).toString('base64'),
-                            iv: iv,
+                            value: Buffer.concat(chunks),
+                            vector: vector,
                         });
                     });
 
-                    cipher.write(clear);
+                    cipher.write(buffer);
                     cipher.end();
                 }
                 else {
@@ -168,16 +220,20 @@ const crypto = require('node:crypto');
             return this.keyObj.type;
         }
 
-        toDer(cipher, passphrase) {
-            return exportKey(this, 'der', cipher, passphrase);
+        sign() {
+            // TODO
+        }
+
+        toBuffer(cipher, passphrase) {
+            return exportKey(this, 'buffer', cipher, passphrase);
         }
 
         toJwk(cipher, passphrase) {
             return exportKey(this, 'jwk', cipher, passphrase);
         }
 
-        toPem(cipher, passphrase) {
-            return exportKey(this, 'pem', cipher, passphrase);
+        verify() {
+            // TODO
         }
     }
 
@@ -186,6 +242,7 @@ const crypto = require('node:crypto');
     *****/
     class CertificateSigningRequest {
         constructor() {
+            // TODO
         }
     }
 
@@ -194,6 +251,7 @@ const crypto = require('node:crypto');
     *****/
     class Certificate {
         constructor() {
+            // TODO
         }
     }
 
@@ -202,6 +260,7 @@ const crypto = require('node:crypto');
     *****/
     singleton('', class Crypto {
         async createCsr(opts) {
+            // TODO
             /*
             let csrTemp;
             let derTemp;
@@ -231,12 +290,6 @@ const crypto = require('node:crypto');
             */
         }
 
-        generateKeyAes(bits) {
-            crypto.generateKey(algorithm, { lengths: bits }, (error, keyObject) => {
-                ok(new SymmetricKey(keyObject, algorithm));
-            });
-        }
-
         generateKey(algorithm, bits) {
             return new Promise((ok, fail) => {
                 if (algorithm == 'aes') {
@@ -249,7 +302,7 @@ const crypto = require('node:crypto');
                         });
                     }
                 }
-                else if (algorithm == 'hmace') {
+                else if (algorithm == 'hmac') {
                     if (bits < 8 || bits >= 64) {
                         fail(`Unsupported HMAC bits: ${bits}`)
                     }
@@ -313,65 +366,66 @@ const crypto = require('node:crypto');
         }
 
         async generateSshKeyPair() {
+            // TODO
+        }
+
+        listEm() {
+            for (let em of crypto.getHashes()) {
+                console.log(em);
+            }
         }
         
-        hash(algorithmName, value, encoding) {
-            /*
+        hash(algorithm, buffer) {
             return new Promise((ok, fail) => {
-                const hasher = CRYPTO.createHash(algorithmName);
-                
+                const hasher = crypto.createHash(algorithm);
+
                 hasher.on('readable', () => {
-                    let buffer = hasher.read();
+                    let hashed = hasher.read();
 
-                    if (buffer) {
-                        switch (encoding) {
-                            case 'base64':
-                                ok(buffer.toString('base64'));
-                                break;
-                                
-                            case 'base64url':
-                                ok(
-                                    buffer.toString('base64').split('=')[0]
-                                    .replace(/[+]/g, '-').replace(/[\/]/g, '_')
-                                );
-                                break;
-                                
-                            case 'hex':
-                                ok(buffer.toString('hex'));
-                                break;
-
-                            default:
-                                ok(buffer);
-                                break;
-                        }
+                    if (hashed) {
+                        ok(hashed);
                     }
                 });
 
-                if (value instanceof Buffer || value instanceof Uint8Array) {
-                    hasher.write(value);
-                }
-                else {
-                    hasher.write(mkBuffer(value));
-                }
-
+                hasher.write(buffer);
                 hasher.end();
             });
-            */
         }
 
-        importKey(arg) {
-            if (arg instanceof Buffer) {
-                return keyFromDer(arg);
+        hmac(buffer) {
+            return new Promise((ok, fail) => {
+                // TODO
+            });
+        }
+
+        importKey(keyExport) {
+            if (keyExport.keyType == 'public') {
+                return crypto.createPublicKey({
+                    key: keyExport.key,
+                    format: keyExport.format,
+                    type: keyExport.type,
+                });
             }
-            else if (typeof arg == 'object') {
-                return keyFromJwk(arg);
+            else if (keyExport.keyType == 'private') {
+                return crypto.createPrivateKey({
+                    key: keyExport.key,
+                    format: keyExport.format,
+                    type: keyExport.type,
+                    passphrase: keyExport.passpharse,
+                });
             }
-            else if (typeof arg == 'string') {
-                return keyFromPem(arg);
+            else if (keyExport.keyType == 'secret') {
+                if (keyExport.format == 'jwk') {
+                    return crypto.createSecretKey(keyExport.key.k);
+                }
+                else if (keyExport.format == 'buffer') {
+                    return crypto.createSecretKey(keyExport.key);
+                }
             }
         }
 
         async parseCertificateChain() {
+            // TODO
             /*
             let pemChain = certificateChain.split('\n\n');
             let pemChainTemp = await writeTemp(pemChain[0]);
@@ -394,132 +448,8 @@ const crypto = require('node:crypto');
 
         scrypto(value, salt) {
             return new Promise((ok, fail) => {
+                // TODO
             });
         }
     });
 })();
-/*
-singleton('', class Crypto {
-    
-    decodeBase64Url(base64url, type) {
-        let base64 = base64url.replaceAll('-', '+').replaceAll('_', '/');
-
-        switch (base64.Length % 4)
-        {
-            case 0: break;
-            case 2: base64 += "=="; break;
-            case 3: base64 += "="; break;
-        }
-
-        if (type == 'object') {
-            return fromStdJson(mkBuffer(base64, 'base64').toString());
-        }
-        else if (type == 'base64') {
-            return base64;
-        }
-        else {
-            return mkBuffer(base64, 'base64').toString();
-        }
-    }
-    
-    digestSalted(algorithmName, value) {
-        return new Promise((ok, fail) => {
-            let hash = CRYPTO.createHash(algorithmName);
-            let salt = Crypto.random(0, 1000000000000).toString();
-
-            hash.on('readable', () => {
-                let hashValue = hash.read();
-
-                if (hashValue) {
-                    ok({ hash: hashValue.toString('base64'), salt: salt });
-                }
-            });
-
-            hash.write(value);
-            hash.write(salt);
-            hash.end();
-        });
-    }
-    
-    digestUnsalted(algorithmName, value) {
-        return new Promise((ok, fail) => {
-            let hash = CRYPTO.createHash(algorithmName);
-
-            hash.on('readable', () => {
-                let hashValue = hash.read();
-
-                if (hashValue) {
-                    ok(hashValue.toString('base64'));
-                }
-            });
-
-            hash.write(value);
-            hash.end();
-        });
-    }
-    
-    encodeBase64Url(value) {        
-        if (value instanceof Buffer) {
-            return value.toString('base64')
-                .split('=')[0]
-                .replaceAll('+', '-')
-                .replaceAll('/', '_');
-        }
-        else if (typeof value == 'object') {
-            return mkBuffer(toStdJson(value))
-                .toString('base64')
-                .split('=')[0]
-                .replaceAll('+', '-')
-                .replaceAll('/', '_');
-        }
-        else {
-            return mkBuffer(value)
-                .toString('base64')
-                .split('=')[0]
-                .replaceAll('+', '-')
-                .replaceAll('/', '_');
-        }
-    }
-    
-    sign(alg, pem, value, encoding) {
-        let signer = CRYPTO.createSign(alg);
-        signer.write(value);
-        signer.end();
-        
-        switch (encoding) {
-            case 'base64':
-                return signer.sign(pem, 'base64');
-                
-            case 'base64url':
-                return signer.sign(pem, 'base64').split('=')[0]
-                        .replace(/[+]/g, '-').replace(/[\/]/g, '_');
-                
-            case 'hex':
-                return signer.sign(pem, 'hex');
-
-            default:
-                return signer.sign(pem);
-        }
-    }
-    
-    signHmac(alg, key, content, encoding) {
-        let signer = CRYPTO.createHmac(alg, key);
-        signer.update(content);
-        let hmac = signer.digest();
-
-        switch (encoding) {
-            case 'base64':
-                return hmac.toString('base64');
-                
-            case 'base64url':
-                return hmac.toString('base64').split('=')[0]
-                        .replace(/[+]/g, '-').replace(/[\/]/g, '_');
-                
-            case 'hex':
-                return hmac.toString('hex');
-
-            default:
-                return hmac;
-        }
-    }
-});*/

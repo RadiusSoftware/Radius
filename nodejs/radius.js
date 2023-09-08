@@ -61,7 +61,22 @@
         require(join(__dirname, sourceFileName));
     }
 
-    let aes = await Crypto.generateKey('aes', 256);
-    let { b64, iv } = await aes.encrypt('cbc', 'hello world.  do you know what i am saying?');
-    console.log(await aes.decrypt('cbc', iv, b64));
+    // *******************************************************************
+    // *******************************************************************
+
+    Crypto.listEm();
+    return;
+
+    let keyPair = await Crypto.generateKeyPair('rsa', 4096);
+
+    /*
+    let exported = keyPair.privateKey.toDer();
+    console.log(exported);
+    */
+
+    let secretKey = await Crypto.generateKey('hmac', 36);
+    let exported = secretKey.toBuffer();
+
+    let key = Crypto.importKey(exported);
+    console.log(key);
 })();
