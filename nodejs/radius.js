@@ -63,20 +63,11 @@
 
     // *******************************************************************
     // *******************************************************************
-
-    Crypto.listEm();
-    return;
-
-    let keyPair = await Crypto.generateKeyPair('rsa', 4096);
-
-    /*
-    let exported = keyPair.privateKey.toDer();
-    console.log(exported);
-    */
-
-    let secretKey = await Crypto.generateKey('hmac', 36);
-    let exported = secretKey.toBuffer();
-
-    let key = Crypto.importKey(exported);
-    console.log(key);
+    
+    let key = await crypto.mkAes(256);
+    let key2 = await crypto.mkAes(key);
+    let encrypted = await key2.encrypt('Hello World, what time is it?');
+    console.log(encrypted);
+    let decrypted = await key2.decrypt(encrypted);
+    console.log(decrypted.toString());
 })();

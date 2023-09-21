@@ -23,23 +23,6 @@
 
 singleton('', class Ctl {
     /*****
-     * In some cases, developers may find that they don't know whether a value
-     * is a promise or a regular objevt.  The function handles that by returning
-     * a promise that will be fulfilled wither when (a) the value is NOT a promise
-     * or (b) immediately by returning the original value (promise) itself.
-    *****/
-    onValue(arg) {
-        return new Promise(async (ok, fail) => {
-            if (arg instanceof Promise) {
-                ok(await arg);
-            }
-            else {
-                ok(arg);
-            }
-        });
-    }
-
-    /*****
      * This is a very simplistic function that's nice to have syntactically.  It
      * makes for some very nice code:  await pauseFor(800).  The input interval is
      * specified in milliseconds.
@@ -66,6 +49,23 @@ singleton('', class Ctl {
                     ok();
                 }
             }, interval);
+        });
+    }
+
+    /*****
+     * In some cases, developers may find that they don't know whether a value
+     * is a promise or a regular objevt.  The function handles that by returning
+     * a promise that will be fulfilled wither when (a) the value is NOT a promise
+     * or (b) immediately by returning the original value (promise) itself.
+    *****/
+    valuize(arg) {
+        return new Promise(async (ok, fail) => {
+            if (arg instanceof Promise) {
+                ok(await arg);
+            }
+            else {
+                ok(arg);
+            }
         });
     }
 });

@@ -19,309 +19,617 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-const crypto = require('node:crypto');
+const crypta = require('node:crypto');
 
 
-(() => {
-    /*****
-     * Exports a KeyObject value to one of four formats: pem, der, jwk or simple
-     * buffer in the case of a symmetric key.  Private keys can be optionally
-     * protected by encrypting them with a provided cipher and a passphrase.
-     * This function supports public keys, private keys, and secret keys, of
-     * which AES and HMAC are supported at this time.  Hence, this function is
-     * called for both Asymmetric and Symmetric keys.  The exported format is
-     * called a Radius KeyBlob, which is an object contain all that's required
-     * to restore the key to it's former value by the Radius framework using
-     * a single call to Crypto.importKey().
-    *****/
-    function exportKey(key, format, type, cipher, passphrase) {
-        type = typeof type == 'string' ? type : 'pkcs1';
-
-        if (typeof cipher == 'string' && typeof passphrase == 'string') {
-            if (key.keyObj.type == 'private') {
-                return {
-                    key: key.keyObj.export({
-                        type: type,
-                        format: format,
-                        cipher: cipher,
-                        passphrase: passphrase,
-                    }),
-                    keyType: key.keyObj.type,
-                    format: format,
-                    type: type,
-                    cipher: cipher,
-                    passpharse: passphrase,
-                };
+/*****
+ * Framework implementation of an AES key, which is used for encryption and
+ * decryption.  The key length may be either 128, 192, or 256 bits, the longest
+ * of which is the most secure.  In essence, the AES key is generated to be
+ * represented in base64 format.  Moreover, the encrypt() method returns the
+ * encrypted value as a buffer.  The input to the decrypt() must be either a
+ * buffer or a base64 representation of a buffer.
+*****/
+register('crypto', class Aes {
+    constructor(arg, base64) {
+        return new Promise(async (ok, fail) => {
+            if (typeof arg == 'object' && arg.algorithm == 'aes') {
+                this.algorithm = 'aes';
+                this.bits = arg.bits;
+                this.base64 = arg.base64;
+                ok(this);
             }
-        }
+            else if (typeof base64 == 'string') {
+                this.algorithm = 'aes';
+                this.bits = arg;
+                this.base64 = base64;
+                ok(this);
+            }
+            else {
+                if (arg == 128 || arg == 192 || arg == 256) {
+                    crypta.generateKey('aes', { length: arg }, (error, keyObj) => {
+                        if (error) {
+                            fail(`\nFailed to generate symmetric key.\n${error}`);
+                        }
+                        else {
+                            this.algorithm = 'aes';
+                            this.bits = arg;
 
-        if (format == 'buffer') {
-            return {
-                key: key.keyObj.export({
-                    type: type,
-                    format: format,
-                }),
-                keyType: key.keyObj.type,
-                format: format,
-            };
+                            this.base64 = keyObj.export({
+                                format: 'buffer',
+                            }).toString('base64');
+
+                            ok(this);
+                        }
+                    });
+                }
+                else {
+                    fail(`\Symmetric key paremters failed verification: bits=${arg}.`);
+                }
+            }
+        });
+    }
+
+    decrypt(encrypted, mode) {
+        return new Promise(async (ok, fail) => {
+            let chunks = [];
+            mode = typeof mode == 'undefined' ? 'cbc' : mode;
+
+            let decipher = crypta.createDecipheriv(
+                `aes-${this.bits}-${mode}`,
+                mkBuffer(this.base64, 'base64'),
+                this.iv,
+            );
+
+            decipher.on('readable', () => {
+              let chunk;
+
+              while (null !== (chunk = decipher.read())) {
+                chunks.push(chunk);
+              }
+            });
+
+            decipher.on('end', () => {
+                ok(Buffer.concat(chunks));
+            });
+
+            decipher.write(encrypted instanceof Buffer ? encrypted : mkBuffer(base64, 'base64'));
+            decipher.end();
+        });
+    }
+
+    encrypt(buffer, mode) {
+        return new Promise(async (ok, fail) => {
+            let chunks = [];
+            mode = typeof mode == 'undefined' ? 'cbc' : mode;
+            this.iv = await Crypto.generateRandomArray(16);
+
+            let cipher = crypta.createCipheriv(
+                `aes-${this.bits}-${mode}`,
+                mkBuffer(this.base64, 'base64'),
+                this.iv,
+            );
+
+            cipher.on('data', chunk => {
+                chunks.push(chunk);
+            });
+
+            cipher.on('end', () => {
+                ok(Buffer.concat(chunks));
+            });
+
+            cipher.write(buffer);
+            cipher.end();
+        });
+    }
+
+    getIv() {
+        return this.iv;
+    }
+
+    setIv(iv) {
+        this.iv = iv;
+        return this;
+    }
+});
+
+
+/*****
+ * The global singleton that provides crypto-related utility functions that are
+ * both self serving and also used by classes and functions in the global crypto
+ * namespace.
+*****/
+singleton('', class Crypto {
+    generateKeyPair(algorithm, opts) {
+        return new Promise((ok, fail) => {
+            /*
+            opts = typeof opts == 'object' ? opts : {};
+            opts.modulusLength = opts.bits;
+
+            crypta.generateKeyPair(algorithm, opts, (error, publicKey, privateKey) => {
+                if (error) {
+                    fail(error);
+                }
+                else {
+                    ok({
+                        publicKey: radius.mkAsymmetricKey(publicKey, algorithm),
+                        privateKey: radius.mkAsymmetricKey(privateKey, algorithm),
+                    });
+                }
+            });
+            */
+        });
+    }
+
+    generateRandomArray(count) {
+        return new Promise((ok, fail) => {
+            crypta.randomFill(new Uint8Array(count), (error, array) => {
+                ok(array);
+            });
+        });
+    }
+
+    generateRandomInt(min, max) {
+        return new Promise((ok, fail) => {
+            if (!Number.isSafeInteger(min) || !Number.isSafeInteger(max)) {
+                throw new Error('Parameter not a safe integer.');
+            }
+            else if (min >= max) {
+                throw new Error('Parameter min >= max.');
+            }
+
+            crypta.randomInt(min, max, (error, n) => {
+                if (error) {
+                    fail(error);
+                }
+                else {
+                    ok(n);
+                }
+            });
+        });
+    }
+});
+
+
+// ***************************************************************************
+// ***************************************************************************
+// ***************************************************************************
+// ***************************************************************************
+// ***************************************************************************
+// ***************************************************************************
+// ***************************************************************************
+
+
+/*****
+ * An asymmetic key is either a public or private key, and is often generated
+ * by the RSA algorithm.  An asymmetric key needs to be paired up with its
+ * counterpart in order to be useful.  Asymmetric keys can be exported in
+ * either PEM, DER, and/or as a JWK object.  Additionally, key pairs can be
+ * used for signing and verifying encrypted and unencrypted messages or data
+ * blocks.
+*****/
+register('crypto', class AsymmetricKey {
+    constructor(keyObj, algorithm) {
+        return new Promise(async (ok, fail) => {
+            this.algorithm = algorithm;
+            this.bits = keyObj.asymmetricKeyDetails.modulusLength;
+        });
+    }
+
+    decrypt(buffer) {
+        if (this.keyObj.type == 'public') {
+            return crypto.publicDecrypt(this.keyObj, buffer);
         }
         else {
-            return {
-                key: key.keyObj.export({
-                    type: type,
-                    format: format,
-                }),
-                keyType: key.keyObj.type,
-                format: format,
-                type: type,
-            };
+            return crypto.privateDecrypt(this.keyObj, buffer);
         }
     }
 
+    encrypt(buffer) {
+        if (this.keyObj.type == 'public') {
+            return crypto.publicEncrypt({
+                key: this.keyObj,
+            }, buffer);
+        }
+        else {
+            return crypto.privateEncrypt({
+                key: this.keyObj,
+            }, buffer);
+        }
+    }
+});
 
+
+/*****
+ * TODO
+*****/
+register('crypto', class Certificate {
+    constructor(certificateBundle) {
+        /*
+        let pemChain = certificateChain.split('\n\n');
+        let pemChainTemp = await writeTemp(pemChain[0]);
+
+        let result = await execShell(`openssl x509 -in ${pemChainTemp.path} -enddate -noout`);
+        let expires = mkTime(result.stdout.split('=')[1]);
+        result = await execShell(`openssl x509 -in ${pemChainTemp.path} -subject -noout`);
+        let subject = result.stdout;
+        
+        await pemChainTemp.rm();
+
+        return {
+            expires: expires,
+            subject: subject,
+            created: mkTime(),
+            certificate: pemChain,
+        };
+        */
+    }
+
+    export() {
+    }
+
+    toPem() {
+    }
+});
+
+
+/*****
+ * TODO
+*****/
+register('crypto', class CertificateRequest {
+    constructor(opts) {
+        this.opts = opts;
+    }
+
+    build() {
+        /*
+        let csrTemp;
+        let derTemp;
+        let pkeyTemp;
+
+        try {
+            csrTemp = await writeTemp('');
+            pkeyTemp = await writeTemp(opts.privateKey);
+
+            let subj = `/C=${opts.country}/ST=${opts.state}/L=${opts.locale}/O=${opts.org}/CN=${opts.hostname}`;
+            await execShell(`openssl req -new -key ${pkeyTemp.path} -out ${csrTemp.path} -days ${opts.days} -subj "${subj}"`);
+
+            if (opts.der) {
+                derTemp = await writeTemp('');
+                await execShell(`openssl req -in ${csrTemp.path} -out ${derTemp.path} -outform DER`);
+                return await derTemp.read();
+            }
+            else {
+                return (await csrTemp.read()).toString();
+            }
+        }
+        finally {
+            csrTemp ? await csrTemp.rm() : false;
+            derTemp ? await derTemp.rm() : false;
+            pkeyTemp ? await pkeyTemp.rm() : false;
+        }
+        */            
+    }
+
+    export() {
+    }
+
+    toPem() {
+    }
+});
+
+
+/*****
+ * The implementation of a hashing or message digest function.  The hash
+ * generates a single value based on the algorithm and the values provided
+ * to the digest function.  The final result is returned in base64 format.
+*****/
+register('crypto', class Hash {
+    constructor(algorithm) {
+        this.cryptoClass = 'Hash';
+        this.algorithm = algorithm;
+    }
+
+    digest(...values) {
+        return new Promise((ok, fail) => {
+            const hash = crypto.createHash(this.algorithm);
+
+            hash.on('readable', () => {
+                let hashed = hash.read();
+
+                if (hashed) {
+                    ok(hashed.toString('base64'));
+                }
+            });
+
+            for (let value of values) {
+                if (typeof value != 'undefined') {
+                    if (value instanceof Buffer) {
+                        hash.write(value);
+                    }
+                    else {
+                        hash.write(mkBuffer(value));
+                    }
+                }
+            }
+
+            hash.end();
+        });
+    }
+});
+
+
+/*****
+ * TODO
+*****/
+register('crypto', class Hmac {
+    constructor(algorithm, keyObj) {
+        this.algorithm = algorithm;
+        this.symmetricKey = keyObj;
+    }
+
+    digest() {
+    }
+
+    export() {
+        return {
+            bundleClass: 'Hmac',
+            algorithm: this.algorithm,
+            key: this.symmetricKey.export(),
+        };
+    }
+
+    sign(value) {
+    }
+
+    verify(signed) {
+    }
+});
+
+
+/*****
+ * TODO
+*****/
+register('crypto', class Scrypt {
+    constructor() {
+    }
+
+    export() {
+    }
+});
+
+
+/*****
+ * TODO
+*****/
+register('crypto', class Sign {
+    constructor(algorithm) {
+        this.sign = crypto.createSign(algorithm);
+        this.algorithm = algorithm;
+    }
+
+    export() {
+        return {
+            bundleClass: 'Sign',
+            algorithm: this.algorithm,
+        };
+    }
+
+    sign(value) {
+    }
+
+    update(value) {
+    }
+
+    write(value) {
+    }
+});
+
+
+/*****
+ * TODO
+*****/
+register('crypto', class Verify {
+    constructor(algorithm) {
+        this.sign = crypto.createSign(algorithm);
+        this.algorithm = algorithm;
+    }
+
+    export() {
+        return {
+            bundleClass: 'Sign',
+            algorithm: this.algorithm,
+        };
+    }
+
+    sign(value) {
+    }
+
+    update(value) {
+    }
+
+    write(value) {
+    }
+});
+/*
+(() => {
     /*****
-     * An asymmetic key is either a public or private key, and is often generate
-     * by the RSA algorithm.  An asymmetric needs to be paired up with its
-     * counterpart in order to be useful.  Asymmetric keys can be exported in
-     * either PEM, DER, and/or as a JWK object.
-    *****/
-    class AsymmetricKey {
+     * Several crypto classes employ the features of the CryptoKey base class.
+     * In effect, the crypto key is an information container that usefule for
+     * exporting crypto objects into a crypto bundle, which is how we retain the
+     * data when exporting a crypto object.  Pleaase note that crypto objects
+     * not extending CryptoKey are responsible for their own unique export func
+     * for returning a cryptoBundle.
+    *****
+    register('radius', class CryptoKey {
         constructor(keyObj) {
             this.keyObj = keyObj;
         }
 
-        decrypt(buffer) {
-            if (this.getType() == 'public') {
-                return crypto.publicDecrypt(this.keyObj, buffer);
-            }
-            else {
-                return crypto.privateDecrypt(this.keyObj, buffer);
-            }
-        }
+        export(opts) {
+            opts = typeof opts == 'object' ? opts : {};
 
-        encrypt(buffer) {
-            if (this.getType() == 'public') {
-                return crypto.publicEncrypt({
-                    key: this.keyObj,
-                }, buffer);
-            }
-            else {
-                return crypto.privateEncrypt({
-                    key: this.keyObj,
-                }, buffer);
-            }
-        }
+            let cryptoBundle = {
+                bundleClass: Reflect.getPrototypeOf(this).constructor.name,
+                algorithm: this.algorithm,
+                bits: this.bits,
+                format: opts.format,
+                key: null,
+            };
 
-        getType() {
-            return this.keyObj.type;
-        }
+            if (this.keyObj.type == 'private') {
+                let type;
 
-        sign() {
-            // TODO
-        }
-
-        toDer(cipher, passphrase) {
-            return exportKey(this, 'der', cipher, passphrase);
-        }
-
-        toJwk(cipher, passphrase) {
-            return exportKey(this, 'jwk', cipher, passphrase);
-        }
-
-        toPem(cipher, passphrase) {
-            return exportKey(this, 'pem', cipher, passphrase);
-        }
-
-        verify() {
-            // TODO
-        }
-    }
-
-
-    /*****
-     * A symmetric or secret key is the shared secret used by partners, Bob and
-     * Alice, when securely exchaning data.  The symmetric key provides the
-     * ability to encrypt and decrypt data using the shared key supported with
-     * the methods in this class.  Supported encryption algorithms, e.g., AES,
-     * are employed as expected.  Other algorithms, such as HMAC, are used for
-     * signature and verification purposes.
-    *****/
-    class SymmetricKey {
-        constructor(keyObj, algorithm) {
-            this.keyObj = keyObj;
-            this.algorithm = algorithm;
-        }
-
-        decrypt(mode, vector, buffer) {
-            return new Promise(async (ok, fail) => {
-                if (mode in { cbc:0 }) {
-                    let chunks = [];
-
-                    let decipher = crypto.createDecipheriv(
-                        `${this.algorithm}-${this.keyObj.symmetricKeySize*8}-${mode}`,
-                        this.keyObj,
-                        vector,
-                    );
-
-                    decipher.on('readable', () => {
-                      let chunk;
-
-                      while (null !== (chunk = decipher.read())) {
-                        chunks.push(chunk);
-                      }
-                    });
-
-                    decipher.on('end', () => {
-                        ok(Buffer.concat(chunks));
-                    });
-
-                    decipher.write(buffer);
-                    decipher.end();
+                if (this.algorithm = 'rsa') {
+                    type = 'pkcs1';
+                }
+                else if (this.algorithm == 'ec') {
+                    type = 'sec1';
                 }
                 else {
-                    fail(`Unsupported decipher mode ${mode}`);
+                    type = 'pkcs8';
                 }
-            });
-        }
 
-        encrypt(mode, buffer) {
-            return new Promise(async (ok, fail) => {
-                if (mode in { cbc:0 }) {
-                    let chunks = [];
-                    const vector = await Crypto.generateRandomArray(this.keyObj.symmetricKeySize/2);
+                if (opts.format == 'pem' || typeof opts.format == 'undefined') {
+                    cryptoBundle.format = 'pem';
 
-                    let cipher = crypto.createCipheriv(
-                        `${this.algorithm}-${this.keyObj.symmetricKeySize*8}-${mode}`,
-                        this.keyObj,
-                        vector,
-                    );
-
-                    cipher.on('data', chunk => {
-                        chunks.push(chunk);
+                    cryptoBundle.key = this.keyObj.export({
+                        type: type,
+                        format: 'pem',
+                        cipher: this.cipher,
+                        passphrase: this.passphrase,
+                        encoding: 'base64',
                     });
-
-                    cipher.on('end', () => {
-                        ok({
-                            value: Buffer.concat(chunks),
-                            vector: vector,
-                        });
+                }
+                else if (opts.format == 'der') {
+                    cryptoBundle.key = this.keyObj.export({
+                        type: type,
+                        format: opts.format,
+                        cipher: this.cipher,
+                        passphrase: this.passphrase,
+                    }).toString('base64');
+                }
+                else if (opts.format == 'jwk') {
+                    cryptoBundle.key = this.keyObj.export({
+                        type: type,
+                        format: opts.format,
+                        cipher: this.cipher,
+                        passphrase: this.passphrase,
                     });
+                }
 
-                    cipher.write(buffer);
-                    cipher.end();
+                cryptoBundle.type = type;
+                cryptoBundle.keyType = 'private';
+            }
+            else if (this.keyObj.type == 'public') {
+                let type;
+                
+                if (this.algorithm = 'rsa') {
+                    type = 'pkcs1';
                 }
                 else {
-                    fail(`Unsupported cipher mode ${mode}`);
+                    type = 'spki';
                 }
-            });
+
+                if (opts.format == 'pem' || typeof opts.format == 'undefined') {
+                    cryptoBundle.format = 'pem';
+
+                    cryptoBundle.key = this.keyObj.export({
+                        type: type,
+                        format: 'pem',
+                    });
+                }
+                else if (opts.format == 'der') {
+                    cryptoBundle.key = this.keyObj.export({
+                        type: type,
+                        format: opts.format,
+                    }).toString('base64');
+                }
+                else if (opts.format == 'jwk') {
+                    cryptoBundle.key = this.keyObj.export({
+                        type: type,
+                        format: opts.format,
+                    });
+                }
+
+                cryptoBundle.type = type;
+                cryptoBundle.keyType = 'public';
+            }
+            else if (this.keyObj.type == 'secret') {
+                if (opts.format == 'buffer' || typeof opts.format == 'undefined') {
+                    cryptoBundle.format = 'buffer';
+
+                    cryptoBundle.key = this.keyObj.export({
+                        format: 'buffer',
+                    }).toString('base64');
+                }
+                else if (opts.format == 'jwk') {
+                    cryptoBundle.key = this.keyObj.export({
+                        format: opts.format,
+                    });
+                }
+
+                cryptoBundle.type = '';
+            }
+
+            return cryptoBundle;
         }
 
-        getType() {
-            return this.keyObj.type;
+        getAlgorithm() {
+            return this.algorithm;
         }
 
-        sign() {
-            // TODO
+        getBits() {
+            return this.bits;
         }
-
-        toBuffer(cipher, passphrase) {
-            return exportKey(this, 'buffer', cipher, passphrase);
-        }
-
-        toJwk(cipher, passphrase) {
-            return exportKey(this, 'jwk', cipher, passphrase);
-        }
-
-        verify() {
-            // TODO
-        }
-    }
+    });
+    */
 
 
     /*****
-    *****/
-    class CertificateSigningRequest {
-        constructor() {
-            // TODO
-        }
-    }
-
-
-    /*****
-    *****/
-    class Certificate {
-        constructor() {
-            // TODO
-        }
-    }
-
-
-    /*****
-    *****/
+    *****
     singleton('', class Crypto {
-        async createCsr(opts) {
+        createCertification(certificateBundle) {
             // TODO
-            /*
-            let csrTemp;
-            let derTemp;
-            let pkeyTemp;
-
-            try {
-                csrTemp = await writeTemp('');
-                pkeyTemp = await writeTemp(opts.privateKey);
-
-                let subj = `/C=${opts.country}/ST=${opts.state}/L=${opts.locale}/O=${opts.org}/CN=${opts.hostname}`;
-                await execShell(`openssl req -new -key ${pkeyTemp.path} -out ${csrTemp.path} -days ${opts.days} -subj "${subj}"`);
-
-                if (opts.der) {
-                    derTemp = await writeTemp('');
-                    await execShell(`openssl req -in ${csrTemp.path} -out ${derTemp.path} -outform DER`);
-                    return await derTemp.read();
-                }
-                else {
-                    return (await csrTemp.read()).toString();
-                }
+        }
+        
+        createHash(arg) {
+            if (typeof arg == 'object') {
+                return radius.mkHash(arg.algorithm);
             }
-            finally {
-                csrTemp ? await csrTemp.rm() : false;
-                derTemp ? await derTemp.rm() : false;
-                pkeyTemp ? await pkeyTemp.rm() : false;
+            else {
+                return radius.mkHash(arg);
             }
-            */
         }
 
-        generateKey(algorithm, bits) {
-            return new Promise((ok, fail) => {
-                if (algorithm == 'aes') {
-                    if (bits != 128 && bits != 192 && bits != 256) {
-                        fail(`Unsupported AES bits: ${bits}`);
-                    }
-                    else {
-                        crypto.generateKey('aes', { length: bits }, (error, keyObject) => {
-                            ok(new SymmetricKey(keyObject, algorithm));
-                        });
-                    }
-                }
-                else if (algorithm == 'hmac') {
-                    if (bits < 8 || bits >= 64) {
-                        fail(`Unsupported HMAC bits: ${bits}`)
-                    }
-                    else {
-                        crypto.generateKey('hmac', { length: bits }, (error, keyObject) => {
-                            ok(new SymmetricKey(keyObject, algorithm));
-                        });
-                    }
-                }
-                else {
-                    fail(`Unsupported Algorithm: ${algorithm}`);
-                }
-            });
+        createHmac(hmac) {
+            // TODO
+            return radius.mkHmac(algorithm, symmetricKey);
         }
 
-        generateKeyPair(algorithm, bits, opts) {
+        createSign(algorithm) {
+            // TODO
+            return radius.mkSign(algorithm);
+        }
+
+        createScrypt(algorithm) {
+            // TODO
+        }
+
+        createSshKeyPair(opts) {
+            // TODO
+        }
+
+        async generateHmac(algorithm, bits) {
+            // TODO
+            return await radius.Hmac(algorithm, bits);
+        }
+
+        generateKeyPair(algorithm, opts) {
+            // TODO
             return new Promise((ok, fail) => {
                 opts = typeof opts == 'object' ? opts : {};
-                opts.modulusLength = bits;
+                opts.modulusLength = opts.bits;
 
                 crypto.generateKeyPair(algorithm, opts, (error, publicKey, privateKey) => {
                     if (error) {
@@ -329,8 +637,8 @@ const crypto = require('node:crypto');
                     }
                     else {
                         ok({
-                            publicKey: new AsymmetricKey(publicKey),
-                            privateKey: new AsymmetricKey(privateKey),
+                            publicKey: radius.mkAsymmetricKey(publicKey, algorithm),
+                            privateKey: radius.mkAsymmetricKey(privateKey, algorithm),
                         });
                     }
                 });
@@ -338,6 +646,7 @@ const crypto = require('node:crypto');
         }
 
         generateRandomArray(count) {
+            // TODO
             return new Promise((ok, fail) => {
                 crypto.randomFill(new Uint8Array(count), (error, array) => {
                     ok(array);
@@ -346,6 +655,7 @@ const crypto = require('node:crypto');
         }
 
         generateRandomInt(min, max) {
+            // TODO
             return new Promise((ok, fail) => {
                 if (!Number.isSafeInteger(min) || !Number.isSafeInteger(max)) {
                     throw new Error('Parameter not a safe integer.');
@@ -365,91 +675,120 @@ const crypto = require('node:crypto');
             });
         }
 
-        async generateSshKeyPair() {
-            // TODO
-        }
-
-        listEm() {
-            for (let em of crypto.getHashes()) {
-                console.log(em);
-            }
-        }
-        
-        hash(algorithm, buffer) {
+        generateSymmetricKey(algorithm, bits) {
             return new Promise((ok, fail) => {
-                const hasher = crypto.createHash(algorithm);
+                crypto.generateKey(algorithm, { length: bits }, (error, keyObj) => {
+                    if (error) {
+                        fail(`\nFailed to generate symmetric key.\n${error}`);
+                    }
+                    else {
+                        let base64 = keyObj.export({
+                            format: 'buffer',
+                        }).toString('base64');
 
-                hasher.on('readable', () => {
-                    let hashed = hasher.read();
-
-                    if (hashed) {
-                        ok(hashed);
+                        ok(radius.mkSymmetricKey(algorithm, base64));
                     }
                 });
-
-                hasher.write(buffer);
-                hasher.end();
             });
         }
-
-        hmac(buffer) {
-            return new Promise((ok, fail) => {
-                // TODO
-            });
-        }
-
-        importKey(keyExport) {
-            if (keyExport.keyType == 'public') {
-                return crypto.createPublicKey({
-                    key: keyExport.key,
-                    format: keyExport.format,
-                    type: keyExport.type,
-                });
-            }
-            else if (keyExport.keyType == 'private') {
-                return crypto.createPrivateKey({
-                    key: keyExport.key,
-                    format: keyExport.format,
-                    type: keyExport.type,
-                    passphrase: keyExport.passpharse,
-                });
-            }
-            else if (keyExport.keyType == 'secret') {
-                if (keyExport.format == 'jwk') {
-                    return crypto.createSecretKey(keyExport.key.k);
+        /*
+        import(cryptoBundle) {
+            if (cryptoBundle.bundleClass == 'SymmetricKey') {
+                if (cryptoBundle.format == 'buffer') {
+                    return radius.mkSymmetricKey(
+                        crypto.createSecretKey(cryptoBundle.key, 'hex'),
+                        cryptoBundle.algorithm,
+                    );
                 }
-                else if (keyExport.format == 'buffer') {
-                    return crypto.createSecretKey(keyExport.key);
+                else if (cryptoBundle.format == 'jwk') {
+                    return radius.mkSymmetricKey(
+                        crypto.createSecretKey(cryptoBundle.key.k, 'base64'),
+                        cryptoBundle.algorithm,
+                    );
                 }
             }
-        }
-
-        async parseCertificateChain() {
-            // TODO
-            /*
-            let pemChain = certificateChain.split('\n\n');
-            let pemChainTemp = await writeTemp(pemChain[0]);
-
-            let result = await execShell(`openssl x509 -in ${pemChainTemp.path} -enddate -noout`);
-            let expires = mkTime(result.stdout.split('=')[1]);
-            result = await execShell(`openssl x509 -in ${pemChainTemp.path} -subject -noout`);
-            let subject = result.stdout;
-            
-            await pemChainTemp.rm();
-
-            return {
-                expires: expires,
-                subject: subject,
-                created: mkTime(),
-                certificate: pemChain,
-            };
-            */
-        }
-
-        scrypto(value, salt) {
-            return new Promise((ok, fail) => {
-                // TODO
-            });
+            else if (cryptoBundle.bundleClass == 'AsymmetricKey') {
+                if (cryptoBundle.keyType == 'private') {
+                    if (cryptoBundle.format == 'pem') {
+                        return radius.mkAsymmetricKey(
+                            crypto.createPrivateKey({
+                                key: cryptoBundle.key,
+                                format: cryptoBundle.format,
+                                type: cryptoBundle.type,
+                                passphrase: cryptoBundle.passphrase,
+                            }),
+                            cryptoBundle.algorithm,
+                        );
+                    }
+                    else if (cryptoBundle.format == 'der') {
+                        return radius.mkAsymmetricKey(
+                            crypto.createPrivateKey({
+                                key: cryptoBundle.key,
+                                format: cryptoBundle.format,
+                                type: cryptoBundle.type,
+                                passphrase: cryptoBundle.passphrase,
+                                encoding: 'base64',
+                            }),
+                            cryptoBundle.algorithm,
+                        );
+                    }
+                    else if (cryptoBundle.format == 'jwk') {
+                        return radius.mkAsymmetricKey(
+                            crypto.createPrivateKey({
+                                key: cryptoBundle.key,
+                                format: cryptoBundle.format,
+                                type: cryptoBundle.type,
+                                passphrase: cryptoBundle.passphrase,
+                            }),
+                            cryptoBundle.algorithm,
+                        );
+                    }
+                }
+                else if (cryptoBundle.keyType == 'public') {
+                    if (cryptoBundle.format == 'pem') {
+                        return radius.mkAsymmetricKey(
+                            crypto.createPublicKey({
+                                key: cryptoBundle.key,
+                                format: cryptoBundle.format,
+                                type: cryptoBundle.type,
+                            }),
+                            cryptoBundle.algorithm,
+                        );
+                    }
+                    else if (cryptoBundle.format == 'der') {
+                        return radius.mkAsymmetricKey(
+                            crypto.createPublicKey({
+                                key: cryptoBundle.key,
+                                format: cryptoBundle.format,
+                                type: cryptoBundle.type,
+                                encoding: 'base64',
+                            }),
+                            cryptoBundle.algorithm,
+                        );
+                    }
+                    else if (cryptoBundle.format == 'jwk') {
+                        return radius.mkAsymmetricKey(
+                            crypto.createPublicKey({
+                                key: cryptoBundle.key,
+                                format: cryptoBundle.format,
+                                type: cryptoBundle.type,
+                            }),
+                            cryptoBundle.algorithm,
+                        );
+                    }
+                }
+            }
+            else if (cryptoBundle.bundleClass == 'Hash') {
+                return radius.mkHash(cryptoBundle.algorithm);
+            }
+            else if (cryptoBundle.bundleClass == 'Hmac') {
+                return radius.mkHmac(cryptoBundle.algorithm, cryptoBundle.key);
+            }
+            else if (cryptoBundle.bundleClass == 'Sign') {
+            }
+            else if (cryptoBundle.bundleClass == 'Verify') {
+            }
         }
     });
 })();
+*/
