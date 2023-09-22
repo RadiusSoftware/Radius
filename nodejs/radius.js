@@ -63,11 +63,8 @@
 
     // *******************************************************************
     // *******************************************************************
-    
-    let key = await crypto.mkAes(256);
-    let key2 = await crypto.mkAes(key);
-    let encrypted = await key2.encrypt('Hello World, what time is it?');
-    console.log(encrypted);
-    let decrypted = await key2.decrypt(encrypted);
-    console.log(decrypted.toString());
+
+    let value = 'Hello there carnivores....';
+    console.log(await Crypto.hash('sha512', value));
+    console.log(await Crypto.hash('sha512', value));    
 })();
