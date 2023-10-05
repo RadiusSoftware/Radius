@@ -1,3 +1,6 @@
+# Not Auto Generated
+*.DS_Store
+
 # Logs
 logs
 *.log

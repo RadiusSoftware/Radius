@@ -23,31 +23,38 @@ const crypto = require('node:crypto');
 
 
 /*****
- * The global singleton that provides crypto-related utility functions that are
- * both self serving and also used by classes and functions in the global crypto
- * namespace.
+ * A collection of useful functions related to cryptolographic features within
+ * nodeJS and functions related to dealing with TLS, ACME protocol, and other
+ * security related technologies.  Most developer application code will not
+ * directly apply these features.  However, other internal libraries that
+ * provide simplified APIs do require this library such as the ACME protocol
+ * and the JOSE library, which implements java web objects such as JWTs.
+ * Where possible, nodeJS functions are preferred over using openssl via a
+ * child process, and single functions are implemented to deal with multiple
+ * cyrptographic type such as the sign() and verify() functions, both of
+ * which accept any supported cryptographic KeyObject.
 *****/
 singleton('', class Crypto {
     createAesKey(base64) {
         return crypto.createSecretKey(base64, 'base64');
     }
 
-    createCertificateSigningRequest() {
-        /*
+    async createCertificateSigningRequest(opts) {
         let csrTemp;
         let derTemp;
         let pkeyTemp;
 
         try {
-            csrTemp = await writeTemp('');
-            pkeyTemp = await writeTemp(opts.privateKey);
+            let pem = this.export(opts.privateKey);
+            csrTemp = await ServerUtils.createTempFile();
+            pkeyTemp = await (ServerUtils.createTempFile()).append(pem);
 
             let subj = `/C=${opts.country}/ST=${opts.state}/L=${opts.locale}/O=${opts.org}/CN=${opts.hostname}`;
-            await execShell(`openssl req -new -key ${pkeyTemp.path} -out ${csrTemp.path} -days ${opts.days} -subj "${subj}"`);
+            await ServerUtils.execInShell(`openssl req -new -key ${pkeyTemp.getPath()} -out ${csrTemp.getPath()} -days ${opts.days} -subj "${subj}"`);
 
             if (opts.der) {
-                derTemp = await writeTemp('');
-                await execShell(`openssl req -in ${csrTemp.path} -out ${derTemp.path} -outform DER`);
+                derTemp = await createTempFile();
+                await ServerUtils.execInShell(`openssl req -in ${csrTemp.getPath()} -out ${derTemp.getPath()} -outform DER`);
                 return await derTemp.read();
             }
             else {
@@ -55,11 +62,17 @@ singleton('', class Crypto {
             }
         }
         finally {
-            csrTemp ? await csrTemp.rm() : false;
-            derTemp ? await derTemp.rm() : false;
-            pkeyTemp ? await pkeyTemp.rm() : false;
+            csrTemp ? await csrTemp.delete() : false;
+            derTemp ? await derTemp.delete() : false;
+            pkeyTemp ? await pkeyTemp.delete() : false;
         }
-        */
+    }
+
+    createHmac(algorithm, aesKey) {
+        let hmac = crypto.createHmac(algorithm, aesKey);
+        hmac._algorithm = algorithm;
+        hmac._aesKey = aesKey;
+        return hmac;
     }
 
     createPrivateKey(pem) {
@@ -70,121 +83,110 @@ singleton('', class Crypto {
         return crypto.createPublicKey(pem);
     }
 
-    decryptAes(keyObj, data, iv, mode) {
+    decrypt(keyObj, data, iv, mode) {
         return new Promise(async (ok, fail) => {
-            let chunks = [];
-            mode = typeof mode == 'undefined' ? 'cbc' : mode;
-
-            let decipher = crypto.createDecipheriv(
-                `aes-${keyObj.symmetricKeySize*8}-${mode}`,
-                keyObj,
-                iv,
-            );
-
-            decipher.on('readable', () => {
-              let chunk;
-
-              while (null !== (chunk = decipher.read())) {
-                chunks.push(chunk);
-              }
-            });
-
-            decipher.on('end', () => {
-                ok(Buffer.concat(chunks));
-            });
-
-            decipher.write(data);
-            decipher.end();
-        });
-    }
-
-    decryptPrivate(keyObj, data) {
-        return crypto.privateDecrypt(
-            keyObj,
-            data instanceof Buffer ? data : mkBuffer(data, 'base64'),
-        );
-    }
-
-    decryptPublic(keyObj, data) {
-        return crypto.publicDecrypt(
-            keyObj,
-            data instanceof Buffer ? data : mkBuffer(data, 'base64'),
-        );
-    }
-
-    encryptAes(keyObj, data, mode) {
-        return new Promise(async (ok, fail) => {
-            let chunks = [];
-            mode = typeof mode == 'undefined' ? 'cbc' : mode;
-            let iv = await this.generateRandomArray(16);
-
-            let cipher = crypto.createCipheriv(
-                `aes-${keyObj.symmetricKeySize*8}-${mode}`,
-                keyObj,
-                iv,
-            );
-
-            cipher.on('data', chunk => {
-                chunks.push(chunk);
-            });
-
-            cipher.on('end', () => {
-                ok({
-                    data: Buffer.concat(chunks),
-                    iv: iv,
+            if (keyObj.type == 'public') {
+                ok(crypto.publicDecrypt(
+                    keyObj,
+                    data instanceof Buffer ? data : mkBuffer(data, 'base64'),
+                ));
+            }
+            else if (keyObj.type == 'private') {
+                ok(crypto.privateDecrypt(
+                    keyObj,
+                    data instanceof Buffer ? data : mkBuffer(data, 'base64'),
+                ));
+            }
+            else {
+                let chunks = [];
+                mode = typeof mode == 'undefined' ? 'cbc' : mode;
+    
+                let decipher = crypto.createDecipheriv(
+                    `aes-${keyObj.symmetricKeySize*8}-${mode}`,
+                    keyObj,
+                    iv,
+                );
+    
+                decipher.on('readable', () => {
+                  let chunk;
+    
+                  while (null !== (chunk = decipher.read())) {
+                    chunks.push(chunk);
+                  }
                 });
-            });
-
-            cipher.write(data);
-            cipher.end();
+    
+                decipher.on('end', () => {
+                    ok(Buffer.concat(chunks));
+                });
+    
+                decipher.write(data);
+                decipher.end();
+            }
         });
     }
 
-    encryptPrivate(keyObj, data) {
-        return crypto.privateEncrypt(
-            keyObj,
-            data instanceof Buffer ? data : mkBuffer(data),
-        );
+    encrypt(keyObj, data, mode) {
+        return new Promise(async (ok, fail) => {
+            if (keyObj.type == 'public') {
+                ok(crypto.publicEncrypt(
+                    keyObj,
+                    data instanceof Buffer ? data : mkBuffer(data),
+                ));
+            }
+            else if (keyObj.type == 'private') {
+                ok(crypto.privateEncrypt(
+                    keyObj,
+                    data instanceof Buffer ? data : mkBuffer(data),
+                ));
+            }
+            else {
+                let chunks = [];
+                mode = typeof mode == 'undefined' ? 'cbc' : mode;
+                let iv = await this.generateRandomArray(16);
+    
+                let cipher = crypto.createCipheriv(
+                    `aes-${keyObj.symmetricKeySize*8}-${mode}`,
+                    keyObj,
+                    iv,
+                );
+    
+                cipher.on('data', chunk => {
+                    chunks.push(chunk);
+                });
+    
+                cipher.on('end', () => {
+                    ok({
+                        data: Buffer.concat(chunks),
+                        iv: iv,
+                    });
+                });
+    
+                cipher.write(data);
+                cipher.end();
+            }
+        });
     }
 
-    encryptPublic(keyObj, data) {
-        return crypto.publicEncrypt(
-            keyObj,
-            data instanceof Buffer ? data : mkBuffer(data),
-        );
-    }
-
-    exportAesKey(keyObj) {
-        return keyObj.export({
-            format: 'buffer',
-        }).toString('base64');
-    }
-
-    exportPrivateKey(keyObj, cipher, passphrase) {
-        if (cipher && passphrase) {
+    export(keyObj) {
+        if (keyObj.type == 'public') {
             return keyObj.export({
                 type: 'pkcs1',
                 format: 'pem',
-                cipher: this.cipher,
-                passphrase: this.passphrase,
+                encoding: 'base64',
+            });
+        }
+        else if (keyObj.type == 'private') {
+            return keyObj.export({
+                type: 'pkcs1',
+                format: 'pem',
                 encoding: 'base64',
             });
         }
         else {
             return keyObj.export({
-                type: 'pkcs1',
-                format: 'pem',
-                encoding: 'base64',
-            });
+                format: 'buffer',
+            }).toString('base64');
         }
-    }
-
-    exportPublicKey(keyObj) {
-        return keyObj.export({
-            type: 'pkcs1',
-            format: 'pem',
-            encoding: 'base64',
-        });
     }
 
     generateAesKey(bits) {
@@ -253,7 +255,26 @@ singleton('', class Crypto {
         });
     }
 
-    generateSshKeyPair() {
+    generateRandomUuid() {
+        return crypto.randomUUID();
+    }
+
+    async generateSshKeyPair() {
+        let pem = ServerUtils.createTempFile('pem');
+        let pub = pem.replica('pem.pub');
+
+        await ServerUtils.execInShell(`ssh-keygen -t rsa -b 4096 -N "" -f ${pem.getPath()}`);
+
+        let publicKey = (await pub.read()).toString();
+        let privateKey = (await pem.read()).toString();
+
+        await pub.delete();
+        await pem.delete();
+
+        return {
+            publicKey: publicKey,
+            privateKey: privateKey,
+        };
     }
 
     hash(algorithm, value) {
@@ -273,14 +294,13 @@ singleton('', class Crypto {
         });
     }
 
-    parseAcmeCertificate(certificate) {
-        /*
+    async parseAcmeCertificate(certificateChain) {
         let pemChain = certificateChain.split('\n\n');
-        let pemChainTemp = await writeTemp(pemChain[0]);
+        let pemChainTemp = await ServerUtils.createTempFile().append(pemChain[0]);
 
-        let result = await execShell(`openssl x509 -in ${pemChainTemp.path} -enddate -noout`);
+        let result = await ServerUtils.execInShell(`openssl x509 -in ${pemChainTemp.getPath()} -enddate -noout`);
         let expires = mkTime(result.stdout.split('=')[1]);
-        result = await execShell(`openssl x509 -in ${pemChainTemp.path} -subject -noout`);
+        result = await execShell(`openssl x509 -in ${pemChainTemp.getPath()} -subject -noout`);
         let subject = result.stdout;
         
         await pemChainTemp.rm();
@@ -291,15 +311,41 @@ singleton('', class Crypto {
             created: mkTime(),
             certificate: pemChain,
         };
-        */
     }
 
-    scrypt() {
+    scrypt(password, salt, keylen) {
+        return new Promise((ok, fail) => {
+            crypto.scrypt(password, salt, keylen, (error, derived) => {
+                ok(derived);
+            })
+        });
     }
 
-    urlDecode() {
+    sign(keyObj, data) {
+        return new Promise((ok, fail) => {
+            if (keyObj instanceof crypto.KeyObject) {
+                crypto.sign(null, data, keyObj, (error, signature) => {
+                    ok(signature);
+                });
+            }
+            else {
+                let hmac = crypto.createHmac(keyObj._algorithm, keyObj._aesKey);
+                ok(hmac.update(data).digest());
+            }
+        });
     }
 
-    urlEncode() {
+    verify(keyObj, data, signature) {
+        return new Promise((ok, fail) => {
+            if (keyObj instanceof crypto.KeyObject) {
+                crypto.verify(null, data, keyObj, signature, (error, result) => {
+                    ok(result);
+                });
+            }
+            else {
+                let hmac = crypto.createHmac(keyObj._algorithm, keyObj._aesKey);
+                ok(hmac.update(data).digest().equals(signature));
+            }
+        })
     }
 });

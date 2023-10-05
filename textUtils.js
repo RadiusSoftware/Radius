@@ -289,4 +289,20 @@ singleton('', class TextUtils {
             }
         }).join('');
     }
+
+    urlDecode() {
+        // TODO
+    }
+
+    urlDecodeBase64() {
+        // TODO
+    }
+
+    urlEncode() {
+        // TODO
+    }
+
+    urlEncodeBase64() {
+        // TODO
+    }
 });

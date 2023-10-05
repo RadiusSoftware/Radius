@@ -49,6 +49,7 @@
         '../textUtils.js',
         '../validator.js',
         './env.js',
+        './serverUtils.js',
         './compression.js',
         './crypto.js',
         './jose.js',
@@ -64,7 +65,24 @@
     // *******************************************************************
     // *******************************************************************
 
-    let value = 'Hello there carnivores....';
-    console.log(await Crypto.hash('sha512', value));
-    console.log(await Crypto.hash('sha512', value));    
+    /*
+    let { publicKey, privateKey } = await Crypto.generateKeyPair('rsa', 4096);
+
+    let csr = await Crypto.createCertificateSigningRequest({
+        privateKey: privateKey,
+        country: 'US',
+        state: 'Nevada',
+        locale: 'Reno',
+        org: 'Radius Software',
+        hostname: 'www.radius.com',
+        der: false,
+    });
+
+    console.log(csr);
+
+    let { publicKey, privateKey } = await Crypto.generateSshKeyPair();
+    console.log(publicKey);
+    console.log(privateKey);
+    */
+
 })();
