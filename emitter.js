@@ -302,7 +302,7 @@ register('', class Trap {
 singleton('', class Message extends Emitter {
     reply(message, value) {
         if ('#Trap' in message) {
-            Trap.handleReply(message['#Trap'], reply);
+            Trap.handleReply(message['#Trap'], value);
         }
     }
 });

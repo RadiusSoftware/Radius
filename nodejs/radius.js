@@ -34,7 +34,6 @@
 *****/
 (async () => {
     const sourceFileNames = [
-        '../core.js',
         '../ctl.js',
         '../buffer.js',
         '../data.js',
@@ -53,36 +52,64 @@
         './compression.js',
         './crypto.js',
         './jose.js',
+        './ipc.js',
+        './server.js',
         './acme.js',
+        './servers/httpServer.js',
     ];
 
     const { join } = require('path');
+    const Cluster = require('cluster');
+    const Process = require('process');
+    require(join(__dirname, '../core.js'));
+    
+    register('', function registerPrimary(ns, arg) {
+        if (Cluster.isPrimary) {
+            register(ns, arg);
+        }
+    });
+
+    register('', function registerWorker(ns, arg) {
+        if (Cluster.isWorker) {
+            register(ns, arg);
+        }
+    });
+    
+    register('', async function singletonPrimary(ns, arg, ...args) {
+        if (Cluster.isPrimary) {
+            singleton(ns, arg, ...args);
+        }
+    });
+    
+    register('', async function singletonWorker(ns, arg, ...args) {
+        if (Cluster.isWorker) {
+            singleton(ns, arg, ...args);
+        }
+    });
+
+    register('', function isPrimary() {
+        return Cluster.isPrimary;
+    });
+
+    register('', function isWorker() {
+        return Cluster.isWorker;
+    });
 
     for (let sourceFileName of sourceFileNames) {
         require(join(__dirname, sourceFileName));
     }
 
-    // *******************************************************************
-    // *******************************************************************
+    if (Cluster.isPrimary) {
+        if (Process.argv.length >= 3) {
+            require(Process.argv[2]);
+        }
+    }
+    else if ('#ServerOpts' in Process.env) {
+        let opts = fromJson(Process.env['#ServerOpts']);
 
-    /*
-    let { publicKey, privateKey } = await Crypto.generateKeyPair('rsa', 4096);
-
-    let csr = await Crypto.createCertificateSigningRequest({
-        privateKey: privateKey,
-        country: 'US',
-        state: 'Nevada',
-        locale: 'Reno',
-        org: 'Radius Software',
-        hostname: 'www.radius.com',
-        der: false,
-    });
-
-    console.log(csr);
-
-    let { publicKey, privateKey } = await Crypto.generateSshKeyPair();
-    console.log(publicKey);
-    console.log(privateKey);
-    */
-
+        if (opts.serverClass) {
+            let server = eval(`mk${opts.serverClass}(opts)`);
+            await server.start();
+        }
+    }
 })();

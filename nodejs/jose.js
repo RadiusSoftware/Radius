@@ -23,39 +23,5 @@
 
 /*****
 *****/
-register('', class Jwa {
-    constructor() {
-    }
-});
-
-
-/*****
-*****/
-register('', class Jwe {
-    constructor() {
-    }
-});
-
-
-/*****
-*****/
-register('', class Jwk {
-    constructor() {
-    }
-});
-
-
-/*****
-*****/
-register('', class Jws {
-    constructor() {
-    }
-});
-
-
-/*****
-*****/
-register('', class Jwt {
-    constructor() {
-    }
+singleton('', class Jose {
 });
