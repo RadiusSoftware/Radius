@@ -25,96 +25,83 @@ const Process = require('process');
 
 /*****
 *****/
-/*
-if (Cluster.isPrimary) {
-    global.ServerWorker = false;
-*/
+registerPrimary('', class Server {
+    constructor(opts) {
+        this.workers = {};
+        this.pid = Process.pid;
+        this.primaryPid = Cluster.isPrimary;
+        this.serverClass = Reflect.getPrototypeOf(this).constructor.name;
+        Object.assign(this, opts);
+    }
 
-    registerPrimary('', class Server {
-        constructor(opts) {
-            this.workers = {};
-            this.pid = Process.pid;
-            this.primaryPid = Cluster.isPrimary;
-            this.serverClass = Reflect.getPrototypeOf(this).constructor.name;
-            Object.assign(this, opts);
+    getPid() {
+        return this.pid;
+    }
+
+    getPrimary() {
+        return this.pid;
+    }
+
+    getServerClass() {
+        return this.serverClass;
+    }
+
+    async restart() {
+        return this;
+    }
+
+    async start() {
+        let count = Object.keys(this.workers).length;
+
+        for (let i = 0; i < this.workerCount; i++) {
+            Cluster.fork({
+                '#ServerOpts': toJson({
+                    primaryPid: this.pid,
+                    serverClass: this.serverClass,
+                })
+            });
         }
 
-        getPid() {
-            return this.pid;
-        }
+        return this;
+    }
 
-        getPrimary() {
-            return this.pid;
-        }
-
-        getServerClass() {
-            return this.serverClass;
-        }
-
-        async restart() {
-            return this;
-        }
-
-        async start() {
-            let count = Object.keys(this.workers).length;
-
-            for (let i = 0; i < this.workerCount; i++) {
-                Cluster.fork({
-                    '#ServerOpts': toJson({
-                        primaryPid: this.pid,
-                        serverClass: this.serverClass,
-                    })
-                });
-            }
-
-            return this;
-        }
-
-        async stop() {
-            return this;
-        }
-    });
-//}
+    async stop() {
+        return this;
+    }
+});
 
 
 /*****
 *****/
-//if (Cluster.isWorker) {
-//    global.ServerDaemon = false;
+registerWorker('', class Server {
+    constructor(opts) {
+        this.pid = Process.pid;
+        this.primaryPid = Cluster.isPrimary;
+        this.serverClass = Reflect.getPrototypeOf(this).constructor.name;
+        Object.assign(this, opts);
+    }
 
-    registerWorker('', class Server {
-        constructor(opts) {
-            this.pid = Process.pid;
-            this.primaryPid = Cluster.isPrimary;
-            this.serverClass = Reflect.getPrototypeOf(this).constructor.name;
-            Object.assign(this, opts);
+    getPid() {
+        return this.pid;
+    }
 
-            Ipc.on('#Server', message => {
-            });
-        }
+    getPrimary() {
+        return this.pid;
+    }
 
-        getPid() {
-            return this.pid;
-        }
+    getServerClass() {
+        return this.serverClass;
+    }
 
-        getPrimary() {
-            return this.pid;
-        }
+    async restart() {
+        return this;
+    }
 
-        getServerClass() {
-            return this.serverClass;
-        }
+    async start() {
+        return this;
+    }
 
-        async restart() {
-            return this;
-        }
-
-        async start() {
-            return this;
-        }
-
-        async stop() {
-            return this;
-        }
-    });
-//}
+    async stop() {
+        return this;
+    }
+});

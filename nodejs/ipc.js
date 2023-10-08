@@ -24,104 +24,68 @@ const Process = require('process');
 
 
 /*****
+ * This is the primary side of the IPC messaging pipe.  There's a singleton
+ * Ipc object extending Emitter and there's listener that's there to handle
+ * incoming messages.  The singleton can send or query a single worker or all
+ * workers simultaneously.  The message handler does the bookeeping required
+ * for incoming queries, replies, and/or simple messages being sent to the
+ * primary process.
 *****/
-//if (Cluster.isPrimary) {
-    singletonPrimary('', class Ipc extends Emitter {
-        /*
-        async queryWorker(worker, message) {
-            if (typeof worker == 'number') {
-                worker = CLUSTER.workers[worker];
-            }
-            
-            let trap = mkTrap();
-            Trap.setExpected(trap.id, 1);
+singletonPrimary('', class Ipc extends Emitter {
+    async queryWorker(worker, message) {
+        if (typeof worker == 'number') {
+            worker = Cluster.workers[worker];
+        }
+        
+        let trap = mkTrap();
+        trap.setCount(1);
+        message['#Worker'] = worker.id;
+        message['#Trap'] = trap.id;
+        message['#IpcQuery'] = true;
+        worker.send(toJson(message));
+        return trap.promise;
+    }
+
+    async queryWorkers(message) {
+        let trap = mkTrap();
+        trap.setCount(Object.entries(Cluster.workers).length);
+        
+        for (let workerId in Cluster.workers) {
+            let worker = Cluster.workers[workerId];
             message['#Worker'] = worker.id;
             message['#Trap'] = trap.id;
             message['#IpcQuery'] = true;
             worker.send(toJson(message));
-            return trap.promise;
+        }
+        
+        return trap.promise;
+    }
+
+    sendWorker(worker, message) {
+        if (typeof worker == 'number') {
+            worker = Cluster.workers[worker];
         }
 
-        async queryWorkers(message) {
-            let trap = mkTrap();
-            Trap.setExpected(trap.id, Object.entries(CLUSTER.workers).length);
-            
-            for (let workerId in CLUSTER.workers) {
-                let worker = CLUSTER.workers[workerId];
-                message['#Worker'] = worker.id;
-                message['#Trap'] = trap.id;
-                message['#IpcQuery'] = true;
-                worker.send(toJson(message));
-            }
-            
-            return trap.promise;
-        }
+        worker.send(toJson(message));
+    }
 
-        sendWorker(worker, message) {
-            if (typeof worker == 'number') {
-                worker = CLUSTER.workers[worker];
-            }
-
-            let socket = message['#Socket'];
-            delete message['#Socket'];
-            worker.send(toJson(message), socket);
+    sendWorkers(message) {
+        for (const id in Cluster.workers) {
+            let worker = Cluster.workers[id];
+            worker.send(toJson(message));
         }
+    }
+});
 
-        sendWorkers(message) {
-            for (const id in CLUSTER.workers) {
-                let worker = CLUSTER.workers[id];
-                worker.send(toJson(message));
-            }
-        }
-        */
-        send(workerId, message) {
-            if (typeof workerId == 'number') {
-                let worker = Cluster.workers[workerId];
-                worker.send(toJson(message));
-            }
-            else if (typeof workerId == 'object') {
-                message = workerId;
-                /*
-                for (const id in CLUSTER.workers) {
-                    let worker = CLUSTER.workers[id];
-                    worker.send(toJson(message));
-                }
-                */
-            }
-        }
-    });
-//}
-//else {
-    singletonWorker('', class Ipc extends Emitter {
-        async query(message) {
-            let trap = mkTrap();
-            trap.setCount(1);
-            message['#Worker'] = Cluster.worker.id;
-            message['#Trap'] = trap.id;
-            message['#IpcQuery'] = true;
-            Process.send(toJson(message));
-            return trap.promise;
-        }
-
-        send(message) {
-            message['#Worker'] = Cluster.worker.id;
-            return Process.send(toJson(message));
-        }
-    });
-//}
-
-
-/*****
-*****/
-if (Cluster.isPrimary) {
+if (isPrimary()) {
     Cluster.on('message', async (worker, json) => {
         let message = fromJson(json);
         
         if ('#IpcReply' in message) {
-            /*
+            let trapId = message['#Trap'];
+            delete message['#Trap'];
             delete message['#IpcReply'];
-            Trap.pushReply(message['#Trap'], message.reply);
-            */
+            Trap.handleReply(trapId, message.reply);
         }
         else if ('#IpcQuery' in message) {
             let trapId = message['#Trap'];
@@ -129,32 +93,57 @@ if (Cluster.isPrimary) {
             message['#Trap'] = trapId;
             message['#IpcReply'] = true;
             delete message['#IpcQuery'];
-            Ipc.send(message['#Worker'], message);
+            Ipc.sendWorker(message['#Worker'], message);
         }
         else {
             Ipc.send(message);
         }
     });
 }
-else {
+
+
+/*****
+ * This is the worker side of the IPC messaging pipe.  There's a singleton
+ * Ipc object extending Emitter and there's listener that's there to handle
+ * incoming messages.  The singleton can send or query the primary process.
+ * The message handler does the bookeeping required for incoming queries,
+ * replies, and/or simple messages being sent to a worker process.
+*****/
+singletonWorker('', class Ipc extends Emitter {
+    async queryPrimary(message) {
+        let trap = mkTrap();
+        trap.setCount(1);
+        message['#Worker'] = Cluster.worker.id;
+        message['#Trap'] = trap.id;
+        message['#IpcQuery'] = true;
+        Process.send(toJson(message));
+        return trap.promise;
+    }
+
+    sendPrimary(message) {
+        message['#Worker'] = Cluster.worker.id;
+        return Process.send(toJson(message));
+    }
+});
+
+if (isWorker()) {
     Cluster.worker.on('message', async json => {
         let message = fromJson(json);
-        //console.log('\n************');
-        //console.log(message);
-        //console.log(Cluster.worker.id);
 
         if ('#IpcReply' in message) {
-            delete message['#Worker'];
+            let trapId = message['#Trap'];
+            delete message['#Trap'];
             delete message['#IpcReply'];
-            Trap.handleReply(message['#Trap'], message.reply);
+            delete message['#Worker'];
+            Trap.handleReply(trapId, message.reply);
         }
         else if ('#IpcQuery' in message) {
-            /*
+            let trapId = message['#Trap'];
             message.reply = await Ipc.query(message);
+            message['#Trap'] = trapId;
             message['#IpcReply'] = true;
             delete message['#IpcQuery'];
             Ipc.sendPrimary(message);
-            */
         }
         else {
             Ipc.send(message);

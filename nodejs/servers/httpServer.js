@@ -21,69 +21,55 @@
 *****/
 
 
-//if (ServerDaemon) {
-    /*****
-    *****/
-    registerPrimary('', class HttpServer extends Server {
-        constructor(opts) {
-            super(opts);
+/*****
+*****/
+registerPrimary('', class HttpServer extends Server {
+    constructor(opts) {
+        super(opts);
+    }
 
-            Ipc.on('BlaBla', message => {
-                Message.reply(message, `\n*****\nGlad to hear worker ${message.me}`);
-            });
-        }
+    async clearItem() {
+    }
 
-        async clearItem() {
-        }
+    async getItem() {
+    }
 
-        async getItem() {
-        }
-
-        async setItem() {
-        }
-    });
+    async setItem() {
+    }
+});
 
 
-    /*****
-    *****/
-    registerPrimary('', class HttpItem {
-        constructor() {
-        }
-    });
-//}
+/*****
+*****/
+registerPrimary('', class HttpItem {
+    constructor() {
+    }
+});
 
 
-//if (ServerWorker) {
-    /*****
-    *****/
-    registerWorker('', class HttpServer extends Server {
-        constructor(opts) {
-            super(opts);
-        }
+/*****
+*****/
+registerWorker('', class HttpServer extends Server {
+    constructor(opts) {
+        super(opts);
+    }
 
-        async start() {
-            let reply = await Ipc.query({
-                name: 'BlaBla',
-                me: this.getPid(),
-            });
-
-            console.log(reply);
-        }
-    });
+    async start() {
+    }
+});
 
 
-    /*****
-    *****/
-    registerWorker('', class HttpRequest {
-        constructor() {
-        }
-    });
+/*****
+*****/
+registerWorker('', class HttpRequest {
+    constructor() {
+    }
+});
 
 
-    /*****
-    *****/
-    registerWorker('', class HttpResponse {
-        constructor() {
-        }
-    });
-//}
+/*****
+*****/
+registerWorker('', class HttpResponse {
+    constructor() {
+    }
+});

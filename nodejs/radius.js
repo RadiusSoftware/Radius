@@ -34,6 +34,7 @@
 *****/
 (async () => {
     const sourceFileNames = [
+        '../core.js',
         '../ctl.js',
         '../buffer.js',
         '../data.js',
@@ -47,6 +48,7 @@
         '../textTemplate.js',
         '../textUtils.js',
         '../validator.js',
+        './core.js',
         './env.js',
         './serverUtils.js',
         './compression.js',
@@ -59,47 +61,14 @@
     ];
 
     const { join } = require('path');
-    const Cluster = require('cluster');
     const Process = require('process');
     require(join(__dirname, '../core.js'));
-    
-    register('', function registerPrimary(ns, arg) {
-        if (Cluster.isPrimary) {
-            register(ns, arg);
-        }
-    });
-
-    register('', function registerWorker(ns, arg) {
-        if (Cluster.isWorker) {
-            register(ns, arg);
-        }
-    });
-    
-    register('', async function singletonPrimary(ns, arg, ...args) {
-        if (Cluster.isPrimary) {
-            singleton(ns, arg, ...args);
-        }
-    });
-    
-    register('', async function singletonWorker(ns, arg, ...args) {
-        if (Cluster.isWorker) {
-            singleton(ns, arg, ...args);
-        }
-    });
-
-    register('', function isPrimary() {
-        return Cluster.isPrimary;
-    });
-
-    register('', function isWorker() {
-        return Cluster.isWorker;
-    });
 
     for (let sourceFileName of sourceFileNames) {
         require(join(__dirname, sourceFileName));
     }
 
-    if (Cluster.isPrimary) {
+    if (isPrimary()) {
         if (Process.argv.length >= 3) {
             require(Process.argv[2]);
         }
