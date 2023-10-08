@@ -26,6 +26,12 @@
 registerPrimary('', class HttpServer extends Server {
     constructor(opts) {
         super(opts);
+
+        this.on('Hello', message => console.log(message));
+
+        setTimeout(() => {
+            this.sendWorker(1, { name: '#Stop' });
+        }, 1000);
     }
 
     async clearItem() {
@@ -52,9 +58,15 @@ registerPrimary('', class HttpItem {
 registerWorker('', class HttpServer extends Server {
     constructor(opts) {
         super(opts);
+        console.log(`***** HttpServer pid=${this.getPid()}`);
+        this.send({ name: 'Hello' })
     }
 
     async start() {
+    }
+
+    async stop() {
+        require('process').exit(1);
     }
 });
 

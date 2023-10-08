@@ -149,7 +149,7 @@ register('', class Emitter {
 
     query(message) {
         if (!this.silent) {
-            if (!this.filter(message, 'query')) {
+            if (!this.filter(message)) {
                 let trap = mkTrap();
                 message['#Trap'] = trap.id;
 
@@ -193,7 +193,7 @@ register('', class Emitter {
 
     send(message) {
         if (!this.silent) {
-            if (!this.filter(message, 'send')) {
+            if (!this.filter(message)) {
                 if (message.name in this.handlers) {
                     let handler = this.handlers[message.name];
                     let thunks = handler.thunks;

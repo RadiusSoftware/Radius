@@ -159,6 +159,18 @@
 
 
     /*****
+    *****/
+    global.logit = async info => {
+        if (platform == 'mozilla') {
+            console.log(info);
+        }
+        else if (platform == 'nodejs') {
+            console.log(info);
+        }
+    };
+
+
+    /*****
      * Singletons may have init() methods, and the init() methods may be async.
      * When async, it may be necessary to wait on the singleton's initialization
      * before proceeding with additional code.  The function returns a promise

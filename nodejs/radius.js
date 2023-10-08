@@ -77,8 +77,17 @@
         let opts = fromJson(Process.env['#ServerOpts']);
 
         if (opts.serverClass) {
-            let server = eval(`mk${opts.serverClass}(opts)`);
-            await server.start();
+            try {
+                let server = eval(`mk${opts.serverClass}(opts)`);
+                await server.start();
+            }
+            catch (e) {
+                await logit({
+                    file: __filename,
+                    action: 'Starting worker process.',
+                    error: e,
+                });
+            }
         }
     }
 })();
