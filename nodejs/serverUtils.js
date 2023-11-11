@@ -23,6 +23,7 @@ const ChildProc = require('child_process');
 const FileSys = require('fs');
 const Files = require('fs').promises;
 const Path = require('path');
+const Process = require('process');
 
 
 (() => {
@@ -118,5 +119,12 @@ const Path = require('path');
         async fileExists(path) {
             return FileSys.existsSync(path);
         }
+    });
+
+    /*****
+     * Quick call to fetch the nodeJS proecess object.
+    *****/
+    register('', function getProcess() {
+        return Process;
     });
 })();

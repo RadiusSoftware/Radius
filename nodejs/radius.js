@@ -57,6 +57,9 @@
         './ipc.js',
         './server.js',
         './acme.js',
+        './clients/tcpClient.js',
+        './clients/httpClient.js',
+        './servers/tcpServer.js',
         './servers/httpServer.js',
     ];
 

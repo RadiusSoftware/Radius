@@ -79,24 +79,26 @@ singletonPrimary('', class Ipc extends Emitter {
 
 if (isPrimary()) {
     Cluster.on('message', async (worker, json) => {
-        let message = fromJson(json);
-        
-        if ('#IpcReply' in message) {
-            let trapId = message['#Trap'];
-            delete message['#Trap'];
-            delete message['#IpcReply'];
-            Trap.handleReply(trapId, message.reply);
-        }
-        else if ('#IpcQuery' in message) {
-            let trapId = message['#Trap'];
-            message.reply = await Ipc.query(message);
-            message['#Trap'] = trapId;
-            message['#IpcReply'] = true;
-            delete message['#IpcQuery'];
-            Ipc.sendWorker(message['#Worker'], message);
-        }
-        else {
-            Ipc.send(message);
+        if (typeof json == 'string' && !json.startsWith('#')) {
+            let message = fromJson(json);
+            
+            if ('#IpcReply' in message) {
+                let trapId = message['#Trap'];
+                delete message['#Trap'];
+                delete message['#IpcReply'];
+                Trap.handleReply(trapId, message.reply);
+            }
+            else if ('#IpcQuery' in message) {
+                let trapId = message['#Trap'];
+                message.reply = await Ipc.query(message);
+                message['#Trap'] = trapId;
+                message['#IpcReply'] = true;
+                delete message['#IpcQuery'];
+                Ipc.sendWorker(message['#Worker'], message);
+            }
+            else {
+                Ipc.send(message);
+            }
         }
     });
 }
@@ -128,25 +130,27 @@ singletonWorker('', class Ipc extends Emitter {
 
 if (isWorker()) {
     Cluster.worker.on('message', async json => {
-        let message = fromJson(json);
+        if (typeof json == 'string' && json != 'socket') {
+            let message = fromJson(json);
 
-        if ('#IpcReply' in message) {
-            let trapId = message['#Trap'];
-            delete message['#Trap'];
-            delete message['#IpcReply'];
-            delete message['#Worker'];
-            Trap.handleReply(trapId, message.reply);
-        }
-        else if ('#IpcQuery' in message) {
-            let trapId = message['#Trap'];
-            message.reply = await Ipc.query(message);
-            message['#Trap'] = trapId;
-            message['#IpcReply'] = true;
-            delete message['#IpcQuery'];
-            Ipc.sendPrimary(message);
-        }
-        else {
-            Ipc.send(message);
+            if ('#IpcReply' in message) {
+                let trapId = message['#Trap'];
+                delete message['#Trap'];
+                delete message['#IpcReply'];
+                delete message['#Worker'];
+                Trap.handleReply(trapId, message.reply);
+            }
+            else if ('#IpcQuery' in message) {
+                let trapId = message['#Trap'];
+                message.reply = await Ipc.query(message);
+                message['#Trap'] = trapId;
+                message['#IpcReply'] = true;
+                delete message['#IpcQuery'];
+                Ipc.sendPrimary(message);
+            }
+            else {
+                Ipc.send(message);
+            }
         }
     });
 }

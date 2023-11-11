@@ -20,6 +20,7 @@
  * THE SOFTWARE.
 *****/
 const Cluster = require('cluster');
+const Net = require('net');
 const Process = require('process');
 
 
@@ -37,21 +38,23 @@ const Process = require('process');
  * primary process.
 *****/
 registerPrimary('', class Server {
-    static instances = {};
+    static servers = (() => {
+        Cluster.on('disconnect', (...args) => Server.handleClusterEvent('disconnect', ...args));
+        Cluster.on('exit', (...args) => Server.handleClusterEvent('exit', ...args));
+        Cluster.on('fork', (...args) => Server.handleClusterEvent('fork', ...args));
+        Cluster.on('listening', (...args) => Server.handleClusterEvent('listening', ...args));
+        Cluster.on('online', (...args) => Server.handleClusterEvent('online', ...args));
+        return new Object();
+    })();
 
     constructor(opts) {
+        this.workers = {};
         this.started = false;
         this.pid = Process.pid;
         this.serverClass = Reflect.getPrototypeOf(this).constructor.name;
         Object.assign(this, opts);
-
-        if (!(this.serverClass in Server.instances)) {
-            Server.instances[this.serverClass] = 1;
-        }
-
-        this.instance = Server.instances[this.serverClass]++;
-        this.route = `#${this.serverClass}#${this.instance}`;
-        Cluster.on('exit', (worker, code, signal) => this.handleExit(worker, code, signal));
+        this.route = `#${this.serverClass}#${Object.keys(Server.servers).length + 1}`;
+        Server.servers[this.route] = this;
     }
 
     getPid() {
@@ -70,10 +73,24 @@ registerPrimary('', class Server {
         return this.serverClass;
     }
 
-    async handleExit(worker, code, signal) {
+    static async handleClusterEvent(eventName, ...args) {
+        let worker = args[0];
+        let primaryRoute = await Ipc.queryWorker(worker, { name: '#GetPrimaryRoute' });
+
+        if (primaryRoute && primaryRoute in Server.servers) {
+            let server = Server.servers[primaryRoute];
+            let handlerName = `handleWorker${eventName[0].toUpperCase()}${eventName.substr(1)}`;
+            
+            if (typeof server[handlerName] == 'function') {
+                await server[handlerName](...args);
+            }
+        }
+    }
+
+    async handleWorkerExit(worker, code, signal) {
         if (this.autoRestart === true) {
             if (code != 0) {
-                await this.startWorker();
+                return await this.startWorker();
             }
         }
     }
@@ -93,10 +110,9 @@ registerPrimary('', class Server {
         return this;
     }
 
-    async restart() {
+    async restartWorkers() {
         if (this.started) {
-            await this.stop();
-            await this.start();
+            await this.sendWorkers({ name: '#Restart' });
         }
 
         return this;
@@ -112,9 +128,15 @@ registerPrimary('', class Server {
         return Ipc.queryWorkers(message);
     }
 
-    sendWorker(worker, message) {
-        message.route = this.route;
-        return Ipc.sendWorker(worker, message);
+    sendWorker(worker, value) {
+        if (typeof value == 'string') {
+            message.route = this.route;
+            return Ipc.sendWorker(worker, message);
+        }
+        else if (value instanceof Net.Socket) {
+            console.log(worker);
+            worker.send('socket', value);
+        }
     }
 
     sendWorkers(message) {
@@ -122,24 +144,24 @@ registerPrimary('', class Server {
         return Ipc.sendWorkers(message);
     }
 
-    start() {
-        let workers = [];
-
+    startWorkers() {
         if (!this.started) {
             for (let i = 0; i < this.workerCount; i++) {
-                workers.push(Cluster.fork({
+                let worker = Cluster.fork({
                     '#ServerOpts': toJson({
                         primaryPid: this.pid,
                         serverClass: this.serverClass,
                         primaryRoute: this.route,
                     })
-                }));
+                });
+
+                this.workers[worker.id] = worker;
             }
 
             this.started = true;
         }
 
-        return workers;
+        return this;
     }
 
     startWorker() {
@@ -154,7 +176,7 @@ registerPrimary('', class Server {
         return null;
     }
 
-    async stop() {
+    async stopWorkers() {
         if (this.started) {
             await this.sendWorkers({ name: '#Stop' });
             this.started = false;
@@ -186,6 +208,10 @@ registerWorker('', class Server {
         this.on('#Restart', message => this.handleRetart(message));
         this.on('#Start', message => this.handleStart(message));
         this.on('#Stop', message => this.handleStop(message));
+
+        Ipc.on('#GetPrimaryRoute', message => {
+            Message.reply(message, this.primaryRoute);
+        });
     }
 
     getPid() {
@@ -254,6 +280,6 @@ registerWorker('', class Server {
         return Ipc.sendPrimary(message);
     }
 
-    async start() {
+    async shutdown() {
     }
 });
