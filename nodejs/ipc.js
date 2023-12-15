@@ -19,8 +19,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-const Cluster = require('cluster');
-const Process = require('process');
+//const Cluster = require('cluster');
+//const Process = require('process');
 
 
 /*****
@@ -30,7 +30,7 @@ const Process = require('process');
  * workers simultaneously.  The message handler does the bookeeping required
  * for incoming queries, replies, and/or simple messages being sent to the
  * primary process.
-*****/
+*****
 singletonPrimary('', class Ipc extends Emitter {
     async queryWorker(worker, message) {
         if (typeof worker == 'number') {
@@ -110,7 +110,7 @@ if (isPrimary()) {
  * incoming messages.  The singleton can send or query the primary process.
  * The message handler does the bookeeping required for incoming queries,
  * replies, and/or simple messages being sent to a worker process.
-*****/
+*****
 singletonWorker('', class Ipc extends Emitter {
     async queryPrimary(message) {
         let trap = mkTrap();
@@ -154,3 +154,4 @@ if (isWorker()) {
         }
     });
 }
+*/

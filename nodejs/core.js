@@ -19,7 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-const Cluster = require('cluster');
+//const Cluster = require('cluster');
 
 
 /*****
@@ -27,7 +27,7 @@ const Cluster = require('cluster');
  * into primary processs or worker process components.  Generally speaking, we
  * expect isPrimary() and isWorker() to be invoked within an if-else clause to
  * split code execution as required.
-*****/
+*****
 register('', function isPrimary() {
     return Cluster.isPrimary;
 });
@@ -44,7 +44,7 @@ register('', function isWorker() {
  * filters to ensure that code is registered only within the specified
  * process type.  This cleans up code that needs one definition of a class
  * in the primary vs a worker process.
-*****/
+*****
 register('', function registerPrimary(ns, arg) {
     if (Cluster.isPrimary) {
         register(ns, arg);
@@ -68,3 +68,4 @@ register('', async function singletonWorker(ns, arg, ...args) {
         singleton(ns, arg, ...args);
     }
 });
+*/

@@ -32,65 +32,36 @@
  * this script only loads the framework.  Once loaded, the framework will be
  * used for loading in developer application code, CSS, and HTML framents.
 *****/
-(async () => {
-    const sourceFileNames = [
-        '../core.js',
-        '../ctl.js',
-        '../buffer.js',
-        '../data.js',
-        '../emitter.js',
-        '../depot.js',
-        '../json.js',
-        '../language.js',
-        '../stringSet.js',
-        '../time.js',
-        '../mime.js',
-        '../textTemplate.js',
-        '../textUtils.js',
-        '../validator.js',
-        './core.js',
-        './env.js',
-        './serverUtils.js',
-        './compression.js',
-        './crypto.js',
-        './jose.js',
-        './ipc.js',
-        './server.js',
-        './acme.js',
-        './clients/tcpClient.js',
-        './clients/httpClient.js',
-        './servers/tcpServer.js',
-        './servers/httpServer.js',
-    ];
+import '../core.js'
+import '../ctl.js'
+import '../buffer.js'
+import '../data.js'
+import '../emitter.js'
+import '../depot.js'
+import '../json.js'
+import '../language.js'
+import '../stringSet.js'
+import '../time.js'
+import '../mime.js'
+import '../textTemplate.js'
+import '../textUtils.js'
+import '../validator.js'
 
-    const { join } = require('path');
-    const Process = require('process');
-    require(join(__dirname, '../core.js'));
+import './net.js'
+import './socket.js'
+import './tls.js'
+import './process.js'
+import './cluster.js'
+import './ipc.js'
+import './serverUtils.js'
+import './compression.js'
+import './crypto.js'
+import './jose.js'
+import './server.js'
+import './acme.js'
 
-    for (let sourceFileName of sourceFileNames) {
-        require(join(__dirname, sourceFileName));
-    }
+import './clients/tcpClient.js'
+import './clients/httpClient.js'
 
-    if (isPrimary()) {
-        if (Process.argv.length >= 3) {
-            require(Process.argv[2]);
-        }
-    }
-    else if ('#ServerOpts' in Process.env) {
-        let opts = fromJson(Process.env['#ServerOpts']);
-
-        if (opts.serverClass) {
-            try {
-                let server = eval(`mk${opts.serverClass}(opts)`);
-                await server.start();
-            }
-            catch (e) {
-                await logit({
-                    file: __filename,
-                    action: 'Starting worker process.',
-                    error: e,
-                });
-            }
-        }
-    }
-})();
+import './servers/tcpServer.js'
+import './servers/httpServer.js'

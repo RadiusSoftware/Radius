@@ -19,12 +19,11 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-const Cluster = require('cluster');
-const Net = require('net');
+import * as LibNet from 'net';
 
 
 /*****
-*****/
+*****
 registerPrimary('', class TcpServer extends Server {
     constructor(opts) {
         super(opts);
@@ -53,7 +52,6 @@ registerPrimary('', class TcpServer extends Server {
     }
 
     async handleWorkerExit(worker, code, signal) {
-        /*
         if (code != 0) {
             if (worker.id in this.busy) {
                 delete this.busy[worker.id];
@@ -72,7 +70,6 @@ registerPrimary('', class TcpServer extends Server {
             super.handleWorkerExit(worker, code, signal);
             let worker = this.startWorker();
         }
-        */
     }
     
     async start() {
@@ -116,7 +113,7 @@ registerPrimary('', class TcpServer extends Server {
 
 
 /*****
-*****/
+*****
 registerWorker('', class TcpServer extends Server {
     constructor(opts) {
         super(opts);
@@ -126,11 +123,10 @@ registerWorker('', class TcpServer extends Server {
             if (args[0] === 'socket') {
                 const socket = args[1];
                 //socket.on('data', data => console.log(data));
-                /*
+                
                 this.client = await mkTcpClient(args[1]);
                 this.client.on('data', (...args) => this.handleData(...args));
                 this.client.resume();
-                */
             }
         });
     }
@@ -149,3 +145,4 @@ registerWorker('', class TcpServer extends Server {
     async stop() {
     }
 });
+*/

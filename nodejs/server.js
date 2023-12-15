@@ -19,9 +19,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-const Cluster = require('cluster');
-const Net = require('net');
-const Process = require('process');
+import * as LibNet from 'net'
+import * as LibProcess from 'process'
 
 
 /*****
@@ -36,7 +35,8 @@ const Process = require('process');
  * launching an instance of an HttpServer.  Note that multiple instances of
  * Server may be launched and reside, of course, together wihtin the server's
  * primary process.
-*****/
+*****
+/*
 registerPrimary('', class Server {
     static servers = (() => {
         Cluster.on('disconnect', (...args) => Server.handleClusterEvent('disconnect', ...args));
@@ -185,6 +185,7 @@ registerPrimary('', class Server {
         return this;
     }
 });
+*/
 
 
 /*****
@@ -199,6 +200,7 @@ registerPrimary('', class Server {
  * defined in servers/socketServer.js.  This class defines the bare minimum of
  * control and communcations features required to deal with the server model.
 *****/
+/*
 registerWorker('', class Server {
     constructor(opts) {
         this.pid = Process.pid;
@@ -283,3 +285,4 @@ registerWorker('', class Server {
     async shutdown() {
     }
 });
+*/
