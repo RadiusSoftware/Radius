@@ -21,18 +21,18 @@
 *****/
 import * as LibCluster from 'cluster'
 import * as LibOs from 'os'
+import * as LibProcess from 'process'
 
 
 /*****
 *****/
-singleton('', class ThisHost extends Emitter {
-    constructor(nodeType) {
+singleton('', class Cluster extends Emitter {
+    constructor() {
         super();
         this.ipV4 = {};
         this.ipV6 = {};
+        this.apps = {};
         this.hosts = {};
-        this.zones = {};
-        this.nodeType = typeof nodeType == 'string' ? nodeType : 'ROOT';
 
         for (let interfaceName in LibOs.networkInterfaces()) {
             for (let nodeInterface of LibOs.networkInterfaces()[interfaceName]) {
@@ -41,10 +41,34 @@ singleton('', class ThisHost extends Emitter {
                 if (netInterface.getSubnet().isIPv6()) this.ipV6[interfaceName] = netInterface;
             }
         }
+
+        let config = this.getEnv('RADIUS', 'json');
+
+        if (typeof config == 'object') {
+            this.config = config;
+        }
+        else {
+            this.config = {
+                nodeType: 'ROOT',
+                iid: Crypto.generateUuid(),
+            };
+        }
+    }
+
+    getApp(name) {
+        return this.apps[name];
+    }
+
+    getApps() {
+        return Object.values(this.apps);
     }
 
     getArchitecture() {
         return LibOs.arch();
+    }
+
+    getConfig() {
+        return this.getConfig;
     }
 
     getCpuCount() {
@@ -57,6 +81,24 @@ singleton('', class ThisHost extends Emitter {
 
     getEndianness() {
         return LibOs.endianness();
+    }
+
+    getEnv(name, flag) {
+        let value = LibProcess.env[name];
+
+        if (value) {
+            if (flag == 'json') {
+                try {
+                    return fromJson(value);
+                }
+                catch (e) {
+                    return new Object();
+                }
+            }
+            else {
+                return value;
+            }
+        }
     }
 
     getEol() {
@@ -75,6 +117,14 @@ singleton('', class ThisHost extends Emitter {
         return LibOs.hostname();
     }
 
+    getIID() {
+        return this.config.iid;
+    }
+
+    getMemory() {
+        return { free: LibOs.freemem(), total: LibOs.totalmem() };
+    }
+
     getNetworkInterface(name) {
         let array = [];
         if (name in this.ipV4) array.push(this.ipV4[name]);
@@ -86,8 +136,8 @@ singleton('', class ThisHost extends Emitter {
         return Object.values(this.ipV4).concat(Object.values(this.ipV6));
     }
 
-    getMemory() {
-        return { free: LibOs.freemem(), total: LibOs.totalmem() };
+    getPid() {
+        return LibProcess.pid;
     }
 
     getPlatform() {
@@ -146,24 +196,33 @@ singleton('', class ThisHost extends Emitter {
         return LibOs.version();
     }
 
-    getZone(name) {
-        return this.zones[name];
-    }
-
-    getZones() {
-        return Object.values(this.zones);
+    isApp() {
+        return this.config.nodeType == 'APP';
     }
 
     isRoot() {
-        return this.nodeType == 'ROOT';
+        return this.config.nodeType == 'ROOT';
     }
 
     isWorker() {
-        return this.nodeType == 'WORKER';
+        return this.config.nodeType == 'WORKER';
     }
 
-    isZone() {
-        return this.nodeType == 'ZONE';
+    async onAppDisconnect(app) {
+    }
+
+    async onAppExit(app) {
+    }
+
+    async onAppOnline(app) {
+    }
+
+    async queryApp() {
+        // TODO
+    }
+
+    async queryApps() {
+        // TODO
     }
 
     async queryHost() {
@@ -174,11 +233,11 @@ singleton('', class ThisHost extends Emitter {
         // TODO
     }
 
-    async queryZone() {
+    sendApp() {
         // TODO
     }
 
-    async queryZones() {
+    sendApps() {
         // TODO
     }
 
@@ -190,86 +249,18 @@ singleton('', class ThisHost extends Emitter {
         // TODO
     }
 
-    sendZone() {
-        // TODO
+    startApp(config) {
+        config.iid = Crypto.generateUuid();
+        config.nodeType = 'APP';
+        let app = LibCluster.fork({ 'RADIUS': toJson(config) });
+        this.apps[config.iid] = app;
+        app.on('online', app => this.onAppOnline(app));
+        app.on('disconnect', () => this.onAppDisconnect(app));
+        app.on('exit', () => this.onAppExit(app));
+        return config.iid;
     }
 
-    sendZones() {
-        // TODO
-    }
-
-    async startZone(opts) {
-        if (this.nodeType == 'ROOT') {
-            if (!(opts.name in this.zones)) {
-                console.log('attaching to the zone....')
-                // TODO **************************
-            }
-        }
-
-        return this;
-    }
-
-    async stopZone(name) {
-        if (this.nodeType == 'ROOT') {
-            if (opts.name in this.zones) {
-                // TODO **************************
-            }
-        }
-
-        return this;
-    }
-});
-
-
-/*****
-*****/
-register('', class ApplicationZone extends Emitter {
-    constructor() {
-        super();
-    }
-
-    async getHost() {
-    }
-
-    async getHosts() {
-    }
-
-    async getWorker() {
-    }
-
-    async getWorkerss() {
-    }
-
-    async queryHost() {
-    }
-
-    async queryHosts() {
-    }
-
-    async queryWorker() {
-    }
-
-    async queryworkers() {
-    }
-    
-    async queryZone() {
-        return new Promise(async (ok, fail) => {
-        });
-    }
-
-    sendHost() {
-    }
-
-    sendHosts() {
-    }
-
-    sendWorker() {
-    }
-
-    sendWorkers() {
-    }
-
-    sendZone() {
+    async stopApp(name) {
     }
 });
 
@@ -282,56 +273,56 @@ register('', class ApplicationZone extends Emitter {
  * process type.  This cleans up code that needs one definition of a class
  * in the primary vs a worker process.
 *****/
+register('', async function execInApp(func) {
+    if (Cluster.isApp()) {
+        await func();
+    }
+});
+
 register('', async function execInRoot(func) {
-    if (ThisHost.isRoot()) {
+    if (Cluster.isRoot()) {
         await func();
     }
 });
 
 register('', async function execInWorker(func) {
-    if (ThisHost.isWorker()) {
+    if (Cluster.isWorker()) {
         await func();
     }
 });
 
-register('', async function execInZone(func) {
-    if (ThisHost.isZone()) {
-        await func();
+register('', function registerApp(ns, arg) {
+    if (Cluster.isApp()) {
+        register(ns, arg);
     }
 });
 
 register('', function registerRoot(ns, arg) {
-    if (ThisHost.isRoot()) {
+    if (Cluster.isRoot()) {
         register(ns, arg);
     }
 });
 
 register('', function registerWorker(ns, arg) {
-    if (ThisHost.isWorker()) {
+    if (Cluster.isWorker()) {
         register(ns, arg);
     }
 });
 
-register('', function registerZone(ns, arg) {
-    if (ThisHost.isZone()) {
-        register(ns, arg);
+register('', async function singletonApp(ns, arg, ...args) {
+    if (Cluster.isApp()) {
+        singleton(ns, arg, ...args);
     }
 });
 
 register('', async function singletonRoot(ns, arg, ...args) {
-    if (ThisHost.isRoot()) {
+    if (Cluster.isRoot()) {
         singleton(ns, arg, ...args);
     }
 });
 
 register('', async function singletonWorker(ns, arg, ...args) {
-    if (ThisHost.isWorker()) {
-        singleton(ns, arg, ...args);
-    }
-});
-
-register('', async function singletonZone(ns, arg, ...args) {
-    if (ThisHost.isZone()) {
+    if (Cluster.isWorker()) {
         singleton(ns, arg, ...args);
     }
 });

@@ -20,6 +20,7 @@
  * THE SOFTWARE.
 *****/
 import 'node:crypto';
+import {v4 as uuidv4} from 'uuid';
 
 
 /*****
@@ -275,6 +276,10 @@ singleton('', class Crypto {
             publicKey: publicKey,
             privateKey: privateKey,
         };
+    }
+
+    generateUuid() {
+        return uuidv4();
     }
 
     hash(algorithm, value) {

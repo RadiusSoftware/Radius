@@ -20,16 +20,9 @@
  * THE SOFTWARE.
 *****/
 import * as LibChildProcess from 'child_process'
-import { 'promises' as LibFiles, existsSync } from 'fs'
+import * as LibFileSystem from 'fs'
 import * as LibPath from 'path'
 import * as LibProcess from 'process'
-/*
-const ChildProc = require('child_process');
-const FileSys = require('fs');
-const Files = require('fs').promises;
-const Path = require('path');
-const Process = require('process');
-*/
 
 
 (() => {
