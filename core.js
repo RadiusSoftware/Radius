@@ -137,59 +137,6 @@
 
 
     /*****
-    *****/
-    global.exitApp = (ok, reason) => {
-        if (platform == 'mozilla') {
-            throw new Error(`Exiting application.  ${reason}`);
-        }
-        else if (platform == 'nodejs') {
-        }
-    };
-
-
-    /*****
-    *****/
-    global.exitProcess = (ok, reason) => {
-        if (platform == 'mozilla') {
-            throw new Error(`Exiting process.  ${reason}`);
-        }
-        else if (platform == 'nodejs') {
-        }
-    };
-
-
-    /*****
-    *****/
-    global.logit = async info => {
-        if (platform == 'mozilla') {
-            console.log(info);
-        }
-        else if (platform == 'nodejs') {
-            console.log(info);
-        }
-    };
-
-
-    /*****
-     * Singletons may have init() methods, and the init() methods may be async.
-     * When async, it may be necessary to wait on the singleton's initialization
-     * before proceeding with additional code.  The function returns a promise
-     * that will be unfulfilled until all initializing singletons have completed
-     * that process.
-    *****/
-    global.onSingletons = arg => {
-        return new Promise((ok, fail) => {
-            if (initializingSingletonCount > 0) {
-                initializingSingletonWaiting.push(ok);
-            }
-            else {
-                ok();
-            }
-        });
-    };
-
-
-    /*****
      * Register a function or class in the specified namespace.  Functions must
      * be named using camcel case names, whereas classes are expected to use
      * pascal case.  Registered functions are placed into the specified namespace
@@ -204,36 +151,41 @@
             let obj = fqn.getObject();
 
             if (!(arg.name in obj)) {
-                if (arg.toString().startsWith('class')) {
-                    if (arg.name.match(/^[A-Z]/)) {
-                        let makerName = `mk${arg.name}`;
+                try {
+                    if (arg.toString().startsWith('class')) {
+                        if (arg.name.match(/^[A-Z]/)) {
+                            let makerName = `mk${arg.name}`;
 
-                        let makerFunc;
-                        eval(`makerFunc = function ${makerName}(...args) {
-                            let made = Reflect.construct(arg, args);
-                            return made;
-                        };`);
+                            let makerFunc;
+                            eval(`makerFunc = function ${makerName}(...args) {
+                                let made = Reflect.construct(arg, args);
+                                return made;
+                            };`);
 
-                        obj[makerName] = makerFunc;
-                        obj[makerName]['#NS'] = ns;
-                        obj[arg.name] = arg;
-                        obj[arg.name]['#NAMESPACE'] = ns;
+                            obj[makerName] = makerFunc;
+                            obj[makerName]['#NS'] = ns;
+                            obj[arg.name] = arg;
+                            obj[arg.name]['#NAMESPACE'] = ns;
+                        }
+                        else {
+                            throw new Error(`register(), class name must start with an upper-case letter: ${arg.name}`);
+                        }
                     }
                     else {
-                        throw new Error(`register(), class name must start with an upper-case letter: ${arg.name}`);
+                        if (arg.name.match(/^[a-z]/)) {
+                            obj[arg.name] = (...args) => {
+                                return Reflect.apply(arg, obj, args);
+                            };
+                            
+                            obj[arg.name].code = arg.toString();
+                        }
+                        else {
+                            throw new Error(`register(), function name must start with an lower-case letter: ${arg.name}`);
+                        }
                     }
                 }
-                else {
-                    if (arg.name.match(/^[a-z]/)) {
-                        obj[arg.name] = (...args) => {
-                            return Reflect.apply(arg, obj, args);
-                        };
-                        
-                        obj[arg.name].code = arg.toString();
-                    }
-                    else {
-                        throw new Error(`register(), function name must start with an lower-case letter: ${arg.name}`);
-                    }
+                catch (e) {
+                    console.log(e);
                 }
             }
             else {
@@ -249,10 +201,7 @@
      * itself are made available when the singleton() function is called.  Note
      * that singleton's with an async function will also kick off initialization.
     *****/
-    let initializingSingletonCount = 0;
-    let initializingSingletonWaiting = [];
-
-    global.singleton = async (ns, arg, ...args) => {
+    global.singleton = (ns, arg, ...args) => {
         if (typeof arg == 'function' && arg.name) {
             let fqn = ns ? mkFqn(`${ns}.${arg.name}`) : mkFqn(arg.name);
             let obj = fqn.getObject();
@@ -260,25 +209,11 @@
             if (!(arg.name in obj)) {
                 if (arg.toString().startsWith('class')) {
                     if (arg.name.match(/^[A-Z]/)) {
-                        obj[arg.name] = Reflect.construct(arg, args);
-                        const proto = Reflect.getPrototypeOf(obj[arg.name]);
-    
-                        if (typeof proto.init == 'function') {
-                            let value = proto.init();
-    
-                            if (value instanceof Promise) {
-                                (async () => {
-                                    initializingSingletonCount++;
-                                    await value;
-                                    initializingSingletonCount--;
-    
-                                    if (initializingSingletonCount == 0) {
-                                        for (let waiting of initializingSingletonWaiting) {
-                                            waiting();
-                                        }
-                                    }
-                                })();
-                            }
+                        try {
+                            obj[arg.name] = Reflect.construct(arg, args);
+                        }
+                        catch (e) {
+                            console.log(e);
                         }
                     }
                     else {

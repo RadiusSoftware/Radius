@@ -30,4 +30,3 @@ register('', async function notify(arg) {
 *****/
 register('', async function dump(...args) {
 });
-

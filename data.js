@@ -194,7 +194,7 @@ singleton('', class Data {
      * keep instances of objects and arrays to know where they link when there are
      * circular references.
     *****/
-    clone(value) {
+    clone(value, arg) {
         let clone;
         let stack = [];
 
@@ -242,6 +242,13 @@ singleton('', class Data {
             }
         }
 
+        if (Array.isArray(arg)) {
+            clone = clone.concat(arg);
+        }
+        else if (typeof arg == 'object') {
+            Object.assign(clone, arg);
+        }
+
         return clone;
     }
     
@@ -250,12 +257,24 @@ singleton('', class Data {
      * copy is especially useful when the src contains browser-based DOM objects, in
      * which case a deep clone is not practical to generated.
     *****/
-    copy(value) {
+    copy(value, arg) {
         if (Array.isArray(value)) {
-            return value.slice(0);
+            let copy = value.slice(0);
+
+            if (Array.isArray(arg)) {
+                copy = copy.concat(arg);
+            }
+
+            return copy;
         }
         else if (typeof value == 'object') {
-            return Object.assign(new Object(), value);
+            let copy = Object.assign(new Object(), value);
+
+            if (typeof arg == 'object') {
+                Object.assign(copy, arg);
+            }
+
+            return copy;
         }
         else {
             return value;

@@ -23,11 +23,17 @@
 
 /*****
 *****/
-register('', async function notify(arg) {
-});
+registerApplication('', class Application extends Emitter {
+    constructor() {
+        super();
+    }
 
-/*****
-*****/
-register('', async function dump(...args) {
-});
+    async start() {
+    }
 
+    async pause() {
+    }
+
+    async stop() {
+    }
+});

@@ -102,8 +102,8 @@ register('', class Websocket extends Emitter {
         if (message.name == '#Ping') {
             this.sendMessage({ name: '#Pong' });
         }
-        else if ('#Trap' in message) {
-            let trapId = message['#Trap'];
+        else if ('#TRAP' in message) {
+            let trapId = message['#TRAP'];
             delete this.awaiting[trapId];
             Trap.pushReply(trapId, message.response);
         }
@@ -115,8 +115,8 @@ register('', class Websocket extends Emitter {
     queryServer(message) {
         let trap = mkTrap();
         Trap.setExpected(trap, 1);
-        message['#Trap'] = trap.id;
-        message['#Session'] = webAppSettings.session();
+        message['#TRAP'] = trap.id;
+        message['#SESSION'] = webAppSettings.session();
 
         if (message instanceof Message) {
             this.pending.push(message);
@@ -131,7 +131,7 @@ register('', class Websocket extends Emitter {
     }
 
     sendServer(message) {
-        message['#Session'] = webAppSettings.session();
+        message['#SESSION'] = webAppSettings.session();
 
         if (message instanceof Message) {
             this.pending.push(message);

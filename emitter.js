@@ -35,6 +35,67 @@ register('', class Emitter {
         this.silent = false;
     }
 
+    call(message) {
+        if (!this.silent) {
+            if (!this.filter(message)) {
+                let trap = mkTrap();
+                message['#TRAP'] = trap.id;
+
+                if (message.name in this.handlers) {
+                    let handler = this.handlers[message.name];
+
+                    if (handler.thunks.length) {
+                        let thunks = handler.thunks;
+                        handler.thunks = [];
+                        trap.setCount(thunks.length);
+
+                        thunks.forEach(thunk => {
+                            if (!thunk.once) {
+                                handler.thunks.push(thunk);
+                            }
+
+                            if (typeof thunk.filter != 'function' || thunk.filter(message)) {
+                                thunk.func(message);
+                            }
+                        });
+                    }
+                    else {
+                        trap.done();
+                    }
+                }
+                else {
+                    trap.done();
+                }
+
+                return trap.promise;
+            }
+        }
+
+        return new Promise((ok, fail) => { ok(null); });
+    }
+
+    emit(message) {
+        if (!this.silent) {
+            if (!this.filter(message)) {
+                if (message.name in this.handlers) {
+                    let handler = this.handlers[message.name];
+                    let thunks = handler.thunks;
+                    handler.thunks = [];
+
+                    thunks.forEach(thunk => {
+                        if (!thunk.once) {
+                            handler.thunks.push(thunk);
+                        }
+
+                        if (typeof thunk.filter != 'function' || thunk.filter(message)) {
+                            thunk.func(message);
+                        }
+                    });
+                }
+            }
+        }
+    }
+
     filter(message, method) {
         let filteredOut = false;
 
@@ -147,70 +208,9 @@ register('', class Emitter {
         return this;
     }
 
-    query(message) {
-        if (!this.silent) {
-            if (!this.filter(message)) {
-                let trap = mkTrap();
-                message['#Trap'] = trap.id;
-
-                if (message.name in this.handlers) {
-                    let handler = this.handlers[message.name];
-
-                    if (handler.thunks.length) {
-                        let thunks = handler.thunks;
-                        handler.thunks = [];
-                        trap.setCount(thunks.length);
-
-                        thunks.forEach(thunk => {
-                            if (!thunk.once) {
-                                handler.thunks.push(thunk);
-                            }
-
-                            if (typeof thunk.filter != 'function' || thunk.filter(message)) {
-                                thunk.func(message);
-                            }
-                        });
-                    }
-                    else {
-                        trap.done();
-                    }
-                }
-                else {
-                    trap.done();
-                }
-
-                return trap.promise;
-            }
-        }
-
-        return new Promise((ok, fail) => { ok(null); });
-    }
-
     resume() {
         this.silent = true;
         return this;
-    }
-
-    send(message) {
-        if (!this.silent) {
-            if (!this.filter(message)) {
-                if (message.name in this.handlers) {
-                    let handler = this.handlers[message.name];
-                    let thunks = handler.thunks;
-                    handler.thunks = [];
-
-                    thunks.forEach(thunk => {
-                        if (!thunk.once) {
-                            handler.thunks.push(thunk);
-                        }
-
-                        if (typeof thunk.filter != 'function' || thunk.filter(message)) {
-                            thunk.func(message);
-                        }
-                    });
-                }
-            }
-        }
     }
 
     silence() {
@@ -222,9 +222,9 @@ register('', class Emitter {
 
 /*****
  * A trap is shared across platforms and has the same functionality in all uses.
- * On all emitters, there is a send() and a query() methiod.  The query method
+ * On all emitters, there is a emit() and a call() methiod.  The call method
  * provides an async service and returns when the remote endpoint has responded
- * to the query.  The Trap class provides the features required to send the
+ * to the call.  The Trap class provides the features required to emit the
  * message and asynchronously return a response to the caller when the reply has
  * been recieved from the remote endpoint.
 *****/
@@ -297,12 +297,12 @@ register('', class Trap {
  * set or properties or property keys with one exception.  All messages MUST
  * have a messsageName property, which is used finding the appropriate message
  * handler.  The static reply() function is used by the remote handler to
- * reply to the sending endpoint.
+ * reply to the emiting endpoint.
 *****/
 singleton('', class Message extends Emitter {
     reply(message, value) {
-        if ('#Trap' in message) {
-            Trap.handleReply(message['#Trap'], value);
+        if ('#TRAP' in message) {
+            Trap.handleReply(message['#TRAP'], value);
         }
     }
 });
