@@ -22,13 +22,8 @@
 
 
 /*****
-*****/
-global.nodeTypeApplication = '#APPLICATION';
-
-
-/*****
-*****/
-registerIn(nodeTypeController, class Application extends Emitter {
+*****
+registerIn(nodeNameController, class Application extends Emitter {
     constructor() {
         super();
     }
@@ -45,8 +40,8 @@ registerIn(nodeTypeController, class Application extends Emitter {
 
 
 /*****
-*****/
-registerIn(nodeTypeController, class Worker extends Emitter {
+*****
+registerIn(nodeNameController, class Worker extends Emitter {
     constructor() {
         super();
     }

@@ -42,9 +42,9 @@ global.sigWinch = 'SIGWINC';
 
 /*****
 *****/
-global.nodeTypeController = '#CONTROLLER';
-global.nodeTypeUndefined  = '#UNDEFINED';
-global.nodeNameUndefined  = '#UNDEFINED';
+global.nodeClassController = '#CONTROLLER';
+global.nodeClassUndefined  = '#UNDEFINED';
+global.nodeTitleUndefined  = '#UNDEFINED';
 
 
 /*****
@@ -60,13 +60,13 @@ singleton('', class Process extends Emitter {
         }
         else {
             this.radius = {
-                nodeType: nodeTypeController,
+                nodeGuid: Crypto.generateUuid(),
+                nodeClass: nodeClassController,
+                nodeTitle: 'Radius Server',
             };
         }
 
-        LibProcess.title = Crypto.generateUuid();
-        this.radius.nodeName ? null : this.radius.nodeName = nodeNameUndefined;
-
+        LibProcess.title = this.radius.nodeTitle;
         LibProcess.on('beforeExit', code => this.onBeforeExit(code));
         LibProcess.on('disconnect', () => this.onDisconnect());
         LibProcess.on('exit', code => this.onExit(code));
@@ -110,12 +110,11 @@ singleton('', class Process extends Emitter {
         return this;
     }
 
-    fork(nodeType) {
+    fork(nodeClass, nodeTitle) {
        let childProcess = null;
-
-        if (typeof nodeType != 'string') {
-            nodeType = nodeTypeUndefined;
-        }
+       let nodeGuid = Crypto.generateUuid();
+       nodeClass ? null : nodeClass = nodeClassUndefined;
+       nodeTitle ? null : nodeTitle = nodeTitleUndefined;
 
         try {
             let subprocess = LibChildProcess.fork(
@@ -124,14 +123,22 @@ singleton('', class Process extends Emitter {
                 {
                     env: Data.copy(LibProcess.env, {
                         '#RADIUS': toJson({
-                            nodeType: nodeType,
+                            nodeGuid: nodeGuid,
+                            nodeClass: nodeClass,
+                            nodeTitle: nodeTitle,
                         }),
                     })
                 }
             );
 
             if (subprocess) {
-                childProcess = mkChildProcess(subprocess);
+                childProcess = mkChildProcess({
+                    childProcess: subprocess,
+                    nodeGuid: nodeGuid,
+                    nodeClass: nodeClass,
+                    nodeTitle: nodeTitle,
+                });
+
                 childProcess.on('*', message => this.onChildMessage(message));
                 this.children[subprocess.pid] = childProcess;
             }
@@ -244,8 +251,16 @@ singleton('', class Process extends Emitter {
         return this.iid;
     }
 
-    getNodeType() {
-        return this.radius.nodeType;
+    getNodeGuid() {
+        return this.radius.nodeGuid;
+    }
+
+    getNodeClass() {
+        return this.radius.nodeClass;
+    }
+
+    getNodeTitle() {
+        return LibProcess.title;
     }
 
     getParentPid() {
@@ -262,10 +277,6 @@ singleton('', class Process extends Emitter {
 
     getRelease() {
         return LibProcess.release;
-    }
-
-    getTitle() {
-        return LibProcess.title;
     }
 
     onBeforeExit(code) {
@@ -389,40 +400,40 @@ singleton('', class Process extends Emitter {
 
 /*****
 *****/
-register('', async function execIn(nodeType, func) {
-    if (Array.isArray(nodeType)) {
-        if (nodeType.filter(nodeTypeName => nodeTypeName == Process.getNodeType()).length) {
+register('', async function execIn(nodeClass, func) {
+    if (Array.isArray(nodeClass)) {
+        if (nodeClass.filter(nodeClass => nodeClass == Process.getNodeClass()).length) {
             await func();
         }
     }
-    else if (typeof nodeType == 'string') {
-        if (nodeType == Process.getNodeType()) {
+    else if (typeof nodeClass == 'string') {
+        if (nodeClass == Process.getNodeClass()) {
             await func();
         }
     }
 });
 
-register('', function registerIn(nodeType, ns, arg) {
-    if (Array.isArray(nodeType)) {
-        if (nodeType.filter(nodeTypeName => nodeTypeName == Process.getNodeType()).length) {
+register('', function registerIn(nodeClass, ns, arg) {
+    if (Array.isArray(nodeClass)) {
+        if (nodeClass.filter(nodeClassName => nodeClassName == Process.getNodeClass()).length) {
             register(ns, arg);
         }
     }
-    else if (typeof nodeType == 'string') {
-        if (nodeType == Process.getNodeType()) {
+    else if (typeof nodeClass == 'string') {
+        if (nodeClass == Process.getNodeClass()) {
             register(ns, arg);
         }
     }
 });
 
-register('', async function singletonIn(nodeType, ns, arg, ...args) {
-    if (Array.isArray(nodeType)) {
-        if (nodeType.filter(nodeTypeName => nodeTypeName == Process.getNodeType()).length) {
+register('', async function singletonIn(nodeClass, ns, arg, ...args) {
+    if (Array.isArray(nodeClass)) {
+        if (nodeClass.filter(nodeClassName => nodeClassName == Process.getNodeClass()).length) {
             singleton(ns, arg, ...args);
         }
     }
-    else if (typeof nodeType == 'string') {
-        if (nodeType == Process.getNodeType()) {
+    else if (typeof nodeClass == 'string') {
+        if (nodeClass == Process.getNodeClass()) {
             singleton(ns, arg, ...args);
         }
     }

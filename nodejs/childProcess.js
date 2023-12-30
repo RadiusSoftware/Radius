@@ -24,15 +24,15 @@
 /*****
 *****/
 register('', class ChildProcess extends Emitter {
-    constructor(subprocess) {
+    constructor(settings) {
         super();
-        this.subprocess = subprocess;
-        this.subprocess.on('close', (code, signal) => this.onClose(code, signal));
-        this.subprocess.on('disconnect', () => this.onDisconnect());
-        this.subprocess.on('error', (error) => this.onError(error));
-        this.subprocess.on('exit', (code, signal) => this.onExit(code, signal));
-        this.subprocess.on('message', (message, sendHandle) => this.onMessage(message, sendHandle));
-        this.subprocess.on('spawn', () => this.onSpawn());
+        this.settings = settings;
+        this.settings.childProcess.on('close', (code, signal) => this.onClose(code, signal));
+        this.settings.childProcess.on('disconnect', () => this.onDisconnect());
+        this.settings.childProcess.on('error', (error) => this.onError(error));
+        this.settings.childProcess.on('exit', (code, signal) => this.onExit(code, signal));
+        this.settings.childProcess.on('message', (message, sendHandle) => this.onMessage(message, sendHandle));
+        this.settings.childProcess.on('spawn', () => this.onSpawn());
     }
 
     async call(message, sendHandle) {
@@ -40,56 +40,68 @@ register('', class ChildProcess extends Emitter {
     }
 
     disconnect() {
-        this.subprocess.disconnect();
+        this.settings.childProcess.disconnect();
         return this;
     }
 
+    getClass() {
+        return this.settings.nodeClass;
+    }
+
     getConnected() {
-        return this.subprocesses.connected;
+        return this.settings.childProcesses.connected;
     }
 
     getExitCode() {
-        return this.subprocess.exitCode;
+        return this.settings.childProcess.exitCode;
+    }
+
+    getGuid() {
+        return this.settings.nodeGuid;
     }
 
     getKilled() {
-        return this.subprocess.killed;
+        return this.settings.childProcess.killed;
     }
 
     getPid() {
-        return this.subprocesses.pid;
+        return this.settings.childProcesses.pid;
     }
 
     getSignalCode() {
-        return this.subprocess.signalCode;
+        return this.settings.childProcess.signalCode;
     }
 
     getSpawnArgs() {
-        return this.subprocess.spawnargs;
+        return this.settings.childProcess.spawnargs;
     }
 
     getSpawnFile() {
-        return this.subprocess.spawnfile;
+        return this.settings.childProcess.spawnfile;
     }
 
     getStdErr() {
-        return this.subprocess.stderr;
+        return this.settings.childProcess.stderr;
     }
 
     getStdIn() {
-        return this.subprocess.stdin;
+        return this.settings.childProcess.stdin;
     }
 
     getStdIo() {
-        return this.subprocess.stdeio;
+        return this.settings.childProcess.stdeio;
     }
 
     getStdOut() {
-        return this.subprocess.stdout;
+        return this.settings.childProcess.stdout;
+    }
+
+    getTitle() {
+        return this.settings.nodeTitle;
     }
 
     kill(signal) {
-        this.subprocess.kill(signal);
+        this.settings.childProcess.kill(signal);
         return this;
     }
 
@@ -141,7 +153,7 @@ register('', class ChildProcess extends Emitter {
     }
 
     ref() {
-        this.subprocess.ref();
+        this.settings.childProcess.ref();
         return this;
     }
 
@@ -150,7 +162,7 @@ register('', class ChildProcess extends Emitter {
     }
 
     unref() {
-        this.subprocess.unref();
+        this.settings.childProcess.unref();
         return this;
     }
 });
