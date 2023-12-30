@@ -35,6 +35,64 @@ register('', class ChildProcess extends Emitter {
         this.subprocess.on('spawn', () => this.onSpawn());
     }
 
+    async call(message, sendHandle) {
+        // TODO
+    }
+
+    disconnect() {
+        this.subprocess.disconnect();
+        return this;
+    }
+
+    getConnected() {
+        return this.subprocesses.connected;
+    }
+
+    getExitCode() {
+        return this.subprocess.exitCode;
+    }
+
+    getKilled() {
+        return this.subprocess.killed;
+    }
+
+    getPid() {
+        return this.subprocesses.pid;
+    }
+
+    getSignalCode() {
+        return this.subprocess.signalCode;
+    }
+
+    getSpawnArgs() {
+        return this.subprocess.spawnargs;
+    }
+
+    getSpawnFile() {
+        return this.subprocess.spawnfile;
+    }
+
+    getStdErr() {
+        return this.subprocess.stderr;
+    }
+
+    getStdIn() {
+        return this.subprocess.stdin;
+    }
+
+    getStdIo() {
+        return this.subprocess.stdeio;
+    }
+
+    getStdOut() {
+        return this.subprocess.stdout;
+    }
+
+    kill(signal) {
+        this.subprocess.kill(signal);
+        return this;
+    }
+
     async onClose(code, signal) {
         this.emit({
             name: 'Close',
@@ -80,5 +138,19 @@ register('', class ChildProcess extends Emitter {
             name: 'Spawn',
             childProcessc: this,
         });
+    }
+
+    ref() {
+        this.subprocess.ref();
+        return this;
+    }
+
+    send(message, sendHandle) {
+        // TODO
+    }
+
+    unref() {
+        this.subprocess.unref();
+        return this;
     }
 });

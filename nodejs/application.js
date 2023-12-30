@@ -23,7 +23,12 @@
 
 /*****
 *****/
-registerApplication('', class Application extends Emitter {
+global.nodeTypeApplication = '#APPLICATION';
+
+
+/*****
+*****/
+registerIn(nodeTypeController, class Application extends Emitter {
     constructor() {
         super();
     }
@@ -37,3 +42,40 @@ registerApplication('', class Application extends Emitter {
     async stop() {
     }
 });
+
+
+/*****
+*****/
+registerIn(nodeTypeController, class Worker extends Emitter {
+    constructor() {
+        super();
+    }
+
+    async start() {
+    }
+
+    async pause() {
+    }
+
+    async stop() {
+    }
+});
+
+
+/*****
+*****
+registerIn(nodeTypeApplication, class Application extends Emitter {
+    constructor() {
+        super();
+    }
+
+    async start() {
+    }
+
+    async pause() {
+    }
+
+    async stop() {
+    }
+});
+*/

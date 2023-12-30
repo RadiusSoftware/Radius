@@ -25,29 +25,54 @@ import LibProcess from 'node:process'
 
 /*****
 *****/
+global.sigBreak = 'SIGBREK';
+global.sigBus   = 'SIGBUS';
+global.sigFpe   = 'SIGFPE';
+global.sigHup   = 'SIGHUP';
+global.sigIll   = 'SIGILL';
+global.sigInt   = 'SIGINT';
+global.sigKill  = 'SIGKILL';
+global.sigPipe  = 'SIGPIPE';
+global.sigSegv  = 'SIGSEGV';
+global.sigStop  = 'SIGSTOP';
+global.sigTerm  = 'SIGTERM';
+global.sigUsr1  = 'SIGUSR1';
+global.sigWinch = 'SIGWINC';
+
+
+/*****
+*****/
+global.nodeTypeController = '#CONTROLLER';
+global.nodeTypeUndefined  = '#UNDEFINED';
+global.nodeNameUndefined  = '#UNDEFINED';
+
+
+/*****
+*****/
 singleton('', class Process extends Emitter {
     constructor() {
         super();
         this.children = {};
-        let radius = this.getEnv('RADIUS', 'json');
+        let radius = this.getEnv('#RADIUS', 'json');
 
         if (typeof radius == 'object') {
             this.radius = radius;
         }
         else {
             this.radius = {
-                nodeType: 'CONTROLLER',
-                iid: Crypto.generateUuid(),
-                appName: 'undefined',
+                nodeType: nodeTypeController,
             };
         }
+
+        LibProcess.title = Crypto.generateUuid();
+        this.radius.nodeName ? null : this.radius.nodeName = nodeNameUndefined;
 
         LibProcess.on('beforeExit', code => this.onBeforeExit(code));
         LibProcess.on('disconnect', () => this.onDisconnect());
         LibProcess.on('exit', code => this.onExit(code));
         LibProcess.on('message', async message => this.onParentMessage(message));
         LibProcess.on('rejectionHandled', (reason, promise) => this.onRejectiionHandled(reason, promise));
-        LibProcess.on('uncaughtException', (error, origin) => this.onUncaughException(error, origin));
+        LibProcess.on('uncaughtException', (error, origin) => this.onUncaughtException(error, origin));
         LibProcess.on('uncaughtExceptionMonitor', (error, origin) => this.onUncaughtExceptionMonitor(error, origin));
         LibProcess.on('unhandledRejection', (reason, promise) => this.onUnhandledRejection(reason, promise));
         LibProcess.on('warning', warning => this.onWarning(warning));
@@ -58,19 +83,19 @@ singleton('', class Process extends Emitter {
         return this;
     }
 
-    callChild(child, message) {
+    callChild(child, message, sendHandle) {
         return new Promise((ok, fail) => {
             // TODO
         });
     }
 
-    callChildren(message) {
+    callChildren(message, sendHandle) {
         return new Promise((ok, fail) => {
             // TODO
         });
     }
 
-    callParent(message) {
+    callParent(message, sendHandle) {
         return new Promise((ok, fail) => {
             // TODO
         });
@@ -89,19 +114,7 @@ singleton('', class Process extends Emitter {
        let childProcess = null;
 
         if (typeof nodeType != 'string') {
-            switch (this.radius.nodeType) {
-                case 'CONTROLLER':
-                    nodeType = 'APPLICATION';
-                    break;
-
-                case 'APPLICATION':
-                    nodeType = 'WORKER';
-                    break;
-
-                default:
-                    nodeType = 'MISC';
-                    break;
-            }
+            nodeType = nodeTypeUndefined;
         }
 
         try {
@@ -110,7 +123,7 @@ singleton('', class Process extends Emitter {
                 [],
                 {
                     env: Data.copy(LibProcess.env, {
-                        RADIUS: toJson({
+                        '#RADIUS': toJson({
                             nodeType: nodeType,
                         }),
                     })
@@ -250,25 +263,9 @@ singleton('', class Process extends Emitter {
     getRelease() {
         return LibProcess.release;
     }
-    
-    isApplication() {
-        return this.radius.nodeType == 'APPLICATION';
-    }
 
-    isController() {
-        return this.radius.nodeType == 'CONTROLLER';
-    }
-
-    isOther() {
-        return !(this.radius.nodeType in {
-            'CONTROLLER': 0,
-            'APPLICATION': 0,
-            'WORKER': 0,
-        });
-    }
-
-    isWorker() {
-        return this.radius.nodeType == 'WORKER';
+    getTitle() {
+        return LibProcess.title;
     }
 
     onBeforeExit(code) {
@@ -307,6 +304,7 @@ singleton('', class Process extends Emitter {
 
     onParentMessage(message) {
         if ('#CALL' in message) {
+            // TODO
             //this.call(message);
         }
         else {
@@ -322,8 +320,8 @@ singleton('', class Process extends Emitter {
             promise: promise,
         });
     }
-
-    onUncaughtRejection(error, origin) {
+    onUncaughtException(error, origin) {
+        console.log(error);
         this.emit({
             name: 'UncaughtException',
             process: this,
@@ -332,7 +330,7 @@ singleton('', class Process extends Emitter {
         });
     }
 
-    onUncaughtRejectionMonitor(error, origin) {
+    onUncaughtExceptionMonitor(error, origin) {
         this.emit({
             name: 'UncaughtExceptionMonitor',
             process: this,
@@ -358,15 +356,15 @@ singleton('', class Process extends Emitter {
         });
     }
 
-    sendChild(child, message) {
+    sendChild(child, message, sendHandle) {
         // TODO
     }
 
-    sendChildren(message) {
+    sendChildren(message, sendHandle) {
         // TODO
     }
 
-    sendParent(message) {
+    sendParent(message, sendHandle) {
         return new Promise((ok, fail) => {
             if ('HANDLE' in message) {
                 LibProcess.send(
@@ -390,99 +388,42 @@ singleton('', class Process extends Emitter {
 
 
 /*****
- * The following are convenience functions that can be used define different
- * code in the primary process vs a worker process: registerPrimary(),
- * registerWorker(), singletonPrimary(), singletonWorker().  They act as
- * filters to ensure that code is registered only within the specified
- * process type.  This cleans up code that needs one definition of a class
- * in the primary vs a worker process.
 *****/
-register('', async function execApplication(func) {
-    if (Process.isApplication()) {
-        await func();
+register('', async function execIn(nodeType, func) {
+    if (Array.isArray(nodeType)) {
+        if (nodeType.filter(nodeTypeName => nodeTypeName == Process.getNodeType()).length) {
+            await func();
+        }
+    }
+    else if (typeof nodeType == 'string') {
+        if (nodeType == Process.getNodeType()) {
+            await func();
+        }
     }
 });
 
-register('', async function execController(func) {
-    if (Process.isController()) {
-        await func();
+register('', function registerIn(nodeType, ns, arg) {
+    if (Array.isArray(nodeType)) {
+        if (nodeType.filter(nodeTypeName => nodeTypeName == Process.getNodeType()).length) {
+            register(ns, arg);
+        }
+    }
+    else if (typeof nodeType == 'string') {
+        if (nodeType == Process.getNodeType()) {
+            register(ns, arg);
+        }
     }
 });
 
-register('', async function execNonController(func) {
-    if (!Process.isController()) {
-        await func();
+register('', async function singletonIn(nodeType, ns, arg, ...args) {
+    if (Array.isArray(nodeType)) {
+        if (nodeType.filter(nodeTypeName => nodeTypeName == Process.getNodeType()).length) {
+            singleton(ns, arg, ...args);
+        }
     }
-});
-
-register('', async function execWorker(func) {
-    if (Process.isWorker()) {
-        await func();
-    }
-});
-
-register('', async function execNonWorker(func) {
-    if (!Process.isWorker()) {
-        await func();
-    }
-});
-
-register('', function registerApplication(ns, arg) {
-    if (Process.isApplication()) {
-        register(ns, arg);
-    }
-});
-
-register('', function registerController(ns, arg) {
-    if (Process.isController()) {
-        register(ns, arg);
-    }
-});
-
-register('', function registerNonController(ns, arg) {
-    if (!Process.isController()) {
-        register(ns, arg);
-    }
-});
-
-register('', function registerWorker(ns, arg) {
-    if (Process.isWorker()) {
-        register(ns, arg);
-    }
-});
-
-register('', function registerNonWorker(ns, arg) {
-    if (!Process.isWorker()) {
-        register(ns, arg);
-    }
-});
-
-register('', async function singletonApplication(ns, arg, ...args) {
-    if (Process.isApplication()) {
-        singleton(ns, arg, ...args);
-    }
-});
-
-register('', async function singletonController(ns, arg, ...args) {
-    if (Process.isController()) {
-        singleton(ns, arg, ...args);
-    }
-});
-
-register('', async function singletonNonController(ns, arg, ...args) {
-    if (!Process.isController()) {
-        singleton(ns, arg, ...args);
-    }
-});
-
-register('', async function singletonWorker(ns, arg, ...args) {
-    if (Process.isWorker()) {
-        singleton(ns, arg, ...args);
-    }
-});
-
-register('', async function singletonNonWorker(ns, arg, ...args) {
-    if (!Process.isWorker()) {
-        singleton(ns, arg, ...args);
+    else if (typeof nodeType == 'string') {
+        if (nodeType == Process.getNodeType()) {
+            singleton(ns, arg, ...args);
+        }
     }
 });
