@@ -22,6 +22,18 @@
 
 
 /*****
+ * ChildProcess is a class that extends the features of the core nodejs library
+ * to help manage interprocess communications with a parent process and the
+ * management of child processes by the current process.  Part of the functions
+ * are to convert nodejs ChildProcess events into Radius messages.  Remember
+ * that the Radius Message class along with the Radius Emitter provies the core
+ * features for all intraprocess, interprocess, and host-to-host communications
+ * and event management.  One point to note is that all messaging employs the
+ * the enhanced JSON features provided by Radius.  Hence, the IPC messageing
+ * implemented in this module performs conversion between messages and bulk
+ * JSON automatically.  Bulk JSON is simply where an object or message is first
+ * converted to JSON using Radius JSON features and transmitted as a "bulk" JSON
+ * message: { "json": "<JSON encoded object>" }.
 *****/
 register('', class ChildProcess extends Emitter {
     constructor(settings) {
@@ -35,8 +47,17 @@ register('', class ChildProcess extends Emitter {
         this.settings.childProcess.on('spawn', () => this.onSpawn());
     }
 
-    async call(message, sendHandle) {
-        // TODO
+    callChild(message) {
+        let trap = mkTrap();
+        trap.setCount(1);
+        message['#TRAP'] = trap.id;
+        message['#CALL'] = true;
+
+        this.settings.childProcess.send(
+            { json: toJson(message) },
+        );
+
+        return trap.promise;
     }
 
     disconnect() {
@@ -65,7 +86,7 @@ register('', class ChildProcess extends Emitter {
     }
 
     getPid() {
-        return this.settings.childProcesses.pid;
+        return this.settings.childProcess.pid;
     }
 
     getSignalCode() {
@@ -117,7 +138,7 @@ register('', class ChildProcess extends Emitter {
     async onDisconnect() {
         this.emit({
             name: 'Disconnect',
-            childProcessc: this,
+            childProcess: this,
         });
     }
 
@@ -148,7 +169,7 @@ register('', class ChildProcess extends Emitter {
     async onSpawn() {
         this.emit({
             name: 'Spawn',
-            childProcessc: this,
+            childProcess: this,
         });
     }
 
@@ -157,8 +178,13 @@ register('', class ChildProcess extends Emitter {
         return this;
     }
 
-    send(message, sendHandle) {
-        // TODO
+    sendChild(message, sendHandle) {
+        this.settings.childProcess.send(
+            { json: toJson(message) },
+            sendHandle,
+        );
+
+        return this;
     }
 
     unref() {

@@ -24,34 +24,53 @@ import LibProcess from 'node:process'
 
 
 /*****
-*****/
-global.sigBreak = 'SIGBREK';
-global.sigBus   = 'SIGBUS';
-global.sigFpe   = 'SIGFPE';
-global.sigHup   = 'SIGHUP';
-global.sigIll   = 'SIGILL';
-global.sigInt   = 'SIGINT';
-global.sigKill  = 'SIGKILL';
-global.sigPipe  = 'SIGPIPE';
-global.sigSegv  = 'SIGSEGV';
-global.sigStop  = 'SIGSTOP';
-global.sigTerm  = 'SIGTERM';
-global.sigUsr1  = 'SIGUSR1';
-global.sigWinch = 'SIGWINC';
-
-
-/*****
-*****/
-global.nodeClassController = '#CONTROLLER';
-global.nodeClassUndefined  = '#UNDEFINED';
-global.nodeTitleUndefined  = '#UNDEFINED';
-
-
-/*****
+ * The Process singleton provides a bundle of features within each nodejs process:
+ * process management, process reflection, and interprocess communications.  Our
+ * basic model is that each process has a parent process and zero or more child
+ * processes.  Process features enable interprocess communications (IPC) using
+ * standard Radius messages.  Each Process may communication directly with its
+ * parent and children.
+ * 
+ * When Radius applications are launched, there's a primary process node classed
+ * as the "#CONTROLLER", whose name is accessable as Process.nodeClassController;
+ * The controll is able to create or spawn applications, which result in a child
+ * of the controller starting and launching the application in that child process.
+ * Child / application processes can in turn spawn children of their own, which
+ * can lead to a tree-like hierarchy process structure within the Radius network.
+ * This enables a single instance of a Radius process to execute multiple apps
+ * under the control of the controller node.
+ * 
+ * NodeJS events and messages  are converted into Radius messages.  Remember
+ * that the Radius Message class along with the Radius Emitter provies the core
+ * features for all intraprocess, interprocess, and host-to-host communications
+ * and event management.  One point to note is that all messaging employs the
+ * the enhanced JSON features provided by Radius.  Hence, the IPC messageing
+ * implemented in this module performs conversion between messages and bulk
+ * JSON automatically.  Bulk JSON is simply where an object or message is first
+ * converted to JSON using Radius JSON features and transmitted as a "bulk" JSON
+ * message: { "json": "<JSON encoded object>" }.
 *****/
 singleton('', class Process extends Emitter {
     constructor() {
         super();
+        this.nodeClassController = '#CONTROLLER';
+        this.nodeClassUndefined  = '#UNDEFINED';
+        this.nodeTitleUndefined  = '#UNDEFINED';
+    
+        this.sigBreak = 'SIGBREK';
+        this.sigBus   = 'SIGBUS';
+        this.sigFpe   = 'SIGFPE';
+        this.sigHup   = 'SIGHUP';
+        this.sigIll   = 'SIGILL';
+        this.sigInt   = 'SIGINT';
+        this.sigKill  = 'SIGKILL';
+        this.sigPipe  = 'SIGPIPE';
+        this.sigSegv  = 'SIGSEGV';
+        this.sigStop  = 'SIGSTOP';
+        this.sigTerm  = 'SIGTERM';
+        this.sigUsr1  = 'SIGUSR1';
+        this.sigWinch = 'SIGWINC';
+
         this.children = {};
         let radius = this.getEnv('#RADIUS', 'json');
 
@@ -61,7 +80,7 @@ singleton('', class Process extends Emitter {
         else {
             this.radius = {
                 nodeGuid: Crypto.generateUuid(),
-                nodeClass: nodeClassController,
+                nodeClass: this.nodeClassController,
                 nodeTitle: 'Radius Server',
             };
         }
@@ -83,22 +102,44 @@ singleton('', class Process extends Emitter {
         return this;
     }
 
-    callChild(child, message, sendHandle) {
-        return new Promise((ok, fail) => {
-            // TODO
-        });
+    async callChild(child, message) {
+        let childProcess;
+
+        if (typeof child == 'number') {
+            if (child in this.children) {
+                childProcess = child;
+            }
+        }
+        else if (child instanceof ChildProcess) {
+            childProcess = child;
+        }
+        
+        if (childProcess) {
+            return await childProcess.callChild(message);
+        }
+
+        return undefined;
     }
 
-    callChildren(message, sendHandle) {
-        return new Promise((ok, fail) => {
-            // TODO
-        });
+    async callChildren(message) {
+        return Promise.all(
+            Object.values(this.children).map(async childProcess => {
+                return (async () => await childProcess.callChild(message))();
+            })
+        );
     }
 
-    callParent(message, sendHandle) {
-        return new Promise((ok, fail) => {
-            // TODO
-        });
+    callParent(message) {
+        let trap = mkTrap();
+        trap.setCount(1);
+        message['#TRAP'] = trap.id;
+        message['#CALL'] = true;
+
+        LibProcess.send(
+            { json: toJson(message) },
+        );
+
+        return trap.promise;
     }
 
     dump() {
@@ -113,8 +154,8 @@ singleton('', class Process extends Emitter {
     fork(nodeClass, nodeTitle) {
        let childProcess = null;
        let nodeGuid = Crypto.generateUuid();
-       nodeClass ? null : nodeClass = nodeClassUndefined;
-       nodeTitle ? null : nodeTitle = nodeTitleUndefined;
+       nodeClass ? null : nodeClass = this.nodeClassUndefined;
+       nodeTitle ? null : nodeTitle = this.nodeTitleUndefined;
 
         try {
             let subprocess = LibChildProcess.fork(
@@ -279,6 +320,10 @@ singleton('', class Process extends Emitter {
         return LibProcess.release;
     }
 
+    onAbort(message) {
+        this.abort();
+    }
+
     onBeforeExit(code) {
         this.emit({
             name: 'BeforeExit',
@@ -286,16 +331,67 @@ singleton('', class Process extends Emitter {
             code: code,
         });
     }
-    
-    onChildMessage(message) {
-        message.name = `Child${message.name}`;
 
-        if ('#CALL' in message) {
-            return this.call(message);
+    onChildClose(childProcess, message) {
+        message.childProcess = childProcess;
+        this.emit(message);
+    }
+
+    onChildDisconnect(childProcess, message) {
+        message.childProcess = childProcess;
+        this.emit(message);
+    }
+
+    onChildError(childProcess, message) {
+        message.childProcess = childProcess;
+        this.emit(message);
+    }
+
+    onChildExit(childProcess, message) {
+        if (childProcess.getPid() in this.children) {
+            delete this.children[childProcess.getPid()];
+        }
+
+        message.childProcess = childProcess;
+        this.emit(message);
+    }
+    
+    async onChildMessage(message) {
+        if ('#RESULT' in message) {
+            let trapId = message['#TRAP'];
+            let result = message['#RESULT'];
+            delete message['#TRAP'];
+            delete message['#RESULT'];
+            Trap.handleReply(trapId, result);
+        }
+        else if ('#CALL' in message) {
+            let trapId = message['#TRAP'];
+            message['#RESULT'] = await this.call(message);
+            message['#TRAP'] = trapId;
+            delete message['#CALL'];
+            let childProcess = message.childProcess;
+            delete message.childProcess;
+            childProcess.sendChild(message);
         }
         else {
-            this.emit(message);
+            let messageCopy = Data.copy(message);
+            let methodName = `onChild${messageCopy.name}`;
+            messageCopy.name = methodName.substring(2);
+
+            if (methodName in this) {
+                let childProcess = messageCopy.childProcess;
+                delete messageCopy.childProcess;
+                this[methodName](childProcess, messageCopy);
+            }
+            else {
+                this.emit(message);
+            }
         }
+    }
+
+    onChildSpawn(childProcess, message) {
+        message.childProcess = childProcess;
+        this.emit(message);
     }
 
     onDisconnect() {
@@ -313,14 +409,53 @@ singleton('', class Process extends Emitter {
         });
     }
 
-    onParentMessage(message) {
-        if ('#CALL' in message) {
-            // TODO
-            //this.call(message);
+    async onParentMessage(encoded) {
+        let message = fromJson(encoded.json);
+
+        if ('#RESULT' in message) {
+            let trapId = message['#TRAP'];
+            let result = message['#RESULT'];
+            delete message['#TRAP'];
+            delete message['#RESULT'];
+            Trap.handleReply(trapId, result);
+        }
+        else if ('#CALL' in message) {
+            let trapId = message['#TRAP'];
+            message['#RESULT'] = await this.call(message);
+            message['#TRAP'] = trapId;
+            delete message['#CALL'];
+            this.sendParent(message);
         }
         else {
-            this.emit(message);
+            let methodName = `onParent${message.name}`;
+
+            if (methodName in this) {
+                this[methodName](message);
+            }
+            else {
+                this.emit(message);
+            }
         }        
+    }
+
+    onParentAbort(message) {
+        this.abort();
+    }
+
+    onParentPause(message) {
+        this.emit(message);
+    }
+
+    onParentResume(message) {
+        this.emit(message);
+    }
+
+    onParentShutdown(message) {
+        this.exit(message.code ? message.code : 9999);
+    }
+
+    onParentStop(message) {
+        this.exit(message.code ? message.code : 9999);
     }
 
     onRejectionHandled(reason, promise) {
@@ -332,7 +467,6 @@ singleton('', class Process extends Emitter {
         });
     }
     onUncaughtException(error, origin) {
-        console.log(error);
         this.emit({
             name: 'UncaughtException',
             process: this,
@@ -368,28 +502,33 @@ singleton('', class Process extends Emitter {
     }
 
     sendChild(child, message, sendHandle) {
-        // TODO
+        if (child instanceof ChildProcess) {
+            child.sendChild(message, sendHandle);
+        }
+        else if (typeof child == 'number') {
+            if (child in this.children) {
+                this.children[child].sendChild(message, sendHandle);
+            }
+        }
+
+        return this;
     }
 
     sendChildren(message, sendHandle) {
-        // TODO
+        for (let childProcess of this) {
+            childProcess.sendChild(message, sendHandle);
+        }
+
+        return this;
     }
 
     sendParent(message, sendHandle) {
-        return new Promise((ok, fail) => {
-            if ('HANDLE' in message) {
-                LibProcess.send(
-                    { json: toJson(message) },
-                    () => ok(this),
-                );
-            }
-            else {
-                LibProcess.send(
-                    { json: toJson(message) },
-                    () => ok(this),
-                );
-            }
-        });
+        LibProcess.send(
+            { json: toJson(message) },
+            sendHandle,
+        );
+
+        return this;
     }
 
     [Symbol.iterator]() {
@@ -399,6 +538,11 @@ singleton('', class Process extends Emitter {
 
 
 /*****
+ * Radius processes are grouped and typed using a "ClassName".  The ClassName
+ * can be used for controlling source code execution using the functions shown
+ * below.  In this manner, a process's ClassName can be used to avoid loading
+ * all code except for the code that's relevant to that process's features and
+ * functionality.
 *****/
 register('', async function execIn(nodeClass, func) {
     if (Array.isArray(nodeClass)) {
