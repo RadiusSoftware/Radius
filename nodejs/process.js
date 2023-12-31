@@ -409,6 +409,14 @@ singleton('', class Process extends Emitter {
         });
     }
 
+    onParentAbort(message) {
+        this.abort();
+    }
+
+    onParentEnd(message) {
+        this.exit(message.code ? message.code : 9999);
+    }
+
     async onParentMessage(encoded) {
         let message = fromJson(encoded.json);
 
@@ -438,10 +446,6 @@ singleton('', class Process extends Emitter {
         }        
     }
 
-    onParentAbort(message) {
-        this.abort();
-    }
-
     onParentPause(message) {
         this.emit(message);
     }
@@ -451,10 +455,6 @@ singleton('', class Process extends Emitter {
     }
 
     onParentShutdown(message) {
-        this.exit(message.code ? message.code : 9999);
-    }
-
-    onParentStop(message) {
         this.exit(message.code ? message.code : 9999);
     }
 
