@@ -258,7 +258,6 @@
         'mime.js',
         'textTemplate.js',
         'textUtils.js',
-        'validator.js',
         'mozilla/core.js',
         'mozilla/win.js',
         'mozilla/doc.js',

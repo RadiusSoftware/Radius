@@ -71,6 +71,7 @@ singleton('', class Process extends Emitter {
         this.sigUsr1  = 'SIGUSR1';
         this.sigWinch = 'SIGWINC';
 
+        this.routing = {};
         this.children = {};
         let radius = this.getEnv('#RADIUS', 'json');
 
@@ -85,16 +86,18 @@ singleton('', class Process extends Emitter {
             };
         }
 
-        LibProcess.title = this.radius.nodeTitle;
         LibProcess.on('beforeExit', code => this.onBeforeExit(code));
         LibProcess.on('disconnect', () => this.onDisconnect());
         LibProcess.on('exit', code => this.onExit(code));
-        LibProcess.on('message', async message => this.onParentMessage(message));
+        LibProcess.on('message', async (message, sendHandle) => this.onParentMessage(message, sendHandle));
         LibProcess.on('rejectionHandled', (reason, promise) => this.onRejectiionHandled(reason, promise));
         LibProcess.on('uncaughtException', (error, origin) => this.onUncaughtException(error, origin));
         LibProcess.on('uncaughtExceptionMonitor', (error, origin) => this.onUncaughtExceptionMonitor(error, origin));
         LibProcess.on('unhandledRejection', (reason, promise) => this.onUnhandledRejection(reason, promise));
         LibProcess.on('warning', warning => this.onWarning(warning));
+
+        LibProcess.title = this.radius.nodeTitle;
+        this.on('StartApplication', message => this.onStartApplication(message.appClassName, message.settings));
     }
 
     abort() {
@@ -151,24 +154,30 @@ singleton('', class Process extends Emitter {
         return this;
     }
 
-    fork(nodeClass, nodeTitle) {
+    fork(nodeClass, nodeTitle, settings) {
        let childProcess = null;
        let nodeGuid = Crypto.generateUuid();
        nodeClass ? null : nodeClass = this.nodeClassUndefined;
        nodeTitle ? null : nodeTitle = this.nodeTitleUndefined;
 
         try {
+            let env = Data.copy(LibProcess.env, {
+                '#RADIUS': toJson({
+                    nodeGuid: nodeGuid,
+                    nodeClass: nodeClass,
+                    nodeTitle: nodeTitle,
+                }),
+            });
+
+            if (typeof settings == 'object') {
+                env[nodeClass] = toJson(settings);
+            }
+
             let subprocess = LibChildProcess.fork(
                 this.getArg(1),
                 [],
                 {
-                    env: Data.copy(LibProcess.env, {
-                        '#RADIUS': toJson({
-                            nodeGuid: nodeGuid,
-                            nodeClass: nodeClass,
-                            nodeTitle: nodeTitle,
-                        }),
-                    })
+                    env: env,
                 }
             );
 
@@ -238,8 +247,27 @@ singleton('', class Process extends Emitter {
         return LibProcess.geteuid();
     }
 
-    getEnv() {
-        return Data.copy(LibProcess.env);
+    getEnv(name, flag) {
+        if (name) {
+            let value = LibProcess.env[name];
+
+            if (value) {
+                if (flag == 'json') {
+                    try {
+                        return fromJson(value);
+                    }
+                    catch (e) {
+                        return new Object();
+                    }
+                }
+                else {
+                    return value;
+                }
+            }
+        }
+        else {
+            return Data.copy(LibProcess.env);
+        }
     }
 
     getExecArgv() {
@@ -268,24 +296,6 @@ singleton('', class Process extends Emitter {
 
     getUid() {
         return LibProcess.getuid();
-    }
-
-    getEnv(name, flag) {
-        let value = LibProcess.env[name];
-
-        if (value) {
-            if (flag == 'json') {
-                try {
-                    return fromJson(value);
-                }
-                catch (e) {
-                    return new Object();
-                }
-            }
-            else {
-                return value;
-            }
-        }
     }
 
     getIid() {
@@ -357,34 +367,36 @@ singleton('', class Process extends Emitter {
     }
     
     async onChildMessage(message) {
-        if ('#RESULT' in message) {
-            let trapId = message['#TRAP'];
-            let result = message['#RESULT'];
-            delete message['#TRAP'];
-            delete message['#RESULT'];
-            Trap.handleReply(trapId, result);
-        }
-        else if ('#CALL' in message) {
-            let trapId = message['#TRAP'];
-            message['#RESULT'] = await this.call(message);
-            message['#TRAP'] = trapId;
-            delete message['#CALL'];
-            let childProcess = message.childProcess;
-            delete message.childProcess;
-            childProcess.sendChild(message);
-        }
-        else {
-            let messageCopy = Data.copy(message);
-            let methodName = `onChild${messageCopy.name}`;
-            messageCopy.name = methodName.substring(2);
-
-            if (methodName in this) {
-                let childProcess = messageCopy.childProcess;
-                delete messageCopy.childProcess;
-                this[methodName](childProcess, messageCopy);
+        if (!this.routeUp(message)) {
+            if ('#RESULT' in message) {
+                let trapId = message['#TRAP'];
+                let result = message['#RESULT'];
+                delete message['#TRAP'];
+                delete message['#RESULT'];
+                Trap.handleReply(trapId, result);
+            }
+            else if ('#CALL' in message) {
+                let trapId = message['#TRAP'];
+                message['#RESULT'] = await this.call(message);
+                message['#TRAP'] = trapId;
+                delete message['#CALL'];
+                let childProcess = message.childProcess;
+                delete message.childProcess;
+                childProcess.sendChild(message);
             }
             else {
-                this.emit(message);
+                let messageCopy = Data.copy(message);
+                let methodName = `onChild${messageCopy.name}`;
+                messageCopy.name = methodName.substring(2);
+
+                if (methodName in this) {
+                    let childProcess = messageCopy.childProcess;
+                    delete messageCopy.childProcess;
+                    this[methodName](childProcess, messageCopy);
+                }
+                else {
+                    this.emit(message);
+                }
             }
         }
     }
@@ -417,33 +429,37 @@ singleton('', class Process extends Emitter {
         this.exit(message.code ? message.code : 9999);
     }
 
-    async onParentMessage(encoded) {
+    async onParentMessage(encoded, sendHandle) {
         let message = fromJson(encoded.json);
 
-        if ('#RESULT' in message) {
-            let trapId = message['#TRAP'];
-            let result = message['#RESULT'];
-            delete message['#TRAP'];
-            delete message['#RESULT'];
-            Trap.handleReply(trapId, result);
-        }
-        else if ('#CALL' in message) {
-            let trapId = message['#TRAP'];
-            message['#RESULT'] = await this.call(message);
-            message['#TRAP'] = trapId;
-            delete message['#CALL'];
-            this.sendParent(message);
-        }
-        else {
-            let methodName = `onParent${message.name}`;
+        if (!this.routeDown(message, sendHandle)) {
+            sendHandle ? message.sendHandle = sendHandle : null;
 
-            if (methodName in this) {
-                this[methodName](message);
+            if ('#RESULT' in message) {
+                let trapId = message['#TRAP'];
+                let result = message['#RESULT'];
+                delete message['#TRAP'];
+                delete message['#RESULT'];
+                Trap.handleReply(trapId, result);
+            }
+            else if ('#CALL' in message) {
+                let trapId = message['#TRAP'];
+                message['#RESULT'] = await this.call(message);
+                message['#TRAP'] = trapId;
+                delete message['#CALL'];
+                this.sendParent(message);
             }
             else {
-                this.emit(message);
+                let methodName = `onParent${message.name}`;
+
+                if (methodName in this) {
+                    this[methodName](message);
+                }
+                else {
+                    this.emit(message);
+                }
             }
-        }        
+        }
     }
 
     onParentPause(message) {
@@ -466,6 +482,11 @@ singleton('', class Process extends Emitter {
             promise: promise,
         });
     }
+
+    onStartApplication(appClassName, settings) {
+        let app = this.fork(appClassName, appClassName, settings);
+    }
+
     onUncaughtException(error, origin) {
         this.emit({
             name: 'UncaughtException',
@@ -501,6 +522,77 @@ singleton('', class Process extends Emitter {
         });
     }
 
+    routeDown(message, sendHandle) {
+        if ('#ROUTING' in message) {
+            let routing = message['#ROUTING'];
+
+            if (routing.type == 'NodeClass') {
+                if (routing.nodeClass == this.getNodeClass()) {
+                    delete message['#ROUTING'];
+                    return false;
+                }
+                else {
+                    this.routeDownRelay(message, sendHandle);
+                    return true;
+                }
+            }
+            else if (routing.type == 'Pid') {
+                if (routing.nodePid == this.getPid()) {
+                    delete message['#ROUTING'];
+                    return false;
+                }
+                else {
+                    this.routeDownRelay(message, sendHandle);
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    routeDownRelay(message, sendHandle) {
+        for (let childProcess of this) {
+            childProcess.sendChild(message, sendHandfe);
+        }
+    }
+
+    routeUp(message) {
+        if ('#ROUTING' in message) {
+            let routing = message['#ROUTING'];
+
+            if (routing.type == 'NodeClass') {
+                if (routing.nodeClass == this.getNodeClass()) {
+                    delete message['#ROUTING'];
+                    return false;
+                }
+                else {
+                    this.routeUpRelay(message);
+                    return true;
+                }
+            }
+            else if (routing.type == 'Pid') {
+                if (routing.nodePid == this.getPid()) {
+                    delete message['#ROUTING'];
+                    return false;
+                }
+                else {
+                    this.routeUpRelay(message);
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    routeUpRelay(message) {
+        let sendHandle = message.sendHandle;
+        delete message.sendHandle;
+        delete message.childProcess;
+        this.sendParent(message, sendHandle);
+    }
+
     sendChild(child, message, sendHandle) {
         if (child instanceof ChildProcess) {
             child.sendChild(message, sendHandle);
@@ -522,11 +614,35 @@ singleton('', class Process extends Emitter {
         return this;
     }
 
+    sendController(message, sendHandle) {
+        message['#ROUTING'] = {
+            type: 'NodeClass',
+            nodeClass: this.nodeClassController,
+        };
+        
+        return this.sendParent(message, sendHandle);
+    }
+
     sendParent(message, sendHandle) {
         LibProcess.send(
             { json: toJson(message) },
             sendHandle,
         );
+
+        return this;
+    }
+
+    startApplication(appClassName, settings) {
+        if (this.getNodeClass() == this.nodeClassController) {
+            this.onStartApplication(appClassName, settings);
+        }
+        else {
+            this.sendController({
+                name: 'StartApplication',
+                appClassName: appClassName,
+                settings: settings,
+            });
+        }
 
         return this;
     }
@@ -545,40 +661,54 @@ singleton('', class Process extends Emitter {
  * functionality.
 *****/
 register('', async function execIn(nodeClass, func) {
-    if (Array.isArray(nodeClass)) {
-        if (nodeClass.filter(nodeClass => nodeClass == Process.getNodeClass()).length) {
-            await func();
+    try {
+        if (Array.isArray(nodeClass)) {
+            if (nodeClass.filter(nodeClass => nodeClass == Process.getNodeClass()).length) {
+                await func();
+            }
+        }
+        else if (typeof nodeClass == 'string') {
+            if (nodeClass == Process.getNodeClass()) {
+                await func();
+            }
         }
     }
-    else if (typeof nodeClass == 'string') {
-        if (nodeClass == Process.getNodeClass()) {
-            await func();
-        }
+    catch (e) {
+        console.log(e);
     }
 });
 
 register('', function registerIn(nodeClass, ns, arg) {
-    if (Array.isArray(nodeClass)) {
-        if (nodeClass.filter(nodeClassName => nodeClassName == Process.getNodeClass()).length) {
-            register(ns, arg);
+    try {
+        if (Array.isArray(nodeClass)) {
+            if (nodeClass.filter(nodeClassName => nodeClassName == Process.getNodeClass()).length) {
+                register(ns, arg);
+            }
+        }
+        else if (typeof nodeClass == 'string') {
+            if (nodeClass == Process.getNodeClass()) {
+                register(ns, arg);
+            }
         }
     }
-    else if (typeof nodeClass == 'string') {
-        if (nodeClass == Process.getNodeClass()) {
-            register(ns, arg);
-        }
+    catch (e) {
+        console.log(e);
     }
 });
 
 register('', async function singletonIn(nodeClass, ns, arg, ...args) {
-    if (Array.isArray(nodeClass)) {
-        if (nodeClass.filter(nodeClassName => nodeClassName == Process.getNodeClass()).length) {
-            singleton(ns, arg, ...args);
+    try {
+        if (Array.isArray(nodeClass)) {
+            if (nodeClass.filter(nodeClassName => nodeClassName == Process.getNodeClass()).length) {
+                singleton(ns, arg, ...args);
+            }
+        }
+        else if (typeof nodeClass == 'string') {
+            if (nodeClass == Process.getNodeClass()) {
+                singleton(ns, arg, ...args);
+            }
         }
     }
-    else if (typeof nodeClass == 'string') {
-        if (nodeClass == Process.getNodeClass()) {
-            singleton(ns, arg, ...args);
-        }
+    catch (e) {
     }
 });

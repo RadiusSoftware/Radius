@@ -20,14 +20,24 @@
  * THE SOFTWARE.
 *****/
 
-/*****
-*****/
-register('', async function log(...args) {
-});
-
 
 /*****
 *****/
-register('', async function notify(arg) {
-});
+register('', class Application {
+    constructor() {
+        this.className = Reflect.getPrototypeOf(this).constructor.name;
+        this.settings = fromJson(Process.getEnv()[Process.getNodeClass()]);
+    }
 
+    getSetting(name) {
+        return this.settings[name];
+    }
+
+    getSettings() {
+        return this.settings;
+    }
+
+    hasSetting(name) {
+        return name in this.settings;
+    }
+});

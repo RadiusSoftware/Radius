@@ -22,58 +22,8 @@
 
 
 /*****
-*****
-registerPrimary('', class HttpServer extends Server {
-    constructor(opts) {
-        super(opts);
-    }
-
-    async clearItem() {
-    }
-
-    async getItem() {
-    }
-
-    async setItem() {
-    }
-});
-
-
-/*****
-*****
-registerPrimary('', class HttpItem {
+*****/
+register('', class UrlLibrary {
     constructor() {
     }
 });
-
-
-/*****
-*****
-registerWorker('', class HttpServer extends Server {
-    constructor(opts) {
-        super(opts);
-    }
-
-    async start() {
-    }
-
-    async stop() {
-    }
-});
-
-
-/*****
-*****
-registerWorker('', class HttpRequest {
-    constructor() {
-    }
-});
-
-
-/*****
-*****
-registerWorker('', class HttpResponse {
-    constructor() {
-    }
-});
-*/

@@ -23,7 +23,7 @@
 
 /*****
 *****/
-register('', class Validator extends Emitter {
+registerIn('HttpServer', '', class HttpServer extends Application {
     constructor() {
         super();
     }

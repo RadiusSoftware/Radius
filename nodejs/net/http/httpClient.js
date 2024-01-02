@@ -34,7 +34,7 @@ import * as LibUrl from 'url'
     *****/
     register('', class HttpClient {
         constructor(url, port) {
-            this.url = Url.parse(url);
+            this.url = LibUrl.parse(url);
             this.host = this.url.host;
             this.path = this.url.path;
 
@@ -83,7 +83,7 @@ import * as LibUrl from 'url'
 
         request(mime, content, headers) {
             let opts = {
-                client: this.protocol == 'https' ? Https : Http,
+                client: this.protocol == 'https' ? LibHttps : LibHttp,
                 headers: {},
                 method: this.method,
                 host: this.host,
