@@ -31,7 +31,7 @@ import LibProcess from 'node:process'
  * standard Radius messages.  Each Process may communication directly with its
  * parent and children.
  * 
- * When Radius applications are launched, there's a primary process node classed
+ * When the Radius server is launched, there's a primary process node classed
  * as the "#CONTROLLER", whose name is accessable as Process.nodeClassController;
  * The controll is able to create or spawn applications, which result in a child
  * of the controller starting and launching the application in that child process.
@@ -86,6 +86,9 @@ singleton('', class Process extends Emitter {
             };
         }
 
+        LibProcess.title = this.radius.nodeTitle;
+        this.on('StartApplication', message => this.startApplication(message.settings));
+
         LibProcess.on('beforeExit', code => this.onBeforeExit(code));
         LibProcess.on('disconnect', () => this.onDisconnect());
         LibProcess.on('exit', code => this.onExit(code));
@@ -95,9 +98,6 @@ singleton('', class Process extends Emitter {
         LibProcess.on('uncaughtExceptionMonitor', (error, origin) => this.onUncaughtExceptionMonitor(error, origin));
         LibProcess.on('unhandledRejection', (reason, promise) => this.onUnhandledRejection(reason, promise));
         LibProcess.on('warning', warning => this.onWarning(warning));
-
-        LibProcess.title = this.radius.nodeTitle;
-        this.on('StartApplication', message => this.onStartApplication(message.appClassName, message.settings));
     }
 
     abort() {
@@ -286,20 +286,16 @@ singleton('', class Process extends Emitter {
         return LibProcess.getgroups();
     }
 
+    getIid() {
+        return this.iid;
+    }
+
     getImplementation() {
         return LibProcess;
     }
 
     getMemory() {
         return LibProcess.constrainedMemory();
-    }
-
-    getUid() {
-        return LibProcess.getuid();
-    }
-
-    getIid() {
-        return this.iid;
     }
 
     getNodeGuid() {
@@ -328,6 +324,10 @@ singleton('', class Process extends Emitter {
 
     getRelease() {
         return LibProcess.release;
+    }
+
+    getUid() {
+        return LibProcess.getuid();
     }
 
     onAbort(message) {
@@ -483,10 +483,6 @@ singleton('', class Process extends Emitter {
         });
     }
 
-    onStartApplication(appClassName, settings) {
-        let app = this.fork(appClassName, appClassName, settings);
-    }
-
     onUncaughtException(error, origin) {
         this.emit({
             name: 'UncaughtException',
@@ -632,14 +628,13 @@ singleton('', class Process extends Emitter {
         return this;
     }
 
-    startApplication(appClassName, settings) {
+    startApplication(settings) {
         if (this.getNodeClass() == this.nodeClassController) {
-            this.onStartApplication(appClassName, settings);
+            this.fork(settings.appClass, settings.appClass, settings);
         }
         else {
             this.sendController({
                 name: 'StartApplication',
-                appClassName: appClassName,
                 settings: settings,
             });
         }

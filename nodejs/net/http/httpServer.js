@@ -23,8 +23,21 @@
 
 /*****
 *****/
-registerIn('HttpServer', '', class HttpServer extends Application {
-    constructor() {
-        super();
+register('', class HttpServer extends Application {
+    constructor(settings) {
+        super(settings);
+    }
+
+    start() {
+        console.log('** starting HttpServer');
+    }
+});
+
+
+/*****
+*****/
+register('', class HttpServerWorker extends Application {
+    constructor(settings) {
+        super(settings);
     }
 });

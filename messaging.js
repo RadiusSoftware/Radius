@@ -21,41 +21,48 @@
 *****/
 
 
-/*****
-*****/
-register('', class Application {
-    constructor(settings) {
-        this.settings = settings;
-        this.className = Reflect.getPrototypeOf(this).constructor.name;
+(() => {
+    /*****
+    *****/
+    const types = {
+        email: { type: 'email' },
+        mms:   { type: 'mms'   },
+    };
 
-        console.log(Process.getNodeClass());
-        /*
-        if (this.radius.nodeClass in this.getEnv()) {
-            let maker = global[`mk${this.radius.nodeClass}`];
-            console.log(maker);
+
+    /*****
+    *****/
+    const instances = {
+    };
+
+
+    /*****
+    *****/
+    register('', class Messenger extends Emitter {
+        static _ = (() => {
+            //console.log(Reflect.getPrototypeOf())    
+        })();
+
+        constructor(type) {
+            super();
         }
-        */
-    }
+    });
 
-    createWorker() {
-    }
 
-    getName() {
-        return this.className;
-    }
+    /*****
+    *****/
+    register('', class Emailer extends Messenger {
+        constructor() {
+            super();
+        }
+    });
 
-    getSetting(name) {
-        return this.settings[name];
-    }
 
-    getSettings() {
-        return this.settings;
-    }
-
-    hasSetting(name) {
-        return name in this.settings;
-    }
-
-    start() {
-    }
-});
+    /*****
+    *****/
+    register('', class Mms extends Messenger {
+        constructor() {
+            super();
+        }
+    });
+})();
