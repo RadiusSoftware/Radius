@@ -32,38 +32,37 @@
  * this script only loads the framework.  Once loaded, the framework will be
  * used for loading in developer application code, CSS, and HTML framents.
 *****/
-import '../core.js'
-import '../ctl.js'
-import '../buffer.js'
-import '../data.js'
-import '../emitter.js'
-import '../depot.js'
-import '../json.js'
-import '../language.js'
-import '../messaging.js'
-import '../stringSet.js'
-import '../time.js'
-import '../mime.js'
-import '../textTemplate.js'
-import '../textUtils.js'
+require('../core.js');
+require('../ctl.js');
+require('../buffer.js');
+require('../data.js');
+require('../emitter.js');
+require('../depot.js');
+require('../json.js');
+require('../language.js');
+require('../messaging.js');
+require('../stringSet.js');
+require('../time.js');
+require('../mime.js');
+require('../textTemplate.js');
+require('../textUtils.js');
 
-import './core.js'
-import './crypto.js'
-import './network.js'
-import './socket.js'
-import './tls.js'
-import './host.js'
-import './process.js'
-import './childProcess.js'
-import './tempFile.js'
-import './compression.js'
-import './jose.js'
-import './acme.js'
-import './urlLibrary.js'
-import './application.js'
+require('./core.js');
+require('./crypto.js');
+require('./tempFile.js');
+require('./network.js');
+require('./socket.js');
+require('./tls.js');
+require('./host.js');
+require('./process.js');
+require('./childProcess.js');
+require('./compression.js');
+require('./jose.js');
+require('./acme.js');
+require('./urlLibrary.js');
+require('./application.js');
 
-import './net/tcp/tcpClient.js'
-import './net/tcp/tcpServer.js'
-
-import './net/http/httpClient.js'
-import './net/http/httpServer.js'
+require('./net/httpClient.js');
+require('./net/httpServer.js');
+require('./net/tcpClient.js');
+require('./net/tcpServer.js');

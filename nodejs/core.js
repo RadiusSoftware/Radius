@@ -20,6 +20,7 @@
  * THE SOFTWARE.
 *****/
 
+
 /*****
 *****/
 register('', async function log(...args) {
@@ -30,4 +31,3 @@ register('', async function log(...args) {
 *****/
 register('', async function notify(arg) {
 });
-

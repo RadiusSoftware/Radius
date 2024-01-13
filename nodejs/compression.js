@@ -19,7 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-import 'node-gzip';
+const NpmGzip = require('node-gzip');
 
 
 /*****
@@ -34,8 +34,8 @@ singleton('', class Compression {
     constructor() {
         this.algorithms = {
             gzip: {
-                compress: async (uncompressed) => await gzip(uncompressed),
-                uncompress: async (compressed) => await ungzip(compressed),
+                compress: async (uncompressed) => await NpmGzip.gzip(uncompressed),
+                uncompress: async (compressed) => await NpmGzip.ungzip(compressed),
             },
         };
     }

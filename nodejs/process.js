@@ -19,8 +19,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-import LibChildProcess from 'node:child_process'
-import LibProcess from 'node:process'
+LibChildProcess = require('node:child_process');
+LibProcess = require('node:process');
 
 
 /*****
@@ -193,13 +193,21 @@ singleton('', class Process extends Emitter {
                 this.children[subprocess.pid] = childProcess;
             }
         }
-        catch (e) {}
+        catch (e) {
+            console.log(e);
+        }
         return childProcess;
     }
 
     getActiveResourceInfo() {
         return LibProcess.getActiveResourceInfo();
     }
+
+    getApplication() {
+        if (this.radius.nodeClass in LibProcess.env) {
+            return fromJson(LibProcess.env[this.radius.nodeClass]);
+        }
+     }
 
     getArg(index) {
         return LibProcess.argv[index];
@@ -330,6 +338,10 @@ singleton('', class Process extends Emitter {
         return LibProcess.getuid();
     }
 
+    hasEnv(name) {
+        return typeof LibProcess.env[name] != 'undefined';
+    }
+
     onAbort(message) {
         this.abort();
     }
@@ -402,6 +414,7 @@ singleton('', class Process extends Emitter {
     }
 
     onChildSpawn(childProcess, message) {
+        childProcess.sendChild({ name: '#SPAWNED' });
         message.childProcess = childProcess;
         this.emit(message);
     }

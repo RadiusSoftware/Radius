@@ -19,8 +19,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-import 'node:crypto';
-import {v4 as uuidv4} from 'uuid';
+const LibCrpto = require('node:crypto');
+const NpmUuid = require('uuid');
 
 
 /*****
@@ -37,7 +37,7 @@ import {v4 as uuidv4} from 'uuid';
 *****/
 singleton('', class Crypto {
     createAesKey(base64) {
-        return crypto.createSecretKey(base64, 'base64');
+        return LibCrypto.createSecretKey(base64, 'base64');
     }
 
     async createCertificateSigningRequest(opts) {
@@ -70,30 +70,30 @@ singleton('', class Crypto {
     }
 
     createHmac(algorithm, aesKey) {
-        let hmac = crypto.createHmac(algorithm, aesKey);
+        let hmac = LibCrypto.createHmac(algorithm, aesKey);
         hmac._algorithm = algorithm;
         hmac._aesKey = aesKey;
         return hmac;
     }
 
     createPrivateKey(pem) {
-        return crypto.createPrivateKey(pem);
+        return LibCrypto.createPrivateKey(pem);
     }
 
     createPublicKey(pem) {
-        return crypto.createPublicKey(pem);
+        return LibCrypto.createPublicKey(pem);
     }
 
     decrypt(keyObj, data, iv, mode) {
         return new Promise(async (ok, fail) => {
             if (keyObj.type == 'public') {
-                ok(crypto.publicDecrypt(
+                ok(LibCrypto.publicDecrypt(
                     keyObj,
                     data instanceof Buffer ? data : mkBuffer(data, 'base64'),
                 ));
             }
             else if (keyObj.type == 'private') {
-                ok(crypto.privateDecrypt(
+                ok(LibCrypto.privateDecrypt(
                     keyObj,
                     data instanceof Buffer ? data : mkBuffer(data, 'base64'),
                 ));
@@ -102,7 +102,7 @@ singleton('', class Crypto {
                 let chunks = [];
                 mode = typeof mode == 'undefined' ? 'cbc' : mode;
     
-                let decipher = crypto.createDecipheriv(
+                let decipher = LibCrypto.createDecipheriv(
                     `aes-${keyObj.symmetricKeySize*8}-${mode}`,
                     keyObj,
                     iv,
@@ -129,13 +129,13 @@ singleton('', class Crypto {
     encrypt(keyObj, data, mode) {
         return new Promise(async (ok, fail) => {
             if (keyObj.type == 'public') {
-                ok(crypto.publicEncrypt(
+                ok(LibCrypto.publicEncrypt(
                     keyObj,
                     data instanceof Buffer ? data : mkBuffer(data),
                 ));
             }
             else if (keyObj.type == 'private') {
-                ok(crypto.privateEncrypt(
+                ok(LibCrypto.privateEncrypt(
                     keyObj,
                     data instanceof Buffer ? data : mkBuffer(data),
                 ));
@@ -145,7 +145,7 @@ singleton('', class Crypto {
                 mode = typeof mode == 'undefined' ? 'cbc' : mode;
                 let iv = await this.generateRandomArray(16);
     
-                let cipher = crypto.createCipheriv(
+                let cipher = LibCrypto.createCipheriv(
                     `aes-${keyObj.symmetricKeySize*8}-${mode}`,
                     keyObj,
                     iv,
@@ -193,7 +193,7 @@ singleton('', class Crypto {
     generateAesKey(bits) {
         return new Promise(async (ok, fail) => {
             if (bits == 128 || bits == 192 || bits == 256) {
-                crypto.generateKey('aes', { length: bits }, (error, keyObj) => {
+                LibCrypto.generateKey('aes', { length: bits }, (error, keyObj) => {
                     if (error) {
                         fail(`\nFailed to generate AES key.\n${error}`);
                     }
@@ -214,7 +214,7 @@ singleton('', class Crypto {
                 modulusLength: opts && opts.bits ? opts.bits : 4096,
             };
 
-            crypto.generateKeyPair(algorithm, options, (error, publicKey, privateKey) => {
+            LibCrypto.generateKeyPair(algorithm, options, (error, publicKey, privateKey) => {
                 if (error) {
                     fail(error);
                 }
@@ -230,7 +230,7 @@ singleton('', class Crypto {
 
     generateRandomArray(count) {
         return new Promise((ok, fail) => {
-            crypto.randomFill(new Uint8Array(count), (error, array) => {
+            LibCrypto.randomFill(new Uint8Array(count), (error, array) => {
                 ok(array);
             });
         });
@@ -245,7 +245,7 @@ singleton('', class Crypto {
                 throw new Error('Parameter min >= max.');
             }
 
-            crypto.randomInt(min, max, (error, n) => {
+            LibCrypto.randomInt(min, max, (error, n) => {
                 if (error) {
                     fail(error);
                 }
@@ -257,7 +257,7 @@ singleton('', class Crypto {
     }
 
     generateRandomUuid() {
-        return crypto.randomUUID();
+        return LibCrypto.randomUUID();
     }
 
     async generateSshKeyPair() {
@@ -279,12 +279,12 @@ singleton('', class Crypto {
     }
 
     generateUuid() {
-        return uuidv4();
+        return NpmUuid.v4();
     }
 
     hash(algorithm, value) {
         return new Promise((ok, fail) => {
-            const hash = crypto.createHash(algorithm);
+            const hash = LibCrypto.createHash(algorithm);
 
             hash.on('readable', () => {
                 let hashed = hash.read();
@@ -320,7 +320,7 @@ singleton('', class Crypto {
 
     scrypt(password, salt, keylen) {
         return new Promise((ok, fail) => {
-            crypto.scrypt(password, salt, keylen, (error, derived) => {
+            LibCrypto.scrypt(password, salt, keylen, (error, derived) => {
                 ok(derived);
             })
         });
@@ -328,13 +328,13 @@ singleton('', class Crypto {
 
     sign(keyObj, data) {
         return new Promise((ok, fail) => {
-            if (keyObj instanceof crypto.KeyObject) {
-                crypto.sign(null, data, keyObj, (error, signature) => {
+            if (keyObj instanceof LibCrypto.KeyObject) {
+                LibCrypto.sign(null, data, keyObj, (error, signature) => {
                     ok(signature);
                 });
             }
             else {
-                let hmac = crypto.createHmac(keyObj._algorithm, keyObj._aesKey);
+                let hmac = LibCrypto.createHmac(keyObj._algorithm, keyObj._aesKey);
                 ok(hmac.update(data).digest());
             }
         });
@@ -342,13 +342,13 @@ singleton('', class Crypto {
 
     verify(keyObj, data, signature) {
         return new Promise((ok, fail) => {
-            if (keyObj instanceof crypto.KeyObject) {
-                crypto.verify(null, data, keyObj, signature, (error, result) => {
+            if (keyObj instanceof LibCrypto.KeyObject) {
+                LibCrypto.verify(null, data, keyObj, signature, (error, result) => {
                     ok(result);
                 });
             }
             else {
-                let hmac = crypto.createHmac(keyObj._algorithm, keyObj._aesKey);
+                let hmac = LibCrypto.createHmac(keyObj._algorithm, keyObj._aesKey);
                 ok(hmac.update(data).digest().equals(signature));
             }
         })

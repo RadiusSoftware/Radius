@@ -23,21 +23,36 @@
 
 /*****
 *****/
-register('', class HttpServer extends Application {
-    constructor(settings) {
-        super(settings);
-    }
-
-    start() {
-        console.log('** starting HttpServer');
+registerIn('HttpServer', '', class HttpServer extends Application {
+    constructor() {
+        super();
     }
 });
 
 
 /*****
 *****/
-register('', class HttpServerWorker extends Application {
-    constructor(settings) {
-        super(settings);
+registerIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWorker {
+    constructor() {
+        super();
+    }
+
+    async start() {
+        await super.start();
     }
 });
+
+
+/*****
+*****
+execIn('HttpServer', async () => {
+    await mkHttpServer().start();
+});
+
+
+/*****
+*****
+execIn('HttpServerWorker', async () => {
+    await mkHttpServerWorker().start();
+});
+*/

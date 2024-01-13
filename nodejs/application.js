@@ -24,24 +24,20 @@
 /*****
 *****/
 register('', class Application {
-    constructor(settings) {
-        this.settings = settings;
+    constructor() {
+        this.workers = {};
         this.className = Reflect.getPrototypeOf(this).constructor.name;
 
-        console.log(Process.getNodeClass());
-        /*
-        if (this.radius.nodeClass in this.getEnv()) {
-            let maker = global[`mk${this.radius.nodeClass}`];
-            console.log(maker);
+        if (Process.hasEnv(this.className)) {
+            this.settings = Process.getEnv(this.className, 'json');
         }
-        */
+        else {
+            this.settings = {};
+        }
     }
 
-    createWorker() {
-    }
-
-    getName() {
-        return this.className;
+    getClassName() {
+        return this.settings.appClass;
     }
 
     getSetting(name) {
@@ -52,10 +48,86 @@ register('', class Application {
         return this.settings;
     }
 
+    getSettingsFromProcess() {
+        if ('nodeClass' in this.radius && this.radius.nodeClass in LibProcess.env) {
+            return fromJson(this.getEnv(this.radius.nodeClass));
+        }
+
+        return {};
+    }
+
+    getWorker() {
+    }
+
     hasSetting(name) {
         return name in this.settings;
     }
 
-    start() {
+    hasWorker() {
     }
+
+    async pause() {
+    }
+
+    async pauseWorker() {
+    }
+
+    async stop() {
+    }
+
+    async stopWorker() {
+    }
+
+    async start() {
+        if (typeof this.settings.workers == 'number') {
+            for (let i = 0; i < this.settings.workers; i++) {
+                await this.startWorker();
+            }
+        }
+    }
+
+    async startWorker() {
+        let workerClassName = `${this.className}Worker`;
+        let worker = Process.fork(workerClassName, workerClassName, this.settings);
+        //console.log(worker);
+        return worker;
+    }
+
+    [Symbol.iterator]() {
+        return Object.values(this.workers)[Symbol.iterator]();
+    }
+});
+
+
+/*****
+*****/
+register('', class ApplicationWorker {
+    constructor() {
+        this.className = Reflect.getPrototypeOf(this).constructor.name;
+
+        if (Process.hasEnv(this.className)) {
+            this.settings = Process.getEnv(this.className, 'json');
+        }
+        else {
+            this.settings = {};
+        }
+    }
+
+    async start() {
+    }
+
+    async stop() {
+    }
+
+    async stop() {
+    }
+});
+
+
+/*****
+*****/
+Process.on('#SPAWNED', async message => {
+    console.log(Process.getNodeClass());
+    let settings = Process.getApplication();
+    console.log(settings);
 });

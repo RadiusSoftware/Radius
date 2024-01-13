@@ -19,9 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-import * as LibFileSystem from 'fs'
-import * as LibPath from 'path'
-import * as LibProcess from 'process'
+const LibPath = require('path');
 
 
 /*****

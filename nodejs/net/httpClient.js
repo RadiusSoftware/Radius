@@ -20,9 +20,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-import * as LibHttp from 'http'
-import * as LibHttps from 'https'
-import * as LibUrl from 'url'
+const LibHttp = require('http');
+const LibHttps = require('https');
+const LibUrl = require('url');
  
  
  (() => {

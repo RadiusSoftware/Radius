@@ -25,5 +25,6 @@
 *****/
 register('', class UrlLibrary {
     constructor() {
+        this.entries = {};
     }
 });
