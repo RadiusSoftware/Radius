@@ -24,8 +24,8 @@
 /*****
 *****/
 registerIn('HttpServer', '', class HttpServer extends Application {
-    constructor() {
-        super();
+    constructor(settings) {
+        super(settings);
     }
 });
 
@@ -33,26 +33,11 @@ registerIn('HttpServer', '', class HttpServer extends Application {
 /*****
 *****/
 registerIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWorker {
-    constructor() {
-        super();
+    constructor(settings) {
+        super(settings);
     }
 
     async start() {
         await super.start();
     }
 });
-
-
-/*****
-*****
-execIn('HttpServer', async () => {
-    await mkHttpServer().start();
-});
-
-
-/*****
-*****
-execIn('HttpServerWorker', async () => {
-    await mkHttpServerWorker().start();
-});
-*/

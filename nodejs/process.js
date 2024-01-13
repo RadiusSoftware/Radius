@@ -31,16 +31,7 @@ LibProcess = require('node:process');
  * standard Radius messages.  Each Process may communication directly with its
  * parent and children.
  * 
- * When the Radius server is launched, there's a primary process node classed
- * as the "#CONTROLLER", whose name is accessable as Process.nodeClassController;
- * The controll is able to create or spawn applications, which result in a child
- * of the controller starting and launching the application in that child process.
- * Child / application processes can in turn spawn children of their own, which
- * can lead to a tree-like hierarchy process structure within the Radius network.
- * This enables a single instance of a Radius process to execute multiple apps
- * under the control of the controller node.
- * 
- * NodeJS events and messages  are converted into Radius messages.  Remember
+ * NodeJS events and messages are converted into Radius messages.  Remember
  * that the Radius Message class along with the Radius Emitter provies the core
  * features for all intraprocess, interprocess, and host-to-host communications
  * and event management.  One point to note is that all messaging employs the
@@ -87,8 +78,6 @@ singleton('', class Process extends Emitter {
         }
 
         LibProcess.title = this.radius.nodeTitle;
-        this.on('StartApplication', message => this.startApplication(message.settings));
-
         LibProcess.on('beforeExit', code => this.onBeforeExit(code));
         LibProcess.on('disconnect', () => this.onDisconnect());
         LibProcess.on('exit', code => this.onExit(code));
@@ -202,12 +191,6 @@ singleton('', class Process extends Emitter {
     getActiveResourceInfo() {
         return LibProcess.getActiveResourceInfo();
     }
-
-    getApplication() {
-        if (this.radius.nodeClass in LibProcess.env) {
-            return fromJson(LibProcess.env[this.radius.nodeClass]);
-        }
-     }
 
     getArg(index) {
         return LibProcess.argv[index];
@@ -624,12 +607,17 @@ singleton('', class Process extends Emitter {
     }
 
     sendController(message, sendHandle) {
-        message['#ROUTING'] = {
-            type: 'NodeClass',
-            nodeClass: this.nodeClassController,
-        };
+        if (this.getNodeClass() == this.nodeClassController) {
+            this.emit(message, sendHandle);
+        }
+        else {
+            message['#ROUTING'] = {
+                type: 'NodeClass',
+                nodeClass: this.nodeClassController,
+            };
         
-        return this.sendParent(message, sendHandle);
+            return this.sendParent(message, sendHandle);
+        }
     }
 
     sendParent(message, sendHandle) {
@@ -637,20 +625,6 @@ singleton('', class Process extends Emitter {
             { json: toJson(message) },
             sendHandle,
         );
-
-        return this;
-    }
-
-    startApplication(settings) {
-        if (this.getNodeClass() == this.nodeClassController) {
-            this.fork(settings.appClass, settings.appClass, settings);
-        }
-        else {
-            this.sendController({
-                name: 'StartApplication',
-                settings: settings,
-            });
-        }
 
         return this;
     }
