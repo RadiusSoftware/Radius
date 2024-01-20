@@ -62,34 +62,14 @@ execIn(Process.nodeClassController, () => {
 
 /*****
 *****/
-register('', class Application {
+register('', class Application extends Emitter {
     constructor(settings) {
-        console.log(settings)
-        console.log('');
-        /*
+        super();
         this.settings = settings;
         this.className = this.getClassName();
-
-        if (typeof settings == 'object') {
-            this.workers = {};
-        }
-        else {
-            Process.sendController({
-                name: '#StartApplication',
-                settings: settings,
-            });
-        }
-
-        if (Process.hasEnv(this.className)) {
-            this.settings = Process.getEnv(this.className, 'json');
-        }
-        else {
-            this.settings = {};
-        }
-        */
+        this.workers = {};
     }
 
-    /*
     getApplication() {
         if (this.radius.nodeClass in LibProcess.env) {
             return fromJson(LibProcess.env[this.radius.nodeClass]);
@@ -105,7 +85,7 @@ register('', class Application {
     }
 
     getSettings() {
-        return this.settings;
+        return Data.clone(settings);
     }
 
     getSettingsFromProcess() {
@@ -116,47 +96,47 @@ register('', class Application {
         return {};
     }
 
-    getWorker() {
-    }
-
     hasSetting(name) {
         return name in this.settings;
     }
 
-    hasWorker() {
-    }
-
     async pause() {
+        return this;
     }
 
-    async pauseWorker() {
+    async pauseWorker(pid) {
+        return this;
     }
 
-    async stop() {
+    async quit() {
+        return this;
     }
 
-    async stopWorker() {
+    async quitWorker(pid) {
+        return this;
     }
-    */
 
     async start() {
-        console.log('\n...starting');
-        /*
         if (typeof this.settings.workers == 'number') {
             for (let i = 0; i < this.settings.workers; i++) {
                 await this.startWorker();
             }
         }
-        */
     }
 
     async startWorker() {
-        /*
         let workerClassName = `${this.className}Worker`;
         let worker = Process.fork(workerClassName, workerClassName, this.settings);
-        //console.log(worker);
+        this.workers[worker.getPid()] = worker;
         return worker;
-        */
+    }
+
+    async stop() {
+        return this;
+    }
+
+    async stopWorker(pid) {
+        return this;
     }
 
     [Symbol.iterator]() {
@@ -167,8 +147,10 @@ register('', class Application {
 
 /*****
 *****/
-register('', class ApplicationWorker {
+register('', class ApplicationWorker extends Emitter {
     constructor() {
+        super();
+        this.state = 'paused';
         this.className = Reflect.getPrototypeOf(this).constructor.name;
 
         if (Process.hasEnv(this.className)) {
@@ -179,22 +161,35 @@ register('', class ApplicationWorker {
         }
     }
 
+    async pause() {
+        if (this.state == 'running') {
+            this.state = 'paused';
+            this.emit({ name: 'WorkerState',  state: 'paused' });
+        }
+
+        return this;
+    }
+
+    async quit() {
+        Process.exit(0);
+        return this;
+    }
+
     async start() {
+        if (this.state == 'paused') {
+            this.state = 'running';
+            this.emit({ name: 'WorkerState',  state: 'running' });
+        }
+
+        return this;
     }
 
     async stop() {
-    }
+        if (this.state == 'running') {
+            this.emit({ name: 'WorkerState',  state: 'stopped' });
+            Process.exit(0);
+        }
 
-    async stop() {
+        return this;
     }
 });
-
-
-/*****
-*****
-Process.on('#SPAWNED', async message => {
-    console.log(Process.getNodeClass());
-    let settings = Process.getApplication();
-    console.log(settings);
-});
-*/

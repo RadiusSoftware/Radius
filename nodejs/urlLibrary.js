@@ -24,7 +24,9 @@
 /*****
 *****/
 register('', class UrlLibrary {
-    constructor() {
-        this.entries = {};
+    constructor(opts) {
+    }
+
+    async get(url) {
     }
 });
