@@ -65,12 +65,9 @@ registerIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWor
     }
 
     async onRequest(httpReq, httpRsp) {
-        this.req = mkHttpRequest(httpReq);
-        this.rsp = mkHttpResponse(httpRsp, this.req);
-
-
-        //this.rsp.respondStatus(200);
-        console.log(this.rsp.respond(200, 'text/plain', this.req.getQuery()));
+        this.req = mkHttpRequest(this, httpReq);
+        this.rsp = mkHttpResponse(this, httpRsp, this.req);
+        this.rsp.respond(200, 'text/plain', this.req.getQuery());
     }
 
     async onUpgrade(httpReq, socket, headPacket) {
@@ -90,7 +87,9 @@ registerIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWor
     }
 
     async start() {
+        this.lib = await mkHttpLibrary(this.settings.libSettings).init(this.settings.libEntries);
         await super.start();
+        return this;
     }
 });
 
@@ -103,7 +102,8 @@ registerIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWor
  * content when making a new HTTP request instance.
 *****/
 registerIn('HttpServerWorker', '', class HttpRequest {
-    constructor(httpReq) {
+    constructor(httpServer, httpReq) {
+        this.httpServer = httpServer;
         this.httpReq = httpReq;
         this.object = {};
         this.params = {};
@@ -411,7 +411,8 @@ registerIn('HttpServerWorker', '', class HttpResponse {
         511: { text: 'Network Authentiation Failed' },
     };
 
-    constructor(httpRsp, req) {
+    constructor(httpServer, httpRsp, req) {
+        this.httpServer = httpServer;
         this.httpRsp = httpRsp;
         this.req = req;
     }
@@ -544,7 +545,7 @@ registerIn('HttpServerWorker', '', class HttpResponse {
         }
         else {
             if (!this.hasHeader('content-language')) {
-                let language = 'en-US';
+                let language = this.httpServer.settings.deflang;
                 let acceptLanguage = this.req.getAcceptLanguage();
     
                 if (Object.keys(acceptLanguage).length) {

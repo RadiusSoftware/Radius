@@ -68,6 +68,7 @@ register('', class Application extends Emitter {
         this.settings = settings;
         this.className = this.getClassName();
         this.workers = {};
+        Process.on('*', message => this.emit(message));
     }
 
     getApplication() {
@@ -100,6 +101,14 @@ register('', class Application extends Emitter {
         return name in this.settings;
     }
 
+    async kill() {
+        return this;
+    }
+
+    async killWorker(pid) {
+        return this;
+    }
+
     async pause() {
         return this;
     }
@@ -108,12 +117,10 @@ register('', class Application extends Emitter {
         return this;
     }
 
-    async quit() {
-        return this;
+    async queryWorker(worker, message) {
     }
 
-    async quitWorker(pid) {
-        return this;
+    sendWorker(worker, message) {
     }
 
     async start() {
@@ -161,6 +168,11 @@ register('', class ApplicationWorker extends Emitter {
         }
     }
 
+    async kill() {
+        Process.exit(0);
+        return this;
+    }
+
     async pause() {
         if (this.state == 'running') {
             this.state = 'paused';
@@ -170,8 +182,12 @@ register('', class ApplicationWorker extends Emitter {
         return this;
     }
 
-    async quit() {
-        Process.exit(0);
+    async queryApplication(message) {
+        return this;
+    }
+
+    sendApplication(message) {
+        Process.sendParent(message);
         return this;
     }
 

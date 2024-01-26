@@ -32,37 +32,45 @@
  * this script only loads the framework.  Once loaded, the framework will be
  * used for loading in developer application code, CSS, and HTML framents.
 *****/
-require('../core.js');
-require('../ctl.js');
-require('../buffer.js');
-require('../data.js');
-require('../emitter.js');
-require('../depot.js');
-require('../json.js');
-require('../language.js');
-require('../messaging.js');
-require('../stringSet.js');
-require('../time.js');
-require('../mime.js');
-require('../textTemplate.js');
-require('../textUtils.js');
+try {
+    require('../core.js');
+    require('../txt.js');
+    require('../ctl.js');
+    require('../buffer.js');
+    require('../data.js');
+    require('../emitter.js');
+    require('../objekt.js');
+    require('../json.js');
+    require('../language.js');
+    require('../messaging.js');
+    require('../stringSet.js');
+    require('../time.js');
+    require('../mime.js');
+    require('../textTemplate.js');
+    require('../textTree.js');
+    require('../textUtils.js');
 
-require('./core.js');
-require('./crypto.js');
-require('./tempFile.js');
-require('./network.js');
-require('./socket.js');
-require('./tls.js');
-require('./host.js');
-require('./process.js');
-require('./childProcess.js');
-require('./compression.js');
-require('./jose.js');
-require('./acme.js');
-require('./urlLibrary.js');
-require('./application.js');
+    require('./core.js');
+    require('./crypto.js');
+    require('./tempFile.js');
+    require('./network.js');
+    require('./socket.js');
+    require('./tls.js');
+    require('./host.js');
+    require('./process.js');
+    require('./childProcess.js');
+    require('./compression.js');
+    require('./jose.js');
+    require('./acme.js');
+    require('./application.js');
+    require('./html.js');
 
-require('./net/httpClient.js');
-require('./net/httpServer.js');
-require('./net/tcpClient.js');
-require('./net/tcpServer.js');
+    require('./net/httpClient.js');
+    require('./net/httpLibrary.js');
+    require('./net/httpServer.js');
+    require('./net/tcpClient.js');
+    require('./net/tcpServer.js');
+}
+catch (e) {
+    console.log(e);
+}

@@ -246,6 +246,8 @@
     *****/
     const frameworkFiles = [
         'core.js',
+        'objekt.js',
+        'txt.js',
         'ctl.js',
         'buffer.js',
         'data.js',
@@ -258,6 +260,7 @@
         'mime.js',
         'textTemplate.js',
         'textUtils.js',
+        'textTree.js',
         'mozilla/core.js',
         'mozilla/win.js',
         'mozilla/doc.js',

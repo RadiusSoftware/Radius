@@ -121,9 +121,13 @@
     register('', class DocNode extends Emitter {
         constructor(node) {
             super();
-            this.node = node;
 
-            if (!(nodeKey in node)) {
+            if (nodeKey in node) {
+                return this.node[nodeKey];
+            }
+            else {
+                this.node = node;
+                this.pinned = {};
                 this.node[nodeKey] = this;
             }
         }
@@ -245,12 +249,20 @@
             }
         }
 
+        getPinned(name) {
+            return this.pinned[name];
+        }
+
         getTextContent() {
             return this.node.textContent;
         }
 
         hasChildNodes() {
             return this.node.hasChildNodes;
+        }
+
+        hasPinned(name) {
+            return name in this.pinned;
         }
 
         insertAfter(...args) {
@@ -351,6 +363,11 @@
                 }
             }
 
+            return this;
+        }
+
+        setPinned(name, value) {
+            this.pinned[name] = value;
             return this;
         }
 
@@ -1038,7 +1055,7 @@
                 stub = parent.children[0];
                 parent.replaceChildren();
                 compilerElement.replaceChildren();
-                compilerElement.replace();
+                compilerElement.remove();
                 return mkHtmlElement(stub);                
             }
             else {
@@ -1047,7 +1064,7 @@
                 stub.outerHTML = outerHtml;
                 stub = compilerElement.children[0];
                 compilerElement.replaceChildren();
-                compilerElement.replace();
+                compilerElement.remove();
                 return mkHtmlElement(stub);
             }
         }

@@ -21,7 +21,7 @@
 *****/
 
 
-register('', class Ctl {
+singleton('', class Ctl {
     /*****
      * This is a very simplistic function that's nice to have syntactically.  It
      * makes for some very nice code:  await pauseFor(800).  The input interval is

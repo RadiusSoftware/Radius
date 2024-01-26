@@ -128,55 +128,15 @@ singleton('', class Data {
     }
 
     /*****
-     * classHeirarchyList() and classHierarchyStack() return the class hierarchy
-     * list or stack for the specified object.  Stack means it's in reverse order,
-     * which means from subclass to super class.  List is the opposite order, which
-     * is from super clas to subclass.
+     * This has essentially one use.  It's shorthand for determining whether a
+     * CTOR function, i.e., class, is a sub ctor-class of the given base ctor.
+     * This function expects that both of the arguments are functions, class ctors
+     * to be more specific.
     *****/
-    enumerateClassHierarchy(arg, method) {
-        let ctor;
-        let classes = [];
-    
-        if (typeof arg == 'object') {
-            ctor = Reflect.getPrototypeOf(arg).constructor;
-        }
-        else if (typeof arg == 'function' && arg.toString().startsWith('class')) {
-            ctor = arg;
-        }
-    
-        if (ctor) {
-            while (true) {
-                classes[method](ctor);
-                let match = ctor.toString().match(/extends[ \t\n\r]+([A-Za-z0-9_]+)[ \t\n\r]+\{/m);
-    
-                if (match) {
-                    if (match[1] in global) {
-                        eval(`ctor = ${match[1]}`);
-                        continue;
-                    }
-                }
-    
-                break;
-            }
-        }
-    
-        return classes;
-    }
-    
-    classHierarchyList(arg) {
-        return enumerateClassHierarchy(arg, 'unshift');
-    }
-    
-    classHierarchyStack(arg) {
-        return enumerateClassHierarchy(arg, 'push');
-    }
-    
     classExtends(clss, base) {
-        if (clss !== base) {
-            for (let baseClss of classHierarchyStack(clss)) {
-                if (baseClss === base) {
-                    return true;
-                }
+        for (let prototype of this.enumerateClassHierarchy(clss)) {
+            if (prototype === base) {
+                return true;
             }
         }
     
@@ -279,6 +239,38 @@ singleton('', class Data {
         else {
             return value;
         }
+    }
+
+    /*****
+     * Generates an array containing the class hierarchy list for the given class.
+     * The first element of the returned hierarchy contains the class itself.  As
+     * we dig down into base classes, they are pushed onto the array value, such
+     * that the very last element will be the last super class above Object.
+    *****/
+    enumerateClassHierarchy(arg) {
+        let ctor;
+        let classes = [];
+    
+        if (typeof arg == 'object') {
+            ctor = Reflect.getPrototypeOf(arg).constructor;
+        }
+        else if (typeof arg == 'function' && arg.toString().startsWith('class')) {
+            ctor = arg;
+        }
+    
+        if (ctor) {
+            classes.push(ctor);
+
+            while (ctor.prototype) {
+                ctor = Reflect.getPrototypeOf(ctor);
+
+                if (ctor.name) {
+                    classes.push(ctor);
+                }
+            }
+        }
+    
+        return classes;
     }
 
     /*****

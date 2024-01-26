@@ -23,10 +23,12 @@
 
 /*****
 *****/
-register('', class UrlLibrary {
-    constructor(opts) {
-    }
-
-    async get(url) {
+register('', function mkTxt(text) {
+    return text;
+});
+/*
+register('', class Txt {
+    constructor() {
     }
 });
+*/

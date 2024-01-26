@@ -692,5 +692,6 @@ register('', async function singletonIn(nodeClass, ns, arg, ...args) {
         }
     }
     catch (e) {
+        console.log(e);
     }
 });

@@ -24,6 +24,11 @@ import * as LibChildProcess from 'child_process'
 
 
 /*****
+ * A quick-n-dirty function that will execute the provided script segment in a
+ * shell within a new child process in an asynchronous manner.  The resulting
+ * output from the child process is returned in the form of an error message,
+ * the standard output, and the standard error output.  If all goes as hoped,
+ * only the stdout property is non-trivial.
 *****/
 singleton('', class ServerUtils {
     execInShell(script) {
@@ -36,9 +41,5 @@ singleton('', class ServerUtils {
                 });
             });        
         });
-    }
-
-    async fileExists(path) {
-        return existsSync(path);
     }
 });

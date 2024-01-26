@@ -19,66 +19,116 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
+const LibFiles = require('fs');
 const LibPath = require('path');
 
 
 /*****
+ * Temporary files can be very useful when processing large data sets or large
+ * files.  This class provides a means for rapidly creating a temporary file
+ * with a guaranteed unique file name, opening it, and then making it ready for
+ * use within one of the server processes.
 *****/
 register('', class TempFile {
-    constructor(ext) {
-        return new Promise((ok, fail) => {
-            this.ext = typeof ext == 'string' ? ext.startsWith('.') ? ext.substr(1) : ext : '';
-            this.path = path ? path : LibPath.join(Env.getTempPath(), Crypto.generateRandomUuid());
-            ok(this);
-        });
-    }
+    constructor(extension) {
+        this.handle = null;
+        this.path = LibPath.join(Env.getTempPath(), Crypto.generateRandomUuid());
 
-    async append(data) {
-        if (await this.exists()) {
-            await Files.appendFile(this.getPath(), data);
+        if (typeof extension == 'string' && extension != '') {
+            if (extension.startsWith('.')) {
+                this.extension = extension.substring(1);
+            }
+            else {
+                this.extension = extension;
+            }
         }
         else {
-            await Files.writeFile(this.getPath(), data);
+            this.extension = '';
+        }
+    }
+
+    async close() {
+        if (this.handle) {
+            await this.handle.close();
+            this.handle = null;
         }
 
         return this;
     }
 
     async delete() {
-        if (await this.exists()) {
-            Files.rm(this.getPath());
+        await this.close();
+
+        if (LibFiles.existsSync(this.path)) {
+            await LibFiles.rm(this.path);
         }
 
         return this;
     }
 
-    async exists() {
-        return FileSys.existsSync(this.getPath());
-    }
-
-    getBasePath() {
+    getPath() {
         return this.path;
     }
 
-    getPath() {
-        return this.ext ? `${this.path}.${this.ext}` : this.path;
+    async open() {
+        if (!this.handle) {
+            this.handle = await (async () => {
+                return new Promise((ok, fail) => {
+                    this.handle = LibFiles.open(this.path, 'w', (error, handle) => {
+                        if (error) {
+                            console.log('LOG ENTRY FOR THIS tempFile.js');
+                        }
+
+                        ok(handle);
+                    });
+                });
+            })();
+        }
+
+        return this;
     }
 
     async read() {
-        if (await this.exists()) {
-            return await Files.readFile(this.getPath());
+        if (!this.handle) {
+            await this.open();
         }
 
-        return '';
+        if (this.handle) {
+            return this.handle.readFile();
+        }
+
+        return mkBuffer('');
     }
 
-    replica(ext) {
-        return new TempFile(this.path, ext);
+    async touch() {
+        if (!this.handle) {
+            this.handle = await (async () => {
+                return new Promise((ok, fail) => {
+                    this.handle = LibFiles.open(this.path, 'w', (error, handle) => {
+                        if (error) {
+                            console.log('LOG ENTRY FOR THIS tempFile.js');
+                        }
+
+                        ok(handle);
+                    });
+                });
+            })();
+
+            if (this.handle) {
+                await this.close();
+            }
+        }
+
+        return this;
     }
 
-    async rm() {
-        if (await this.exists()) {
-            Files.rm(this.getPath());
+    async write(data) {
+        if (!this.handle) {
+            await this.open();
+        }
+
+        if (this.handle) {
+            return this.handle.appendFile(data);
         }
 
         return this;

@@ -168,6 +168,24 @@ singleton('', class TextUtils {
     }
 
     /*****
+     * In certain instances, the String.split() function is unsatisfying because it
+     * will leave one or more empty strings in the returned array.  This function
+     * avoids this messy detail by removing all empty, '', elements from the array
+     * before returning it to the caller.
+    *****/
+    split(str, delimiter) {
+        let segments = str.split(delimiter);
+
+        for (let i = segments.length - 1; i >= 0; i--) {
+            if (segments[i] == '') {
+                segments.splice(i, 1);
+            }
+        }
+
+        return segments;
+    }
+
+    /*****
      * In general, it's useful to be able to convert characters between camelCase,
      * PascalCase, and snake_case.  In our world, PascalCase is just a special case
      * of camelCase.  This function takes a programming word and splits it apart

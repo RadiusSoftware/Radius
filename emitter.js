@@ -209,12 +209,12 @@ register('', class Emitter {
     }
 
     resume() {
-        this.silent = true;
+        this.silent = false;
         return this;
     }
 
     silence() {
-        this.silent = false;
+        this.silent = true;
         return this;
     }
 });
