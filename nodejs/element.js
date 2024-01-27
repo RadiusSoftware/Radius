@@ -32,12 +32,163 @@ const nodeKey = Symbol('NodeKey');
 
 
 /*****
- * Analyzes the argument type with and returns which DocNode or DocElement type
- * to return to the caller.  In any case, the returned value is always once of
- * the wrapper objects defined in this source file.  If we're unable to find
- * any specific type of object, just return a Text node using the argument as
- * the value to be converted to text.
+ * Here's the list of HTML tags that we're treaing as being void tags.  These
+ * tags have NO content and will be represented with a single tag that has no
+ * slash:  <hr>, <br>.
 *****/
+const voidTags = {
+    area: 0,
+    base: 0,
+    br: 0,
+    col: 0,
+    embed: 0,
+    hr: 0,
+    img: 0,
+    input: 0,
+    link: 0,
+    meta: 0,
+    param: 0,
+    source: 0,
+    track: 0,
+    wbr: 0,
+};
+
+
+/*****
+ * This function employs the features of our HTML parser to generate a single
+ * HtmlElement object from raw HTML text.  This function can be used to generate
+ * an entire HTML document structure for generating and manipulating and HTML
+ * document or fragment for server-side dyanmic document generation.
+*****/
+register('', function createDocElementFromOuterHtml(outerHtml) {
+    /*
+    function wrapNode(node) {
+        if (node instanceof NpmHtml.HTMLElement) {
+            let htmlElement = mkDocElement(node);
+            let stack = [].concat(node.childNodes);
+    
+            while (stack.length) {
+                let node = stack.pop();
+                let docNode = wrapNode(node);
+
+                if (docNode) {
+                    for (let i = node.childNodes.length; i > 0; i--) {
+                        stack.push(node.childNodes[i-1]);
+                    }
+                }
+            }
+
+            return htmlElement;
+        }
+        else if (node instanceof NpmHtml.TextNode) {
+            return mkDocText(node);
+        }
+    }
+    */
+
+    const options = {
+        lowerCaseTagName: true,
+        comment: false,
+        voidTag:{
+          tags: Object.keys(voidTags),
+          closingSlash: false,
+        },
+        blockTextElements: {
+          script: true,
+          noscript: true,
+          style: true,
+          pre: true,
+        }
+    };
+
+    for (let childNode of NpmHtml.parse(outerHtml, options).childNodes) {
+        if (childNode instanceof NpmHtml.HTMLElement) {
+            childNode.removeWhitespace();
+            let htmlElement = (childNode);
+            htmlElement.getDescendants();
+            return htmlElement;
+        }
+    }
+});
+
+
+/*****
+ * Create a new document Element from a single tagname.  To make this happen,
+ * generate some basic outer HTML and then call our internal parser to generate
+ * our Node.  Since we don't distinguish between between HTML, SVG, and MATHML
+ * elemetns like on a browser, the return DocElement can be used for generating
+ * any typeof element dynamically on the server.
+*****/
+register('', function createDocElementFromTagName(tagName) {
+    tagName = tagName.trim().toLowerCase();
+    let html = tagName in voidTags ? `<${tagName}>` : `<${tagName}></${tagName}>`;
+
+    let htmlElement = NpmHtml.parse(html, {
+        lowerCaseTagName: true,
+        comment: false,
+        voidTag:{
+          tags: Object.keys(voidTags),
+          closingSlash: false,
+        },
+        blockTextElements: {
+          script: true,
+          noscript: true,
+          style: true,
+          pre: true,
+        }
+    });
+
+    return wrapDocElement(htmlElement.childNodes[0]);
+});
+
+
+/*****
+ * Create a new DocText node from the provided text.  This node is then able to
+ * be inserted into a document or fragment because it's based on the underlying
+ * NpmHtml.TextNode object.
+*****/
+register('', function createDocText(text) {
+    let textNode = NpmHtml.parse(text, {
+        lowerCaseTagName: true,
+        comment: false,
+        voidTag:{
+          tags: Object.keys(voidTags),
+          closingSlash: false,
+        },
+        blockTextElements: {
+          script: true,
+          noscript: true,
+          style: true,
+          pre: true,
+        }
+    });
+
+    if (!(textNode instanceof NpmHtml.TextNode)) {
+        textNode = NpmHtml.parse('', {
+            lowerCaseTagName: true,
+            comment: false,
+            voidTag:{
+              tags: Object.keys(voidTags),
+              closingSlash: false,
+            },
+            blockTextElements: {
+              script: true,
+              noscript: true,
+              style: true,
+              pre: true,
+            }
+        });
+    }
+
+    return mkDocText(textNode);
+});
+
+
+/*****
+ * Analyzes the argument type with and returns which DocNode or DocElement type
+ * to return to the caller.  In any case, the returned value is always one of
+ * the wrapper objects defined in this source file.
+*****
 register('', function wrapDocNode(arg) {
     if (arg instanceof NpmHtml.TextNode) {
         return arg[nodeKey] ? arg[nodeKey] : mkDocText(arg);
@@ -51,7 +202,18 @@ register('', function wrapDocNode(arg) {
     else if (arg instanceof DocElement) {
         return arg;
     }
+
+    function wrapElement(element) {
+        let stack = [element];
+
+        while (stack.length) {
+            let node = stack.pop();
+        }
+
+        return element[nodeKey];
+    }
 });
+*/
 
 
 /*****
@@ -64,16 +226,20 @@ register('', function wrapDocNode(arg) {
 register('', class DocNode extends Emitter {
     constructor(node) {
         super();
-        this.node = node;
-        this.pinned = {};
-        this.node[nodeKey] = this;
+
+        if (nodeKey in node) {
+            return node[nodeKey];
+        }
+        else {
+            this.node = node;
+            this.pinned = {};
+            this.node[nodeKey] = this;
+            return this;
+        }
     }
 
     append(...docNodes) {
-        for (let arg of args) {
-            this.node.childNodes.push(arg);
-        }
-
+        this.node.childNodes.concat(docNodes);
         return this;
     }
 
@@ -83,8 +249,10 @@ register('', class DocNode extends Emitter {
     }
 
     contains(arg) {
+        let node = wrapDocNode(arg).node;
+
         for (let childNode of this.node.childNodes) {
-            if (Object.is(childNode, arg)) {
+            if (Object.is(childNode, node)) {
                 return true;
             }
         }
@@ -103,7 +271,7 @@ register('', class DocNode extends Emitter {
     }
 
     getChildren() {
-        return this.node.childNodes.map(childNode => childNode[nodeKey]);
+        return this.node.childNodes.map(childNode => wrapDocNode(childNode));
     }
 
     getDescendants() {
@@ -111,7 +279,7 @@ register('', class DocNode extends Emitter {
         let stack = this.getChildren();
 
         while (stack.length) {
-            let docNode = stack.pop();
+            let docNode = wrapDocNode(stack.pop());
             descendants.push(docNode);
             docNode.getChildren().reverse().forEach(child => stack.push(child));
         }
@@ -121,13 +289,17 @@ register('', class DocNode extends Emitter {
 
     getFirstChild() {
         if (this.node.childNodes.length) {
-            return this.node.childNodes[0][nodeKey];
+            return wrapDocNode(this.node.childNodes[0]);
         }
+    }
+
+    getImplementation() {
+        return this.node;
     }
 
     getLastChild() {
         if (this.node.childNodes.length) {
-            return this.node.childNodes[this.node.childNodes.length - 1][nodeKey];
+            return wrapDocNode(this.node.childNodes[this.node.childNodes.length - 1]);
         }
     }
   
@@ -348,6 +520,15 @@ register('', class DocElement extends DocNode {
     constructor(node) {
         super(node);
         this.indentSize = 2;
+        let stack = [this.node];
+
+        while (stack.length) {
+            let node = stack.pop();
+
+            if (!(nodeKey in node)) {
+                node[nodeKey] = mkDoc
+            }
+        }
     }
 
     getOuterHtml(hr) {
@@ -360,20 +541,31 @@ register('', class DocElement extends DocNode {
             const indent = hr ? TextUtils.fillWithChar(entry.indent*this.indentSize, ' ') : '';
 
             if (entry.node instanceof NpmHtml.HTMLElement) {
-                if (entry.pending) {
-                    snippets.push(`${indent}</${entry.node.tagName.toLowerCase()}>${lf}`);
-                    continue;
-                }
-                else {
+                if (entry.node.rawTagName in voidTags) {
                     snippets.push(`${indent}<${entry.node.tagName.toLowerCase()}`);
                     
                     for (let attributeName in entry.node.attributes) {
                         snippets.push(` attributeName="${entry.node.attributes[attributeName]}"`);
                     }
 
-                    snippets.push(`>${lf}`);
-                    entry.pending = true;
-                    stack.push(entry);
+                    snippets.push(`>${lf}`);               
+                }
+                else {
+                    if (entry.pending) {
+                        snippets.push(`${indent}</${entry.node.tagName.toLowerCase()}>${lf}`);
+                        continue;
+                    }
+                    else {
+                        snippets.push(`${indent}<${entry.node.tagName.toLowerCase()}`);
+                        
+                        for (let attributeName in entry.node.attributes) {
+                            snippets.push(` attributeName="${entry.node.attributes[attributeName]}"`);
+                        }
+
+                        snippets.push(`>${lf}`);
+                        entry.pending = true;
+                        stack.push(entry);
+                    }
                 }
             }
             else if (entry.node instanceof NpmHtml.TextNode) {
@@ -392,47 +584,5 @@ register('', class DocElement extends DocNode {
         }
 
         return snippets.join('');
-    }
-});
-
-
-/*****
- * This is a nice little tricky thing for creating an HTML element from HTML
- * text.  The first point is that this won't work unless the HTML passsed to
- * this function is the outer HTML for a single HEML element.  It doesn't work
- * on fragments.  Moreover, once we've parsed the HTML, we need to wrap all of
- * the parsed nodes in subclasses of DocNode so that our API is almost the same
- * as that on the Mozilla size of the API.
-*****/
-register('', function createElementFromOuterHtml(outerHtml) {
-function wrapBranch(node) {
-        if (node instanceof NpmHtml.HTMLElement) {
-            let htmlElement = mkDocElement(node);
-            let stack = [].concat(node.childNodes);
-    
-            while (stack.length) {
-                let node = stack.pop();
-                let docNode = wrapBranch(node);
-
-                if (docNode) {
-                    for (let i = node.childNodes.length; i > 0; i--) {
-                        stack.push(node.childNodes[i-1]);
-                    }
-                }
-            }
-
-            return htmlElement;
-        }
-        else if (node instanceof NpmHtml.TextNode) {
-            return mkDocText(node);
-        }
-    }
-
-    for (let childNode of NpmHtml.parse(outerHtml).childNodes) {
-        if (childNode instanceof NpmHtml.HTMLElement) {
-            childNode.removeWhitespace();
-            let htmlElement = wrapBranch(childNode);
-            return htmlElement;
-        }
     }
 });

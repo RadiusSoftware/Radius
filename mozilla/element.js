@@ -32,6 +32,63 @@
 
 
     /*****
+     * This is a nice little tricky thing for creating an HTML element from HTML
+     * text.  The first point is that this won't work unless the HTML passsed to
+     * this function is the outer HTML for a single HEML element.  It doesn't work
+     * on fragments.  The second point is that we need first create an element with
+     * the proper tagName and then attach that tag to our <COMPILER></COMPILER>
+     * HTML element.  Next, set the outer HTML equal to the outerHtml paramrter.
+     * The browser compiles it and replaces the original stub with a new stub.
+     * That's why we need to then fetch the first child from either the parent or
+     * the <COMPILER></COMPILER> HTML element.
+    *****/
+    const requiredParents = {
+        'td': ['table', 'tr'],
+        'th': ['table', 'tr'],
+        'tr': ['table'],
+    };
+
+    register('', function createElementFromOuterHtml(outerHtml) {
+        const match = outerHtml.match(/< *([0-9A-Za-z]+)/);
+
+        if (match) {
+            let tagName = match[1];
+            const compilerElement = document.createElement('div');
+            document.documentElement.appendChild(compilerElement);
+
+            if (tagName in requiredParents) {
+                let parent;
+
+                requiredParents[tagName].forEach(tagName => {
+                    let element = document.createElement(tagName);
+                    parent ? parent.appendChild(element) : compilerElement.appendChild(element);
+                    parent = element;
+                });
+
+                let stub = document.createElement(tagName);
+                parent.appendChild(stub);
+                stub.outerHTML = outerHtml;
+                parent.appendChild(stub);
+                stub = parent.children[0];
+                parent.replaceChildren();
+                compilerElement.replaceChildren();
+                compilerElement.remove();
+                return mkHtmlElement(stub);                
+            }
+            else {
+                let stub = document.createElement(tagName);
+                compilerElement.appendChild(stub);
+                stub.outerHTML = outerHtml;
+                stub = compilerElement.children[0];
+                compilerElement.replaceChildren();
+                compilerElement.remove();
+                return mkHtmlElement(stub);
+            }
+        }
+    });
+
+
+    /*****
      * Analyzes the argument type with and returns which DocNode or DocElement type
      * to return to the caller.  In any case, the returned value is always once of
      * the wrapper objects defined in this source file.  If we're unable to find
@@ -98,6 +155,7 @@
      * object.  The return node extends beyond HTML because it includes our wrapper
      * objects as well as SVG and MathML elements, both of which extend Node.
     *****/
+   /*
     register('',  function unwrapDocNode(arg) {
         if (arg instanceof DocNode) {
             return arg.node;
@@ -109,6 +167,7 @@
             return document.createTextNode(typeof arg == 'undefined' ? '' : arg);
         }
     });
+    */
 
 
     /*****
@@ -129,12 +188,13 @@
                 this.node = node;
                 this.pinned = {};
                 this.node[nodeKey] = this;
+                return this;
             }
         }
 
         append(...args) {
             for (let arg of args) {
-                this.node.appendChild(unwrapDocNode(arg));
+                this.node.appendChild(wrapDocNode(arg).node);
             }
 
             return this;
@@ -146,7 +206,7 @@
         }
 
         contains(arg) {
-            return this.node.contains(unwrapDocNode(arg));
+            return this.node.contains(wrapDocNode(arg).node);
         }
 
         dir() {
@@ -201,6 +261,10 @@
             if (this.node.firstChild) {
                 return wrapDocNode(this.node.firstChild);
             }
+        }
+
+        getImplementation() {
+            return this.node;
         }
 
         getLastChild() {
@@ -1010,63 +1074,6 @@
         setTitle(title) {
             this.node.title = title;
             return this;
-        }
-    });
-
-
-    /*****
-     * This is a nice little tricky thing for creating an HTML element from HTML
-     * text.  The first point is that this won't work unless the HTML passsed to
-     * this function is the outer HTML for a single HEML element.  It doesn't work
-     * on fragments.  The second point is that we need first create an element with
-     * the proper tagName and then attach that tag to our <COMPILER></COMPILER>
-     * HTML element.  Next, set the outer HTML equal to the outerHtml paramrter.
-     * The browser compiles it and replaces the original stub with a new stub.
-     * That's why we need to then fetch the first child from either the parent or
-     * the <COMPILER></COMPILER> HTML element.
-    *****/
-    const requiredParents = {
-        'td': ['table', 'tr'],
-        'th': ['table', 'tr'],
-        'tr': ['table'],
-    };
-
-    register('', function createElementFromOuterHtml(outerHtml) {
-        const match = outerHtml.match(/< *([0-9A-Za-z]+)/);
-
-        if (match) {
-            let tagName = match[1];
-            const compilerElement = document.createElement('div');
-            document.documentElement.appendChild(compilerElement);
-
-            if (tagName in requiredParents) {
-                let parent;
-
-                requiredParents[tagName].forEach(tagName => {
-                    let element = document.createElement(tagName);
-                    parent ? parent.appendChild(element) : compilerElement.appendChild(element);
-                    parent = element;
-                });
-
-                let stub = document.createElement(tagName);
-                parent.appendChild(stub);
-                stub.outerHTML = outerHtml;
-                parent.appendChild(stub);
-                stub = parent.children[0];
-                parent.replaceChildren();
-                compilerElement.replaceChildren();
-                compilerElement.remove();
-                return mkHtmlElement(stub);                
-            }
-            else {
-                let stub = document.createElement(tagName);
-                compilerElement.appendChild(stub);
-                stub.outerHTML = outerHtml;
-                stub = compilerElement.children[0];
-                compilerElement.replaceChildren();
-                compilerElement.remove();
-                return mkHtmlElement(stub);
-            }
         }
     });
 })();
