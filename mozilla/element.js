@@ -175,13 +175,13 @@
         }
 
         getDescendants() {
-            let stack = this.children();
             let descendants = [];
+            let stack = this.getChildren();
 
             while (stack.length) {
                 let docNode = stack.pop();
                 descendants.push(docNode);
-                docNode.children().reverse().forEach(child => stack.push(child));
+                docNode.getChildren().reverse().forEach(child => stack.push(child));
             }
 
             return descendants;
@@ -197,7 +197,7 @@
             return null;
         }
 
-        GetFirstChild() {
+        getFirstChild() {
             if (this.node.firstChild) {
                 return wrapDocNode(this.node.firstChild);
             }

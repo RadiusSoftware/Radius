@@ -196,9 +196,7 @@
                 func();
             }
             catch (e) {
-                console.log('Objekt Reflection Error');
-                console.log(`func = ${func}`);
-                console.log(e);
+                // TODO -- need to handle error.
             }
             finally {
                 reflecting = false;

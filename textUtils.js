@@ -100,7 +100,7 @@ singleton('', class TextUtils {
     /*****
      * Takes a single character and builds a string that's as long as the specified
      * count parameter.  It's not padding, it's just a repeating sequence of the
-     * same char that's resturned as a string.
+     * same char that's returned as a string.
     *****/
     fillWithChar(count, char) {
         char = char === undefined ? '' : char;

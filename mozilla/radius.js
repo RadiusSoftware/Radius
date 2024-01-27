@@ -266,7 +266,7 @@
         'mozilla/doc.js',
         'mozilla/element.js',
         'mozilla/svg.js',
-        'mozilla/math.js',
+        'mozilla/mathml.js',
         'mozilla/style.js',
         'mozilla/ctl.js',
         'mozilla/entanglements.js',

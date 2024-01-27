@@ -63,7 +63,9 @@ try {
     require('./jose.js');
     require('./acme.js');
     require('./application.js');
-    require('./html.js');
+    require('./element.js');
+    require('./svg.js');
+    require('./mathml.js');
 
     require('./net/httpClient.js');
     require('./net/httpLibrary.js');
