@@ -32,6 +32,87 @@
 
 
     /*****
+     * Analyzes the argument type with and returns which DocNode or DocElement type
+     * to return to the caller.  In any case, the returned value is always once of
+     * the wrapper objects defined in this source file.  If we're unable to find
+     * any specific type of object, just return a Text node using the argument as
+     * the value to be converted to text.
+    *****/
+    register('', function wrapNode(node) {
+        if (node instanceof Text) {
+            return node[nodeKey] ? node[nodeKey] : mkDocText(node);
+        }
+        else if (node instanceof DocText) {
+            return node;
+        }
+        else if (node instanceof HTMLElement) {
+            if (node[nodeKey]) {
+                return node[nodeKey];
+            }
+            
+            if (node.tagName.toLowerCase().startsWith('widget-')) {
+                let widget;
+                let fqcn = mkFqn(node.getAttribute('radius-widgetclass'));
+
+                if (fqcn.getNamespaceSegments().length) {
+                    widget = fqcn.getObject()[`${fqcn.getNamespace()}mk${fqcn.getName()}`](node);
+                }
+                else {
+                    widget = fqcn.getObject()[`mk${fqcn.getName()}`](node);
+                }
+
+                widget.setFqcn(fqcn);
+                return widget;
+            }
+            else {
+                return mkHtmlElement(node);
+            }
+        }
+        else if (node instanceof Widget) {
+            return node;
+        }
+        else if (node instanceof HtmlElement) {
+            return node;
+        }
+        else if (node instanceof SVGElement) {
+            return node[nodeKey] ? node[nodeKey] : mkSvgElement(node);
+        }
+        else if (node instanceof SvgElement) {
+            return node;
+        }
+        else if (node instanceof MathMLElement) {
+            return node[nodeKey] ? node[nodeKey] : mkMathElement(node);
+        }
+        else if (node instanceof MathElement) {
+            return node;
+        }
+    });
+
+
+    /*****
+     * Recursively proceed through all of the nodes in the provided DOM branch to
+     * wrap each of the individual nodes with a DocNode object.  In this methodical
+     * manner, we can take an entire tree of Npm Nodes objects and ensure that they
+     * have all been wrapped.
+    *****/
+    register('', function wrapTree(node) {
+        const root = wrapNode(node);
+        let stack = [root.node];
+    
+        while (stack.length) {
+            let node = stack.pop();
+            wrapNode(node);
+
+            for (let i = 0; i < node.childNodes.length; i++) {
+                stack.push(node.childNodes.item(i));
+            }
+        }
+    
+        return root;
+    });
+
+
+    /*****
      * This is a nice little tricky thing for creating an HTML element from HTML
      * text.  The first point is that this won't work unless the HTML passsed to
      * this function is the outer HTML for a single HEML element.  It doesn't work
@@ -89,88 +170,6 @@
 
 
     /*****
-     * Analyzes the argument type with and returns which DocNode or DocElement type
-     * to return to the caller.  In any case, the returned value is always once of
-     * the wrapper objects defined in this source file.  If we're unable to find
-     * any specific type of object, just return a Text node using the argument as
-     * the value to be converted to text.
-    *****/
-    register('', function wrapDocNode(arg) {
-        if (arg instanceof Text) {
-            return arg[nodeKey] ? arg[nodeKey] : mkDocText(arg);
-        }
-        else if (arg instanceof DocText) {
-            return arg;
-        }
-        else if (arg instanceof HTMLElement) {
-            if (arg.tagName.toLowerCase().startsWith('widget-')) {
-                if (arg[nodeKey]) {
-                    return arg[nodeKey];
-                }
-                else {
-                    let widget;
-                    let fqcn = mkFqn(arg.getAttribute('radius-widgetclass'));
-
-                    if (fqcn.getNamespaceSegments().length) {
-                        widget = fqcn.getObject()[`${fqcn.getNamespace()}mk${fqcn.getName()}`](arg);
-                    }
-                    else {
-                        widget = fqcn.getObject()[`mk${fqcn.getName()}`](arg);
-                    }
-
-                    widget.setFqcn(fqcn);
-                    return widget;
-                }
-            }
-            else {
-                return arg[nodeKey] ? arg[nodeKey] : mkHtmlElement(arg);
-            }
-        }
-        else if (arg instanceof Widget) {
-            return arg;
-        }
-        else if (arg instanceof HtmlElement) {
-            return arg;
-        }
-        else if (arg instanceof SVGElement) {
-            return arg[nodeKey] ? arg[nodeKey] : mkSvgElement(arg);
-        }
-        else if (arg instanceof SvgElement) {
-            return arg;
-        }
-        else if (arg instanceof MathMLElement) {
-            return arg[nodeKey] ? arg[nodeKey] : mkMathElement(arg);
-        }
-        else if (arg instanceof MathElement) {
-            return arg;
-        }
-        else {
-            return mkDocText(arg.toString());
-        }
-    });
-
-
-    /*****
-     * Reverses the effect of any DOM node wrapping by returning the naked DOM node
-     * object.  The return node extends beyond HTML because it includes our wrapper
-     * objects as well as SVG and MathML elements, both of which extend Node.
-    *****/
-   /*
-    register('',  function unwrapDocNode(arg) {
-        if (arg instanceof DocNode) {
-            return arg.node;
-        }
-        else if (arg instanceof Node) {
-            return arg;
-        }
-        else {
-            return document.createTextNode(typeof arg == 'undefined' ? '' : arg);
-        }
-    });
-    */
-
-
-    /*****
      * The DocNode class provides a wrapper for existing DOM HTMLElements and Text
      * objects.  This class is NOT used for creating new objects.  It's only for
      * wrapping existing objects with a more efficient API.  DocNode is the base
@@ -192,9 +191,9 @@
             }
         }
 
-        append(...args) {
-            for (let arg of args) {
-                this.node.appendChild(wrapDocNode(arg).node);
+        append(...docNodes) {
+            for (let docNode of docNodes) {
+                this.node.appendChild(docNode.node);
             }
 
             return this;
@@ -205,8 +204,8 @@
             return this;
         }
 
-        contains(arg) {
-            return this.node.contains(wrapDocNode(arg).node);
+        contains(docNode) {
+            return this.node.contains(docNode.node);
         }
 
         dir() {
@@ -216,7 +215,7 @@
 
         getChildAt(index) {
             if (index >= 0 && index < this.node.childNodes.length) {
-                return wrapDocNode(this.node.childNodes.item(index));
+                return this.node.childNodes.item(index)[nodeKey];
             }
         }
 
@@ -228,7 +227,7 @@
             let children = [];
 
             for (let i = 0; i < this.node.childNodes.length; i++) {
-                children.push(wrapDocNode(this.node.childNodes.item(i)));
+                children.push(this.node.childNodes.item(i)[nodeKey]);
             }
 
             return children;
@@ -236,7 +235,7 @@
 
         getDescendants() {
             let descendants = [];
-            let stack = this.getChildren();
+            let stack = this.getChildren().reverse();
 
             while (stack.length) {
                 let docNode = stack.pop();
@@ -259,7 +258,7 @@
 
         getFirstChild() {
             if (this.node.firstChild) {
-                return wrapDocNode(this.node.firstChild);
+                return this.node.firstChild[nodeKey];
             }
         }
 
@@ -269,35 +268,27 @@
 
         getLastChild() {
             if (this.node.lastChild) {
-                return wrapDocNode(this.node.lastChild);
+                return this.node.lastChild[nodeKey];
             }
         }
 
-        getName() {
-            return this.node.nodeName.toLowerCase();
-        }
-      
-        getNextSibling() {
-            if (this.node.nextSibling) {
-                return wrapDocNode(this.node.nextSibling);
+        getNodeIndex() {
+            for (let i = 0; i < this.node.parentNode.childNodes.length; i++) {
+                if (this.node.isSame(this.node.parentNode.childNodes.item(i))) {
+                    return i;
+                }
             }
-        }
-
-        getNodeName() {
-            return this.node.nodeName;
+    
+            return -1;
         }
 
         getNodeType() {
             return this.node.nodeType;
         }
-
-        getNodeValue() {
-            return this.node.nodeValue;
-        }
       
         getParent() {
             if (this.node.parentNode) {
-                return wrapDocNode(this.node.parentNode);
+                return wrapNode(this.node.parentNode);
             }
         }
       
@@ -306,19 +297,21 @@
                 return wrapDocNode(this.node.parentElement);
             }
         }
-      
-        getPrevSibling() {
-            if (this.node.previousSibling) {
-                return wrapDocNode(this.node.previousSibling);
-            }
-        }
 
         getPinned(name) {
             return this.pinned[name];
         }
-
-        getTextContent() {
-            return this.node.textContent;
+      
+        getSiblingNext() {
+            if (this.node.nextSibling) {
+                return this.node.nextSibling[nodeKey];
+            }
+        }
+      
+        getSiblingPrev() {
+            if (this.node.previousSibling) {
+                return this.node.previousSibling[nodeKey];
+            }
         }
 
         hasChildNodes() {
@@ -329,18 +322,18 @@
             return name in this.pinned;
         }
 
-        insertAfter(...args) {
+        insertAfter(...docNodes) {
             if (this.node.parentNode) {
                 let nextSibling = this.node.nextSibling;
       
                 if (nextSibling) {
-                    for (let arg of args) {
-                        this.node.parentNode.insertBefore(unwrapDocNode(arg), nextSibling);
+                    for (let docNode of docNodes) {
+                        this.node.parentNode.insertBefore(docNode.node, nextSibling);
                     }
                 }
                 else {
-                    for (let arg of args) {
-                        this.node.parentNode.appendChild(unwrapDocNode(arg));
+                    for (let docNode of docNodes) {
+                        this.node.parentNode.appendChild(docNode.node);
                     }
                 }
             }
@@ -348,34 +341,30 @@
             return this;
         }
 
-        insertBefore(...args) {
+        insertBefore(...docNodes) {
             if (this.node.parentNode) {
-                for (let arg of args) {
-                    this.node.parentNode.insertBefore(unwrapDocNode(arg), this.node);
+                for (let docNode of docNodes) {
+                    this.node.parentNode.insertBefore(docNode.node, this.node);
                 }
             }
 
             return this;
         }
 
-        isConnected() {
-            return this.node.isConnected;
-        }
-
         isElement() {
-            return this.node instanceof Element;
+            return this instanceof DocElement;
         }
 
         isHtmlElement() {
-            return this.node instanceof HTMLElement
+            return this instanceof HtmlElement;
         }
       
-        isSame(arg) {
-            return unwrapDocNode(arg).isSameNode(this.node);
+        isSame(docNode) {
+            return this.node.isSameNode(docNode.node);
         }
 
         isText() {
-            return this.node instanceof Text;
+            return this instanceof DocText;
         }
 
         log() {
@@ -887,14 +876,8 @@
             if (arg instanceof HTMLElement) {
                 super(arg);
             }
-            else if (arg instanceof HtmlElement) {
-                super(arg.node)
-            }
             else if (typeof arg == 'string') {
                 super(document.createElement(arg.toLowerCase()));
-            }
-            else {
-                super(document.createElement('noname'));
             }
         }
 

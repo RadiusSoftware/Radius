@@ -55,37 +55,57 @@ const voidTags = {
 
 
 /*****
+ * Wrap a single Npm node in the appropriate DocNode subclass.  Note that this
+ * only wraps individual nodes, not an entire tree.  Use wrapDocTree() to wrap
+ * an entire tree or a subtree.  This is the safe method for wrapping an unknown
+ * Npm Node with the appropriate DocNode type.  Please note, unlike the MDN
+ * version of this code, all document elements are represented with DocElement.
+*****/
+register('', function wrapNode(node) {
+    let docNode;
+
+    if (node instanceof NpmHtml.TextNode) {
+        return node[nodeKey] ? node[nodeKey] : mkDocText(node);
+    }
+    else if (node instanceof DocText) {
+        return node;
+    }
+    else if (node instanceof NpmHtml.HTMLElement) {
+        return node[nodeKey] ? node[nodeKey] : mkDocElement(node);
+    }
+    else if (node instanceof DocElement) {
+        return node;
+    }
+});
+
+
+/*****
+ * Recursively proceed through all of the nodes in the provided DOM branch to
+ * wrap each of the individual nodes with a DocNode object.  In this methodical
+ * manner, we can take an entire tree of Npm Nodes objects and ensure that they
+ * have all been wrapped.
+*****/
+register('', function wrapTree(node) {
+    const root = wrapNode(node);
+    let stack = [root.node];
+
+    while (stack.length) {
+        let node = stack.pop();
+        wrapNode(node);
+        node.childNodes.forEach(childNode => stack.push(childNode));
+    }
+
+    return root;
+});
+
+
+/*****
  * This function employs the features of our HTML parser to generate a single
  * HtmlElement object from raw HTML text.  This function can be used to generate
  * an entire HTML document structure for generating and manipulating and HTML
  * document or fragment for server-side dyanmic document generation.
 *****/
 register('', function createDocElementFromOuterHtml(outerHtml) {
-    /*
-    function wrapNode(node) {
-        if (node instanceof NpmHtml.HTMLElement) {
-            let htmlElement = mkDocElement(node);
-            let stack = [].concat(node.childNodes);
-    
-            while (stack.length) {
-                let node = stack.pop();
-                let docNode = wrapNode(node);
-
-                if (docNode) {
-                    for (let i = node.childNodes.length; i > 0; i--) {
-                        stack.push(node.childNodes[i-1]);
-                    }
-                }
-            }
-
-            return htmlElement;
-        }
-        else if (node instanceof NpmHtml.TextNode) {
-            return mkDocText(node);
-        }
-    }
-    */
-
     const options = {
         lowerCaseTagName: true,
         comment: false,
@@ -104,116 +124,12 @@ register('', function createDocElementFromOuterHtml(outerHtml) {
     for (let childNode of NpmHtml.parse(outerHtml, options).childNodes) {
         if (childNode instanceof NpmHtml.HTMLElement) {
             childNode.removeWhitespace();
-            let htmlElement = (childNode);
-            htmlElement.getDescendants();
-            return htmlElement;
+            return wrapTree(childNode);
         }
     }
+
+    return mkDocElement('div');
 });
-
-
-/*****
- * Create a new document Element from a single tagname.  To make this happen,
- * generate some basic outer HTML and then call our internal parser to generate
- * our Node.  Since we don't distinguish between between HTML, SVG, and MATHML
- * elemetns like on a browser, the return DocElement can be used for generating
- * any typeof element dynamically on the server.
-*****/
-register('', function createDocElementFromTagName(tagName) {
-    tagName = tagName.trim().toLowerCase();
-    let html = tagName in voidTags ? `<${tagName}>` : `<${tagName}></${tagName}>`;
-
-    let htmlElement = NpmHtml.parse(html, {
-        lowerCaseTagName: true,
-        comment: false,
-        voidTag:{
-          tags: Object.keys(voidTags),
-          closingSlash: false,
-        },
-        blockTextElements: {
-          script: true,
-          noscript: true,
-          style: true,
-          pre: true,
-        }
-    });
-
-    return wrapDocElement(htmlElement.childNodes[0]);
-});
-
-
-/*****
- * Create a new DocText node from the provided text.  This node is then able to
- * be inserted into a document or fragment because it's based on the underlying
- * NpmHtml.TextNode object.
-*****/
-register('', function createDocText(text) {
-    let textNode = NpmHtml.parse(text, {
-        lowerCaseTagName: true,
-        comment: false,
-        voidTag:{
-          tags: Object.keys(voidTags),
-          closingSlash: false,
-        },
-        blockTextElements: {
-          script: true,
-          noscript: true,
-          style: true,
-          pre: true,
-        }
-    });
-
-    if (!(textNode instanceof NpmHtml.TextNode)) {
-        textNode = NpmHtml.parse('', {
-            lowerCaseTagName: true,
-            comment: false,
-            voidTag:{
-              tags: Object.keys(voidTags),
-              closingSlash: false,
-            },
-            blockTextElements: {
-              script: true,
-              noscript: true,
-              style: true,
-              pre: true,
-            }
-        });
-    }
-
-    return mkDocText(textNode);
-});
-
-
-/*****
- * Analyzes the argument type with and returns which DocNode or DocElement type
- * to return to the caller.  In any case, the returned value is always one of
- * the wrapper objects defined in this source file.
-*****
-register('', function wrapDocNode(arg) {
-    if (arg instanceof NpmHtml.TextNode) {
-        return arg[nodeKey] ? arg[nodeKey] : mkDocText(arg);
-    }
-    else if (arg instanceof DocText) {
-        return arg;
-    }
-    else if (arg instanceof NpmHtml.HTMLElement) {
-        return arg[nodeKey] ? arg[nodeKey] : mkDocElement(arg);
-    }
-    else if (arg instanceof DocElement) {
-        return arg;
-    }
-
-    function wrapElement(element) {
-        let stack = [element];
-
-        while (stack.length) {
-            let node = stack.pop();
-        }
-
-        return element[nodeKey];
-    }
-});
-*/
 
 
 /*****
@@ -239,25 +155,40 @@ register('', class DocNode extends Emitter {
     }
 
     append(...docNodes) {
-        this.node.childNodes.concat(docNodes);
+        for (let docNode of docNodes) {
+            docNode.detach();
+            docNode.node.parentNode = this;
+            this.node.childNodes.push(docNode.node)
+        }
+
         return this;
     }
 
     clear() {
+        this.node.childNodes.forEach(childNode => childNode.parentNode = null);
         this.node.childNodes.splice(0, this.node.childNodes.length);
         return this;
     }
 
-    contains(arg) {
-        let node = wrapDocNode(arg).node;
-
+    contains(docNode) {
         for (let childNode of this.node.childNodes) {
-            if (Object.is(childNode, node)) {
+            if (Object.is(childNode, docNode.node)) {
                 return true;
             }
         }
         
         return false;
+    }
+
+    detach() {
+        let index = this.getNodeIndex();
+
+        if (index >= 0) {
+            this.node.parentNode.childNodes.splice(index, 1);
+            this.node.parentNode = null;
+        }
+
+        return this;
     }
 
     getChildAt(index) {
@@ -271,15 +202,15 @@ register('', class DocNode extends Emitter {
     }
 
     getChildren() {
-        return this.node.childNodes.map(childNode => wrapDocNode(childNode));
+        return this.node.childNodes.map(childNode => childNode[nodeKey]);
     }
 
     getDescendants() {
         let descendants = [];
-        let stack = this.getChildren();
+        let stack = this.getChildren().reverse();
 
         while (stack.length) {
-            let docNode = wrapDocNode(stack.pop());
+            let docNode = stack.pop();
             descendants.push(docNode);
             docNode.getChildren().reverse().forEach(child => stack.push(child));
         }
@@ -289,7 +220,7 @@ register('', class DocNode extends Emitter {
 
     getFirstChild() {
         if (this.node.childNodes.length) {
-            return wrapDocNode(this.node.childNodes[0]);
+            return this.node.childNodes[0][nodeKey];
         }
     }
 
@@ -299,20 +230,14 @@ register('', class DocNode extends Emitter {
 
     getLastChild() {
         if (this.node.childNodes.length) {
-            return wrapDocNode(this.node.childNodes[this.node.childNodes.length - 1]);
-        }
-    }
-  
-    getNextSibling() {
-        if (this.node.nextSibling) {
-            return wrapDocNode(this.node.nextSibling);
+            return this.node.childNodes[this.node.childNodes.length - 1][nodeKey];
         }
     }
 
     getNodeIndex() {
-        if (this.node.parent) {
-            for (let i = 0; i < this.parent.childNodes.length; i++) {
-                if (Object.is(this.parent.node, this.node)) {
+        if (this.node.parentNode) {
+            for (let i = 0; i < this.node.parentNode.childNodes.length; i++) {
+                if (Object.is(this.node.parentNode.childNodes[i], this.node)) {
                     return i;
                 }
             }
@@ -321,117 +246,104 @@ register('', class DocNode extends Emitter {
         return -1;
     }
 
-    getNodeName() {
-        /*
-        return this.node.nodeName;
-        */
-    }
-
     getNodeType() {
-        /*
         return this.node.nodeType;
-        */
-    }
-
-    getNodeValue() {
-        /*
-        return this.node.nodeValue;
-        */
     }
   
     getParent() {
-        /*
         if (this.node.parentNode) {
-            return wrapDocNode(this.node.parentNode);
+            return wrapNode(this.node.parentNode);
         }
-        */
     }
   
     getParentElement() {
-        /*
-        if (this.node.parentElement) {
-            return wrapDocNode(this.node.parentElement);
+        if (this.node.parentNode instanceof NpmHtml.HTMLElement) {
+            return wrapDocNode(this.node.parentNode);
         }
-        */
-    }
-  
-    getPrevSibling() {
-        /*
-        if (this.node.previousSibling) {
-            return wrapDocNode(this.node.previousSibling);
-        }
-        */
     }
 
-    /*
     getPinned(name) {
         return this.pinned[name];
     }
+  
+    getSiblingNext() {
+        let index = this.getNodeIndex();
 
-    getTextContent() {
-        return this.node.textContent;
+        if (index >= 0) {
+            if (index < this.node.parentNode.childNodes.length - 1) {
+                return this.node.parentNode.childNodes[index + 1][nodeKey];
+            }
+        }
+    }
+  
+    getSiblingPrev() {
+        let index = this.getNodeIndex();
+
+        if (index > 0) {
+            return this.node.parentNode.childNodes[index - 1][nodeKey];
+        }
     }
 
     hasChildNodes() {
-        return this.node.hasChildNodes;
+        return this.node.childNodes.length > 0;
     }
 
     hasPinned(name) {
         return name in this.pinned;
     }
 
-    insertAfter(...args) {
-        if (this.node.parentNode) {
-            let nextSibling = this.node.nextSibling;
-  
-            if (nextSibling) {
-                for (let arg of args) {
-                    this.node.parentNode.insertBefore(unwrapDocNode(arg), nextSibling);
-                }
+    insertAfter(...docNodes) {
+        let index = this.getNodeIndex();
+
+        if (index == this.node.parentNode.childNodes.length - 1) {
+            for (let docNode of docNodes) {
+                docNode.detach();
+                docNode.node.parentNode = this.node.parentNode;
+                this.node.parentNode.childNodes.push(docNode.node);
             }
-            else {
-                for (let arg of args) {
-                    this.node.parentNode.appendChild(unwrapDocNode(arg));
-                }
+        }
+        else if (index >= 0) {
+            for (let docNode of docNodes) {
+                docNode.detach();
+                docNode.node.parentNode = this.node.parentNode;
+                this.node.parentNode.childNodes.splice(index + 1, 0, docNode.node);
             }
         }
   
         return this;
     }
 
-    insertBefore(...args) {
-        if (this.node.parentNode) {
-            for (let arg of args) {
-                this.node.parentNode.insertBefore(unwrapDocNode(arg), this.node);
+    insertBefore(...docNodes) {
+        let index = this.getNodeIndex();
+
+        if (index == 0) {
+            for (let docNode of docNodes) {
+                docNode.detach();
+                docNode.node.parentNode = this.node.parentNode;
+                this.node.parentNode.childNodes.unshift(docNode.node);
             }
         }
-
+        else if (index > 0) {
+            for (let docNode of docNodes) {
+                docNode.detach();
+                docNode.node.parentNode = this.node.parentNode;
+                this.node.parentNode.childNodes.splice(index, 0, docNode.node);
+            }
+        }
+        
         return this;
-    }
-
-    isConnected() {
-        return this.node.isConnected;
     }
 
     isElement() {
-        return this.node instanceof Element;
-    }
-
-    isHtmlElement() {
-        return this.node instanceof HTMLElement
+        return this instanceof DocElement;
     }
   
-    isSame(arg) {
-        return unwrapDocNode(arg).isSameNode(this.node);
+    isSame(docNode) {
+        return Object.is(docNode.node, this.node);
     }
 
     isText() {
-        return this.node instanceof Text;
-    }
-
-    log() {
-        console.log(this.node);
-        return this;
+        return this instanceof DocText;
     }
 
     prepend(...args) {
@@ -490,7 +402,6 @@ register('', class DocNode extends Emitter {
         this.node.textContent = content;
         return this;
     }
-    */
 
     [Symbol.iterator]() {
         return this.getChildren()[Symbol.iterator]();
@@ -504,8 +415,14 @@ register('', class DocNode extends Emitter {
  * Moreover, DocText provides a link-free copy function.
 *****/
 register('', class DocText extends DocNode {
-    constructor(node) {
-        super(node);
+    constructor(arg) {
+        if (typeof arg == 'string') {
+            let node;
+            super(node);
+        }
+        else {
+            super(arg);
+        }
     }
 });
 
@@ -517,18 +434,33 @@ register('', class DocText extends DocNode {
  * in min that this wrapper class is non-specific.
 *****/
 register('', class DocElement extends DocNode {
-    constructor(node) {
-        super(node);
-        this.indentSize = 2;
-        let stack = [this.node];
-
-        while (stack.length) {
-            let node = stack.pop();
-
-            if (!(nodeKey in node)) {
-                node[nodeKey] = mkDoc
-            }
+    constructor(arg) {
+        if (arg instanceof NpmHtml.HTMLElement) {
+            super(arg);
         }
+        else if (typeof arg == 'string') {
+            let tagName = arg.trim().toLowerCase();
+            let html = tagName in voidTags ? `<${tagName}>` : `<${tagName}></${tagName}>`;
+        
+            let htmlElement = NpmHtml.parse(html, {
+                lowerCaseTagName: true,
+                comment: false,
+                voidTag:{
+                  tags: Object.keys(voidTags),
+                  closingSlash: false,
+                },
+                blockTextElements: {
+                  script: true,
+                  noscript: true,
+                  style: true,
+                  pre: true,
+                }
+            });
+            
+            super(htmlElement.childNodes[0]);
+        }
+
+        this.indentSize = 2;
     }
 
     getOuterHtml(hr) {
@@ -584,5 +516,9 @@ register('', class DocElement extends DocNode {
         }
 
         return snippets.join('');
+    }
+
+    getTagName() {
+        return this.node.rawTagName;
     }
 });
