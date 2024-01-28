@@ -100,6 +100,21 @@ register('', function wrapTree(node) {
 
 
 /*****
+ * Hidden utility function, whose purpose is to encapsulate the mechanics for
+ * removing a node from it's position within the DOM tree.  Note that this logic
+ * is use repeatedly through the DOM tree feature set.
+*****/
+function detach(docNode) {
+    let index = docNode.getNodeIndex();
+
+    if (index >= 0) {
+        docNode.node.parentNode.childNodes.splice(index, 1);
+        docNode.node.parentNode = null;
+    }
+}
+
+
+/*****
  * This function employs the features of our HTML parser to generate a single
  * HtmlElement object from raw HTML text.  This function can be used to generate
  * an entire HTML document structure for generating and manipulating and HTML
@@ -156,8 +171,8 @@ register('', class DocNode extends Emitter {
 
     append(...docNodes) {
         for (let docNode of docNodes) {
-            docNode.detach();
-            docNode.node.parentNode = this;
+            detach(docNode);
+            docNode.node.parentNode = this.node;
             this.node.childNodes.push(docNode.node)
         }
 
@@ -178,17 +193,6 @@ register('', class DocNode extends Emitter {
         }
         
         return false;
-    }
-
-    detach() {
-        let index = this.getNodeIndex();
-
-        if (index >= 0) {
-            this.node.parentNode.childNodes.splice(index, 1);
-            this.node.parentNode = null;
-        }
-
-        return this;
     }
 
     getChildAt(index) {
@@ -297,14 +301,14 @@ register('', class DocNode extends Emitter {
 
         if (index == this.node.parentNode.childNodes.length - 1) {
             for (let docNode of docNodes) {
-                docNode.detach();
+                detach(docNode);
                 docNode.node.parentNode = this.node.parentNode;
                 this.node.parentNode.childNodes.push(docNode.node);
             }
         }
         else if (index >= 0) {
             for (let docNode of docNodes) {
-                docNode.detach();
+                detach(docNode);
                 docNode.node.parentNode = this.node.parentNode;
                 this.node.parentNode.childNodes.splice(index + 1, 0, docNode.node);
             }
@@ -318,14 +322,14 @@ register('', class DocNode extends Emitter {
 
         if (index == 0) {
             for (let docNode of docNodes) {
-                docNode.detach();
+                detach(docNode);
                 docNode.node.parentNode = this.node.parentNode;
                 this.node.parentNode.childNodes.unshift(docNode.node);
             }
         }
         else if (index > 0) {
             for (let docNode of docNodes) {
-                docNode.detach();
+                detach(docNode);
                 docNode.node.parentNode = this.node.parentNode;
                 this.node.parentNode.childNodes.splice(index, 0, docNode.node);
             }
@@ -346,48 +350,35 @@ register('', class DocNode extends Emitter {
         return this instanceof DocText;
     }
 
-    prepend(...args) {
-        if (this.node.childNodes.length) {
-            let beforeChild = this.node.firstChild;
-
-            for (let arg of args) {
-                this.node.insertBefore(unwrapDocNode(arg), beforeChild);
-            }
-        }
-        else {
-            for (let arg of args) {
-                this.node.appendChild(unwrapDocNode(arg));
-            }
+    prepend(...docNodes) {
+        for (let docNode of docNodes.reverse()) {
+            detach(docNode);
+            docNode.node.parentNode = this.node;
+            this.node.childNodes.unshift(docNode.node);
         }
 
         return this;
     }
 
     remove() {
-        if (this.node.parentNode) {
-            this.node.parentNode.removeChild(this.node);
-        }
-
+        detach(this);
         return this;
     }
 
-    replace(...args) {
-        if (this.node.parentNode) {
-            let inserted;
+    replace(...docNodes) {
+        const index = this.getNodeIndex();
 
-            if (args.length) {
-                inserted = wrapDocNode(args[0]);
-                this.node.parentNode.replaceChild(unwrapDocNode(inserted), this.node);
+        if (index >= 0) {
+            this.node.parentNode.childNodes.splice(
+                index,
+                0,
+                ...docNodes.map(docNode => {
+                    detach(docNode);
+                    return docNode.node;
+                }),
+            );
 
-                for (let i = 1; i < args.length; i++) {
-                    let node = wrapDocNode(args[i]);
-                    inserted.insertAfter(node);
-                    inserted = node;
-                }
-            }
-            else {
-                this.node.parentNode.removeChild(this.node);
-            }
+            detach(this);
         }
 
         return this;
@@ -395,11 +386,6 @@ register('', class DocNode extends Emitter {
 
     setPinned(name, value) {
         this.pinned[name] = value;
-        return this;
-    }
-
-    setTextContent(content) {
-        this.node.textContent = content;
         return this;
     }
 
@@ -423,6 +409,11 @@ register('', class DocText extends DocNode {
         else {
             super(arg);
         }
+    }
+
+    setText(content) {
+        this.node.textContent = content;
+        return this;
     }
 });
 

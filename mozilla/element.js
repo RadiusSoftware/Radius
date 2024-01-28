@@ -372,17 +372,17 @@
             return this;
         }
 
-        prepend(...args) {
+        prepend(...docNodes) {
             if (this.node.childNodes.length) {
                 let beforeChild = this.node.firstChild;
 
-                for (let arg of args) {
-                    this.node.insertBefore(unwrapDocNode(arg), beforeChild);
+                for (let docNode of docNodes) {
+                    this.node.insertBefore(docNode.node, beforeChild);
                 }
             }
             else {
-                for (let arg of args) {
-                    this.node.appendChild(unwrapDocNode(arg));
+                for (let docNode of docNodes) {
+                    this.node.appendChild(docNode.node);
                 }
             }
 
@@ -397,18 +397,18 @@
             return this;
         }
 
-        replace(...args) {
+        replace(...docNodes) {
             if (this.node.parentNode) {
                 let inserted;
 
-                if (args.length) {
-                    inserted = wrapDocNode(args[0]);
-                    this.node.parentNode.replaceChild(unwrapDocNode(inserted), this.node);
+                if (docNode.length) {
+                    inserted = docNode;
+                    this.node.parentNode.replaceChild(inserted.node, this.node);
 
-                    for (let i = 1; i < args.length; i++) {
-                        let node = wrapDocNode(args[i]);
-                        inserted.insertAfter(node);
-                        inserted = node;
+                    for (let i = 1; i < docNodes.length; i++) {
+                        let docNode = docNodes[i];
+                        inserted.insertAfter(docNode);
+                        inserted = docNode;
                     }
                 }
                 else {
@@ -421,11 +421,6 @@
 
         setPinned(name, value) {
             this.pinned[name] = value;
-            return this;
-        }
-
-        setTextContent(content) {
-            this.node.textContent = content;
             return this;
         }
 
