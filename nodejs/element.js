@@ -396,33 +396,67 @@ register('', class DocNode extends Emitter {
 
 
 /*****
- * The DocText element is a wrapper the DOM built in Text class.  Instances
- * of DocText are return in API class that refer to the underlying Text class.
- * Moreover, DocText provides a link-free copy function.
+ * DocText is a subclass of DocNode and represents the DOM Text node.  The
+ * constructor is used both for constructing a new DocText object and for
+ * wrapping an existing DOM node.  DocText nodes should never have child
+ * nodes are always leaves within the DOM tree.
 *****/
 register('', class DocText extends DocNode {
     constructor(arg) {
         if (typeof arg == 'string') {
-            let node;
-            super(node);
+            super(new NpmHtml.TextNode(arg));
         }
         else {
             super(arg);
         }
     }
 
-    setText(content) {
-        this.node.textContent = content;
-        return this;
+    append() {
+    }
+  
+    getText() {
+        return this.node.rawText;
+    }
+
+    insertAfter() {
+    }
+
+    insertBefore() {
+    }
+
+    prepend() {
+    }
+
+    setText(arg) {
+        let text;
+
+        if (typeof arg == 'undefined' || arg === null) {
+            text = '';
+        }
+        else if (typeof arg == 'string') {
+            text = arg;
+        }
+        else {
+            text = arg.toString();
+        }
+
+        let docText = mkDocText(text);
+        this.replace(docText);
+        return docText;
+    }
+
+    toString() {
+        return this.node.rawText;
     }
 });
 
 
 /*****
- * An element is distinguished from an HTML Element to be more generic.  It is
- * the base class/interface for node types such as HTMLElement, SVGElement, and
- * MathMLElement.  It has attributes, children, a parent, ... etc.  Just keep
- * in min that this wrapper class is non-specific.
+ * On the server side, we're using a simplified DOM model by pushing all of the
+ * element types, Element, HTMLElement, SVGElement, and MATHMLElement, into a
+ * single wrapper calss called DocElement.  That's primarily a simplification
+ * due to the fact that there's no runtime functionality on the server side so
+ * there is no need to differential between element types.
 *****/
 register('', class DocElement extends DocNode {
     constructor(arg) {
