@@ -543,11 +543,12 @@
         constructor(node) {
             super(node);
             this.listeners = {};
-            this.contoller = null;
+            this.controller = null;
             this.propagation = mkStringSet();
         }
 
         animate() {
+            // TODO
             console.log('TBD DocElement.animate()');
         }
 
@@ -566,6 +567,14 @@
             return this;
         }
 
+        clearController() {
+            // TODO
+            if (this.controller instanceof Controller) {
+                console.log('do something with controller');
+                this.controller = null;
+            }
+        }
+
         disablePropagation(eventName) {
             this.propagation.clear(eventName);
             return this;
@@ -577,6 +586,7 @@
         }
 
         getAnimation() {
+            // TODO
             console.log('TBD DocElement.getAnimation()');
         }
 
@@ -600,6 +610,22 @@
 
         getBoundingRects() {
             return this.node.getBoundingRects()
+        }
+
+        getChildElementFirst() {
+            if (this.node.firstElementChild) {
+                return this.node.firstElementChild[nodeKey];
+            }
+
+            return null;
+        }
+
+        getChildElementLast() {
+            if (this.node.lastElementChild) {
+                return this.node.lastElementChild[nodeKey];
+            }
+
+            return null;
         }
 
         getClassNames() {
@@ -646,44 +672,12 @@
             return null;
         }
 
-        getFirstElementChild() {
-            if (this.node.firstElementChild) {
-                return wrapDocNode(this.node.firstElementChild);
-            }
-
-            return null;
-        }
-
-        getLastElementChild() {
-            if (this.node.lastElementChild) {
-                return wrapDocNode(this.node.lastElementChild);
-            }
-
-            return null;
-        }
-
         getInnerHtml() {
             return this.node.innerHTML;
-        }
-      
-        getNextextElementSibling() {
-            if (this.node.nextElementSibling) {
-                return wrapDocNode(this.node.nextSElementibling);
-            }
-
-            return null
         }
 
         getOuterHtml() {
             return this.node.outerHTML;
-        }
-      
-        getPrevElementSibling() {
-            if (this.node.previousElementSibling) {
-                return wrapDocNode(this.node.previousSElementibling);
-            }
-
-            return null;
         }
 
         getScrollHeight() {
@@ -700,6 +694,22 @@
 
         getScrollWidth() {
             return this.node.scrollWidth;
+        }
+      
+        getSiblingElementNext() {
+            if (this.node.nextElementSibling) {
+                return wrapDocNode(this.node.nextSElementibling);
+            }
+
+            return null
+        }
+      
+        getSiblingElementPrev() {
+            if (this.node.previousElementSibling) {
+                return wrapDocNode(this.node.previousSElementibling);
+            }
+
+            return null;
         }
 
         getTagName() {
@@ -836,11 +846,11 @@
         }
 
         setController(controller) {
-            if (!this.controller) {
+            if (!(this.controller instanceof Controller)) {
+                // TODO
+                console.log('do something with controller');
                 this.controller = controller;
             }
-
-            return this;
         }
 
         setInnerHtml(innerHtml) {

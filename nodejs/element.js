@@ -374,6 +374,7 @@ register('', class DocNode extends Emitter {
                 0,
                 ...docNodes.map(docNode => {
                     detach(docNode);
+                    docNode.node.parentNode = this;
                     return docNode.node;
                 }),
             );
@@ -488,10 +489,84 @@ register('', class DocElement extends DocNode {
         this.indentSize = 2;
     }
 
-    getOuterHtml(hr) {
+    clearAttribute(name) {
+        this.node.removeAttribute(name);
+        return this;
+    }
+
+    clearClassName(className) {
+        this.node.classList.remove(className);
+
+        if (this.getClassNames().length == 0) {
+            this.node.removeAttribute('class');
+        }
+
+        return this;
+    }
+
+    clearClassNames() {
+        for (let className of this.getClassNames()) {
+            this.node.classList.remove(className);
+        }
+
+        this.node.removeAttribute('class');
+        return this;
+    }
+
+    getAttribute(name) {
+        return this.node.getAttribute(name);
+    }
+
+    getAttributeNames() {
+        return Object.keys(this.node.attributes);
+    }
+
+    getAttributes() {
+        return Object.keys(this.node.attributes).map(key => {
+            return { name: key, value: this.node.attributes[key] };
+        });
+    }
+
+    getChildElementFirst() {
+        for (let childNode of this.node.childNodes) {
+            if (childNode instanceof NpmHtml.HTMLElement) {
+                return childNode[nodeKey];
+            }
+        }
+
+        return null;
+    }
+
+    getChildElementLast() {
+        for (let i = this.node.childNodes.length; i > 0; i--) {
+            let childNode = this.node.childNodes[i];
+
+            if (childNode instanceof NpmHtml.HTMLElement) {
+                return childNode[nodeKey];
+            }
+        }
+
+        return null;
+    }
+
+    getClassNames() {
+        let array = [];
+
+        for (let key of this.node.classList._set.keys()) {
+            array.push(key);
+        }
+
+        return array;
+    }
+
+    getHtml(hr, ...nodes) {
+        let stack = [];
         let snippets = [];
         const lf = hr ? '\n' : '';
-        let stack = [{ node: this.node, indent: 0, pending: false }];
+
+        for (let node of nodes) {
+            stack.push({ node: node, indent: 0, pending: false });
+        }
 
         while (stack.length) {
             let entry = stack.pop();
@@ -502,7 +577,7 @@ register('', class DocElement extends DocNode {
                     snippets.push(`${indent}<${entry.node.tagName.toLowerCase()}`);
                     
                     for (let attributeName in entry.node.attributes) {
-                        snippets.push(` attributeName="${entry.node.attributes[attributeName]}"`);
+                        snippets.push(` ${attributeName}="${entry.node.attributes[attributeName]}"`);
                     }
 
                     snippets.push(`>${lf}`);               
@@ -516,7 +591,7 @@ register('', class DocElement extends DocNode {
                         snippets.push(`${indent}<${entry.node.tagName.toLowerCase()}`);
                         
                         for (let attributeName in entry.node.attributes) {
-                            snippets.push(` attributeName="${entry.node.attributes[attributeName]}"`);
+                            snippets.push(` ${attributeName}="${entry.node.attributes[attributeName]}"`);
                         }
 
                         snippets.push(`>${lf}`);
@@ -543,7 +618,79 @@ register('', class DocElement extends DocNode {
         return snippets.join('');
     }
 
+    getInnerHtml(hr) {
+        return this.getHtml(hr, ...this.node.childNodes);
+    }
+
+    getOuterHtml(hr) {
+        return this.getHtml(hr, this.node)
+    }
+
+    getSiblingElementNext() {
+        let index = this.getNodeIndex();
+
+        if (index >= 0) {
+            for (let i = index + 1; i < this.node.parentNode.childNodes.length; i++) {
+                let childNode = this.node.parentNode.childNodes[i];
+
+                if (childNode instanceof NpmHtml.HTMLElement) {
+                    return childNode[nodeKey];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    getSiblingElementPrev() {
+        let index = this.getNodeIndex();
+
+        if (index >= 0) {
+            for (let i = index; i > 0; i--) {
+                let childNode = this.node.parentNode.childNodes[i-1];
+
+                if (childNode instanceof NpmHtml.HTMLElement) {
+                    return childNode[nodeKey];
+                }
+            }
+        }
+
+        return null;
+    }
+
     getTagName() {
         return this.node.rawTagName;
+    }
+
+    hasAttribute(name) {
+        return name in this.node.attributes;
+    }
+
+    hasClassName(className) {
+        return this.node.classList._set.has(className);
+    }
+
+    setAttribute(name, value) {
+        this.node.setAttribute(name, value);
+        return this;
+    }
+
+    setClassName(className) {
+        this.node.classList.add(className);
+        return this;
+    }
+
+    setClassNames(classNames) {
+        this.clearClassNames();
+
+        if (typeof classNames == 'string' && classNames.trim()) {
+            for (let className of classNames.trim().split(' ')) {
+                if (className.trim()) {
+                    this.setClassName(className.trim());
+                }
+            }
+        }
+
+        return this;
     }
 });
