@@ -100,21 +100,6 @@ register('', function wrapTree(node) {
 
 
 /*****
- * Hidden utility function, whose purpose is to encapsulate the mechanics for
- * removing a node from it's position within the DOM tree.  Note that this logic
- * is use repeatedly through the DOM tree feature set.
-*****/
-function detach(docNode) {
-    let index = docNode.getNodeIndex();
-
-    if (index >= 0) {
-        docNode.node.parentNode.childNodes.splice(index, 1);
-        docNode.node.parentNode = null;
-    }
-}
-
-
-/*****
  * This function employs the features of our HTML parser to generate a single
  * HtmlElement object from raw HTML text.  This function can be used to generate
  * an entire HTML document structure for generating and manipulating and HTML
@@ -145,6 +130,21 @@ register('', function createDocElementFromOuterHtml(outerHtml) {
 
     return mkDocElement('div');
 });
+
+
+/*****
+ * Hidden utility function, whose purpose is to encapsulate the mechanics for
+ * removing a node from it's position within the DOM tree.  Note that this logic
+ * is use repeatedly through the DOM tree feature set.
+*****/
+function detach(docNode) {
+    let index = docNode.getNodeIndex();
+
+    if (index >= 0) {
+        docNode.node.parentNode.childNodes.splice(index, 1);
+        docNode.node.parentNode = null;
+    }
+}
 
 
 /*****
@@ -371,15 +371,13 @@ register('', class DocNode extends Emitter {
         if (index >= 0) {
             this.node.parentNode.childNodes.splice(
                 index,
-                0,
-                ...docNodes.map(docNode => {
+                1,
+                ...(docNodes.map(docNode => {
                     detach(docNode);
                     docNode.node.parentNode = this;
                     return docNode.node;
-                }),
+                }))
             );
-
-            detach(this);
         }
 
         return this;
@@ -670,6 +668,30 @@ register('', class DocElement extends DocNode {
         return this.node.classList._set.has(className);
     }
 
+    queryAll(selector) {
+        let selected = [];
+  
+        if (typeof selector == 'string' && selector != '') {
+            for (let node of this.node.querySelectorAll(selector)) {
+                selected.push(mkDocElement(node));
+            }
+        }
+  
+        return selected
+    }
+
+    queryOne(selector) {
+        if (typeof selector == 'string' && selector != '') {
+            let selected = this.node.querySelector(selector);
+
+            if (selected) {
+                return mkDocElement(selected);
+            }
+        }
+
+        return null;
+    }
+
     setAttribute(name, value) {
         this.node.setAttribute(name, value);
         return this;
@@ -692,5 +714,47 @@ register('', class DocElement extends DocNode {
         }
 
         return this;
+    }
+
+    setInnerHtml(innerHtml) {
+        const options = {
+            lowerCaseTagName: true,
+            comment: false,
+            voidTag:{
+              tags: Object.keys(voidTags),
+              closingSlash: false,
+            },
+            blockTextElements: {
+              script: true,
+              noscript: true,
+              style: true,
+              pre: true,
+            }
+        };
+    
+        this.clear();
+        let htmlElement = NpmHtml.parse(innerHtml, options);
+        let childNodes = typeof htmlElement.tagName == 'text' ? htmlElement : htmlElement.childNodes;
+
+        for (let childNode of childNodes) {
+            if (childNode.nodeType == 1) {
+                childNode.removeWhitespace();
+                this.append(wrapNode(childNode));
+            }
+        }
+        
+        return this;
+    }
+
+    setOuterHtml(outerHtml) {
+        let docElement = createDocElementFromOuterHtml(outerHtml);
+
+        if (this.node.parentNode) {
+            this.replace(docElement);
+            return this;
+        }
+        else {
+            return docElement;
+        }
     }
 });

@@ -543,7 +543,8 @@
         constructor(node) {
             super(node);
             this.listeners = {};
-            this.controller = null;
+            // TODO
+            //this.controller = null;
             this.propagation = mkStringSet();
         }
 
@@ -569,10 +570,12 @@
 
         clearController() {
             // TODO
+            /*
             if (this.controller instanceof Controller) {
                 console.log('do something with controller');
                 this.controller = null;
             }
+            */
         }
 
         disablePropagation(eventName) {
@@ -659,6 +662,8 @@
         }
 
         getController() {
+            // TODO
+            /*
             let docNode = this;
 
             while (docNode) {
@@ -670,6 +675,7 @@
             }
 
             return null;
+            */
         }
 
         getInnerHtml() {
@@ -846,11 +852,14 @@
         }
 
         setController(controller) {
+            // TODO
+            /*
             if (!(this.controller instanceof Controller)) {
                 // TODO
                 console.log('do something with controller');
                 this.controller = controller;
             }
+            */
         }
 
         setInnerHtml(innerHtml) {
