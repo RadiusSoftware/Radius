@@ -290,8 +290,8 @@
             wrapDocNode(scriptElement).remove();
         }
 
-        global.win = mkWin();
-        global.doc = mkDoc();
+        globalThis.win = mkWin();
+        globalThis.doc = mkDoc();
         registerRadius();
         mkRadius(doc.getHtml());
 

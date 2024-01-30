@@ -35,47 +35,60 @@ register('', class HttpLibrary {
         };
     }
 
+    async add(entry) {
+        try {
+            if (typeof entry.url == 'string') {
+                if (await this.validateUrl(entry.url)) {
+                    let item = await this.makers[entry.type](this, entry);
+
+                    if (await item.init()) {
+                        for (let url of this.enumerateUrls(entry.url)) {
+                            this.entries.add(url, item);
+                        }
+                    }
+                }
+            }
+            else if (typeof entry.status == 'number') {
+                let item = await this.makers[entry.type](this, entry);
+
+                if (await item.init()) {
+                    this.statuses[entry.status] = item;
+                }
+            }
+        }
+        catch (error) {
+            // todo -- handle error
+            console.log(e);
+        }
+
+        return this;
+    }
+
     enumerateUrls(url) {
         return [url];
     }
 
-    async getStatus(status) {
-        // TODO
-    }
-
-    async getUrl(url) {
-        // TODO
-    }
-
-    insert(url, item) {
-        // TODO
-        return this;
+    async get(arg) {
+        if (typeof arg == 'number') {
+        }
+        else if (typeof arg == 'string') {
+        }
     }
 
     async init(entries) {
         if (Array.isArray(entries)) {
+            this.statuses = {};
             this.entries = mkTextTree('/');
 
             for (let entry of entries) {
-                if (await this.validateUrl(entry.url)) {
-                    try {
-                        let item = await this.makers[entry.type](this, entry);
-
-                        if (await item.init()) {
-                            for (let url of this.enumerateUrls(entry.url)) {
-                                this.entries.add(url, item);
-                            }
-                        }
-                    }
-                    catch (e) {}
-                }
+                await this.add(entry);
             }
         }
 
         return this;
     }
 
-    remove(url) {
+    remove(arg) {
         // TODO
         return this;
     }
@@ -97,8 +110,8 @@ register('', class HttpLibrary {
 /*****
 *****/
 register('', class HttpItem {
-    constructor(urlLibrary, entry) {
-        this.urlLibrary = urlLibrary;
+    constructor(httpLibrary, entry) {
+        this.httpLibrary = httpLibrary;
         this.entry = entry;
         this.content = {};
     }
@@ -136,8 +149,8 @@ register('', class HttpItem {
 /*****
 *****/
 register('', class HttpData extends HttpItem {
-    constructor(urlLibrary, entry) {
-        super(urlLibrary, entry);
+    constructor(httpLibrary, entry) {
+        super(httpLibrary, entry);
     }
 
     async handleRequest(req, rsp) {
@@ -149,8 +162,8 @@ register('', class HttpData extends HttpItem {
 /*****
 *****/
 register('', class HttpFileSystem extends HttpItem {
-    constructor(urlLibrary, entry) {
-        super(urlLibrary, entry);
+    constructor(httpLibrary, entry) {
+        super(httpLibrary, entry);
     }
 
     async init() {
@@ -176,8 +189,8 @@ register('', class HttpFileSystem extends HttpItem {
 /*****
 *****/
 register('', class HttpWebX extends HttpItem {
-    constructor(urlLibrary, entry) {
-        super(urlLibrary, entry);
+    constructor(httpLibrary, entry) {
+        super(httpLibrary, entry);
     }
 
     async handleRequest(req, rsp) {

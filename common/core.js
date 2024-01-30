@@ -30,13 +30,12 @@
  * code point of view.
 *****/
 (() => {
-    try {
-        window.global = window;
-        global.platform = 'mozilla';
-    }
-    catch (e) {
-        global.platform = 'nodejs';
-    }
+    /*****
+     * Keep track of the platform tpye.  Essentially we need to know whether the
+     * framework is running on a host, nodejs, or on a browser, mozilla.  If ever
+     * needed, we can add more logic to detect other platforms.
+    *****/
+    globalThis.platform = 'window' in globalThis ? 'mozilla' : 'nodejs';
 
     
     /*****
@@ -56,7 +55,7 @@
                 this.segments = [];
             }
 
-            this.object = global;
+            this.object = globalThis;
 
             for (let segment of this.getNamespaceSegments()) {
                 if (!(segment in this.object)) {
@@ -120,8 +119,8 @@
         }
 
         [Symbol.iterator]() {
-            let objs = [ global ];
-            let obj = global;
+            let objs = [ globalThis ];
+            let obj = globalThis;
 
             for (let segment of this.getNamespaceSegments()) {
                 obj = obj[segment];
@@ -133,7 +132,7 @@
         }
     }
     
-    global.mkFqn = (fqn, value) => new Fqn(fqn, value);
+    globalThis.mkFqn = (fqn, value) => new Fqn(fqn, value);
 
 
     /*****
@@ -145,7 +144,7 @@
      * into that same namespace:  register(class ClassName...), mkClassName() is
      * a ctor added to the namespace.
     *****/
-    global.register = (ns, arg) => {
+    globalThis.register = (ns, arg) => {
         if (typeof arg == 'function' && arg.name) {
             let fqn = ns ? mkFqn(`${ns}.${arg.name}`) : mkFqn(arg.name);
             let obj = fqn.getObject();
@@ -201,7 +200,7 @@
      * itself are made available when the singleton() function is called.  Note
      * that singleton's with an async function will also kick off initialization.
     *****/
-    global.singleton = (ns, arg, ...args) => {
+    globalThis.singleton = (ns, arg, ...args) => {
         if (typeof arg == 'function' && arg.name) {
             let fqn = ns ? mkFqn(`${ns}.${arg.name}`) : mkFqn(arg.name);
             let obj = fqn.getObject();

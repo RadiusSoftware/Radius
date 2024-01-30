@@ -108,7 +108,7 @@ register('', class Websocket extends Emitter {
             Trap.pushReply(trapId, message.response);
         }
         else {
-            global.send(message);
+            globalThis.send(message);
         }
     }
 
