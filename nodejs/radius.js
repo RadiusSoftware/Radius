@@ -33,22 +33,22 @@
  * used for loading in developer application code, CSS, and HTML framents.
 *****/
 try {
-    require('../core.js');
-    require('../txt.js');
-    require('../ctl.js');
-    require('../buffer.js');
-    require('../data.js');
-    require('../emitter.js');
-    require('../objekt.js');
-    require('../json.js');
-    require('../language.js');
-    require('../messaging.js');
-    require('../stringSet.js');
-    require('../time.js');
-    require('../mime.js');
-    require('../textTemplate.js');
-    require('../textTree.js');
-    require('../textUtils.js');
+    require('../common/core.js');
+    require('../common/txt.js');
+    require('../common/ctl.js');
+    require('../common/buffer.js');
+    require('../common/data.js');
+    require('../common/emitter.js');
+    require('../common/objekt.js');
+    require('../common/json.js');
+    require('../common/language.js');
+    require('../common/messaging.js');
+    require('../common/stringSet.js');
+    require('../common/time.js');
+    require('../common/mime.js');
+    require('../common/textTemplate.js');
+    require('../common/textTree.js');
+    require('../common/textUtils.js');
 
     require('./core.js');
     require('./crypto.js');
