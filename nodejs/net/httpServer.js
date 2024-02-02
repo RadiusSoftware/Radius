@@ -87,7 +87,7 @@ registerIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWor
     }
 
     async start() {
-        this.lib = await mkHttpLibrary(this.settings.libSettings).init(this.settings.libEntries);
+        //this.lib = await mkHttpLibrary(this.settings.libSettings).init(this.settings.libEntries);
         await super.start();
         return this;
     }
@@ -226,6 +226,14 @@ registerIn('HttpServerWorker', '', class HttpRequest {
         else {
             return '';
         }
+    }
+
+    getCookie(name) {
+        // TODO
+    }
+
+    getCookies() {
+        // TODO
     }
 
     getEncoding() {
@@ -417,6 +425,14 @@ registerIn('HttpServerWorker', '', class HttpResponse {
         this.req = req;
     }
 
+    clearCookie(name) {
+        // TODO
+    }
+
+    clearCookies() {
+        // TODO
+    }
+
     getHeader(headerName) {
         return this.httpRsp.getHeader(headerName);
     }
@@ -572,6 +588,10 @@ registerIn('HttpServerWorker', '', class HttpResponse {
         }
 
         return this;
+    }
+
+    setCookie(cookie) {
+        // TODO
     }
 
     setHeader(headerName, value) {

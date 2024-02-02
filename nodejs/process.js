@@ -138,6 +138,18 @@ singleton('', class Process extends Emitter {
         console.log(LibProcess);
     }
 
+    execInShell(script) {
+        return new Promise((ok, fail) => {
+            LibChildProcess.exec(script, (error, stdout, stderr) => {
+                ok({
+                    error: error,
+                    stdout: stdout,
+                    stderr: stderr,
+                });
+            });        
+        });
+    }
+
     exit(code) {
         LibProcess.exit(code);
         return this;

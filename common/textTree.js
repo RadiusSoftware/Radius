@@ -88,6 +88,23 @@ register('', class TextTree {
         return node;
     }
 
+    getBest(path) {
+        let node = this.root;
+
+        if (typeof path == 'string') {
+            for (let key of this.getKeys(path.trim(), this.delimiter)) {
+                if (key in node) {
+                    node = node.children[key];
+                }
+                else {
+                    return node;
+                }
+            }
+        }
+
+        return node;
+    }
+
     remove(path) {
         let node = this.getNode();
 

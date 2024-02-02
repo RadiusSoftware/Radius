@@ -54,7 +54,7 @@ singleton('', class Ctl {
 
     /*****
      * In some cases, developers may find that they don't know whether a value
-     * is a promise or a regular objevt.  The function handles that by returning
+     * is a promise or a regular object.  The function handles that by returning
      * a promise that will be fulfilled wither when (a) the value is NOT a promise
      * or (b) immediately by returning the original value (promise) itself.
     *****/
