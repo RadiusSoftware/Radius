@@ -37,6 +37,18 @@
     *****/
     globalThis.platform = 'window' in globalThis ? 'mozilla' : 'nodejs';
 
+
+    /*****
+     * This function is a basic placeholder for a global function that deals with
+     * and handles caught errors.  The function should be repleaced with functions
+     * that are specific to the other Radius realms, nodejs and mozilla with the
+     * global replace() function.  This placeholder simply logs the error in string
+     * manner to the console.
+    *****/
+    globalThis.handleError = async function(error) {
+        console.log(error);
+    };
+
     
     /*****
      * This class provides support for managing namespaces and fully qualified
@@ -145,51 +157,48 @@
      * a ctor added to the namespace.
     *****/
     globalThis.register = (ns, arg) => {
-        if (typeof arg == 'function' && arg.name) {
+        try {
             let fqn = ns ? mkFqn(`${ns}.${arg.name}`) : mkFqn(arg.name);
             let obj = fqn.getObject();
 
-            if (!(arg.name in obj)) {
-                try {
-                    if (arg.toString().startsWith('class')) {
-                        if (arg.name.match(/^[A-Z]/)) {
-                            let makerName = `mk${arg.name}`;
+            if (arg.name in obj) {
+                throw new Error(`register(), name already exists in container: ${arg.name}`);
+            }
+            
+            if (arg.toString().startsWith('class')) {
+                if (arg.name.match(/^[A-Z]/)) {
+                    let makerName = `mk${arg.name}`;
 
-                            let makerFunc;
-                            eval(`makerFunc = function ${makerName}(...args) {
-                                let made = Reflect.construct(arg, args);
-                                return made;
-                            };`);
+                    let makerFunc;
+                    eval(`makerFunc = function ${makerName}(...args) {
+                        let made = Reflect.construct(arg, args);
+                        return made;
+                    };`);
 
-                            obj[makerName] = makerFunc;
-                            obj[makerName]['#NS'] = ns;
-                            obj[arg.name] = arg;
-                            obj[arg.name]['#NAMESPACE'] = ns;
-                        }
-                        else {
-                            throw new Error(`register(), class name must start with an upper-case letter: ${arg.name}`);
-                        }
-                    }
-                    else {
-                        if (arg.name.match(/^[a-z]/)) {
-                            obj[arg.name] = (...args) => {
-                                return Reflect.apply(arg, obj, args);
-                            };
-                            
-                            obj[arg.name].code = arg.toString();
-                        }
-                        else {
-                            throw new Error(`register(), function name must start with an lower-case letter: ${arg.name}`);
-                        }
-                    }
+                    obj[makerName] = makerFunc;
+                    obj[makerName]['#NS'] = ns;
+                    obj[arg.name] = arg;
+                    obj[arg.name]['#NAMESPACE'] = ns;
                 }
-                catch (e) {
-                    console.log(e);
+                else {
+                    throw new Error(`register(), class name must start with an upper-case letter: ${arg.name}`);
                 }
             }
             else {
-                throw new Error(`register(), name already exists in container: ${arg.name}`);
+                if (arg.name.match(/^[a-z]/)) {
+                    obj[arg.name] = (...args) => {
+                        return Reflect.apply(arg, obj, args);
+                    };
+                    
+                    obj[arg.name].code = arg.toString();
+                }
+                else {
+                    throw new Error(`register(), function name must start with an lower-case letter: ${arg.name}`);
+                }
             }
+        }
+        catch (error) {
+            handleError(error);
         }
     };
 
@@ -201,19 +210,14 @@
      * that singleton's with an async function will also kick off initialization.
     *****/
     globalThis.singleton = (ns, arg, ...args) => {
-        if (typeof arg == 'function' && arg.name) {
+        try {
             let fqn = ns ? mkFqn(`${ns}.${arg.name}`) : mkFqn(arg.name);
             let obj = fqn.getObject();
 
             if (!(arg.name in obj)) {
                 if (arg.toString().startsWith('class')) {
                     if (arg.name.match(/^[A-Z]/)) {
-                        try {
-                            obj[arg.name] = Reflect.construct(arg, args);
-                        }
-                        catch (e) {
-                            console.log(e);
-                        }
+                        obj[arg.name] = Reflect.construct(arg, args);
                     }
                     else {
                         throw new Error(`singleton(), class name must start with an upper-case letter: ${arg.name}`);
@@ -223,6 +227,9 @@
             else {
                 throw new Error(`singleton(), name already exists in container: ${fqn.getNamespace()}`);
             }
+        }
+        catch (error) {
+            handleError(error);
         }
     };
 })();

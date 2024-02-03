@@ -32,46 +32,42 @@
  * this script only loads the framework.  Once loaded, the framework will be
  * used for loading in developer application code, CSS, and HTML framents.
 *****/
-try {
-    require('../common/core.js');
-    require('../common/txt.js');
-    require('../common/ctl.js');
-    require('../common/buffer.js');
-    require('../common/data.js');
-    require('../common/emitter.js');
-    require('../common/objekt.js');
-    require('../common/json.js');
-    require('../common/language.js');
-    require('../common/messaging.js');
-    require('../common/stringSet.js');
-    require('../common/time.js');
-    require('../common/mime.js');
-    require('../common/textTemplate.js');
-    require('../common/textTree.js');
-    require('../common/textUtils.js');
+require('../common/core.js');
+require('./core.js');
 
-    require('./core.js');
-    require('./crypto.js');
-    require('./network.js');
-    require('./host.js');
-    require('./socket.js');
-    require('./tls.js');
-    require('./fileSystem.js');
-    require('./tempFile.js');
-    require('./process.js');
-    require('./childProcess.js');
-    require('./compression.js');
-    require('./jose.js');
-    require('./acme.js');
-    require('./application.js');
-    require('./element.js');
+require('../common/txt.js');
+require('../common/ctl.js');
+require('../common/buffer.js');
+require('../common/data.js');
+require('../common/emitter.js');
+require('../common/objekt.js');
+require('../common/json.js');
+require('../common/language.js');
+require('../common/messaging.js');
+require('../common/stringSet.js');
+require('../common/time.js');
+require('../common/mime.js');
+require('../common/textTemplate.js');
+require('../common/textTree.js');
+require('../common/textUtils.js');
 
-    require('./net/httpClient.js');
-    require('./net/httpServer.js');
-    require('./net/httpLibrary.js');
-    require('./net/tcpClient.js');
-    require('./net/tcpServer.js');
-}
-catch (e) {
-    console.log(e);
-}
+require('./crypto.js');
+require('./network.js');
+require('./host.js');
+require('./socket.js');
+require('./tls.js');
+require('./fileSystem.js');
+require('./tempFile.js');
+require('./process.js');
+require('./childProcess.js');
+require('./compression.js');
+require('./jose.js');
+require('./acme.js');
+require('./application.js');
+require('./element.js');
+
+require('./net/httpClient.js');
+require('./net/httpServer.js');
+//require('./net/httpLibrary.js');
+require('./net/tcpClient.js');
+require('./net/tcpServer.js');

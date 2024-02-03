@@ -29,7 +29,8 @@ const LibUrl = require('url');
 *****/
 registerIn('HttpServer', '', class HttpServer extends Application {
     constructor(settings) {
-        console.log(Process.getEnv());
+        super(settings);
+        //console.log(Process.getEnv());
     }
     /*
     async start() {

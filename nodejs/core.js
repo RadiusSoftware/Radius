@@ -21,13 +21,11 @@
 *****/
 
 
-/*****
-*****/
-register('', async function log(...args) {
-});
-
-
-/*****
-*****/
-register('', async function notify(arg) {
-});
+(() => 
+    /*****
+    *****/
+    globalThis.handleError = async function(error, opts) {
+        console.log(error)
+        require('process').exit(-1);
+    }
+)();
