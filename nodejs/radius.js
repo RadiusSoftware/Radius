@@ -66,9 +66,9 @@ try {
     require('./application.js');
     require('./element.js');
 
-    require('./net/httpLibrary.js');
     require('./net/httpClient.js');
     require('./net/httpServer.js');
+    require('./net/httpLibrary.js');
     require('./net/tcpClient.js');
     require('./net/tcpServer.js');
 }

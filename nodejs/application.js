@@ -59,6 +59,7 @@ Process.on('#SPAWNED', async message => {
         }
     }
     catch (error) {
+        console.log(error);
         // TODO - log error
     }
 });

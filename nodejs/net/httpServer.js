@@ -29,8 +29,17 @@ const LibUrl = require('url');
 *****/
 registerIn('HttpServer', '', class HttpServer extends Application {
     constructor(settings) {
-        super(settings);
+        console.log(Process.getEnv());
     }
+    /*
+    async start() {
+        console.log(Process.getNodeClass());
+        console.log(HttpLibrary);
+        this.httpLibrary = await mkHttpLibrary(this.settings.libSettings).init(this.settings.libEntries);
+        await super.start();
+        return this;
+    }
+    */
 });
 
 
@@ -85,12 +94,13 @@ registerIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWor
         }
         */
     }
-
+    /*
     async start() {
-        //this.lib = await mkHttpLibrary(this.settings.libSettings).init(this.settings.libEntries);
+        this.httpLib = mkHttpLibrary();
         await super.start();
         return this;
     }
+    */
 });
 
 

@@ -22,109 +22,110 @@
 const LibFiles = require('fs');
 
 
-/*****
-*****/
-register('', class HttpItem {
-    constructor(httpLibrary, entry) {
-        this.httpLibrary = httpLibrary;
-        this.entry = entry;
-    }
+execIn('HttpServer', () => {
+    /*****
+    *****/
+    register('', class HttpItem {
+        constructor(httpLibrary, entry) {
+            this.httpLibrary = httpLibrary;
+            this.entry = entry;
+        }
 
-    getUrl() {
-        return this.entry.url;
-    }
+        getUrl() {
+            return this.entry.url;
+        }
 
-    isOnce() {
-        return this.entry.once === true;
-    }
+        isOnce() {
+            return this.entry.once === true;
+        }
 
-    [Symbol.iterator]() {
-        return Object.values(this.urls)[Symbol.iterator]();
-    }
-});
-
-
-/*****
-*****/
-register('', class HttpData extends HttpItem {
-    constructor(httpLibrary, entry) {
-        super(httpLibrary, entry);
-    }
-
-    async handleRequest(req, rsp) {
-        return await super.handleRequest(req, rsp);
-    }
-
-    async init() {
-    }
-});
+        [Symbol.iterator]() {
+            return [][Symbol.iterator]();
+        }
+    });
 
 
-/*****
-*****/
-register('', class HttpFileSystem extends HttpItem {
-    constructor(httpLibrary, entry) {
-        super(httpLibrary, entry);
-    }
+    /*****
+    *****
+    register('', class HttpData extends HttpItem {
+        constructor(httpLibrary, entry) {
+            super(httpLibrary, entry);
+        }
 
-    async init() {
-        /*
-        await super.init();
+        async handleRequest(req, rsp) {
+            return await super.handleRequest(req, rsp);
+        }
 
-        if (LibFiles.existsSync(this.entry.path)) {
-            let stats = await LibFiles.stat(this.entry.path);
+        async init() {
+        }
+    });
+    */
 
-            if (stats.isDirectory()) {
-                return true;
-            }
-            else if (stats.isFile()) {
+
+    /*****
+    *****/
+    register('', class HttpFileSystem extends HttpItem {
+        constructor(httpLibrary, entry) {
+            super(httpLibrary, entry);
+        }
+
+        async handleRequest(req, rsp) {
+            return await super.handleRequest(req, rsp);
+        }
+
+        async init() {
+            if (LibFiles.existsSync(this.entry.path)) {
+                let stats = await LibFiles.stat(this.entry.path);
+
+                if (stats.isDirectory()) {
+                    return true;
+                }
+                else if (stats.isFile()) {
+                }
             }
         }
-       */
-    }
 
-    async handleRequest(req, rsp) {
-        return await super.handleRequest(req, rsp);
-    }
+        isDynamic() {
+            return this.entry.dynamic === true;
+        }
 
-    isDynamic() {
-        return this.entry.dynamic === true;
-    }
-
-    async validatePath(path) {
-    }
-});
+        async validatePath(path) {
+        }
+    });
 
 
-/*****
-*****/
-register('', class HttpObject extends HttpItem {
-    constructor(httpLibrary, entry) {
-        super(httpLibrary, entry);
-    }
+    /*****
+    *****
+    register('', class HttpObject extends HttpItem {
+        constructor(httpLibrary, entry) {
+            super(httpLibrary, entry);
+        }
 
-    async handleRequest(req, rsp) {
-        return await super.handleRequest(req, rsp);
-    }
+        async handleRequest(req, rsp) {
+            return await super.handleRequest(req, rsp);
+        }
 
-    async init() {
-    }
-});
+        async init() {
+        }
+    });
+    */
 
 
-/*****
-*****/
-register('', class HttpWebX extends HttpItem {
-    constructor(httpLibrary, entry) {
-        super(httpLibrary, entry);
-    }
+    /*****
+    *****
+    register('', class HttpWebX extends HttpItem {
+        constructor(httpLibrary, entry) {
+            super(httpLibrary, entry);
+        }
 
-    async handleRequest(req, rsp) {
-        return await super.handleRequest(req, rsp);
-    }
+        async handleRequest(req, rsp) {
+            return await super.handleRequest(req, rsp);
+        }
 
-    async init() {
-    }
+        async init() {
+        }
+    });
+    */
 });
 
 
@@ -132,38 +133,17 @@ register('', class HttpWebX extends HttpItem {
 *****/
 singletonIn('HttpServer', '', class HttpLibrary {
     constructor(settings) {
-        Process.on('HttpLibrary', message => this.onRequest(message));
-    }
-
-    getCacheDuration() {
-        return this.settings.getCacheDuration;
-    }
-
-    getCacheMax() {
-        return this.settings.cacheMax;
-    }
-
-    async onRequest(message) {
-        console.log(message);
-    }
-});
-
-
-/*****
-*****/
-singletonIn('HttpServerWorker', '', class HttpLibrary {
-    constructor(settings) {
         this.settings = settings;
         this.tree = mkTextTree('/');
-        
+
         this.makers = {
-            data: mkHttpData,
+            //data: mkHttpData,
             files: mkHttpFileSystem,
-            object: mkHttpObject,
-            webx: mkHttpWebX,
+            //object: mkHttpObject,
+            //webx: mkHttpWebX,
         };
 
-        Process.sendParent({ name: 'HttpLibrary' });
+        Process.on('HttpLibrary', message => this.onRequest(message));
     }
 
     async add(entry) {
@@ -182,18 +162,55 @@ singletonIn('HttpServerWorker', '', class HttpLibrary {
     async get(url) {
     }
 
-    async init(entries) {
+    getBlockSizeMb() {
+        return this.settings.getBlockSizeMb;
+    }
+
+    getCacheDurationMs() {
+        return this.settings.getCacheDurationMs;
+    }
+
+    getCacheMaxSizeMb() {
+        return this.settings.cacheMaxSizeMb;
+    }
+
+    async init() {
         if (Array.isArray(entries)) {
 
             for (let entry of entries) {
-                await this.add(entry);
+                //await this.add(entry);
+                console.log(this.entry);
             }
         }
 
         return this;
     }
 
-    remove(url) {
+    async remove(url) {
+        return this;
+    }
+
+    async onRequest(message) {
+        console.log(message);
+    }
+});
+
+
+/*****
+*****/
+singletonIn('HttpServerWorker', '', class HttpLibrary {
+    constructor() {
+    }
+
+    async add(entry) {
+        return this;
+    }
+
+    async get(url) {
+        //Process.sendParent({ name: 'HttpLibrary' });
+    }
+
+    async remove(url) {
         return this;
     }
 });
