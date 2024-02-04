@@ -22,56 +22,6 @@
 
 
 /*****
- * Starting an application is a non-obvious and coordinated task requiring the
- * correct seequence of operations in three different process nodes: (a) the
- * controller, (b) the main application node, and (c) the application worker nodes.
- * startApplication() can be called in any process to launch a new application.
- * Note that multiple instances of an application be launched on a host, with
- * the primary issue being that each instance may require full controll of one
- * resource such as a network interface's port.
- * 
- * The startApplication() function sends a message to the controller, to inform
- * the controller that a request to launch application instance was initiated.
- * The controller then launches the application process via Process.fork().
- * What's created in the application's "primary" process.  The management of
- * worker processes is under the control the the application's "primary" process.
- * 
- * Applications only work if the process's node class matches the application
- * class's class name.  For workers, that name is {application-class}Worker.
-*****/
-register('', async function startApplication(fqClassName, settings) {
-    Process.sendController({
-        name: '#STARTAPPLICATION',
-        fqClassName: fqClassName,
-        settings: settings,
-    });
-});
-
-Process.on('#SPAWNED', async message => {
-    try {
-        let nodeClass = Process.getNodeClass();
-        let settings = Process.getEnv(nodeClass, 'json');
-
-        if (typeof settings == 'object') {
-            let application;
-            eval(`application = mk${nodeClass}(settings)`);
-            await application.start();
-        }
-    }
-    catch (error) {
-        console.log(error);
-        // TODO - log error
-    }
-});
-
-execIn(Process.nodeClassController, () => {
-    Process.on('#STARTAPPLICATION', async message => {
-        Process.fork(message.fqClassName, message.fqClassName, message.settings);
-    });
-});
-
-
-/*****
  * An application is a construct within the Radius server framework wherein
  * there is a child of the controller process with that has zero or more child
  * processes called workers.  Yes, the terminology is like the builtin Cluster
@@ -88,10 +38,10 @@ execIn(Process.nodeClassController, () => {
  * class, in which it will execute;
 *****/
 register('', class Application extends Emitter {
-    constructor(settings) {
+    constructor() {
         super();
-        this.settings = settings;
         this.className = this.getClassName();
+        this.settings = Process.getEnv(this.className, 'json');
         this.workers = {};
         Process.on('*', message => this.emit(message));
     }
@@ -114,16 +64,11 @@ register('', class Application extends Emitter {
         return Data.clone(settings);
     }
 
-    getSettingsFromProcess() {
-        if ('nodeClass' in this.radius && this.radius.nodeClass in LibProcess.env) {
-            return fromJson(this.getEnv(this.radius.nodeClass));
-        }
-
-        return {};
-    }
-
     hasSetting(name) {
         return name in this.settings;
+    }
+
+    async init() {
     }
 
     async kill() {
@@ -198,13 +143,22 @@ register('', class ApplicationWorker extends Emitter {
         super();
         this.state = 'paused';
         this.className = Reflect.getPrototypeOf(this).constructor.name;
+        this.settings = Process.getEnv(this.className, 'json');
+    }
 
-        if (Process.hasEnv(this.className)) {
-            this.settings = Process.getEnv(this.className, 'json');
-        }
-        else {
-            this.settings = {};
-        }
+    async init() {
+    }
+
+    getClassName() {
+        return Reflect.getPrototypeOf(this).constructor.name;
+    }
+
+    getSetting(name) {
+        return this.settings[name];
+    }
+
+    getSettings() {
+        return Data.clone(settings);
     }
 
     async kill() {
@@ -246,5 +200,50 @@ register('', class ApplicationWorker extends Emitter {
         }
 
         return this;
+    }
+});
+
+
+/*****
+ * Starting an application is a non-obvious and coordinated task requiring the
+ * correct seequence of operations in three different process nodes: (a) the
+ * controller, (b) the main application node, and (c) the application worker nodes.
+ * startApplication() can be called in any process to launch a new application.
+ * Note that multiple instances of an application be launched on a host, with
+ * the primary issue being that each instance may require full controll of one
+ * resource such as a network interface's port.
+ * 
+ * The startApplication() function sends a message to the controller, to inform
+ * the controller that a request to launch application instance was initiated.
+ * The controller then launches the application process via Process.fork().
+ * What's created in the application's "primary" process.  The management of
+ * worker processes is under the control the the application's "primary" process.
+ * 
+ * Applications only work if the process's node class matches the application
+ * class's class name.  For workers, that name is {application-class}Worker.
+*****/
+register('', async function startApplication(fqClassName, settings) {
+    Process.sendController({
+        name: '#STARTAPPLICATION',
+        fqClassName: fqClassName,
+        settings: settings,
+    });
+});
+
+execIn(Process.nodeClassController, () => {
+    Process.on('#STARTAPPLICATION', async message => {
+        Process.fork(message.fqClassName, message.fqClassName, message.settings);
+    });
+});
+
+Process.on('#SPAWNED', async message => {
+    let nodeClass = Process.getNodeClass();
+    let settings = Process.getEnv(nodeClass, 'json');
+
+    if (typeof settings == 'object') {
+        let application;
+        eval(`application = ${nodeClass}`);
+        await application.init();
+        await application.start();
     }
 });

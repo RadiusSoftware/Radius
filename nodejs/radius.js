@@ -33,8 +33,6 @@
  * used for loading in developer application code, CSS, and HTML framents.
 *****/
 require('../common/core.js');
-require('./core.js');
-
 require('../common/txt.js');
 require('../common/ctl.js');
 require('../common/buffer.js');
@@ -68,6 +66,6 @@ require('./element.js');
 
 require('./net/httpClient.js');
 require('./net/httpServer.js');
-//require('./net/httpLibrary.js');
+require('./net/httpLibrary.js');
 require('./net/tcpClient.js');
 require('./net/tcpServer.js');

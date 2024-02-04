@@ -195,8 +195,9 @@ singleton('', class Process extends Emitter {
             }
         }
         catch (e) {
-            console.log(e);
+            log(e);
         }
+
         return childProcess;
     }
 
@@ -491,31 +492,41 @@ singleton('', class Process extends Emitter {
         });
     }
 
-    onUncaughtException(error, origin) {
-        this.emit({
-            name: 'UncaughtException',
-            process: this,
-            error: error,
-            origin: origin,
-        });
+    onUncaughtException(e, origin) {
+        if (this.handles('UnhandledRejection')) {
+            this.emit({
+                name: 'UncaughtException',
+                process: this,
+                exception: e,
+                origin: origin,
+            });
+        }
+        else {
+            log(e);
+        }
     }
 
-    onUncaughtExceptionMonitor(error, origin) {
+    onUncaughtExceptionMonitor(e, origin) {
         this.emit({
             name: 'UncaughtExceptionMonitor',
             process: this,
-            error: error,
+            exception: e,
             origin: origin,
         });
     }
 
     onUnhandledRejection(reason, promise) {
-        this.emit({
-            name: 'UnhandledRejection',
-            process: this,
-            reason: reason,
-            promise: promise,
-        });
+        if (this.handles('UnhandledRejection')) {
+            this.emit({
+                name: 'UnhandledRejection',
+                process: this,
+                reason: reason,
+                promise: promise,
+            });
+        }
+        else {
+            log(reason);
+        }
     }
 
     onWarning(warning) {
@@ -655,55 +666,40 @@ singleton('', class Process extends Emitter {
  * functionality.
 *****/
 register('', async function execIn(nodeClass, func) {
-    try {
-        if (Array.isArray(nodeClass)) {
-            if (nodeClass.filter(nodeClass => nodeClass == Process.getNodeClass()).length) {
-                await func();
-            }
-        }
-        else if (typeof nodeClass == 'string') {
-            if (nodeClass == Process.getNodeClass()) {
-                await func();
-            }
+    if (Array.isArray(nodeClass)) {
+        if (nodeClass.filter(nodeClass => nodeClass == Process.getNodeClass()).length) {
+            await func();
         }
     }
-    catch (e) {
-        console.log(e);
+    else if (typeof nodeClass == 'string') {
+        if (nodeClass == Process.getNodeClass()) {
+            await func();
+        }
     }
 });
 
 register('', function registerIn(nodeClass, ns, arg) {
-    try {
-        if (Array.isArray(nodeClass)) {
-            if (nodeClass.filter(nodeClassName => nodeClassName == Process.getNodeClass()).length) {
-                register(ns, arg);
-            }
-        }
-        else if (typeof nodeClass == 'string') {
-            if (nodeClass == Process.getNodeClass()) {
-                register(ns, arg);
-            }
+    if (Array.isArray(nodeClass)) {
+        if (nodeClass.filter(nodeClassName => nodeClassName == Process.getNodeClass()).length) {
+            register(ns, arg);
         }
     }
-    catch (e) {
-        console.log(e);
+    else if (typeof nodeClass == 'string') {
+        if (nodeClass == Process.getNodeClass()) {
+            register(ns, arg);
+        }
     }
 });
 
 register('', async function singletonIn(nodeClass, ns, arg, ...args) {
-    try {
-        if (Array.isArray(nodeClass)) {
-            if (nodeClass.filter(nodeClassName => nodeClassName == Process.getNodeClass()).length) {
-                singleton(ns, arg, ...args);
-            }
-        }
-        else if (typeof nodeClass == 'string') {
-            if (nodeClass == Process.getNodeClass()) {
-                singleton(ns, arg, ...args);
-            }
+    if (Array.isArray(nodeClass)) {
+        if (nodeClass.filter(nodeClassName => nodeClassName == Process.getNodeClass()).length) {
+            singleton(ns, arg, ...args);
         }
     }
-    catch (e) {
-        console.log(e);
+    else if (typeof nodeClass == 'string') {
+        if (nodeClass == Process.getNodeClass()) {
+            singleton(ns, arg, ...args);
+        }
     }
 });

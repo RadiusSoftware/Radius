@@ -19,7 +19,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-const LibFiles = require('fs');
 
 
 execIn('HttpServer', () => {
@@ -69,13 +68,16 @@ execIn('HttpServer', () => {
             super(httpLibrary, entry);
         }
 
+        getPaths() {
+        }
+
         async handleRequest(req, rsp) {
             return await super.handleRequest(req, rsp);
         }
 
         async init() {
-            if (LibFiles.existsSync(this.entry.path)) {
-                let stats = await LibFiles.stat(this.entry.path);
+            if (await FileSystem.pathExists(this.entry.path)) {
+                let stats = await FileSystem.stat(this.entry.path);
 
                 if (stats.isDirectory()) {
                     return true;
@@ -85,8 +87,14 @@ execIn('HttpServer', () => {
             }
         }
 
+        isDirectory() {
+        }
+
         isDynamic() {
             return this.entry.dynamic === true;
+        }
+
+        isFile() {
         }
 
         async validatePath(path) {
@@ -132,8 +140,7 @@ execIn('HttpServer', () => {
 /*****
 *****/
 singletonIn('HttpServer', '', class HttpLibrary {
-    constructor(settings) {
-        this.settings = settings;
+    constructor() {
         this.tree = mkTextTree('/');
 
         this.makers = {
@@ -147,15 +154,15 @@ singletonIn('HttpServer', '', class HttpLibrary {
     }
 
     async add(entry) {
-        try {
-            let item = this.makers[entry.type](this, entry);
-            await item.init();
-            this.tree.add(item.getUrl(), item);
-        }
-        catch (error) {
-            console.log(e);
-        }
-
+        let item = this.makers[entry.type](this, entry);
+        //try {
+        await item.init();
+        //}
+        //catch (e) {
+            //debug(e);
+        //    throw e;
+       // }
+        this.tree.add(item.getUrl(), item);
         return this;
     }
 
@@ -163,27 +170,25 @@ singletonIn('HttpServer', '', class HttpLibrary {
     }
 
     getBlockSizeMb() {
-        return this.settings.getBlockSizeMb;
+        return this.settings.blockSizeMb;
     }
 
     getCacheDurationMs() {
-        return this.settings.getCacheDurationMs;
+        return this.settings.cacheDurationMs;
     }
 
     getCacheMaxSizeMb() {
         return this.settings.cacheMaxSizeMb;
     }
 
-    async init() {
-        if (Array.isArray(entries)) {
+    async init(settings, entries) {
+        this.settings = settings;
 
+        if (Array.isArray(entries)) {
             for (let entry of entries) {
-                //await this.add(entry);
-                console.log(this.entry);
+                await this.add(entry);
             }
         }
-
-        return this;
     }
 
     async remove(url) {

@@ -196,7 +196,7 @@ register('', function fromJson(json) {
                         else {
                             eval(`constructed = Reflect.construct(${value['#CTOR']}, [])`);
                         }
-                    } catch (e) { console.log(value) }
+                    } catch (e) {}
 
                     if (constructed) {
                         return constructed;

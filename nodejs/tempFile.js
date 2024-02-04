@@ -19,7 +19,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-const LibFiles = require('fs');
 const LibPath = require('path');
 
 
@@ -59,8 +58,8 @@ register('', class TempFile {
     async delete() {
         await this.close();
 
-        if (LibFiles.existsSync(this.path)) {
-            await LibFiles.rm(this.path);
+        if (await FileSystem.pathExists(this.path)) {
+            await FileSystem.deleteFile(this.path);
         }
 
         return this;
@@ -72,17 +71,7 @@ register('', class TempFile {
 
     async open() {
         if (!this.handle) {
-            this.handle = await (async () => {
-                return new Promise((ok, fail) => {
-                    this.handle = LibFiles.open(this.path, 'w', (error, handle) => {
-                        if (error) {
-                            console.log('LOG ENTRY FOR THIS tempFile.js');
-                        }
-
-                        ok(handle);
-                    });
-                });
-            })();
+            this.handle = await FileSystem.open(this.path, 'w');
         }
 
         return this;
@@ -102,21 +91,10 @@ register('', class TempFile {
 
     async touch() {
         if (!this.handle) {
-            this.handle = await (async () => {
-                return new Promise((ok, fail) => {
-                    this.handle = LibFiles.open(this.path, 'w', (error, handle) => {
-                        if (error) {
-                            console.log('LOG ENTRY FOR THIS tempFile.js');
-                        }
-
-                        ok(handle);
-                    });
-                });
-            })();
-
-            if (this.handle) {
-                await this.close();
-            }
+            this.handle = await this.open();
+        }
+        else {
+            this.open();
         }
 
         return this;

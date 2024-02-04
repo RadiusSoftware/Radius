@@ -191,17 +191,9 @@
         static reflect(func) {
             reflection = {};
             reflecting = true;
-    
-            try {
-                func();
-            }
-            catch (e) {
-                // TODO -- need to handle error.
-            }
-            finally {
-                reflecting = false;
-                return Object.values(reflection);
-            }
+            func();
+            reflecting = false;
+            return Object.values(reflection);
         }
 
         resume() {

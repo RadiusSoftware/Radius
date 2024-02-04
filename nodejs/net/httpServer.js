@@ -27,28 +27,30 @@ const LibUrl = require('url');
 
 /*****
 *****/
-registerIn('HttpServer', '', class HttpServer extends Application {
-    constructor(settings) {
-        super(settings);
-        //console.log(Process.getEnv());
+singletonIn('HttpServer', '', class HttpServer extends Application {
+    constructor() {
+        super();
     }
-    /*
-    async start() {
-        console.log(Process.getNodeClass());
-        console.log(HttpLibrary);
-        this.httpLibrary = await mkHttpLibrary(this.settings.libSettings).init(this.settings.libEntries);
-        await super.start();
-        return this;
+
+    getLibEntries() {
+        return this.settings.libEntries;
     }
-    */
+
+    getLibSettings() {
+        return this.settings.libSettings;
+    }
+
+    async init() {
+        await HttpLibrary.init(this.settings.libSettings, this.settings.libEntries);
+    }
 });
 
 
 /*****
 *****/
-registerIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWorker {
-    constructor(settings) {
-        super(settings);
+singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWorker {
+    constructor() {
+        super();
 
         if (this.settings.tls instanceof Tls) {
             this.scheme = 'https';

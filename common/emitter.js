@@ -121,7 +121,11 @@ register('', class Emitter {
     }
 
     handles(name) {
-        return name in this.handlers;
+        if (name in this.handlers) {
+            return this.handlers.length > 0;
+        }
+        
+        return false;
     }
   
     listening(name) {

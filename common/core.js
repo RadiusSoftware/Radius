@@ -37,18 +37,6 @@
     *****/
     globalThis.platform = 'window' in globalThis ? 'mozilla' : 'nodejs';
 
-
-    /*****
-     * This function is a basic placeholder for a global function that deals with
-     * and handles caught errors.  The function should be repleaced with functions
-     * that are specific to the other Radius realms, nodejs and mozilla with the
-     * global replace() function.  This placeholder simply logs the error in string
-     * manner to the console.
-    *****/
-    globalThis.handleError = async function(error) {
-        console.log(error);
-    };
-
     
     /*****
      * This class provides support for managing namespaces and fully qualified
@@ -157,48 +145,36 @@
      * a ctor added to the namespace.
     *****/
     globalThis.register = (ns, arg) => {
-        try {
-            let fqn = ns ? mkFqn(`${ns}.${arg.name}`) : mkFqn(arg.name);
-            let obj = fqn.getObject();
+        let fqn = ns ? mkFqn(`${ns}.${arg.name}`) : mkFqn(arg.name);
+        let obj = fqn.getObject();
 
-            if (arg.name in obj) {
-                throw new Error(`register(), name already exists in container: ${arg.name}`);
-            }
-            
-            if (arg.toString().startsWith('class')) {
-                if (arg.name.match(/^[A-Z]/)) {
-                    let makerName = `mk${arg.name}`;
-
-                    let makerFunc;
-                    eval(`makerFunc = function ${makerName}(...args) {
-                        let made = Reflect.construct(arg, args);
-                        return made;
-                    };`);
-
-                    obj[makerName] = makerFunc;
-                    obj[makerName]['#NS'] = ns;
-                    obj[arg.name] = arg;
-                    obj[arg.name]['#NAMESPACE'] = ns;
-                }
-                else {
-                    throw new Error(`register(), class name must start with an upper-case letter: ${arg.name}`);
-                }
+        if (arg.name in obj) {
+            throw new Error(`register(), name already exists in container: ${arg.name}`);
+        }
+        
+        if (arg.toString().startsWith('class')) {
+            if (arg.name.match(/^[A-Z]/)) {
+                let makerName = `mk${arg.name}`;
+                obj[makerName] = (...args) => Reflect.construct(arg, args);
+                obj[makerName]['#NS'] = ns;
+                obj[arg.name] = arg;
+                obj[arg.name]['#NAMESPACE'] = ns;
             }
             else {
-                if (arg.name.match(/^[a-z]/)) {
-                    obj[arg.name] = (...args) => {
-                        return Reflect.apply(arg, obj, args);
-                    };
-                    
-                    obj[arg.name].code = arg.toString();
-                }
-                else {
-                    throw new Error(`register(), function name must start with an lower-case letter: ${arg.name}`);
-                }
+                throw new Error(`register(), class name must start with an upper-case letter: ${arg.name}`);
             }
         }
-        catch (error) {
-            handleError(error);
+        else {
+            if (arg.name.match(/^[a-z]/)) {
+                obj[arg.name] = (...args) => {
+                    return Reflect.apply(arg, obj, args);
+                };
+                
+                obj[arg.name].code = arg.toString();
+            }
+            else {
+                throw new Error(`register(), function name must start with an lower-case letter: ${arg.name}`);
+            }
         }
     };
 
@@ -210,26 +186,71 @@
      * that singleton's with an async function will also kick off initialization.
     *****/
     globalThis.singleton = (ns, arg, ...args) => {
-        try {
-            let fqn = ns ? mkFqn(`${ns}.${arg.name}`) : mkFqn(arg.name);
-            let obj = fqn.getObject();
+        let fqn = ns ? mkFqn(`${ns}.${arg.name}`) : mkFqn(arg.name);
+        let obj = fqn.getObject();
 
-            if (!(arg.name in obj)) {
-                if (arg.toString().startsWith('class')) {
-                    if (arg.name.match(/^[A-Z]/)) {
-                        obj[arg.name] = Reflect.construct(arg, args);
-                    }
-                    else {
-                        throw new Error(`singleton(), class name must start with an upper-case letter: ${arg.name}`);
-                    }
+        if (!(arg.name in obj)) {
+            if (arg.toString().startsWith('class')) {
+                if (arg.name.match(/^[A-Z]/)) {
+                    obj[arg.name] = Reflect.construct(arg, args);
+                }
+                else {
+                    throw new Error(`singleton(), class name must start with an upper-case letter: ${arg.name}`);
                 }
             }
-            else {
-                throw new Error(`singleton(), name already exists in container: ${fqn.getNamespace()}`);
-            }
         }
-        catch (error) {
-            handleError(error);
+        else {
+            throw new Error(`singleton(), name already exists in container: ${fqn.getNamespace()}`);
         }
     };
+
+
+    /*****
+     * The framework-wide standard handler for catch(e) clauses.  The standard
+     * procedure is to simply log the exception, e, with global system logger.
+     * An "action" function may be provided as an alterative to the standard
+     * feature of just logging the exception.  Note that the action function is
+     * able to accept zero or more arguments provided to the caught() function.
+    *****/
+    register('', async function caught(e, action, ...args) {
+        if (typeof action == 'function') {
+            let result = action(e, ...args);
+            return result instanceof Promise ? await result : result;
+        }
+        else {
+            log(e);
+        }
+    });
+
+
+    /*****
+     * This provides a standard system-wide logging feature.  The actual logging
+     * service is provided by the loggerFunction.  Note, the framework default is
+     * to perform a console.log() for the provided argument.  Override the default
+     * behavior by setting the logging function with a developer provider function.
+     * Note that log() is actually an asynchronous function, which can be used for
+     * outward messaging or event network-base communicatons.
+    *****/
+    let loggingFunction = (arg) => console.log(arg);
+
+    register('', function setLogger(logger) {
+        loggingFunction = logger;
+    });
+    
+    register('', async function log(arg) {
+        loggingFunction(arg);
+    });
+
+
+    /*****
+     * For development purposes only!  The good ole fashion console.log() is useful
+     * for debugging purposes.  Sometimes the number of console.logs() get out of
+     * hand.  Hence, if we use debug() instead of console.log(), we can easily find
+     * all instances of debugging statements in the code so we can remove them.
+    *****/
+    register('', function debug(...args) {
+        for (let arg of args) {
+            console.log(arg);
+        }
+    });
 })();
