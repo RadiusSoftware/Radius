@@ -312,3 +312,42 @@ singleton('', class Message extends Emitter {
 });
 
 
+/*****
+ * A handle is an object the handlers incoming messages from an emitter with
+ * methods based on "on" plus the message.name or a substring thereof.  The
+ * reason for the message.name prefix is to ensure we can distringuish between
+ * our messages and messages from other sources on a busy emitter.
+*****/
+register('', class Handler {
+    constructor(emitter, prefix, handler) {
+        if (typeof prefix == 'string') {
+            this.prefix = prefix;
+            this.handler = handler;
+        }
+        else {
+            this.prefix = '';
+            this.handler = prefix;
+        }
+
+        emitter.on('*', async message => {
+            if (!this.prefix || message.name.startsWith(this.prefix)) {
+                const name = message.name.substring(this.prefix.length);
+                let methodName = `on${name[0].toUpperCase()}${name.substring(1)}`;
+
+                if (typeof this.handler[methodName] == 'function') {
+                    let response = await this.handler[methodName](message);
+                    console.log(response);
+
+                    if (this.emitter instanceof Process) {
+                    }
+                    else {
+                    }
+                    // IF PROCESS, REPLY WITH A RESPODING MESSAGE.
+                    //Message.reply(message, await this.handler[methodName](message));
+                }
+            }
+        });
+    }
+});
+
+

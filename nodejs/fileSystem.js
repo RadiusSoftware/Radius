@@ -34,6 +34,7 @@ const LibPath = require('path');
 singleton('', class FileSystem extends Emitter {
     constructor() {
         super();
+        this.watches = {};
     }
 
     absolutePath(base, path) {
@@ -95,15 +96,6 @@ singleton('', class FileSystem extends Emitter {
         }
     
         return false;
-    }
-
-    offWatch(path) {
-    }
-
-    onWatch(path) {
-    }
-
-    onceWatch(path) {
     }
 
     async openDirectory(path, recursive) {

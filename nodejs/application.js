@@ -43,13 +43,12 @@ register('', class Application extends Emitter {
         this.className = this.getClassName();
         this.settings = Process.getEnv(this.className, 'json');
         this.workers = {};
-        Process.on('*', message => this.emit(message));
+        this.appName = Reflect.getPrototypeOf(this).constructor.name;
+        mkHandler(Process, this.appName, this);
     }
 
-    getApplication() {
-        if (this.radius.nodeClass in LibProcess.env) {
-            return fromJson(LibProcess.env[this.radius.nodeClass]);
-        }
+    getAppName() {
+        return this.appName;
     }
 
     getClassName() {
@@ -144,9 +143,15 @@ register('', class ApplicationWorker extends Emitter {
         this.state = 'paused';
         this.className = Reflect.getPrototypeOf(this).constructor.name;
         this.settings = Process.getEnv(this.className, 'json');
+        this.appName = Reflect.getPrototypeOf(this).constructor.name.replace('Worker', '');
+        mkHandler(Process, this.appName, this);
     }
 
     async init() {
+    }
+
+    getAppName() {
+        return this.appName;
     }
 
     getClassName() {
@@ -176,10 +181,16 @@ register('', class ApplicationWorker extends Emitter {
     }
 
     async queryApplication(message) {
-        return this;
+        const name = message.name;
+        message.name = `${this.appName}${name}`;
+        let response = await Process.queryParent(message);
+        message.name = name;
+        return response;
     }
 
     sendApplication(message) {
+        const name = message.name;
+        message.name = `${this.appName}${name}`;
         Process.sendParent(message);
         return this;
     }

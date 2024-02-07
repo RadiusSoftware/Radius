@@ -21,152 +21,58 @@
 *****/
 
 
-execIn('HttpServer', () => {
-    /*****
-    *****/
-    register('', class HttpItem {
-        constructor(httpLibrary, entry) {
-            this.httpLibrary = httpLibrary;
-            this.entry = entry;
-        }
+/*****
+*****/
+registerIn('HttpServer', '', class HttpLibrary {
+    constructor() {
+        mkHandler(Process, 'HttpLibrary', this);
+    }
 
-        getUrl() {
-            return this.entry.url;
-        }
+    getBlockSizeMb() {
+        return this.settings.blockSizeMb;
+    }
 
-        isOnce() {
-            return this.entry.once === true;
-        }
+    getCacheDurationMs() {
+        return this.settings.cacheDurationMs;
+    }
 
-        [Symbol.iterator]() {
-            return [][Symbol.iterator]();
-        }
-    });
+    getCacheMaxSizeMb() {
+        return this.settings.cacheMaxSizeMb;
+    }
 
-
-    /*****
-    *****
-    register('', class HttpData extends HttpItem {
-        constructor(httpLibrary, entry) {
-            super(httpLibrary, entry);
-        }
-
-        async handleRequest(req, rsp) {
-            return await super.handleRequest(req, rsp);
-        }
-
-        async init() {
-        }
-    });
-    */
-
-
-    /*****
-    *****/
-    register('', class HttpFileSystem extends HttpItem {
-        constructor(httpLibrary, entry) {
-            super(httpLibrary, entry);
-        }
-
-        getPaths() {
-        }
-
-        async handleRequest(req, rsp) {
-            return await super.handleRequest(req, rsp);
-        }
-
-        async init() {
-            if (await FileSystem.pathExists(this.entry.path)) {
-                let stats = await FileSystem.stat(this.entry.path);
-
-                if (stats.isDirectory()) {
-                    return true;
-                }
-                else if (stats.isFile()) {
-                }
-            }
-        }
-
-        isDirectory() {
-        }
-
-        isDynamic() {
-            return this.entry.dynamic === true;
-        }
-
-        isFile() {
-        }
-
-        async validatePath(path) {
-        }
-    });
-
-
-    /*****
-    *****
-    register('', class HttpObject extends HttpItem {
-        constructor(httpLibrary, entry) {
-            super(httpLibrary, entry);
-        }
-
-        async handleRequest(req, rsp) {
-            return await super.handleRequest(req, rsp);
-        }
-
-        async init() {
-        }
-    });
-    */
-
-
-    /*****
-    *****
-    register('', class HttpWebX extends HttpItem {
-        constructor(httpLibrary, entry) {
-            super(httpLibrary, entry);
-        }
-
-        async handleRequest(req, rsp) {
-            return await super.handleRequest(req, rsp);
-        }
-
-        async init() {
-        }
-    });
-    */
+    async onGetFile(message) {
+        console.log(message);
+        Message.reply(message, 'Hello');
+    }
 });
 
 
 /*****
 *****/
-singletonIn('HttpServer', '', class HttpLibrary {
+registerIn('HttpServerWorker', '', class HttpLibrary {
     constructor() {
         this.tree = mkTextTree('/');
 
         this.makers = {
-            //data: mkHttpData,
+            data: mkHttpData,
             files: mkHttpFileSystem,
-            //object: mkHttpObject,
-            //webx: mkHttpWebX,
+            object: mkHttpObject,
+            webx: mkHttpWebX,
         };
-
-        Process.on('HttpLibrary', message => this.onRequest(message));
     }
 
-    async add(entry) {
-        let item = this.makers[entry.type](this, entry);
-        //try {
-        await item.init();
-        //}
-        //catch (e) {
-            //debug(e);
-        //    throw e;
-       // }
-        this.tree.add(item.getUrl(), item);
+    async addItem(entry) {
+        let item = await this.makers[entry.type](this, entry).init();
+        let node = this.tree.ensureNode(entry.path);
+        node.setValue(item);
         return this;
     }
 
-    async get(url) {
+    getItem(path) {
+        let node = this.tree.getBestNode(path);
+        console.log(node.getValue());
+        console.log(node.getPath());
+        return node.getValue();
     }
 
     getBlockSizeMb() {
@@ -182,40 +88,204 @@ singletonIn('HttpServer', '', class HttpLibrary {
     }
 
     async init(settings, entries) {
+        console.log(await Process.callParent({ name: 'HttpLibraryGetFile'}))
         this.settings = settings;
 
         if (Array.isArray(entries)) {
             for (let entry of entries) {
-                await this.add(entry);
+                await this.addItem(entry);
             }
         }
     }
 
-    async remove(url) {
+    removeItem(path) {
+        this.tree.remove(path);
         return this;
-    }
-
-    async onRequest(message) {
-        console.log(message);
     }
 });
 
 
 /*****
 *****/
-singletonIn('HttpServerWorker', '', class HttpLibrary {
-    constructor() {
+register('', class HttpItem {
+    constructor(httpLibrary, entry) {
+        this.httpLibrary = httpLibrary;
+        this.entry = entry;
+
+        this.methods = {
+            delete: false,
+            get: false,
+            head: false,
+            options: false,
+            patch: false,
+            post: false,
+            put: false,
+            trace: false,
+        };
     }
 
-    async add(entry) {
+    clearMethod(methodName) {
+        if (methodName.toLowerCase() in this.methods) {
+            this.methods[this.methodName.toLowerCase()] = false;
+        }
+
         return this;
     }
 
-    async get(url) {
-        //Process.sendParent({ name: 'HttpLibrary' });
+    getMethod(methodName) {
+        if (methodName.toLowerCase() in this.methods) {
+            return this.methods[this.methodName.toLowerCase()];
+        }
+
+        return null;
     }
 
-    async remove(url) {
+    getMethods() {
+        return Data.copy(this.methods);
+    }
+
+    getPath() {
+        return this.entry.path;
+    }
+
+    getSettings() {
+        return Data.copy(this.entry);
+    }
+
+    isOnce() {
+        return this.entry.once === true;
+    }
+
+    setMethod(methodName) {
+        if (methodName.toLowerCase() in this.methods) {
+            this.methods[this.methodName.toLowerCase()] = true;
+        }
+
         return this;
+    }
+
+    [Symbol.iterator]() {
+        return [][Symbol.iterator]();
+    }
+});
+
+
+/*****
+*****/
+registerIn('HttpServerWorker', '', class HttpData extends HttpItem {
+    constructor(httpLibrary, entry) {
+        super(httpLibrary, entry);
+    }
+
+    async handleRequest(req, rsp) {
+        return await super.handleRequest(req, rsp);
+    }
+
+    async init() {
+    }
+
+    [Symbol.iterator]() {
+        return [][Symbol.iterator]();
+    }
+});
+
+
+/*****
+*****/
+registerIn('HttpServerWorker', '', class HttpFileSystem extends HttpItem {
+    constructor(httpLibrary, entry) {
+        super(httpLibrary, entry);
+        this.paths = {};
+    }
+
+    async handleRequest(req, rsp) {
+        return await super.handleRequest(req, rsp);
+    }
+
+    async init() {
+        if (await FileSystem.pathExists(this.entry.file)) {
+            let stats = await FileSystem.stat(this.entry.file);
+
+            if (stats.isDirectory()) {
+                this.fsType = 'directory';
+
+                if (!this.isDynamic()) {
+                    for (let path of await FileSystem.recurseFiles(this.entry.file)) {
+                        this.paths[path] = {
+                            path: path,
+                            expires: mkTime(0),
+                            valid: true,
+                            content: {},
+                        };
+                    }
+                }
+            }
+            else if (stats.isFile()) {
+                this.fsType = 'file';
+
+                this.paths[this.entry.path] = {
+                    path: this.entry.path,
+                    expires: mkTime(0),
+                    valid: true,
+                    content: {},
+                };
+            }
+        }
+    }
+
+    isDirectory() {
+        return this.fsType == 'directory';
+    }
+
+    isDynamic() {
+        return this.entry.dynamic === true;
+    }
+
+    isFile() {
+        return this.fsType == 'file';
+    }
+
+    [Symbol.iterator]() {
+        return Object.values(this.paths)[Symbol.iterator]();
+    }
+});
+
+
+/*****
+*****/
+registerIn('HttpServerWorker', '', class HttpObject extends HttpItem {
+    constructor(httpLibrary, entry) {
+        super(httpLibrary, entry);
+    }
+
+    async handleRequest(req, rsp) {
+        return await super.handleRequest(req, rsp);
+    }
+
+    async init() {
+    }
+
+    [Symbol.iterator]() {
+        return [][Symbol.iterator]();
+    }
+});
+
+
+/*****
+*****/
+registerIn('HttpServerWorker', '', class HttpWebX extends HttpItem {
+    constructor(httpLibrary, entry) {
+        super(httpLibrary, entry);
+    }
+
+    async handleRequest(req, rsp) {
+        return await super.handleRequest(req, rsp);
+    }
+
+    async init() {
+    }
+
+    [Symbol.iterator]() {
+        return [][Symbol.iterator]();
     }
 });

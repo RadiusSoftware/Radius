@@ -126,7 +126,7 @@ singleton('', class Process extends Emitter {
         trap.setCount(1);
         message['#TRAP'] = trap.id;
         message['#CALL'] = true;
-
+        
         LibProcess.send(
             { json: toJson(message) },
         );

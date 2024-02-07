@@ -30,6 +30,7 @@ const LibUrl = require('url');
 singletonIn('HttpServer', '', class HttpServer extends Application {
     constructor() {
         super();
+        mkHttpLibrary();
     }
 
     getLibEntries() {
@@ -39,10 +40,6 @@ singletonIn('HttpServer', '', class HttpServer extends Application {
     getLibSettings() {
         return this.settings.libSettings;
     }
-
-    async init() {
-        await HttpLibrary.init(this.settings.libSettings, this.settings.libEntries);
-    }
 });
 
 
@@ -51,6 +48,7 @@ singletonIn('HttpServer', '', class HttpServer extends Application {
 singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWorker {
     constructor() {
         super();
+        this.httpLibrary = mkHttpLibrary();
 
         if (this.settings.tls instanceof Tls) {
             this.scheme = 'https';
@@ -72,6 +70,19 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
         }
     }
 
+    getLibEntries() {
+        return this.settings.libEntries;
+    }
+
+    getLibSettings() {
+        return this.settings.libSettings;
+    }
+
+    async init() {
+        this.httpLibrary = mkHttpLibrary();
+        await this.httpLibrary.init(this.settings.libSettings, this.settings.libEntries);
+    }
+
     isTls() {
         return this.settings.tls instanceof Tls;
     }
@@ -79,7 +90,14 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
     async onRequest(httpReq, httpRsp) {
         this.req = mkHttpRequest(this, httpReq);
         this.rsp = mkHttpResponse(this, httpRsp, this.req);
-        this.rsp.respond(200, 'text/plain', this.req.getQuery());
+        let httpItem = this.httpLibrary.getItem(this.req.getPath());
+
+        if (httpItem) {
+            debug(httpItem);
+        }
+        else {
+            this.rsp.respond(200, 'text/plain', this.req.getQuery());
+        }
     }
 
     async onUpgrade(httpReq, socket, headPacket) {
@@ -97,6 +115,7 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
         }
         */
     }
+
     /*
     async start() {
         this.httpLib = mkHttpLibrary();
@@ -295,14 +314,14 @@ registerIn('HttpServerWorker', '', class HttpRequest {
         return this.params;
     }
 
-    getPathname() {
+    getPath() {
         if (this.parsedUrl.pathname) {
             if (this.parsedUrl.pathname == '/') {
                 return this.parsedUrl.pathname;
             }
             else if (this.parsedUrl.pathname.endsWith('/')) {
                 let length = this.parsedUrl.pathname.length;
-                return this.parsedUrl.pathname.substr(0, length - 1);
+                return this.parsedUrl.pathname.substring(0, length - 1);
             }
             else {
                 return this.parsedUrl.pathname;

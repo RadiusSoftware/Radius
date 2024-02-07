@@ -32,50 +32,26 @@
 register('', class TextTree {
     constructor(delimiter) {
         this.delimiter = delimiter;
-        this.root = mkTextTreeNode();
+        this.root = mkTextTreeNode(null);
         this.root.tree = this;
         this.root.value = null;
     }
 
-    add(path, value) {
-        let node = this.ensureNode(path);
-
-        if (node.value === null) {
-            node.value = value;
-        }
-
-        return this;
-    }
-
     ensureNode(path) {
-        let node;
+        let node = this.root;
 
-        if (typeof path == 'string') {
-            node = this.root;
-            let keys = this.getKeys(path.trim(), this.delimiter);
-
-            while (keys.length) {
-                let key = keys.shift();
-
-                if (key in node) {
-                    node = node[key];
-                }
-                else {
-                    let child = mkTextTreeNode(null);
-                    node.add(key, child);
-                    node = child;
-                }
-            }
+        for (let key of this.parsePath(path)) {
+            node = node.add(key);
         }
 
         return node;
     }
 
-    get(path) {
+    getNode(path) {
         let node = this.root;
 
         if (typeof path == 'string') {
-            for (let key of this.getKeys(path.trim(), this.delimiter)) {
+            for (let key of this.parsePath(path)) {
                 if (key in node) {
                     node = node.children[key];
                 }
@@ -88,11 +64,11 @@ register('', class TextTree {
         return node;
     }
 
-    getBest(path) {
+    getBestNode(path) {
         let node = this.root;
 
         if (typeof path == 'string') {
-            for (let key of this.getKeys(path.trim(), this.delimiter)) {
+            for (let key of this.parsePath(path)) {
                 if (key in node) {
                     node = node.children[key];
                 }
@@ -105,20 +81,10 @@ register('', class TextTree {
         return node;
     }
 
-    remove(path) {
-        let node = this.getNode();
-
-        if (node) {
-            node.detach();
-        }
-
-        return this;
-    }
-
-    set(path, value) {
-        let node = this.ensureNode(path);
-        node.value = value;
-        return this;
+    parsePath(path) {
+        return path
+        .trim().split(this.delimiter)
+        .filter(segment => segment != '');
     }
 });
 
@@ -131,18 +97,18 @@ register('', class TextTree {
  * and removing child nodes.
 *****/
 register('', class TextTreeNode {
-    constructor(value) {
-        this.value = value;
-        this.tree = null;
-        this.parent = null;
+    constructor(parent) {
+        this.value = null;
+        this.parent = parent instanceof TextTreeNode ? parent : null;
+        this.tree = parent instanceof TextTreeNode ? parent.tree : null;
         this.key = null;
         this.children = {};
     }
 
-    add(key, value) {
+    add(key) {
         if (this.tree) {
             if (!(key in this.children)) {
-                let node = mkTextTreeNode(this, value);
+                let node = mkTextTreeNode(this);
                 this.children[key] = node;
                 node.tree = this.tree;
                 node.parent = this;
@@ -150,18 +116,15 @@ register('', class TextTreeNode {
             }
         }
 
-        return this;
+        return this.children[key];
     }
 
-    detach() {
-        if (this.tree && this.parent) {
-            delete this.parent.children[this.key];
-            this.tree = null;
-            this.parent = null;
-            this.key = null;
-        }
+    clearValue() {
+        return this.value = null;
+    }
 
-        return this;
+    getChild(key) {
+        return this.children[key];
     }
 
     getChildren() {
@@ -207,7 +170,22 @@ register('', class TextTreeNode {
         return Object.values(this.children).map(v => v.value);
     }
 
-    remove(key) {
+    hasKey(key) {
+        return key in this.children; 
+    }
+
+    remove() {
+        if (this.tree && this.parent) {
+            delete this.parent.children[this.key];
+            this.tree = null;
+            this.parent = null;
+            this.key = null;
+        }
+
+        return this;
+    }
+
+    removeChild(key) {
         if (key in this.children) {
             this.children[key].detach();
         }
@@ -223,20 +201,8 @@ register('', class TextTreeNode {
         return this;
     }
 
-    set(key, value) {
-        if (this.tree) {
-            if (key in this.children) {
-                this.children[key].value = value;
-            }
-            else {
-                let node = mkTextTreeNode(this, value);
-                this.children[key] = node;
-                node.tree = this.tree;
-                node.parent = this;
-                node.key = key;
-            }
-        }
-        
+    setValue(value) {
+        this.value = value;
         return this;
     }
 
