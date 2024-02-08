@@ -41,8 +41,7 @@ registerIn('HttpServer', '', class HttpLibrary {
     }
 
     async onGetFile(message) {
-        console.log(message);
-        Message.reply(message, 'Hello');
+        return 'Hello';
     }
 });
 

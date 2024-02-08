@@ -94,25 +94,6 @@ singleton('', class Process extends Emitter {
         return this;
     }
 
-    async callChild(child, message) {
-        let childProcess;
-
-        if (typeof child == 'number') {
-            if (child in this.children) {
-                childProcess = child;
-            }
-        }
-        else if (child instanceof ChildProcess) {
-            childProcess = child;
-        }
-        
-        if (childProcess) {
-            return await childProcess.callChild(message);
-        }
-
-        return undefined;
-    }
-
     async callChildren(message) {
         return Promise.all(
             Object.values(this.children).map(async childProcess => {
@@ -121,9 +102,8 @@ singleton('', class Process extends Emitter {
         );
     }
 
-    callParent(message) {
-        let trap = mkTrap();
-        trap.setCount(1);
+    async callParent(message) {
+        let trap = mkTrap().setExpected(1);
         message['#TRAP'] = trap.id;
         message['#CALL'] = true;
         
@@ -376,16 +356,16 @@ singleton('', class Process extends Emitter {
     
     async onChildMessage(message) {
         if (!this.routeUp(message)) {
-            if ('#RESULT' in message) {
+            if ('#RESPONSE' in message) {
                 let trapId = message['#TRAP'];
-                let result = message['#RESULT'];
+                let response = message['#RESPONSE'];
                 delete message['#TRAP'];
-                delete message['#RESULT'];
-                Trap.handleReply(trapId, result);
+                delete message['#RESPONSE'];
+                Trap.handleResponse(trapId, response);
             }
             else if ('#CALL' in message) {
                 let trapId = message['#TRAP'];
-                message['#RESULT'] = await this.call(message);
+                message['#RESPONSE'] = await this.call(message);
                 message['#TRAP'] = trapId;
                 delete message['#CALL'];
                 let childProcess = message.childProcess;
@@ -444,16 +424,16 @@ singleton('', class Process extends Emitter {
         if (!this.routeDown(message, sendHandle)) {
             sendHandle ? message.sendHandle = sendHandle : null;
 
-            if ('#RESULT' in message) {
+            if ('#RESPONSE' in message) {
                 let trapId = message['#TRAP'];
-                let result = message['#RESULT'];
+                let result = message['#RESPONSE'];
                 delete message['#TRAP'];
-                delete message['#RESULT'];
-                Trap.handleReply(trapId, result);
+                delete message['#RESPONSE'];
+                Trap.handleResponse(trapId, result);
             }
             else if ('#CALL' in message) {
                 let trapId = message['#TRAP'];
-                message['#RESULT'] = await this.call(message);
+                message['#RESPONSE'] = await this.call(message);
                 message['#TRAP'] = trapId;
                 delete message['#CALL'];
                 this.sendParent(message);
@@ -606,19 +586,6 @@ singleton('', class Process extends Emitter {
         delete message.sendHandle;
         delete message.childProcess;
         this.sendParent(message, sendHandle);
-    }
-
-    sendChild(child, message, sendHandle) {
-        if (child instanceof ChildProcess) {
-            child.sendChild(message, sendHandle);
-        }
-        else if (typeof child == 'number') {
-            if (child in this.children) {
-                this.children[child].sendChild(message, sendHandle);
-            }
-        }
-
-        return this;
     }
 
     sendChildren(message, sendHandle) {

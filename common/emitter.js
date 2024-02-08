@@ -35,7 +35,7 @@ register('', class Emitter {
         this.silent = false;
     }
 
-    call(message) {
+    async call(message) {
         if (!this.silent) {
             if (!this.filter(message)) {
                 let trap = mkTrap();
@@ -47,17 +47,21 @@ register('', class Emitter {
                     if (handler.thunks.length) {
                         let thunks = handler.thunks;
                         handler.thunks = [];
-                        trap.setCount(thunks.length);
+                        trap.setExpected(thunks.length);
 
-                        thunks.forEach(thunk => {
+                        for (let thunk of thunks) {
                             if (!thunk.once) {
                                 handler.thunks.push(thunk);
                             }
 
                             if (typeof thunk.filter != 'function' || thunk.filter(message)) {
-                                thunk.func(message);
+                                (async () => {
+                                    let response = thunk.func(message);
+                                    response instanceof Promise ? response = await response : null;
+                                    trap.handleResponse(response);
+                                })();
                             }
-                        });
+                        };
                     }
                     else {
                         trap.done();
@@ -66,12 +70,10 @@ register('', class Emitter {
                 else {
                     trap.done();
                 }
-
-                return trap.promise;
             }
         }
-
-        return new Promise((ok, fail) => { ok(null); });
+        
+        return trap.promise;
     }
 
     emit(message) {
@@ -94,11 +96,14 @@ register('', class Emitter {
                 }
             }
         }
+
+        return this;
     }
 
     filter(message, method) {
         let filteredOut = false;
 
+        //if (!('*' in this.handlers)) {
         if ('*' in this.handlers) {
             let handler = this.handlers['*'];
             let thunks = handler.thunks;
@@ -233,27 +238,33 @@ register('', class Emitter {
  * been recieved from the remote endpoint.
 *****/
 register('', class Trap {
-    static nextId = 1;
     static traps = {};
-  
-    constructor() {
+    static nextId = 1;
+
+    constructor(timeoutMillis) {
         this.id = Trap.nextId++;
-        this.replies = [];
-        this.expected = 0;
-        this.pending = true;
         Trap.traps[this.id] = this;
+
+        this.expected = 0;
+        this.responses = [];
+        this.pending = true;
+        this.timeout = null;
+
+        if (typeof timeoutMillis == 'number') {
+            this.timeout = setTimeout(() => this.onTimeout());
+        }
   
         this.promise = new Promise((ok, fail) => {
+            delete Trap.traps[this.id];
+
             const done = () => {
-                delete Trap.traps[this.id];
-            
-                switch (this.replies.length) {
+                switch (this.responses.length) {
                     case 0:
                         ok(null);
                     case 1:
-                        ok(this.replies[0]);
+                        ok(this.responses[0]);
                     default:
-                        ok(this.replies);
+                        ok(this.responses);
                 }
             };
             
@@ -263,51 +274,60 @@ register('', class Trap {
     
     cancel() {
         delete Trap.traps[this.id];
+        return this;
+    }
+
+    decrementExpected() {
+        this.expected--;
+
+        if (this.responses.length == this.expected) {
+            trap.pending = false;
+            trap.done();
+        }
+
+        return this;
     }
 
     static get(trapId) {
-        return Trap.traps[trapId];
+        return Trap.traps(trapId);
     }
-  
-    static handleReply(arg, reply) {
-        let trap;
 
-        if (typeof arg == 'number') {
-            trap = Trap.traps[arg];
-        }
-        else if (arg instanceof Trap && arg.id in Trap.traps) {
-            trap = arg;
-        }
+    getExpected() {
+        return this.expected;
+    }
 
-        if (trap && trap.pending) {
-            trap.replies.push(reply);
+    static handleResponse(trapId, response) {
+        if (trapId in Trap.traps) {
+            Trap.traps[trapId].handleResponse(response);
+        }
+    }
+
+    handleResponse(response) {
+        if (this && this.pending) {
+            this.responses.push(response);
   
-            if (trap.replies.length == trap.expected) {
-                trap.pending = false;
-                trap.done();
+            if (this.responses.length == this.expected) {
+                this.pending = false;
+                this.done();
             }
         }
+
+        return this;
+    }
+
+    incrementExpected() {
+        this.expected++;
+        return this;
+    }
+
+    onTimeout() {
+        trap.pending = false;
+        trap.done();
     }
   
-    setCount(expected) {
+    setExpected(expected) {
         this.expected = expected;
-    }
-});
-
-
-/*****
- * There's not a lot to a message.  It's an object whose properties are sent
- * from endpoint to endpoint.  Each message is individual and has a different
- * set or properties or property keys with one exception.  All messages MUST
- * have a messsageName property, which is used finding the appropriate message
- * handler.  The static reply() function is used by the remote handler to
- * reply to the emiting endpoint.
-*****/
-singleton('', class Message extends Emitter {
-    reply(message, value) {
-        if ('#TRAP' in message) {
-            Trap.handleReply(message['#TRAP'], value);
-        }
+        return this;
     }
 });
 
@@ -335,15 +355,19 @@ register('', class Handler {
                 let methodName = `on${name[0].toUpperCase()}${name.substring(1)}`;
 
                 if (typeof this.handler[methodName] == 'function') {
-                    let response = await this.handler[methodName](message);
-                    console.log(response);
+                    if ('#CALL' in message) {
+                        let response = await this.handler[methodName](message);
 
-                    if (this.emitter instanceof Process) {
+                        if (response instanceof Promise) {
+                            debug(message);
+                        }
+                        else {
+                            debug(message);
+                        }
                     }
                     else {
+                        this.handler[methodName](message);
                     }
-                    // IF PROCESS, REPLY WITH A RESPODING MESSAGE.
-                    //Message.reply(message, await this.handler[methodName](message));
                 }
             }
         });

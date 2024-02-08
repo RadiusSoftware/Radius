@@ -48,8 +48,7 @@ register('', class ChildProcess extends Emitter {
     }
 
     callChild(message) {
-        let trap = mkTrap();
-        trap.setCount(1);
+        let trap = mkTrap().setExpected(1);
         message['#TRAP'] = trap.id;
         message['#CALL'] = true;
 

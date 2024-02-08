@@ -47,6 +47,14 @@ register('', class Application extends Emitter {
         mkHandler(Process, this.appName, this);
     }
 
+    async callWorker(worker, message) {
+        const name = message.name;
+        message.name = `${this.appName}WorkerOn${name}`;
+        let response = await worker.sendChild(message);
+        message.name = name;
+        return response;
+    }
+
     getAppName() {
         return this.appName;
     }
@@ -86,10 +94,12 @@ register('', class Application extends Emitter {
         return this;
     }
 
-    async queryWorker(worker, message) {
-    }
-
     sendWorker(worker, message) {
+        const name = message.name;
+        message.name = `${this.appName}WorkerOn${name}`;
+        worker.sendChild(message);
+        message.name = name;
+        return this;
     }
 
     async start() {
@@ -103,7 +113,11 @@ register('', class Application extends Emitter {
     async startWorker() {
         let workerClassName = `${this.className}Worker`;
         let worker = Process.fork(workerClassName, workerClassName, this.settings);
+
+        worker.on('HeyMan', message => debug(message));
+
         this.workers[worker.getPid()] = worker;
+        await this.callWorker(worker, { name: 'Init' });
         return worker;
     }
 
@@ -147,7 +161,12 @@ register('', class ApplicationWorker extends Emitter {
         mkHandler(Process, this.appName, this);
     }
 
-    async init() {
+    async callApp(message) {
+        const name = message.name;
+        message.name = `${this.appName}${name}`;
+        let response = await Process.callParent(message);
+        message.name = name;
+        return response;
     }
 
     getAppName() {
@@ -166,6 +185,9 @@ register('', class ApplicationWorker extends Emitter {
         return Data.clone(settings);
     }
 
+    async init() {
+    }
+
     async kill() {
         Process.exit(0);
         return this;
@@ -180,15 +202,7 @@ register('', class ApplicationWorker extends Emitter {
         return this;
     }
 
-    async queryApplication(message) {
-        const name = message.name;
-        message.name = `${this.appName}${name}`;
-        let response = await Process.queryParent(message);
-        message.name = name;
-        return response;
-    }
-
-    sendApplication(message) {
+    sendApp(message) {
         const name = message.name;
         message.name = `${this.appName}${name}`;
         Process.sendParent(message);

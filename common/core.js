@@ -206,6 +206,18 @@
 
 
     /*****
+     * This is a very simplistic function that's nice to have syntactically.  It
+     * makes for some very nice code:  await pauseFor(800).  The input interval is
+     * specified in milliseconds.
+    *****/
+    register('', function pause(milliseconds) {
+        return new Promise((ok, fail) => {
+            setTimeout(() => ok(), milliseconds);
+        });
+    });
+
+
+    /*****
      * The framework-wide standard handler for catch(e) clauses.  The standard
      * procedure is to simply log the exception, e, with global system logger.
      * An "action" function may be provided as an alterative to the standard

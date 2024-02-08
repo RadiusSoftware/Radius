@@ -30,7 +30,8 @@ const LibUrl = require('url');
 singletonIn('HttpServer', '', class HttpServer extends Application {
     constructor() {
         super();
-        mkHttpLibrary();
+        this.httpLibrary = mkHttpLibrary();
+
     }
 
     getLibEntries() {
@@ -48,8 +49,6 @@ singletonIn('HttpServer', '', class HttpServer extends Application {
 singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWorker {
     constructor() {
         super();
-        this.httpLibrary = mkHttpLibrary();
-
         if (this.settings.tls instanceof Tls) {
             this.scheme = 'https';
 
@@ -79,7 +78,7 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
     }
 
     async init() {
-        this.httpLibrary = mkHttpLibrary();
+        this.httpLibrary = await mkHttpLibrary();
         await this.httpLibrary.init(this.settings.libSettings, this.settings.libEntries);
     }
 
@@ -373,6 +372,10 @@ registerIn('HttpServerWorker', '', class HttpRequest {
 
     hasVars() {
         return Object.entries(this.vars).length > 0;
+    }
+
+    async init() {
+        await this.mkHttpLibrary.init();
     }
 });
 

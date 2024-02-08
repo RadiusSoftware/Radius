@@ -248,7 +248,6 @@
         'core.js',
         'objekt.js',
         'txt.js',
-        'ctl.js',
         'buffer.js',
         'data.js',
         'emitter.js',

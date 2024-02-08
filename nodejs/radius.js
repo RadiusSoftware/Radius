@@ -34,7 +34,6 @@
 *****/
 require('../common/core.js');
 require('../common/txt.js');
-require('../common/ctl.js');
 require('../common/buffer.js');
 require('../common/data.js');
 require('../common/emitter.js');

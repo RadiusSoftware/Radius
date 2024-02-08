@@ -59,11 +59,13 @@ else if (platform == 'mozilla') {
 
                     case 'base64':
                         let binary = atob(value);
-                        this.jsArray = (new TextEncoder()).encode(binary);
+                        this.jsArray = Uint8Array.from(binString, (m) => m.codePointAt(0));
                         break;
 
                     default:
-                        this.jsArray = (new TextEncoder()).encode(value);
+                        this.jsArray = new Uint8Array(value);
+                        //this.jsArray = (new TextEncoder()).encode(value);
+                        break;
                 }
             }
             else {
@@ -85,11 +87,11 @@ else if (platform == 'mozilla') {
                     return bytes.join('');
 
                 case 'base64':
-                    let string = (new TextDecoder()).decode(this.jsArray);
-                    return btoa(string);
+                    const binString = String.fromCodePoint(...this.jsArray);
+                    return btoa(binString);
 
                 default:
-                    return (new TextDecoder()).decode(this.jsArray);
+                    return String.fromCodePoint(...this.jsArray);
             }
         }
     });
