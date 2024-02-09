@@ -35,64 +35,59 @@ register('', class Emitter {
         this.silent = false;
     }
 
-    async call(message) {
-        if (!this.silent) {
-            if (!this.filter(message)) {
-                let trap = mkTrap();
-                message['#TRAP'] = trap.id;
+    call(message) {
+        const trap = mkTrap();
 
-                if (message.name in this.handlers) {
-                    let handler = this.handlers[message.name];
+        if (!this.silent && message.name != '*') {
+            const callees = [];
 
-                    if (handler.thunks.length) {
-                        let thunks = handler.thunks;
-                        handler.thunks = [];
-                        trap.setExpected(thunks.length);
+            for (let messageName of [message.name, '*']) {
+                if (messageName in this.handlers) {
+                    let thunks = this.handlers[messageName];
+                    let recycled = this.handlers[messageName] = [];
 
-                        for (let thunk of thunks) {
-                            if (!thunk.once) {
-                                handler.thunks.push(thunk);
-                            }
+                    for (let thunk of thunks) {
+                        trap.incrementExpected();
+                        callees.push(thunk.func);
 
-                            if (typeof thunk.filter != 'function' || thunk.filter(message)) {
-                                (async () => {
-                                    let response = thunk.func(message);
-                                    response instanceof Promise ? response = await response : null;
-                                    trap.handleResponse(response);
-                                })();
-                            }
-                        };
+                        if (!thunk.once) {
+                            recycled.push(thunk);
+                        }
                     }
-                    else {
-                        trap.done();
-                    }
-                }
-                else {
-                    trap.done();
                 }
             }
+
+            if (callees.length) {
+                for (let callee of callees) {
+                    (async () => {
+                        let response = callee(message);
+                        response instanceof Promise ? response = await response : null;
+                        trap.handleResponse(response);
+                    })();
+                }
+            }
+            else {
+                trap.done();
+            }
         }
-        
+
         return trap.promise;
     }
 
     emit(message) {
-        if (!this.silent) {
-            if (!this.filter(message)) {
-                if (message.name in this.handlers) {
-                    let handler = this.handlers[message.name];
-                    let thunks = handler.thunks;
-                    handler.thunks = [];
+        if (!this.silent && message.name != '*') {
+            for (let messageName of [message.name, '*']) {
+                if (messageName in this.handlers) {
+                    let thunks = this.handlers[messageName];
+                    let recycled = this.handlers[messageName] = [];
 
-                    thunks.forEach(thunk => {
+                    for (let thunk of thunks) {
+                        thunk.func(message);
+
                         if (!thunk.once) {
-                            handler.thunks.push(thunk);
+                            recycled.push(thunk);
                         }
-
-                        if (typeof thunk.filter != 'function' || thunk.filter(message)) {
-                            thunk.func(message);
-                        }
-                    });
+                    }
                 }
             }
         }
@@ -100,67 +95,41 @@ register('', class Emitter {
         return this;
     }
 
-    filter(message, method) {
-        let filteredOut = false;
-
-        //if (!('*' in this.handlers)) {
-        if ('*' in this.handlers) {
-            let handler = this.handlers['*'];
-            let thunks = handler.thunks;
-            handler.thunks = [];
-
-            thunks.forEach(thunk => {
-                if (!thunk.once) {
-                    handler.thunks.push(thunk);
-                }
-
-                if (typeof thunk.filter != 'function' || thunk.filter(message)) {
-                    if (thunk.func(message, method) === true) {
-                        filteredOut = true;
-                    }
-                }
-            });
-        }
-
-        return filteredOut;
-    }
-
     handles(name) {
         if (name in this.handlers) {
-            return this.handlers.length > 0;
+            return this.handlers[name].length > 0;
+        }
+        else if ('*' in this.handlers) {
+            return this.handlers['*'].length > 0;
         }
         
         return false;
     }
-  
-    listening(name) {
-        if (name in this.handlers) {
-            return this.handlers[name].thunks.length;
-        }
-  
-        return 0;
-    }
 
     off(name, func) {
         if (func === undefined) {
-            delete this.handlers[name];
+            (Array.isArray(name) ? name : [name]).forEach(name => {
+                delete this.handlers[name];
+            });
         }
         else {
-            if ('#HANDLER' in func) {
-                (Array.isArray(name) ? name : [name]).forEach(name => {
-                    let handler = this.handlers[name];
+            if (typeof func['#HANDLER'] == 'symbol') {
+                (Array.isArray(name) ? name : [name])
+                .forEach(name => {
+                    if (name in this.handlers) {
+                        let thunks = this.handlers[name];
 
-                    if (handler && (func['#HANDLER'] in handler.map)) {
-                        for (let i = 0; i < handler.thunks.length; i++) {
-                            let thunk = handler.thunks[i];
-                            
-                            if (func['#HANDLER'] === thunk.func['#HANDLER']) {
-                                handler.thunks.splice(i, 1);
-                                break;
+                        if (func['#HANDLER'] in thunks) {
+                            for (let i = 0; i < thunks.length; i++) {
+                                let thunk = thunks[i];
+
+                                if (thunk.func['#HANDLER'] === func['#HANDLER']) {
+                                    thunk.splice(i, 1);
+                                    delete thunks[func['#HANDLER']];
+                                    break;
+                                }
                             }
                         }
-                        
-                        delete handler.map[func['#HANDLER']];
                     }
                 });
             }
@@ -169,52 +138,34 @@ register('', class Emitter {
         return this;
     }
 
-    on(name, func, filter) {
+    on(name, func, once) {
         if (!('#HANDLER' in func)) {
             func['#HANDLER'] = Symbol('handler');
         }
 
-        (Array.isArray(name) ? name : [name]).forEach(name => {
+        (Array.isArray(name) ? name : [name])
+        .forEach(name => {
+            let thunks;
+
             if (name in this.handlers) {
-                var handler = this.handlers[name];
+                thunks = this.handlers[name];
             }
             else {
-                var handler = { map: {}, thunks: [] };
-                this.handlers[name] = handler;
+                thunks = [];
+                this.handlers[name] = thunks;
             }
             
-            if (!(func['#HANDLER'] in handler.map)) {
-                let thunk = { func: func, once: false, filter: filter ? filter : false };
-                handler.thunks.push(thunk);
-                handler.map[func['#HANDLER']] = thunk;
+            if (!(func['#HANDLER'] in thunks)) {
+                thunks[func['#HANDLER']] = true;
+                thunks.push({ func: func, once: once === true });
             }
         });
 
         return this;
     }
 
-    once(name, func, filter) {
-        if (!('#HANDLER' in func)) {
-            func['#HANDLER'] = Symbol('handler');
-        }
-
-        (Array.isArray(name) ? name : [name]).forEach(name => {
-            if (name in this.handlers) {
-                var handler = this.handlers[name];
-            }
-            else {
-                var handler = { map: {}, thunks: [] };
-                this.handlers[name] = handler;
-            }
-            
-            if (!(func['#HANDLER'] in handler.map)) {
-                let thunk = { func: func, once: true, filter: filter ? filter : false };
-                handler.thunks.push(thunk);
-                handler.map[func['#HANDLER']] = thunk;
-            }
-        });
-
-        return this;
+    once(name, func) {
+        return this.on(name, func, true);
     }
 
     resume() {
@@ -241,30 +192,30 @@ register('', class Trap {
     static traps = {};
     static nextId = 1;
 
-    constructor(timeoutMillis) {
+    constructor(expected) {
         this.id = Trap.nextId++;
         Trap.traps[this.id] = this;
 
-        this.expected = 0;
+        this.expected = typeof expected == 'number' ? expected : 0;
+        this.received = 0;
         this.responses = [];
         this.pending = true;
         this.timeout = null;
-
-        if (typeof timeoutMillis == 'number') {
-            this.timeout = setTimeout(() => this.onTimeout());
-        }
   
         this.promise = new Promise((ok, fail) => {
-            delete Trap.traps[this.id];
-
             const done = () => {
+                delete Trap.traps[this.id];
+
                 switch (this.responses.length) {
                     case 0:
                         ok(null);
+                        break;
                     case 1:
                         ok(this.responses[0]);
+                        break;
                     default:
                         ok(this.responses);
+                        break;
                 }
             };
             
@@ -304,9 +255,13 @@ register('', class Trap {
 
     handleResponse(response) {
         if (this && this.pending) {
-            this.responses.push(response);
+            this.received++;
+
+            if (response !== undefined) {
+                this.responses.push(response);
+            }
   
-            if (this.responses.length == this.expected) {
+            if (this.received == this.expected) {
                 this.pending = false;
                 this.done();
             }
@@ -327,6 +282,14 @@ register('', class Trap {
   
     setExpected(expected) {
         this.expected = expected;
+        return this;
+    }
+
+    setTimeout(millis) {
+        if (this.timeout === null && typeof millis == 'number') {
+            this.timeout = setTimeout(() => this.onTimeout());
+        }
+
         return this;
     }
 });
@@ -355,19 +318,17 @@ register('', class Handler {
                 let methodName = `on${name[0].toUpperCase()}${name.substring(1)}`;
 
                 if (typeof this.handler[methodName] == 'function') {
+                    return this.handler[methodName](message);
+                    /*
                     if ('#CALL' in message) {
                         let response = await this.handler[methodName](message);
-
-                        if (response instanceof Promise) {
-                            debug(message);
-                        }
-                        else {
-                            debug(message);
-                        }
+                        response instanceof Promise ? response = await response : null;
+                        return response;
                     }
                     else {
                         this.handler[methodName](message);
                     }
+                    */
                 }
             }
         });

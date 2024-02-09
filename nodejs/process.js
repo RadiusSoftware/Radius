@@ -103,7 +103,7 @@ singleton('', class Process extends Emitter {
     }
 
     async callParent(message) {
-        let trap = mkTrap().setExpected(1);
+        let trap = mkTrap(1);
         message['#TRAP'] = trap.id;
         message['#CALL'] = true;
         

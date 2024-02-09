@@ -87,7 +87,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
     }
 
     async init(settings, entries) {
-        console.log(await Process.callParent({ name: 'HttpLibraryGetFile'}))
+        debug(await Process.callParent({ name: 'HttpLibraryGetFile'}))
         this.settings = settings;
 
         if (Array.isArray(entries)) {

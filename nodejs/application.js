@@ -113,9 +113,6 @@ register('', class Application extends Emitter {
     async startWorker() {
         let workerClassName = `${this.className}Worker`;
         let worker = Process.fork(workerClassName, workerClassName, this.settings);
-
-        worker.on('HeyMan', message => debug(message));
-
         this.workers[worker.getPid()] = worker;
         await this.callWorker(worker, { name: 'Init' });
         return worker;
