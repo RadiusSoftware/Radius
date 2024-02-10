@@ -218,43 +218,6 @@
 
 
     /*****
-     * The framework-wide standard handler for catch(e) clauses.  The standard
-     * procedure is to simply log the exception, e, with global system logger.
-     * An "action" function may be provided as an alterative to the standard
-     * feature of just logging the exception.  Note that the action function is
-     * able to accept zero or more arguments provided to the caught() function.
-    *****/
-    register('', async function caught(e, action, ...args) {
-        if (typeof action == 'function') {
-            let result = action(e, ...args);
-            return result instanceof Promise ? await result : result;
-        }
-        else {
-            log(e);
-        }
-    });
-
-
-    /*****
-     * This provides a standard system-wide logging feature.  The actual logging
-     * service is provided by the loggerFunction.  Note, the framework default is
-     * to perform a console.log() for the provided argument.  Override the default
-     * behavior by setting the logging function with a developer provider function.
-     * Note that log() is actually an asynchronous function, which can be used for
-     * outward messaging or event network-base communicatons.
-    *****/
-    let loggingFunction = (arg) => console.log(arg);
-
-    register('', function setLogger(logger) {
-        loggingFunction = logger;
-    });
-    
-    register('', async function log(arg) {
-        loggingFunction(arg);
-    });
-
-
-    /*****
      * For development purposes only!  The good ole fashion console.log() is useful
      * for debugging purposes.  Sometimes the number of console.logs() get out of
      * hand.  Hence, if we use debug() instead of console.log(), we can easily find
@@ -263,6 +226,52 @@
     register('', function debug(...args) {
         for (let arg of args) {
             console.log(arg);
+        }
+    });
+
+
+    /*****
+     * By convention, the caught func is what's used in try-catch clauses in
+     * the entire framework and by the application code.  Generally speaking,
+     * each platform implementation and perhaps each application will have its
+     * own caughtHandle, which should be set when the application launches via
+     * the global setCaughtHandler() function.
+    *****/
+    let caughtHandler = async e => console.log(e);
+
+    register('', async function setCaughtHandler(func) {
+        caughtHandler = func;
+    });
+
+    register('', async function caught(e) {
+        try {
+            let value = logHandler(e);
+            value instanceof Promise ? await value : null;
+        }
+        catch (e) {}
+    });
+    
+    
+    /*****
+     * At its most basic and default level, logging should perform a console.log
+     * to provide information to the developer and operator.  This default log
+     * behavior is modified by calling the global setLogHandler() function to
+     * set a system-wide function that's used for handling and executing a call
+     * to log data.
+    *****/
+    let logHandler = async e => console.log(e);
+
+    register('', function setLogHandler(func) {
+        logHandler = func;
+    });
+
+    register('', async function log(...args) {
+        for (let arg of args) {
+            try {
+                let value = logHandler(arg);
+                value instanceof Promise ? await value : null;
+            }
+            catch (e) {}
         }
     });
 })();

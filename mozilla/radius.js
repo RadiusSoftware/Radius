@@ -260,6 +260,8 @@
         'textTemplate.js',
         'textUtils.js',
         'textTree.js',
+        'chronos.js',
+        'transation.js',
         
         'mozilla/win.js',
         'mozilla/doc.js',

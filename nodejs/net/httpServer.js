@@ -80,6 +80,7 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
     async init() {
         this.httpLibrary = await mkHttpLibrary();
         await this.httpLibrary.init(this.settings.libSettings, this.settings.libEntries);
+        return this;
     }
 
     isTls() {
@@ -115,13 +116,10 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
         */
     }
 
-    /*
     async start() {
-        this.httpLib = mkHttpLibrary();
         await super.start();
         return this;
     }
-    */
 });
 
 
@@ -376,6 +374,7 @@ registerIn('HttpServerWorker', '', class HttpRequest {
 
     async init() {
         await this.mkHttpLibrary.init();
+        return this;
     }
 });
 

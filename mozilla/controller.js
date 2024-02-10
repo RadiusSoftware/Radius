@@ -56,6 +56,7 @@ register('', class Controller extends Entanglements {
     }
 
     async init() {
+        return this;
     }
 
     onAttributeChanged(mutation) {

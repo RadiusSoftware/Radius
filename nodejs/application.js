@@ -44,7 +44,7 @@ register('', class Application extends Emitter {
         this.settings = Process.getEnv(this.className, 'json');
         this.workers = {};
         this.appName = Reflect.getPrototypeOf(this).constructor.name;
-        mkHandler(Process, this.appName, this);
+        mkHandlerProxy(Process, this.appName, this);
     }
 
     async callWorker(worker, message) {
@@ -76,6 +76,7 @@ register('', class Application extends Emitter {
     }
 
     async init() {
+        return this;
     }
 
     async kill() {
@@ -155,7 +156,7 @@ register('', class ApplicationWorker extends Emitter {
         this.className = Reflect.getPrototypeOf(this).constructor.name;
         this.settings = Process.getEnv(this.className, 'json');
         this.appName = Reflect.getPrototypeOf(this).constructor.name.replace('Worker', '');
-        mkHandler(Process, this.appName, this);
+        mkHandlerProxy(Process, this.appName, this);
     }
 
     async callApp(message) {
@@ -183,6 +184,7 @@ register('', class ApplicationWorker extends Emitter {
     }
 
     async init() {
+        return this;
     }
 
     async kill() {

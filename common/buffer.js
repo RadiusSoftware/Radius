@@ -35,6 +35,7 @@ if (platform == 'nodejs') {
     });
 }
 else if (platform == 'mozilla') {
+    alert('Test and debug class Buffer');
     register('', class Buffer {
         constructor(value, encoding) {
             this.set(value, encoding);

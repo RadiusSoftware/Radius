@@ -47,6 +47,8 @@ require('../common/mime.js');
 require('../common/textTemplate.js');
 require('../common/textTree.js');
 require('../common/textUtils.js');
+require('../common/chronos.js');
+require('../common/transaction.js');
 
 require('./crypto.js');
 require('./network.js');

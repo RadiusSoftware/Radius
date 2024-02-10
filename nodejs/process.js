@@ -473,7 +473,7 @@ singleton('', class Process extends Emitter {
     }
 
     onUncaughtException(e, origin) {
-        if (this.handles('UnhandledRejection')) {
+        if (this.strictlyHandles('UnhandledRejection')) {
             this.emit({
                 name: 'UncaughtException',
                 process: this,
@@ -496,7 +496,7 @@ singleton('', class Process extends Emitter {
     }
 
     onUnhandledRejection(reason, promise) {
-        if (this.handles('UnhandledRejection')) {
+        if (this.strictlyHandles('UnhandledRejection')) {
             this.emit({
                 name: 'UnhandledRejection',
                 process: this,

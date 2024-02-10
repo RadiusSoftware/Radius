@@ -23,25 +23,16 @@
 
 /*****
 *****/
-register('', class Resource {
+singleton('', class Chronos {
     constructor() {
+        this.pending = [];
     }
 });
 
 
 /*****
 *****/
-register('', class Transaction extends Emitter {
-    constructor(resources, func) {
-        super();
-        this.resources = resources;
-        this.func = func;
-    }
-
-    async exec() {
-        try {
-        }
-        catch (e) {
-        }
+register('', class Chrono {
+    constructor() {
     }
 });

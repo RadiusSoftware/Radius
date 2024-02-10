@@ -106,6 +106,10 @@ register('', class Emitter {
         return false;
     }
 
+    isSilent() {
+        return this.silent;
+    }
+
     off(name, func) {
         if (func === undefined) {
             (Array.isArray(name) ? name : [name]).forEach(name => {
@@ -177,6 +181,14 @@ register('', class Emitter {
         this.silent = true;
         return this;
     }
+
+    strictlyHandles(name) {
+        if (name in this.handlers) {
+            return this.handlers[name].length > 0;
+        }
+        
+        return false;
+    }
 });
 
 
@@ -225,6 +237,8 @@ register('', class Trap {
     
     cancel() {
         delete Trap.traps[this.id];
+        this.responses = [];
+        this.done();
         return this;
     }
 
@@ -287,7 +301,7 @@ register('', class Trap {
 
     setTimeout(millis) {
         if (this.timeout === null && typeof millis == 'number') {
-            this.timeout = setTimeout(() => this.onTimeout());
+            this.timeout = setTimeout(() => this.cancel(), millis);
         }
 
         return this;
@@ -301,7 +315,7 @@ register('', class Trap {
  * reason for the message.name prefix is to ensure we can distringuish between
  * our messages and messages from other sources on a busy emitter.
 *****/
-register('', class Handler {
+register('', class HandlerProxy {
     constructor(emitter, prefix, handler) {
         if (typeof prefix == 'string') {
             this.prefix = prefix;
@@ -318,17 +332,13 @@ register('', class Handler {
                 let methodName = `on${name[0].toUpperCase()}${name.substring(1)}`;
 
                 if (typeof this.handler[methodName] == 'function') {
-                    return this.handler[methodName](message);
-                    /*
-                    if ('#CALL' in message) {
-                        let response = await this.handler[methodName](message);
-                        response instanceof Promise ? response = await response : null;
-                        return response;
+                    try {
+                        return this.handler[methodName](message);
                     }
-                    else {
-                        this.handler[methodName](message);
+                    catch (e) {
+                        await caught(e);
+                        return null;
                     }
-                    */
                 }
             }
         });
