@@ -218,12 +218,13 @@
 
 
     /*****
-     * For development purposes only!  The good ole fashion console.log() is useful
-     * for debugging purposes.  Sometimes the number of console.logs() get out of
-     * hand.  Hence, if we use debug() instead of console.log(), we can easily find
-     * all instances of debugging statements in the code so we can remove them.
+     * For development purposes only!  The good ole fashion console.log() is
+     * useful for debugging purposes.  Sometimes the number of console.logs()
+     * get out of hand.  Hence, if we use this function instead of
+     * console.log(), we can easily find all instances of debugging statements
+     * in the code so we can remove them.
     *****/
-    register('', function debug(...args) {
+    register('', function display(...args) {
         for (let arg of args) {
             console.log(arg);
         }

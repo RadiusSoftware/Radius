@@ -21,6 +21,7 @@
 *****/
 const LibHttp = require('http');
 const LibHttps = require('https');
+const LibPath = require('path');
 const LibQueryString = require('node:querystring');
 const LibUrl = require('url');
 
@@ -31,7 +32,6 @@ singletonIn('HttpServer', '', class HttpServer extends Application {
     constructor() {
         super();
         this.httpLibrary = mkHttpLibrary();
-
     }
 
     getLibEntries() {
@@ -40,6 +40,11 @@ singletonIn('HttpServer', '', class HttpServer extends Application {
 
     getLibSettings() {
         return this.settings.libSettings;
+    }
+
+    async init() {
+        await super.init();
+        return this;
     }
 });
 
@@ -56,14 +61,14 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
                 key: this.settings.getPrivateKey(),
                 cert: this.settings.getCert(),
                 ca: this.settings.getCaCert(),
-            }, (httpReq, httpRsp) => this.handle(httpReq, httpRsp));
+            }, (httpReq, httpRsp) => this.handleRequest(httpReq, httpRsp));
 
             this.server.listen(this.settings.port, this.settings.addr);
             this.server.on('upgrade', (...args) => this.onUpgrade(...args));
         }
         else {
             this.scheme = 'http';
-            this.server = LibHttp.createServer({}, (...args) => this.onRequest(...args));
+            this.server = LibHttp.createServer({}, (...args) => this.handleRequest(...args));
             this.server.listen(this.settings.port, this.settings.addr);
             this.server.on('upgrade', (httpReq) => this.onUpgrade(httpRsp));
         }
@@ -76,8 +81,63 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
     getLibSettings() {
         return this.settings.libSettings;
     }
+    
+    getStatusResponseTemplate(statusCode) {
+        if (statusCode in this.httpStatusResponses) {
+            return this.httpStatusResponses[statusCode];
+        }
+        else {
+            return this.httpStatusResponses.default;
+        }
+    }
+
+    async handleRequest(httpReq, httpRsp) {
+        this.req = mkHttpRequest(this, httpReq);
+        this.rsp = mkHttpResponse(this, httpRsp, this.req);
+        let httpItem = this.httpLibrary.getItem(this.req.getPath());
+
+        if (httpItem) {
+            try {
+                this.rsp.respondStatus(420);
+            }
+            catch (e) {
+                await caught(e);
+            }
+        }
+        else {
+            this.rsp.respondStatus(404);
+        }
+    }
 
     async init() {
+        this.httpStatusResponses = {};
+        
+        if (typeof this.settings.HttpStatusTemplates == 'string') {
+            let path = this.settingsHttpStatusTemplates;
+
+            if (FileSystem.isDirectory(path)) {
+                for (let httpStatusCode in HttpResponse.statusCodes) {
+                    let htmlpath = LibPath.join(path, `httpStatusResponse${httpStatusCode}.html`);
+
+                    if (await FileSystem.isFile(htmlpath)) {
+                        let text = await FileSystem.readFile(htmlpath);
+                        this.httpStatusResponses[httpStatusCode] = mkTextTemplate(text);
+                    }
+                }
+            }
+            else if (FileSystem.isFile(path)) {
+                if (path.endsWith('.html')) {
+                    let text = await FileSystem.readFile(path);
+                    this.httpStatusResponses.default = mkTextTemplate(text);
+                }
+            }
+        }
+
+        if (!this.httpStatusResponses.default) {
+            let text = await FileSystem.readFile(LibPath.join(__dirname, 'statusResponse.html'));
+            this.httpStatusResponses.default = mkTextTemplate(text);
+        }
+
         this.httpLibrary = await mkHttpLibrary();
         await this.httpLibrary.init(this.settings.libSettings, this.settings.libEntries);
         return this;
@@ -85,19 +145,6 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
 
     isTls() {
         return this.settings.tls instanceof Tls;
-    }
-
-    async onRequest(httpReq, httpRsp) {
-        this.req = mkHttpRequest(this, httpReq);
-        this.rsp = mkHttpResponse(this, httpRsp, this.req);
-        let httpItem = this.httpLibrary.getItem(this.req.getPath());
-
-        if (httpItem) {
-            debug(httpItem);
-        }
-        else {
-            this.rsp.respond(200, 'text/plain', this.req.getQuery());
-        }
     }
 
     async onUpgrade(httpReq, socket, headPacket) {
@@ -272,7 +319,7 @@ registerIn('HttpServerWorker', '', class HttpRequest {
     }
 
     getFullRequest() {
-        return `${this.scheme()}://${this.httpReq.headers.host}${this.httpReq.url}`;
+        return `${this.getScheme()}://${this.httpReq.headers.host}${this.httpReq.url}`;
     }
 
     getHeader(headerName) {
@@ -544,23 +591,24 @@ registerIn('HttpServerWorker', '', class HttpResponse {
         // TODO
         // Transfer-Encoding: chunked
     }
+    
+    respondStatus(statusCode) {
+        let template = this.httpServer.getStatusResponseTemplate(statusCode);
+        
+        if (statusCode in HttpResponse.statusCodes) {
+            this.respond(statusCode, 'text/html', template.toString({
+                statusCode: statusCode,
+                statusText: HttpResponse.statusCodes[statusCode].text,
+            }));
+        }
+        else {
+            statusCode = 500;
 
-    respondStatus(status, plainText) {
-        this.setContentLanguage();
-        this.setContentType('text/plain', 'UTF-8');
-        this.setContentEncoding();
-
-        let algorithm = this.getHeader('content-encoding');
-        let content = typeof plainText == 'string' ? plainText : HttpResponse.statusCodes[status].text;
-
-        (async () => {
-            if (algorithm) {
-                content = await Compression.compress(algorithm, content)
-            }
-
-            this.httpRsp.writeHead(status);
-            this.httpRsp.end(content);
-        })();
+            this.respond(statusCode, 'text/html', template.toString({
+                statusCode: statusCode,
+                statusText: HttpResponse.statusCodes[statusCode].text,
+            }));
+        }
     }
 
     setContentEncoding(algorithm) {

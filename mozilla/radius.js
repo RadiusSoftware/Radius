@@ -247,7 +247,7 @@
     const frameworkFiles = [
         'core.js',
         'objekt.js',
-        'txt.js',
+        'str.js',
         'buffer.js',
         'data.js',
         'emitter.js',

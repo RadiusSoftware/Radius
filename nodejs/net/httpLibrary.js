@@ -130,8 +130,6 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
 
     getItem(path) {
         let node = this.tree.getBestNode(path);
-        console.log(node.getValue());
-        console.log(node.getPath());
         return node.getValue();
     }
 

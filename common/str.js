@@ -22,13 +22,24 @@
 
 
 /*****
+ * All text used by this framework and supposedly within any application based
+ * on the Radius framework needs to encapsulate strings with a Str() object to
+ * facilitate internationalization.  By wrapping text within code in a Str
+ * object, we will be able to faciliate replacing strings with strings from
+ * other languages.
 *****/
-register('', function mkTxt(text) {
-    return text;
-});
-/*
-register('', class Txt {
-    constructor() {
-    }
-});
-*/
+(() => {
+    let nextId = 1;
+    const strings = {}
+
+    register('', class Str {
+        constructor(str) {
+            this.id = nextID++;
+            this.str = str;
+        }
+    });
+
+    register('', function str(str) {
+        return str instanceof Str ? str.str : str.toString();
+    });
+})();

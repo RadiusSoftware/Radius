@@ -32,87 +32,162 @@
 *****/
 register('', class TextTemplate {
     constructor(text) {
-        this.symbols = {};
-
-        let state = 0;
-        let chars = [];
-        let symbol = [];
-
-        for (let char of text) {
-            if (state == 0) {
-                if (char == '$') {
-                    state = 1;
-                }
-                else {
-                    chars.push(char);
-                }                
-            }
-            else if (state == 1) {
-                if (char == '{') {
-                    state = 2;
-                }
-                else {
-                    state = 0;
-                    chars.push('$');
-                    chars.push(char);
-                }
-            }
-            else if (state == 2) {
-                if (char == '}') {
-                    let joined = symbol.join('');
-                    symbol = new Array();
-                    state = 0;
-
-                    if (joined.match(/^[a-zA-Z][a-zA-Z0-9_]*$/m)) {
-                        this.symbols[joined] = `\${${joined}}`;
-                        chars.push(`\${this.symbols.${joined}}`);
-                    }
-                }
-                else {
-                    symbol.push(char);
-                }
-            }
-        }
-
-        this.text = chars.join('').trim();
+        this.parse(text.toString());
     }
 
-    clear(symbol) {
-        if (typeof symbol == 'undefined') {
-            this.symbols = {};
-        }
-        else if (symbol in this.symbols) {
+    clearSymbol(symbol) {
+        if (symbol in this.symbols) {
             this.symbols[symbol] = '${' + symbol + '}';
         }
 
         return this;
     }
 
-    get(symbol) {
-        if (typeof symbol == 'undefined') {
-            return Data.clone(this.symbols);
+    clearSymbols() {
+        for (let symbol in this.symbols) {
+            this.symbols[symbol] = '${' + symbol + '}';
         }
-        else {
-            return this.symbols[symbol];
+
+        return this;
+    }
+
+    getSymbol(symbol) {
+        return this.symbols[symbol];
+    }
+
+    listSymbols() {
+        return Object.keys(this.symbols);
+    }
+
+    parse(text) {
+        if (!this.text) {
+            this.symbols = {};
+            this.runtime = {};
+
+            const pushChar = (char, chars) => {
+                if (char == '`') {
+                    chars.push('\\\`');
+                }
+                else {
+                    chars.push(char);
+                }
+            }
+    
+            let state = 0;
+            let chars = [];
+            let symbolChars = [];
+    
+            for (let char of text) {
+                if (state == 0) {
+                    if (char == '$') {
+                        state = 1;
+                    }
+                    else if (char == '#') {
+                        state = 3;
+                    }
+                    else {
+                        pushChar(char, chars);
+                    }                
+                }
+                else if (state == 1) {
+                    if (char == '{') {
+                        state = 2;
+                    }
+                    else {
+                        state = 0;
+                        chars.push('$');
+                        pushChar(char, chars);
+                    }
+                }
+                else if (state == 2) {
+                    if (char == '}') {
+                        let symbolName = symbolChars.join('').trim();
+                        symbolChars = new Array();
+                        state = 0;
+    
+                        if (symbolName.match(/^[a-zA-Z][a-zA-Z0-9_]*$/m)) {
+                            this.symbols[symbolName] = `[[${symbolName}]]`;
+                            chars.push(`\${this.symbols.${symbolName}}`);
+                        }
+                        else {
+                            // ERROR
+                        }
+                    }
+                    else {
+                        symbolChars.push(char);
+                    }
+                }
+                else if (state == 3) {
+                    if (char == '$') {
+                        state = 4;
+                    }
+                    else {
+                        chars.push('#');
+                        pushChar(char, chars);
+                    }    
+                }
+                else if (state == 4) {
+                    if (char == '{') {
+                        state = 5;
+                    }
+                    else {
+                        state = 0;
+                        chars.push('#');
+                        chars.push('$');
+                        pushChar(char, chars);
+                    }
+                }
+                else if (state == 5) {
+                    if (char == '}') {
+                        let symbolName = symbolChars.join('').trim();
+                        symbolChars = new Array();
+                        state = 0;
+    
+                        if (symbolName.match(/^[a-zA-Z][a-zA-Z0-9_]*$/m)) {
+                            this.runtime[symbolName] = `\${${symbolName}}`;
+                            chars.push(`\${this.runtime.${symbolName}}`);
+                        }
+                        else {
+                            // ERROR
+                        }
+                    }
+                    else {
+                        symbolChars.push(char);
+                    }
+                }
+            }
+    
+            this.text = chars.join('');
         }
     }
 
-    set(symbol, value) {
-        if (typeof symbol == 'object') {
-            Object.keys(symbol).forEach(key => {
-                if (key in this.symbols) {
-                    this.symbols[key] = symbol[key].toString();
-                }
-            });
-        }
-        else if (typeof symbol == 'string' && symbol in this.symbols) {
+    setSymbol(symbol, value) {
+        if (symbol in this.symbols) {
             this.symbols[symbol] = value.toString();
         }
 
         return this;
     }
 
-    toString() {
+    setSymbols(values) {
+        if (typeof values == 'object') {
+            Object.keys(values).forEach(key => {
+                if (key in this.symbols) {
+                    this.symbols[key] = values[key].toString();
+                }
+            });
+        }
+
+        return this;
+    }
+
+    [Symbol.iterator]() {
+        return Object.keys(this.symbols)[Symbol.iterator]();
+    }
+
+    toString(values) {
+        this.setSymbols(values);
+
         let text;
         eval('text=`' + this.text + '`');
         return text;

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Server Response Code ${statusCode}</title>
+        <style>
+            html {
+                width: 100vw;
+                height: 100vh;
+                color: black;
+                background-color: white;
+            }
+            body {
+                margin: 0x;
+                padding: 20px;
+                font-size: 18px;
+                font-family: Verdana, Geneva, Tahoma, sans-serif;
+            }
+            .title {
+                margin-bottom: 32px;
+                font-size: 22px;
+                font-weight: bold;
+            }
+            .content {
+                font-size: 18px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="title">Server Responded with HTTP status ${statusCode}</div>
+        <div class="content">${statusText}</div>
+    </body>
+</html>

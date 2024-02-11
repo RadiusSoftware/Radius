@@ -52,7 +52,7 @@ register('', class TextTree {
 
         if (typeof path == 'string') {
             for (let key of this.parsePath(path)) {
-                if (key in node) {
+                if (key in node.children) {
                     node = node.children[key];
                 }
                 else {
@@ -69,11 +69,11 @@ register('', class TextTree {
 
         if (typeof path == 'string') {
             for (let key of this.parsePath(path)) {
-                if (key in node) {
+                if (key in node.children) {
                     node = node.children[key];
                 }
                 else {
-                    return node;
+                    break;
                 }
             }
         }
