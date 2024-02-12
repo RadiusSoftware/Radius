@@ -107,16 +107,13 @@ singleton('', class FileSystem extends Emitter {
     }
 
     async pathExists(path) {
-        return new Promise(async (ok, fail) => {
-            try {
-                let handle = await LibFiles.promises.open(path);
-                await handle.close();
-                ok(true);
-            }
-            catch (e) {
-                ok(false);
-            }
-        });
+        try {
+            LibFiles.promises.stat(path);
+            return true;
+        }
+        catch (e) {
+            return false;
+        }
     }
 
     async readDirectory(path, recursive) {

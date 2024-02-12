@@ -43,6 +43,7 @@ singletonIn('HttpServer', '', class HttpServer extends Application {
     }
 
     async init() {
+        await this.httpLibrary.init(this.settings.libSettings, this.settings.libEntries);
         await super.init();
         return this;
     }
@@ -94,14 +95,60 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
     async handleRequest(httpReq, httpRsp) {
         this.req = mkHttpRequest(this, httpReq);
         this.rsp = mkHttpResponse(this, httpRsp, this.req);
-        let httpItem = this.httpLibrary.getItem(this.req.getPath());
+        let libEntry = this.httpLibrary.getItem(this.req.getPath());
 
-        if (httpItem) {
+        if (libEntry) {
             try {
-                this.rsp.respondStatus(420);
+                for (let httpFilter of this.httpLibrary) {
+                    let filterResult = await httpFilter.exec(req, libEntry);
+
+                    if (filterResult === true) {
+                        continue;
+                    }
+                    else if (typeof filterResult == 'number') {
+                        this.respondStatus(filterResult);
+                        return;
+                    }
+                    else {
+                        this.respondStatus(512);
+                        return;
+                    }
+                }
+
+                let rsp = await libEntry[`handle${this.req.getMethod()}`](this.req);
+
+                if (typeof rsp == 'number') {
+                    this.rsp.respondStatus(rsp);
+                }
+                else {
+                    this.rsp.respond(rsp.status, rsp.mime, rsp.content);
+                }
+                // ****************************************************
+                // ** REPLACE WITH A BUILT-IN HTTP LIB FILTER
+                // ****************************************************
+                /*
+                let methodName = `handle${this.req.getMethod()}`;
+
+                if (methodName in libEntry) {
+                    let rsp = await libEntry[methodName](this.req);
+
+                    if (typeof rsp == 'number') {
+                        this.rsp.respondStatus(rsp);
+                    }
+                    else {
+                        this.rsp.respond(rsp.status, rsp.mime, rsp.content);
+                    }
+                }
+                else {
+                    this.rsp.respndStatus(405);
+                }
+                */
+                // ****************************************************
+                // ****************************************************
             }
             catch (e) {
                 await caught(e);
+                this.rsp.respndStatus(500);
             }
         }
         else {
@@ -313,7 +360,7 @@ registerIn('HttpServerWorker', '', class HttpRequest {
     }
 
     getEncoding() {
-        if ('content-encoding' in this.headers()) {
+        if ('content-encoding' in this.getHeaders()) {
             return this.header('content-encoding');
         }
     }

@@ -26,8 +26,69 @@ const LibPath = require('path');
 *****/
 registerIn('HttpServer', '', class HttpLibrary {
     constructor() {
-        this.paths = {};
         mkHandlerProxy(Process, 'HttpLibrary', this);
+    }
+
+    async addDynamicFiles(entry) {
+        if (await FileSystem.pathExists(entry.file)) {
+            let stats = await FileSystem.stat(entry.file);
+
+            if (stats.isDirectory()) {
+                this.paths[entry.file] = {
+                    type: 'dir',
+                    path: entry.file,
+                    mime: mkMime(LibPath.extname(entry.file)),
+                    once: entry.once === true,
+                    timeout: null,
+                    cached: {},
+                };
+            }
+            else if (stats.isFile()) {
+                this.paths[entry.file] = {
+                    type: 'file',
+                    path: entry.file,
+                    mime: mkMime(LibPath.extname(entry.file)),
+                    once: entry.once === true,
+                    timeout: null,
+                    cached: {},
+                };
+            }
+        }
+    }
+
+    async addData(entry) {
+    }
+
+    async addOject(entry) {
+    }
+
+    async addStaticFiles(entry) {
+        if (await FileSystem.pathExists(entry.file)) {
+            let stats = await FileSystem.stat(entry.file);
+
+            if (stats.isDirectory()) {
+                for (let path of await FileSystem.recurseFiles(entry.file)) {
+                    this.paths[path] = {
+                        type: 'file',
+                        path: path,
+                        mime: mkMime(LibPath.extname(path)),
+                        once: entry.once === true,
+                        timeout: null,
+                        cache: {},
+                    };
+                };
+            }
+            else if (stats.isFile()) {
+                this.paths[entry.file] = {
+                    type: 'file',
+                    path: entry.file,
+                    mime: mkMime(LibPath.extname(entry.file)),
+                    once: entry.once === true,
+                    timeout: null,
+                    cache: {},
+                };
+            }
+        }
     }
 
     getBlockSizeMb() {
@@ -42,67 +103,86 @@ registerIn('HttpServer', '', class HttpLibrary {
         return this.settings.cacheMaxSizeMb;
     }
 
-    async onClearData(message) {
-        // TODO
-        return 'CLEAR DATA';
-    }
+    async init(settings, entries) {
+        this.paths = {};
+        this.settings = settings;
 
-    async onClearFile(message) {
-        // TODO
-        return 'FILE DATA';
-    }
-
-    async onGetData(message) {
-        // TODO
-        return 'GET DATA';
-    }
-
-    async onGetFile(message) {
-        // TODO
-        return 'GET FILE';
-    }
-
-    async onGetMime(message) {
-        // TODO
-        return 'GET MIME';
-    }
-
-    async onScanFileSystem(message) {
-        if (await FileSystem.pathExists(message.path)) {
-            let stats = await FileSystem.stat(message.path);
-
-            if (stats.isDirectory()) {
-                let pathArray = await FileSystem.recurseFiles(message.path);
-
-                for (let path of pathArray) {
-                    this.paths[path] = {
-                        type: 'file',
-                        path: path,
-                        mime: mkMime(LibPath.extname(path)),
-                        encodings: {},
-                    };
+        for (let entry of entries) {
+            if (entry.type == 'file') {
+                if (entry.isDynamic === true) {
+                    await this.addDynamicFiles(entry);
                 }
-
-                return pathArray;
+                else {
+                    await this.addStaticFiles(entry);
+                }
             }
-            else if (stats.isFile()) {
-                this.paths[message.path] = {
-                    type: 'file',
-                    path: message.path,
-                    mime: mkMime(LibPath.extname(message.path)),
-                    encodings: {},
-                };
-
-                return [message.path];
+            else if (entry.type == 'data') {
+            }
+            else if (entry.type == 'object') {
             }
         }
 
-        return [];
+        return this;
     }
 
-    async onSetData(message) {
-        // TODO
-        return 'SET DATA';
+    async loadFileDynamic(entry) {
+    }
+
+    async loadFileStatic(entry) {
+        let content = await FileSystem.readFile(entry.path);
+
+        return {
+            status: 200,
+            mime: entry.mime,
+            encoding: '',
+            data: content,
+        };
+    }
+
+    async onAddEntry(message) {
+        if (message.entry.type == 'file') {
+        }
+        else if (message.entry.tye == 'data') {
+        }
+        else if (message.entry.tye == 'object') {
+        }
+    }
+
+    async onGet(message) {
+        let libEntry = this.paths[message.path];
+
+        if (libEntry.type == 'file') {
+            let rsp;
+
+            if (libEntry.dynamic) {
+                rsp = await this.loadFileDynamic(libEntry);
+            }
+            else {
+                rsp = await this.loadFileStatic(libEntry);
+            }
+
+            if (typeof rsp == 'object') {
+                return rsp;
+            }
+        }
+        else if (libEntry.type == 'data') {
+        }
+        else if (libEntry.type == 'object') {
+        }
+        
+        return 404;
+    }
+
+    async onHead(message) {
+        if (libEntry.type == 'files') {
+        }
+        else if (libEntry.type == 'data') {
+        }
+        else if (libEntry.type == 'object') {
+        }
+    }
+
+    async onRemove(message) {
     }
 });
 
@@ -111,11 +191,12 @@ registerIn('HttpServer', '', class HttpLibrary {
 *****/
 registerIn('HttpServerWorker', '', class HttpLibrary {
     constructor() {
+        this.filters = [];
         this.tree = mkTextTree('/');
 
         this.makers = {
             data: mkHttpData,
-            files: mkHttpFileSystem,
+            file: mkHttpFileSystem,
             object: mkHttpObject,
             webx: mkHttpWebX,
         };
@@ -161,6 +242,10 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
         this.tree.remove(path);
         return this;
     }
+
+    [Symbol.iterator]() {
+        return this.filters[Symbol.iterator]();
+    }
 });
 
 
@@ -188,7 +273,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
  * the HttpServerWorker, the HttpItem base class, the HttpItem subclass that's
  * used by the server.
 *****/
-register('', class HttpItem {
+register('', class HttpLibraryItem {
     constructor(httpLibrary, entry) {
         this.httpLibrary = httpLibrary;
         this.entry = entry;
@@ -202,26 +287,18 @@ register('', class HttpItem {
     getSettings() {
         return Data.copy(this.entry);
     }
+
+    async init() {
+        return this;
+    }
 });
 
 
 /*****
 *****/
-registerIn('HttpServerWorker', '', class HttpData extends HttpItem {
+registerIn('HttpServerWorker', '', class HttpData extends HttpLibraryItem {
     constructor(httpLibrary, entry) {
         super(httpLibrary, entry);
-    }
-
-    async handleGET(req, rsp) {
-        return {
-            status: 404,
-            encoding: '',
-            content: '',
-        };
-    }
-
-    async init() {
-        return this;
     }
 });
 
@@ -244,15 +321,29 @@ registerIn('HttpServerWorker', '', class HttpData extends HttpItem {
  * process that's responsible for all file-system operations for static file
  * systems.
 *****/
-registerIn('HttpServerWorker', '', class HttpFileSystem extends HttpItem {
+registerIn('HttpServerWorker', '', class HttpFileSystem extends HttpLibraryItem {
     constructor(httpLibrary, entry) {
         super(httpLibrary, entry);
     }
 
-    async handleGET(req, rsp) {
-        if (this.entry.dynamic === true) {
+    async handleGET(req) {
+        let path = LibPath.join(this.entry.file, req.getPath().substring(this.entry.path.length));
+
+        let rsp = await Process.callParent({
+            name: 'HttpLibraryGet',
+            path: path,
+            encoding: req.getAcceptEncoding(),
+        });
+
+        if (typeof rsp == 'number') {
+            return rsp;
         }
         else {
+            return {
+                status: 200,
+                mime: rsp.mime.code,
+                content: rsp.data,
+            }
         }
     }
 
@@ -260,52 +351,38 @@ registerIn('HttpServerWorker', '', class HttpFileSystem extends HttpItem {
         if (this.entry.head === true) {
         }
         else {
+            return 405;
         }
-    }
-
-    async init() {
-        if (this.entry.dynamic === true) {
-        }
-        else {
-            for (let fileinfo of await Process.callParent({
-                name: 'HttpLibraryScanFileSystem',
-                path: this.entry.file,
-            })) {
-                let path = `${this.entry.path}${fileinfo.replace(this.entry.file, '')}`;
-                this.paths[path] = { dynamic: false };
-            }
-        }
-
-        return this;
     }
 });
 
 
 /*****
 *****/
-registerIn('HttpServerWorker', '', class HttpObject extends HttpItem {
+registerIn('HttpServerWorker', '', class HttpObject extends HttpLibraryItem {
     constructor(httpLibrary, entry) {
         super(httpLibrary, entry);
-    }
-
-    async handleGET(req, rsp) {
-        return {
-            status: 404,
-            encoding: '',
-            content: '',
-        };
-    }
-
-    async init() {
-        return this;
     }
 });
 
 
 /*****
 *****/
-registerIn('HttpServerWorker', '', class HttpWebX extends HttpItem {
+registerIn('HttpServerWorker', '', class HttpWebX extends HttpLibraryItem {
     constructor(httpLibrary, entry) {
         super(httpLibrary, entry);
+    }
+});
+
+
+/*****
+*****/
+registerIn('HttpServerWorker', '', class HttpLibraryFilter {
+    constructor(httpLibrary) {
+        this.httpLibrary = httpLibrary;
+    }
+
+    async exec(req, libEntry) {
+        return true;
     }
 });
