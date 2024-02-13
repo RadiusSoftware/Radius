@@ -125,7 +125,7 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
                 let response = await httpItem[`handle${req.getMethod()}`](req);
 
                 if (typeof response == 'number') {
-                    rsp.respondStatus(rsp);
+                    rsp.respondStatus(response);
                 }
                 else {
                     rsp.setContentEncoding(response.encoding);
@@ -134,11 +134,11 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
             }
             catch (e) {
                 await caught(e);
-                this.rsp.respndStatus(500);
+                rsp.respndStatus(500);
             }
         }
         else {
-            this.rsp.respondStatus(404);
+            rsp.respondStatus(404);
         }
     }
 
@@ -597,9 +597,11 @@ registerIn('HttpServerWorker', '', class HttpResponse {
             content = args[3];
         }
         else {
-            throw new Error('......')
+            this.respondStatus(500);
+            return;
         }
 
+        this.setContentType(contentType, charset);
         this.httpRsp.writeHead(status);
         this.httpRsp.end(content);
     }
@@ -636,9 +638,6 @@ registerIn('HttpServerWorker', '', class HttpResponse {
         if (typeof algorithm == 'string') {
             this.httpRsp.setHeader('content-encoding', algorithm);
         }
-        else {
-            this.httpRsp.removeHeader('content-encoding');
-        }
 
         return this;
     }
@@ -647,23 +646,18 @@ registerIn('HttpServerWorker', '', class HttpResponse {
         if (typeof lang == 'string') {
             this.httpRsp.setHeader('content-language', lang);
         }
-        else {
-            this.httpRsp.removeHeader('content-language', lang);
-        }
 
         return this;
     }
 
     setContentType(mimeInfo, charset) {
-        if (!this.hasHeader('content-type')) {
-            let mime = mimeInfo instanceof Mime ? mimeInfo : mkMime(mimeInfo);
+        let mime = mimeInfo instanceof Mime ? mimeInfo : mkMime(mimeInfo);
 
-            if (mime.getType() == 'string' && typeof charset == 'string') {
-                this.httpRsp.setHeader('Content-Type', `${mime.getCode()}; charset="${charset}"`);
-            }
-            else {
-                this.httpRsp.setHeader('Content-Type', mime.getCode());
-            }
+        if (mime.getType() == 'string' && typeof charset == 'string') {
+            this.httpRsp.setHeader('Content-Type', `${mime.getCode()}; charset="${charset}"`);
+        }
+        else {
+            this.httpRsp.setHeader('Content-Type', mime.getCode());
         }
 
         return this;

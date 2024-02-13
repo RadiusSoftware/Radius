@@ -81,7 +81,7 @@ singleton('', class FileSystem extends Emitter {
     }
 
     async isFile(path) {
-        if (await pathExists(path)) {
+        if (await this.pathExists(path)) {
             let stats = await LibFiles.promises.stat(path);
             return stats.isFile();
         }

@@ -27,6 +27,10 @@ const LibPath = require('path');
 registerIn('HttpServer', '', class HttpLibrary {
     constructor() {
         mkHandlerProxy(Process, 'HttpLibrary', this);
+        display(`\n******* Implement the cache cleanse feature.\n`);
+    }
+
+    async addData(entry) {
     }
 
     async addDynamicFiles(entry) {
@@ -39,6 +43,7 @@ registerIn('HttpServer', '', class HttpLibrary {
                     path: entry.file,
                     mime: mkMime(LibPath.extname(entry.file)),
                     once: entry.once === true,
+                    dynamic: true,
                     cached: {},
                 };
             }
@@ -48,13 +53,11 @@ registerIn('HttpServer', '', class HttpLibrary {
                     path: entry.file,
                     mime: mkMime(LibPath.extname(entry.file)),
                     once: entry.once === true,
+                    dynamic: true,
                     cached: {},
                 };
             }
         }
-    }
-
-    async addData(entry) {
     }
 
     async addOject(entry) {
@@ -71,6 +74,7 @@ registerIn('HttpServer', '', class HttpLibrary {
                         path: path,
                         mime: mkMime(LibPath.extname(path)),
                         once: entry.once === true,
+                        dynamic: false,
                         cache: {},
                     };
                 };
@@ -81,6 +85,7 @@ registerIn('HttpServer', '', class HttpLibrary {
                     path: entry.file,
                     mime: mkMime(LibPath.extname(entry.file)),
                     once: entry.once === true,
+                    dynamic: false,
                     cache: {},
                 };
             }
@@ -99,13 +104,17 @@ registerIn('HttpServer', '', class HttpLibrary {
         return this.settings.cacheMaxSizeMb;
     }
 
+    getLibFilters() {
+        return this.settings.libFilters;
+    }
+
     async init(settings, entries) {
         this.paths = {};
         this.settings = settings;
 
         for (let entry of entries) {
             if (entry.type == 'file') {
-                if (entry.isDynamic === true) {
+                if (entry.dynamic === true) {
                     await this.addDynamicFiles(entry);
                 }
                 else {
@@ -121,7 +130,35 @@ registerIn('HttpServer', '', class HttpLibrary {
         return this;
     }
 
-    async loadFileDynamic(entry) {
+    async loadFileDynamic(entry, encodings) {
+        if (await FileSystem.isFile(entry.path)) {
+            let content;
+            let encoding = '';
+            let raw = await FileSystem.readFile(entry.path);
+            
+            for (let key in encodings) {
+                if (Compression.isSupported(key)) {
+                    encoding = key;
+                    break;
+                }
+            }
+
+            if (encoding) {
+                content = await Compression.compress(encoding, raw);
+            }
+            else {
+                content = raw;
+            }
+
+            return {
+                status: 200,
+                mime: entry.mime,
+                encoding: encoding,
+                content: content,
+            };
+        }
+
+        return 404;
     }
 
     async loadFileStatic(entry, encodings) {
@@ -137,7 +174,7 @@ registerIn('HttpServer', '', class HttpLibrary {
 
         if (encoding in entry.cache) {
             content = entry.cache[encoding].content;
-            entry.cache[encoding].expires = mkTime().addMilliseconds(this.settings.cacheDurationMs);
+            entry.cache[encoding].expires = mkTime().addMilliseconds(this.getCacheDurationMs());
         }
         else {
             let raw = entry.cache[''];
@@ -148,17 +185,17 @@ registerIn('HttpServer', '', class HttpLibrary {
 
             content = await Compression.compress(encoding, raw);
 
-            if (raw.length < this.settings.cacheMaxSizeMb*1024*1024) {
+            if (raw.length < this.getCacheMaxSizeMb()*1024*1024) {
                 entry.cache[''] = {
                     content: raw,
-                    expires: mkTime().addMilliseconds(this.settings.cacheDurationMs),
+                    expires: mkTime().addMilliseconds(this.getCacheDurationMs()),
                 };
             }
 
-            if (content.length < this.settings.cacheMaxSizeMb*1024*1024) {
+            if (content.length < this.getCacheMaxSizeMb()*1024*1024) {
                 entry.cache[encoding] = {
                     content: content,
-                    expires: mkTime().addMilliseconds(this.settings.cacheDurationMs),
+                    expires: mkTime().addMilliseconds(this.getCacheDurationMs()),
                 };
             }
         }
@@ -181,7 +218,6 @@ registerIn('HttpServer', '', class HttpLibrary {
     }
 
     async onGet(message) {
-        console.log(message);
         let libEntry = this.paths[message.path];
 
         if (libEntry) {
@@ -190,7 +226,7 @@ registerIn('HttpServer', '', class HttpLibrary {
 
                 try {
                     if (libEntry.dynamic) {
-                        rsp = await this.loadFileDynamic(libEntry, acceptedEncoding);
+                        rsp = await this.loadFileDynamic(libEntry, message.encoding);
                     }
                     else {
                         rsp = await this.loadFileStatic(libEntry, message.encoding);
@@ -198,6 +234,12 @@ registerIn('HttpServer', '', class HttpLibrary {
 
                     if (typeof rsp == 'object') {
                         return rsp;
+                    }
+                    else if (typeof rsp == 'number') {
+                        return rsp;
+                    }
+                    else {
+                        return 500;
                     }
                 }
                 catch (e) {
@@ -233,86 +275,90 @@ registerIn('HttpServer', '', class HttpLibrary {
 });
 
 
-/*****
-*****/
-registerIn('HttpServerWorker', '', class HttpLibrary {
-    constructor() {
-        this.filters = [];
-        this.tree = mkTextTree('/');
-        mkHandlerProxy(Process, 'HttpLibrary', this);
-
-        this.makers = {
-            data: mkHttpData,
-            file: mkHttpFileSystem,
-            object: mkHttpObject,
-            webx: mkHttpWebX,
-        };
-    }
-
-    async addItem(entry) {
-        let item = await this.makers[entry.type](this, entry).init();
-        let node = this.tree.ensureNode(entry.path);
-        node.setValue(item);
-        return this;
-    }
-
-    getItem(path) {
-        let node = this.tree.getBestNode(path);
-        return node.getValue();
-    }
-
-    getBlockSizeMb() {
-        return this.settings.blockSizeMb;
-    }
-
-    getCacheDurationMs() {
-        return this.settings.cacheDurationMs;
-    }
-
-    getCacheMaxSizeMb() {
-        return this.settings.cacheMaxSizeMb;
-    }
-
-    async init(settings, entries) {
-        this.settings = settings;
-
-        if (Array.isArray(entries)) {
-            for (let entry of entries) {
-                await this.addItem(entry);
-            }
-        }
-
-        this.filters = [
-            await mkHttpMethodFilter(this).init(),
-        ];
-
-        if (Array.isArray(this.settings.libFilters)) {
-            for (let httpFilterMaker of this.settings.libFilters) {
-                this.filters.push(httpFilterMaker(this));
-            }
-        }
-
-        return this;
-    }
-
-    async onAdd(message) {
-    }
-
-    async onRemove(message) {
-    }
-
-    removeItem(path) {
-        this.tree.remove(path);
-        return this;
-    }
-
-    [Symbol.iterator]() {
-        return this.filters[Symbol.iterator]();
-    }
-});
-
-
 execIn('HttpServerWorker', () => {
+    /*****
+    *****/
+    register('', class HttpLibrary {
+        constructor() {
+            this.filters = [];
+            this.tree = mkTextTree('/');
+            mkHandlerProxy(Process, 'HttpLibrary', this);
+    
+            this.makers = {
+                data: mkHttpData,
+                file: mkHttpFileSystem,
+                object: mkHttpObject,
+                webx: mkHttpWebX,
+            };
+        }
+    
+        async addItem(entry) {
+            let item = await this.makers[entry.type](this, entry).init();
+            let node = this.tree.ensureNode(entry.path);
+            node.setValue(item);
+            return this;
+        }
+    
+        getItem(path) {
+            let node = this.tree.getBestNode(path);
+            return node.getValue();
+        }
+    
+        getBlockSizeMb() {
+            return this.settings.blockSizeMb;
+        }
+    
+        getCacheDurationMs() {
+            return this.settings.cacheDurationMs;
+        }
+    
+        getCacheMaxSizeMb() {
+            return this.settings.cacheMaxSizeMb;
+        }
+
+        getLibFilters() {
+            return this.settings.libFilters;
+        }
+    
+        async init(settings, entries) {
+            this.settings = settings;
+    
+            if (Array.isArray(entries)) {
+                for (let entry of entries) {
+                    await this.addItem(entry);
+                }
+            }
+    
+            this.filters = [
+                await mkHttpMethodFilter(this).init(),
+            ];
+    
+            if (Array.isArray(this.getLibFilters())) {
+                for (let httpFilterMaker of this.getLibFilters) {
+                    this.filters.push(httpFilterMaker(this));
+                }
+            }
+    
+            return this;
+        }
+    
+        async onAdd(message) {
+        }
+    
+        async onRemove(message) {
+        }
+    
+        removeItem(path) {
+            this.tree.remove(path);
+            return this;
+        }
+    
+        [Symbol.iterator]() {
+            return this.filters[Symbol.iterator]();
+        }
+    });
+    
+    
     /*****
      * A library filter is a programmable object whose purpose is to filter out
      * HTTP requests due to things such as bad method, unauthorized, or other
