@@ -55,6 +55,9 @@ singletonIn('HttpServer', '', class HttpServer extends Application {
 singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWorker {
     constructor() {
         super();
+
+        // ITERATE OVER all addresses and ports.
+        display('\n**********  Iterate over all addresses and ports.\n');
         if (this.settings.tls instanceof Tls) {
             this.scheme = 'https';
 
@@ -93,58 +96,41 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
     }
 
     async handleRequest(httpReq, httpRsp) {
-        this.req = mkHttpRequest(this, httpReq);
-        this.rsp = mkHttpResponse(this, httpRsp, this.req);
-        let libEntry = this.httpLibrary.getItem(this.req.getPath());
+        const req = mkHttpRequest(this, httpReq);
+        const rsp = mkHttpResponse(this, httpRsp);
+        const httpItem = this.httpLibrary.getItem(req.getPath());
 
-        if (libEntry) {
+        if (httpItem) {
             try {
                 for (let httpFilter of this.httpLibrary) {
-                    let filterResult = await httpFilter.exec(req, libEntry);
+                    let filterResult = await httpFilter.exec(req, httpItem);
 
                     if (filterResult === true) {
                         continue;
                     }
+                    else if (typeof filterResult == 'object') {
+                        rsp.respond(filterResult.status, filterResult.mime, filterResult.content);
+                        return;
+                    }
                     else if (typeof filterResult == 'number') {
-                        this.respondStatus(filterResult);
+                        rsp.respondStatus(filterResult);
                         return;
                     }
                     else {
-                        this.respondStatus(512);
+                        rsp.respondStatus(400);
                         return;
                     }
                 }
 
-                let rsp = await libEntry[`handle${this.req.getMethod()}`](this.req);
+                let response = await httpItem[`handle${req.getMethod()}`](req);
 
-                if (typeof rsp == 'number') {
-                    this.rsp.respondStatus(rsp);
+                if (typeof response == 'number') {
+                    rsp.respondStatus(rsp);
                 }
                 else {
-                    this.rsp.respond(rsp.status, rsp.mime, rsp.content);
+                    rsp.setContentEncoding(response.encoding);
+                    rsp.respond(response.status, response.mime, response.content);
                 }
-                // ****************************************************
-                // ** REPLACE WITH A BUILT-IN HTTP LIB FILTER
-                // ****************************************************
-                /*
-                let methodName = `handle${this.req.getMethod()}`;
-
-                if (methodName in libEntry) {
-                    let rsp = await libEntry[methodName](this.req);
-
-                    if (typeof rsp == 'number') {
-                        this.rsp.respondStatus(rsp);
-                    }
-                    else {
-                        this.rsp.respond(rsp.status, rsp.mime, rsp.content);
-                    }
-                }
-                else {
-                    this.rsp.respndStatus(405);
-                }
-                */
-                // ****************************************************
-                // ****************************************************
             }
             catch (e) {
                 await caught(e);
@@ -547,10 +533,9 @@ registerIn('HttpServerWorker', '', class HttpResponse {
         511: { text: 'Network Authentiation Failed' },
     };
 
-    constructor(httpServer, httpRsp, req) {
+    constructor(httpServer, httpRsp) {
         this.httpServer = httpServer;
         this.httpRsp = httpRsp;
-        this.req = req;
     }
 
     clearCookie(name) {
@@ -615,19 +600,8 @@ registerIn('HttpServerWorker', '', class HttpResponse {
             throw new Error('......')
         }
 
-        this.setContentLanguage();
-        this.setContentType(contentType, charset);
-        this.setContentEncoding();
-        let algorithm = this.getHeader('content-encoding');
-
-        (async () => {
-            if (algorithm) {
-                content = await Compression.compress(algorithm, content)
-            }
-
-            this.httpRsp.writeHead(status);
-            this.httpRsp.end(content);
-        })();
+        this.httpRsp.writeHead(status);
+        this.httpRsp.end(content);
     }
 
     respondChunk(chunk) {
@@ -663,22 +637,7 @@ registerIn('HttpServerWorker', '', class HttpResponse {
             this.httpRsp.setHeader('content-encoding', algorithm);
         }
         else {
-            if (!this.hasHeader('content-encoding')) {
-                let algorithm;
-
-                for (let encoding of Object.values(this.req.getAcceptEncoding())) {
-                    let { value, quality } = encoding;
-        
-                    if (Compression.isSupported(value)) {
-                        algorithm = value;
-                        break;
-                    }
-                }
-
-                if (algorithm) {
-                    this.httpRsp.setHeader('content-encoding', algorithm);
-                }
-            }
+            this.httpRsp.removeHeader('content-encoding');
         }
 
         return this;
@@ -689,16 +648,7 @@ registerIn('HttpServerWorker', '', class HttpResponse {
             this.httpRsp.setHeader('content-language', lang);
         }
         else {
-            if (!this.hasHeader('content-language')) {
-                let language = this.httpServer.settings.deflang;
-                let acceptLanguage = this.req.getAcceptLanguage();
-    
-                if (Object.keys(acceptLanguage).length) {
-                    this.language = Object.keys(acceptLanguage)[0];
-                }
-
-                this.httpRsp.setHeader('content-language', language);
-            }
+            this.httpRsp.removeHeader('content-language', lang);
         }
 
         return this;

@@ -39,7 +39,6 @@ registerIn('HttpServer', '', class HttpLibrary {
                     path: entry.file,
                     mime: mkMime(LibPath.extname(entry.file)),
                     once: entry.once === true,
-                    timeout: null,
                     cached: {},
                 };
             }
@@ -49,7 +48,6 @@ registerIn('HttpServer', '', class HttpLibrary {
                     path: entry.file,
                     mime: mkMime(LibPath.extname(entry.file)),
                     once: entry.once === true,
-                    timeout: null,
                     cached: {},
                 };
             }
@@ -73,7 +71,6 @@ registerIn('HttpServer', '', class HttpLibrary {
                         path: path,
                         mime: mkMime(LibPath.extname(path)),
                         once: entry.once === true,
-                        timeout: null,
                         cache: {},
                     };
                 };
@@ -84,7 +81,6 @@ registerIn('HttpServer', '', class HttpLibrary {
                     path: entry.file,
                     mime: mkMime(LibPath.extname(entry.file)),
                     once: entry.once === true,
-                    timeout: null,
                     cache: {},
                 };
             }
@@ -128,14 +124,50 @@ registerIn('HttpServer', '', class HttpLibrary {
     async loadFileDynamic(entry) {
     }
 
-    async loadFileStatic(entry) {
-        let content = await FileSystem.readFile(entry.path);
+    async loadFileStatic(entry, encodings) {
+        let content;
+        let encoding = '';
+        
+        for (let key in encodings) {
+            if (Compression.isSupported(key)) {
+                encoding = key;
+                break;
+            }
+        }
+
+        if (encoding in entry.cache) {
+            content = entry.cache[encoding].content;
+            entry.cache[encoding].expires = mkTime().addMilliseconds(this.settings.cacheDurationMs);
+        }
+        else {
+            let raw = entry.cache[''];
+
+            if (!('' in entry.cache)) {
+                raw = await FileSystem.readFile(entry.path);
+            }
+
+            content = await Compression.compress(encoding, raw);
+
+            if (raw.length < this.settings.cacheMaxSizeMb*1024*1024) {
+                entry.cache[''] = {
+                    content: raw,
+                    expires: mkTime().addMilliseconds(this.settings.cacheDurationMs),
+                };
+            }
+
+            if (content.length < this.settings.cacheMaxSizeMb*1024*1024) {
+                entry.cache[encoding] = {
+                    content: content,
+                    expires: mkTime().addMilliseconds(this.settings.cacheDurationMs),
+                };
+            }
+        }
 
         return {
             status: 200,
             mime: entry.mime,
-            encoding: '',
-            data: content,
+            encoding: encoding,
+            content: content,
         };
     }
 
@@ -149,32 +181,40 @@ registerIn('HttpServer', '', class HttpLibrary {
     }
 
     async onGet(message) {
+        console.log(message);
         let libEntry = this.paths[message.path];
 
-        if (libEntry.type == 'file') {
-            let rsp;
+        if (libEntry) {
+            if (libEntry.type == 'file') {
+                let rsp;
 
-            if (libEntry.dynamic) {
-                rsp = await this.loadFileDynamic(libEntry);
-            }
-            else {
-                rsp = await this.loadFileStatic(libEntry);
-            }
+                try {
+                    if (libEntry.dynamic) {
+                        rsp = await this.loadFileDynamic(libEntry, acceptedEncoding);
+                    }
+                    else {
+                        rsp = await this.loadFileStatic(libEntry, message.encoding);
+                    }
 
-            if (typeof rsp == 'object') {
-                return rsp;
+                    if (typeof rsp == 'object') {
+                        return rsp;
+                    }
+                }
+                catch (e) {
+                    return 410;
+                }
             }
-        }
-        else if (libEntry.type == 'data') {
-        }
-        else if (libEntry.type == 'object') {
+            else if (libEntry.type == 'data') {
+            }
+            else if (libEntry.type == 'object') {
+            }
         }
         
         return 404;
     }
 
     async onHead(message) {
-        if (libEntry.type == 'files') {
+        if (libEntry.type == 'file') {
         }
         else if (libEntry.type == 'data') {
         }
@@ -183,6 +223,12 @@ registerIn('HttpServer', '', class HttpLibrary {
     }
 
     async onRemove(message) {
+        if (libEntry.type == 'file') {
+        }
+        else if (libEntry.type == 'data') {
+        }
+        else if (libEntry.type == 'object') {
+        }
     }
 });
 
@@ -193,6 +239,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
     constructor() {
         this.filters = [];
         this.tree = mkTextTree('/');
+        mkHandlerProxy(Process, 'HttpLibrary', this);
 
         this.makers = {
             data: mkHttpData,
@@ -235,7 +282,23 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
             }
         }
 
+        this.filters = [
+            await mkHttpMethodFilter(this).init(),
+        ];
+
+        if (Array.isArray(this.settings.libFilters)) {
+            for (let httpFilterMaker of this.settings.libFilters) {
+                this.filters.push(httpFilterMaker(this));
+            }
+        }
+
         return this;
+    }
+
+    async onAdd(message) {
+    }
+
+    async onRemove(message) {
     }
 
     removeItem(path) {
@@ -249,140 +312,173 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
 });
 
 
-/*****
- * Here's how the HTTP server works.  The HTTP request includes a URL with the
- * path.  The path of the URL is used to search for the best matching in the path
- * tree.  The best-match is the "subdirectory" chain starting from the root and
- * following the branches until there's no longer a match.  Here's an example:
- * 
- *      available path -- /dir1/dir2
- *      requested path -- /dir1/dir2/dir3/filename.ext
- *      best/longest path -- /dir1/dir2
- * 
- * In this case, the HTTP server will be able to fetch the HttpItem in the path
- * tree at /dir/dir2.  The remaining part of the path is /dir3/filename.txt, is
- * passed to the item as part of the request.  It's up to the HttpItem on how to
- * reespond the request.
- * 
- * Examples of some of the first built HttpItem classes are HttpFileSystem and
- * HttpWebX.  The former pulls files off of the server's file system, while the
- * latter is a programming object that computes its response vis-a-vis a class
- * that extends HttpWebX.
- * 
- * Essentially, handling an HTTP request has three-part responsibility between
- * the HttpServerWorker, the HttpItem base class, the HttpItem subclass that's
- * used by the server.
-*****/
-register('', class HttpLibraryItem {
-    constructor(httpLibrary, entry) {
-        this.httpLibrary = httpLibrary;
-        this.entry = entry;
-        this.paths = {};
-    }
-
-    getPath() {
-        return this.entry.path;
-    }
-
-    getSettings() {
-        return Data.copy(this.entry);
-    }
-
-    async init() {
-        return this;
-    }
-});
-
-
-/*****
-*****/
-registerIn('HttpServerWorker', '', class HttpData extends HttpLibraryItem {
-    constructor(httpLibrary, entry) {
-        super(httpLibrary, entry);
-    }
-});
-
-
-/*****
- * The HttpFileSystem item provides the features for servering files resident on
- * the server's file system.  This is the original and classic task assigned to
- * HTTP servers.  As discussed above under HttpItem, the URL path is used to find
- * the HttpFileSystem item, wheres the remaining part of the path locate a file
- * within the filesystem itself.
- * 
- * HttpFileSystem items may be either static (default) or dynamic.  Dynamic
- * files are simple.  When are request is received, a (slow) search for the file
- * is performed and depending on whether the file was found, will be served or
- * an error message is generated.
- * 
- * Static file systems are more complex because caching is part of the mix.
- * For efficiency, dynamic files are searched for, loaded, cached and otherwise
- * managed by the Application-processes HttpLibrary object.  It's the application
- * process that's responsible for all file-system operations for static file
- * systems.
-*****/
-registerIn('HttpServerWorker', '', class HttpFileSystem extends HttpLibraryItem {
-    constructor(httpLibrary, entry) {
-        super(httpLibrary, entry);
-    }
-
-    async handleGET(req) {
-        let path = LibPath.join(this.entry.file, req.getPath().substring(this.entry.path.length));
-
-        let rsp = await Process.callParent({
-            name: 'HttpLibraryGet',
-            path: path,
-            encoding: req.getAcceptEncoding(),
-        });
-
-        if (typeof rsp == 'number') {
-            return rsp;
+execIn('HttpServerWorker', () => {
+    /*****
+     * A library filter is a programmable object whose purpose is to filter out
+     * HTTP requests due to things such as bad method, unauthorized, or other
+     * issues associated with the passed request.  In fact, outside callers may
+     * add filters to their HTTP server that are specific to their application
+     * or permissions framework.
+    *****/
+    register('', class HttpLibraryFilter {
+        constructor(httpLibrary) {
+            this.httpLibrary = httpLibrary;
         }
-        else {
-            return {
-                status: 200,
-                mime: rsp.mime.code,
-                content: rsp.data,
+
+        async exec(req, httpItem) {
+            return true;
+        }
+
+        async init() {
+            return this;
+        }
+    });
+
+
+    /*****
+     * The most fundamental of built-in HttpLibrary filters.  This particulare
+     * filter just checks the method name from the request to determine wheterh
+     * provided httpItem had a method for handle that particular method.  The
+     * negative response is 405, which is "Method Not Allowed".
+    *****/
+    register('', class HttpMethodFilter extends HttpLibraryFilter {
+        constructor(httpLibrary) {
+            super(httpLibrary);
+        }
+
+        async exec(req, httpItem) {
+            if (typeof httpItem[`handle${req.getMethod()}`] == 'function') {
+                return true;
             }
-        }
-    }
 
-    async handleHEAD(req, rsp) {
-        if (this.entry.head === true) {
-        }
-        else {
             return 405;
         }
-    }
-});
+    });
 
 
-/*****
-*****/
-registerIn('HttpServerWorker', '', class HttpObject extends HttpLibraryItem {
-    constructor(httpLibrary, entry) {
-        super(httpLibrary, entry);
-    }
-});
-
-
-/*****
-*****/
-registerIn('HttpServerWorker', '', class HttpWebX extends HttpLibraryItem {
-    constructor(httpLibrary, entry) {
-        super(httpLibrary, entry);
-    }
-});
-
-
-/*****
-*****/
-registerIn('HttpServerWorker', '', class HttpLibraryFilter {
-    constructor(httpLibrary) {
-        this.httpLibrary = httpLibrary;
-    }
-
-    async exec(req, libEntry) {
-        return true;
-    }
+    /*****
+     * Here's how the HTTP server works.  The HTTP request includes a URL with the
+     * path.  The path of the URL is used to search for the best matching in the path
+     * tree.  The best-match is the "subdirectory" chain starting from the root and
+     * following the branches until there's no longer a match.  Here's an example:
+     * 
+     *      available path -- /dir1/dir2
+     *      requested path -- /dir1/dir2/dir3/filename.ext
+     *      best/longest path -- /dir1/dir2
+     * 
+     * In this case, the HTTP server will be able to fetch the HttpItem in the path
+     * tree at /dir/dir2.  The remaining part of the path is /dir3/filename.txt, is
+     * passed to the item as part of the request.  It's up to the HttpItem on how to
+     * reespond the request.
+     * 
+     * Examples of some of the first built HttpItem classes are HttpFileSystem and
+     * HttpWebX.  The former pulls files off of the server's file system, while the
+     * latter is a programming object that computes its response vis-a-vis a class
+     * that extends HttpWebX.
+     * 
+     * Essentially, handling an HTTP request has three-part responsibility between
+     * the HttpServerWorker, the HttpItem base class, the HttpItem subclass that's
+     * used by the server.
+    *****/
+    register('', class HttpLibraryItem {
+        constructor(httpLibrary, entry) {
+            this.httpLibrary = httpLibrary;
+            this.entry = entry;
+            this.paths = {};
+        }
+    
+        getPath() {
+            return this.entry.path;
+        }
+    
+        getSettings() {
+            return Data.copy(this.entry);
+        }
+    
+        async init() {
+            return this;
+        }
+    });
+    
+    
+    /*****
+    *****/
+    registerIn('HttpServerWorker', '', class HttpData extends HttpLibraryItem {
+        constructor(httpLibrary, entry) {
+            super(httpLibrary, entry);
+        }
+    });
+    
+    
+    /*****
+     * The HttpFileSystem item provides the features for servering files resident on
+     * the server's file system.  This is the original and classic task assigned to
+     * HTTP servers.  As discussed above under HttpItem, the URL path is used to find
+     * the HttpFileSystem item, wheres the remaining part of the path locate a file
+     * within the filesystem itself.
+     * 
+     * HttpFileSystem items may be either static (default) or dynamic.  Dynamic
+     * files are simple.  When are request is received, a (slow) search for the file
+     * is performed and depending on whether the file was found, will be served or
+     * an error message is generated.
+     * 
+     * Static file systems are more complex because caching is part of the mix.
+     * For efficiency, dynamic files are searched for, loaded, cached and otherwise
+     * managed by the Application-processes HttpLibrary object.  It's the application
+     * process that's responsible for all file-system operations for static file
+     * systems.
+    *****/
+    registerIn('HttpServerWorker', '', class HttpFileSystem extends HttpLibraryItem {
+        constructor(httpLibrary, entry) {
+            super(httpLibrary, entry);
+        }
+    
+        async handleGET(req) {
+            let path = LibPath.join(this.entry.file, req.getPath().substring(this.entry.path.length));
+    
+            let rsp = await Process.callParent({
+                name: 'HttpLibraryGet',
+                path: path,
+                encoding: req.getAcceptEncoding(),
+            });
+    
+            if (typeof rsp == 'number') {
+                return rsp;
+            }
+            else {
+                return {
+                    status: 200,
+                    mime: rsp.mime.code,
+                    encoding: rsp.encoding,
+                    content: rsp.content,
+                }
+            }
+        }
+    
+        async handleHEAD(req, rsp) {
+            if (this.entry.head === true) {
+            }
+            else {
+                return 405;
+            }
+        }
+    });
+    
+    
+    /*****
+    *****/
+    registerIn('HttpServerWorker', '', class HttpObject extends HttpLibraryItem {
+        constructor(httpLibrary, entry) {
+            super(httpLibrary, entry);
+        }
+    });
+    
+    
+    /*****
+    *****/
+    registerIn('HttpServerWorker', '', class HttpWebX extends HttpLibraryItem {
+        constructor(httpLibrary, entry) {
+            super(httpLibrary, entry);
+        }
+    });
 });
