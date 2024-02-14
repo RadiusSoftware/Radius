@@ -40,6 +40,7 @@ registerIn('HttpServer', '', class HttpLibrary {
             if (stats.isDirectory()) {
                 this.paths[entry.file] = {
                     type: 'dir',
+                    itemPath: entry.path,
                     path: entry.file,
                     mime: mkMime(LibPath.extname(entry.file)),
                     once: entry.once === true,
@@ -50,6 +51,7 @@ registerIn('HttpServer', '', class HttpLibrary {
             else if (stats.isFile()) {
                 this.paths[entry.file] = {
                     type: 'file',
+                    itemPath: entry.path,
                     path: entry.file,
                     mime: mkMime(LibPath.extname(entry.file)),
                     once: entry.once === true,
@@ -71,6 +73,7 @@ registerIn('HttpServer', '', class HttpLibrary {
                 for (let path of await FileSystem.recurseFiles(entry.file)) {
                     this.paths[path] = {
                         type: 'file',
+                        itemPath: entry.path,
                         path: path,
                         mime: mkMime(LibPath.extname(path)),
                         once: entry.once === true,
@@ -82,6 +85,7 @@ registerIn('HttpServer', '', class HttpLibrary {
             else if (stats.isFile()) {
                 this.paths[entry.file] = {
                     type: 'file',
+                    itemPath: entry.path,
                     path: entry.file,
                     mime: mkMime(LibPath.extname(entry.file)),
                     once: entry.once === true,
@@ -208,7 +212,7 @@ registerIn('HttpServer', '', class HttpLibrary {
         };
     }
 
-    async onAddEntry(message) {
+    async onAdd(message) {
         if (message.entry.type == 'file') {
         }
         else if (message.entry.tye == 'data') {
@@ -233,6 +237,10 @@ registerIn('HttpServer', '', class HttpLibrary {
                     }
 
                     if (typeof rsp == 'object') {
+                        if (libEntry.once) {
+                            this.remove(libEntry);
+                        }
+
                         return rsp;
                     }
                     else if (typeof rsp == 'number') {
@@ -270,6 +278,32 @@ registerIn('HttpServer', '', class HttpLibrary {
         else if (libEntry.type == 'data') {
         }
         else if (libEntry.type == 'object') {
+        }
+    }
+
+    remove(libEntry) {
+        if (libEntry.path in this.paths) {
+            if (libEntry.static && libEntry.type == 'file') {
+                const paths = Object.keys(this.paths);
+
+                for (let path in paths) {
+                    let entry = this.paths[path];
+
+                    if (entry) {
+                        if (entry.itemPath == libEntry.itemPath) {
+                            delete this.paths[path];
+                        }
+                    }
+                }
+            }
+            else {
+                delete this.paths[libEntry.path];
+            }
+
+            Process.sendChildren({
+                name: 'HttpLibraryRemove',
+                path: libEntry.itemPath,
+            });
         }
     }
 });
@@ -343,9 +377,16 @@ execIn('HttpServerWorker', () => {
         }
     
         async onAdd(message) {
+            console.log('adding...');
+            console.log(message);
         }
     
         async onRemove(message) {
+            let node = this.tree.getNode(message.path);
+
+            if (node) {
+                node.clearValue();
+            }
         }
     
         removeItem(path) {
@@ -495,17 +536,9 @@ execIn('HttpServerWorker', () => {
                 return {
                     status: 200,
                     mime: rsp.mime.code,
-                    encoding: rsp.encoding,
+                    contentEncoding: rsp.encoding,
                     content: rsp.content,
                 }
-            }
-        }
-    
-        async handleHEAD(req, rsp) {
-            if (this.entry.head === true) {
-            }
-            else {
-                return 405;
             }
         }
     });
@@ -525,6 +558,12 @@ execIn('HttpServerWorker', () => {
     registerIn('HttpServerWorker', '', class HttpWebX extends HttpLibraryItem {
         constructor(httpLibrary, entry) {
             super(httpLibrary, entry);
+        }
+    
+        async handleGET(req) {
+        }
+    
+        async handlePOST(req) {
         }
     });
 });

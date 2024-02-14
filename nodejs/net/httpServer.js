@@ -128,7 +128,8 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
                     rsp.respondStatus(response);
                 }
                 else {
-                    rsp.setContentEncoding(response.encoding);
+                    response.contentEncoding ? rsp.setContentEncoding(response.contentEncoding) : null;
+                    response.contentLength ? rsp.setHeader('Content-Length', response.contentLength) : null;
                     rsp.respond(response.status, response.mime, response.content);
                 }
             }

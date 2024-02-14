@@ -86,6 +86,16 @@ register('', class TextTree {
         .trim().split(this.delimiter)
         .filter(segment => segment != '');
     }
+
+    removeNode(path) {
+        let node = this.getNode(path);
+
+        if (node && node.getParent()) {
+            node.remove();
+        }
+
+        return this;
+    }
 });
 
 
