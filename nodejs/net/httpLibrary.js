@@ -27,73 +27,132 @@ const LibPath = require('path');
 registerIn('HttpServer', '', class HttpLibrary {
     constructor() {
         mkHandlerProxy(Process, 'HttpLibrary', this);
-        display(`\n******* Implement the cache cleanse feature.\n`);
     }
 
-    async addData(entry) {
-    }
+    async addData(libEntry) {
+        let data;
+        let mime;
 
-    async addDynamicFiles(entry) {
-        if (await FileSystem.pathExists(entry.file)) {
-            let stats = await FileSystem.stat(entry.file);
-
-            if (stats.isDirectory()) {
-                this.paths[entry.file] = {
-                    type: 'dir',
-                    itemPath: entry.path,
-                    path: entry.file,
-                    mime: mkMime(LibPath.extname(entry.file)),
-                    once: entry.once === true,
-                    dynamic: true,
-                    cached: {},
-                };
+        if (typeof libEntry.data == 'object') {
+            data = toJson(libEntry.data);
+            mime = mkMime('application/json');
+        }
+        else if (typeof libEntry.data == 'string') {
+            data = libEntry.data;
+            mime = mkMime('text/plain');
+        }
+        else {
+            if (libEntry.data instanceof Buffer) {
+                data = libEntry.data;
             }
-            else if (stats.isFile()) {
-                this.paths[entry.file] = {
-                    type: 'file',
-                    itemPath: entry.path,
-                    path: entry.file,
-                    mime: mkMime(LibPath.extname(entry.file)),
-                    once: entry.once === true,
-                    dynamic: true,
-                    cached: {},
-                };
+            else {
+                data = mkBuffer(libEntry.data);
+            }
+
+            if (libEntry.mime instanceof Mime) {
+                mime = libEntry.mime;
+            }
+            else if (typeof libEntry.mime == 'string') {
+                mime = mkMime(libEntry.mime);
+            }
+            else {
+                mime = mkMime('');
             }
         }
+
+        this.paths[libEntry.path] = {
+            type: 'data',
+            path: libEntry.path,
+            mime: mime,
+            once: libEntry.once === true,
+            auth: libEntry.auth ? libEntry.auth : {},
+            cache: { '': data },
+        }
+
+        return this;
     }
 
-    async addOject(entry) {
-    }
-
-    async addStaticFiles(entry) {
-        if (await FileSystem.pathExists(entry.file)) {
-            let stats = await FileSystem.stat(entry.file);
-
-            if (stats.isDirectory()) {
-                for (let path of await FileSystem.recurseFiles(entry.file)) {
-                    this.paths[path] = {
-                        type: 'file',
-                        itemPath: entry.path,
-                        path: path,
-                        mime: mkMime(LibPath.extname(path)),
-                        once: entry.once === true,
-                        dynamic: false,
-                        cache: {},
-                    };
-                };
-            }
-            else if (stats.isFile()) {
-                this.paths[entry.file] = {
+    async addFile(libEntry) {
+        if (await FileSystem.isDirectory(libEntry.fspath)) {
+            for (let fspath of await FileSystem.recurseFiles(libEntry.fspath)) {
+                let path = LibPath.join(libEntry.path, fspath.substring(libEntry.fspath.length));
+                this.paths[path] = {
                     type: 'file',
-                    itemPath: entry.path,
-                    path: entry.file,
-                    mime: mkMime(LibPath.extname(entry.file)),
-                    once: entry.once === true,
-                    dynamic: false,
+                    path: path,
+                    fspath: fspath,
+                    mime: mkMime(LibPath.extname(fspath)),
+                    once: libEntry.once === true,
+                    auth: libEntry.auth ? libEntry.auth : {},
                     cache: {},
                 };
+            };
+        }
+        else if (await FileSystem.isFile(libEntry.fspath)) {
+            this.paths[libEntry.path] = {
+                type: 'file',
+                path: libEntry.path,
+                fspath: libEntry.fspath,
+                mime: mkMime(LibPath.extname(libEntry.fspath)),
+                once: libEntry.once === true,
+                auth: libEntry.auth ? libEntry.auth : {},
+                cache: {},
+            };
+        }
+
+        return this;
+    }
+
+    async addHttpX(libEntry) {
+        let clssName;
+
+        if (typeof libEntry.clss == 'function') {
+            if (Data.classExtends(libEntry.clss, HttpX)) {
+                clssName = libEntry.clss.name;
             }
         }
+        else if (typeof libEntry.clss == 'string') {
+            clssName = libEntry.clss;
+        }
+
+        if (clssName) {
+            this.paths[libEntry.path] = {
+                type: 'httpx',
+                path: libEntry.path,
+                mime: null,
+                once: libEntry.once === true,
+                auth: libEntry.auth ? libEntry.auth : {},
+                cache: { '': clssName },
+            }
+        }
+        else {
+            log(`Unable add HttpX libEntry to HttpLibrary.`, toJson(libEntry));
+        }
+
+        return this;
+    }
+
+    async checkAuth(libEntry, authObj) {
+        let response = this.authHandler(libEntry, authObj); 
+        return response instanceof Promise ? await response :response;
+    }
+
+    checkMethod(libEntry, method) {
+        if (libEntry.type == 'data') {
+            return method == 'GET';
+        }
+        else if (libEntry.type == 'file') {
+            return method == 'GET';
+        }
+        else if (libEntry.type == 'httpx') {
+        }
+    }
+
+    clearAuthHandler() {
+        this.authHandler = () => true;
+    }
+
+    getAuthHandler() {
+        return this.authHandler;
     }
 
     getBlockSizeMb() {
@@ -108,462 +167,252 @@ registerIn('HttpServer', '', class HttpLibrary {
         return this.settings.cacheMaxSizeMb;
     }
 
-    getLibFilters() {
-        return this.settings.libFilters;
-    }
-
-    async init(settings, entries) {
-        this.paths = {};
-        this.settings = settings;
-
-        for (let entry of entries) {
-            if (entry.type == 'file') {
-                if (entry.dynamic === true) {
-                    await this.addDynamicFiles(entry);
-                }
-                else {
-                    await this.addStaticFiles(entry);
-                }
-            }
-            else if (entry.type == 'data') {
-            }
-            else if (entry.type == 'object') {
-            }
-        }
-
-        return this;
-    }
-
-    async loadFileDynamic(entry, encodings) {
-        if (await FileSystem.isFile(entry.path)) {
+    async getData(info) {
+        try {
             let content;
             let encoding = '';
-            let raw = await FileSystem.readFile(entry.path);
             
-            for (let key in encodings) {
+            for (let key in info.encoding) {
                 if (Compression.isSupported(key)) {
                     encoding = key;
                     break;
                 }
             }
 
-            if (encoding) {
-                content = await Compression.compress(encoding, raw);
+            if (encoding in info.libEntry.cache) {
+                content = info.libEntry.cache[encoding].content;
             }
             else {
-                content = raw;
+                let raw = info.libEntry.cache[''];
+                content = await Compression.compress(encoding, raw);
+
+                if (content.length < this.getCacheMaxSizeMb()*1024*1024) {
+                    info.libEntry.cache[encoding] = { content: content };
+                    this.touch(info.libEntry.cache[encoding]);
+                }
             }
 
             return {
                 status: 200,
-                mime: entry.mime,
-                encoding: encoding,
+                contentType: info.libEntry.mime.code,
+                contentEncoding: encoding,
+                contentCharset: '',
                 content: content,
             };
         }
-
-        return 404;
+        catch (e) {
+            caught(e);
+            return 500;
+        }
     }
 
-    async loadFileStatic(entry, encodings) {
-        let content;
-        let encoding = '';
-        
-        for (let key in encodings) {
-            if (Compression.isSupported(key)) {
-                encoding = key;
-                break;
+    async getFile(info) {
+        try {
+            let content;
+            let encoding = '';
+            
+            for (let key in info.encoding) {
+                if (Compression.isSupported(key)) {
+                    encoding = key;
+                    break;
+                }
+            }
+
+            if (encoding in info.libEntry.cache) {
+                content = info.libEntry.cache[encoding].content;
+            }
+            else {
+                let raw = info.libEntry.cache[''];
+
+                if (!raw) {
+                    raw = await FileSystem.readFile(info.libEntry.fspath);
+                }
+
+                content = await Compression.compress(encoding, raw);
+
+                if (raw.length < this.getCacheMaxSizeMb()*1024*1024) {
+                    info.libEntry.cache[''] = { content: raw };
+                    this.touch(info.libEntry.cache['']);
+                }
+
+                if (content.length < this.getCacheMaxSizeMb()*1024*1024) {
+                    info.libEntry.cache[encoding] = { content: content };
+                    this.touch(info.libEntry.cache[encoding]);
+                }
+            }
+
+            return {
+                status: 200,
+                contentType: info.libEntry.mime.code,
+                contentEncoding: encoding,
+                contentCharset: '',
+                content: content,
+            };
+        }
+        catch (e) {
+            caught(e);
+            return 500;
+        }
+    }
+
+    async getHttpX(libEntry) {
+    }
+
+    async init(settings, libEntries) {
+        this.paths = {};
+        this.settings = settings;
+        this.setAuthHandler(this.settings.authHandler);
+
+        for (let libEntry of libEntries) {
+            if (libEntry.type == 'data') {
+                await this.addData(libEntry);
+            }
+            else if (libEntry.type == 'file') {
+                await this.addFile(libEntry)
+            }
+            else if (libEntry.type == 'httpx') {
+                await this.addHttpX(libEntry);
             }
         }
 
-        if (encoding in entry.cache) {
-            content = entry.cache[encoding].content;
-            entry.cache[encoding].expires = mkTime().addMilliseconds(this.getCacheDurationMs());
-        }
-        else {
-            let raw = entry.cache[''];
-
-            if (!('' in entry.cache)) {
-                raw = await FileSystem.readFile(entry.path);
-            }
-
-            content = await Compression.compress(encoding, raw);
-
-            if (raw.length < this.getCacheMaxSizeMb()*1024*1024) {
-                entry.cache[''] = {
-                    content: raw,
-                    expires: mkTime().addMilliseconds(this.getCacheDurationMs()),
-                };
-            }
-
-            if (content.length < this.getCacheMaxSizeMb()*1024*1024) {
-                entry.cache[encoding] = {
-                    content: content,
-                    expires: mkTime().addMilliseconds(this.getCacheDurationMs()),
-                };
-            }
-        }
-
-        return {
-            status: 200,
-            mime: entry.mime,
-            encoding: encoding,
-            content: content,
-        };
+        return this;
     }
 
     async onAdd(message) {
-        if (message.entry.type == 'file') {
-        }
-        else if (message.entry.tye == 'data') {
-        }
-        else if (message.entry.tye == 'object') {
-        }
     }
 
     async onGet(message) {
-        let libEntry = this.paths[message.path];
+        if (message.path in this.paths) {
+            let libEntry = this.paths[message.path];
+            
+            if (this.checkMethod(libEntry, message.method)) {
+                if (await this.checkAuth(libEntry)) {
+                    let response;
 
-        if (libEntry) {
-            if (libEntry.type == 'file') {
-                let rsp;
+                    if (libEntry.type == 'data') {
+                        response = await this.getData({
+                            libEntry: libEntry,
+                            encoding: message.encoding,
+                            language: message.language,
+                        });
+                    }
+                    else if (libEntry.type == 'file') {
+                        response = await this.getFile({
+                            libEntry: libEntry,
+                            encoding: message.encoding,
+                            language: message.language,
+                        });
+                    }
+                    else if (libEntry.type == 'httpx') {
+                        response = await this.getHttpX(libEntry);
+                    }
 
-                try {
-                    if (libEntry.dynamic) {
-                        rsp = await this.loadFileDynamic(libEntry, message.encoding);
-                    }
-                    else {
-                        rsp = await this.loadFileStatic(libEntry, message.encoding);
+                    if (libEntry.once) {
+                        this.remove(libEntry.path);
                     }
 
-                    if (typeof rsp == 'object') {
-                        if (libEntry.once) {
-                            this.remove(libEntry);
-                        }
-
-                        return rsp;
-                    }
-                    else if (typeof rsp == 'number') {
-                        return rsp;
-                    }
-                    else {
-                        return 500;
-                    }
+                    return response;
                 }
-                catch (e) {
-                    return 410;
-                }
-            }
-            else if (libEntry.type == 'data') {
-            }
-            else if (libEntry.type == 'object') {
-            }
-        }
-        
-        return 404;
-    }
-
-    async onHead(message) {
-        if (libEntry.type == 'file') {
-        }
-        else if (libEntry.type == 'data') {
-        }
-        else if (libEntry.type == 'object') {
-        }
-    }
-
-    async onRemove(message) {
-        if (libEntry.type == 'file') {
-        }
-        else if (libEntry.type == 'data') {
-        }
-        else if (libEntry.type == 'object') {
-        }
-    }
-
-    remove(libEntry) {
-        if (libEntry.path in this.paths) {
-            if (libEntry.static && libEntry.type == 'file') {
-                const paths = Object.keys(this.paths);
-
-                for (let path in paths) {
-                    let entry = this.paths[path];
-
-                    if (entry) {
-                        if (entry.itemPath == libEntry.itemPath) {
-                            delete this.paths[path];
-                        }
-                    }
+                else {
+                    return 403;
                 }
             }
             else {
-                delete this.paths[libEntry.path];
+                return 405;
             }
-
-            Process.sendChildren({
-                name: 'HttpLibraryRemove',
-                path: libEntry.itemPath,
-            });
         }
+        else {
+            return 404;
+        }
+    }
+
+    async onRefresh(message) {
+    }
+
+    async onRemove(message) {
+    }
+
+    async onWatch(message) {
+    }
+
+    refresh(path) {
+        if (path in this.paths) {
+            let libEntry = this.paths[path];
+
+            if (libEntry.type == 'data') {
+            }
+            else if (libEntry.type == 'file') {
+            }
+            else if (libEntry.type == 'httpx') {
+            }
+        }
+
+        return this;
+    }
+
+    remove(path) {
+        delete this.paths[path];
+    }
+
+    setAuthHandler(func) {
+        if (typeof func == 'function') {
+            this.authHandler = func;
+        }
+        else {
+            this.authHandler = () => true;
+        }
+    }
+
+    touch(libEntry) {
     }
 });
 
 
-execIn('HttpServerWorker', () => {
-    /*****
-    *****/
-    register('', class HttpLibrary {
-        constructor() {
-            this.filters = [];
-            this.tree = mkTextTree('/');
-            mkHandlerProxy(Process, 'HttpLibrary', this);
-    
-            this.makers = {
-                data: mkHttpData,
-                file: mkHttpFileSystem,
-                object: mkHttpObject,
-                webx: mkHttpWebX,
-            };
-        }
-    
-        async addItem(entry) {
-            let item = await this.makers[entry.type](this, entry).init();
-            let node = this.tree.ensureNode(entry.path);
-            node.setValue(item);
-            return this;
-        }
-    
-        getItem(path) {
-            let node = this.tree.getBestNode(path);
-            return node.getValue();
-        }
-    
-        getBlockSizeMb() {
-            return this.settings.blockSizeMb;
-        }
-    
-        getCacheDurationMs() {
-            return this.settings.cacheDurationMs;
-        }
-    
-        getCacheMaxSizeMb() {
-            return this.settings.cacheMaxSizeMb;
-        }
+/*****
+*****/
+registerIn('HttpServerWorker', '', class HttpLibrary {
+    constructor() {
+        mkHandlerProxy(Process, 'HttpLibrary', this);
+    }
 
-        getLibFilters() {
-            return this.settings.libFilters;
-        }
-    
-        async init(settings, entries) {
-            this.settings = settings;
-    
-            if (Array.isArray(entries)) {
-                for (let entry of entries) {
-                    await this.addItem(entry);
-                }
-            }
-    
-            this.filters = [
-                await mkHttpMethodFilter(this).init(),
-            ];
-    
-            if (Array.isArray(this.getLibFilters())) {
-                for (let httpFilterMaker of this.getLibFilters) {
-                    this.filters.push(httpFilterMaker(this));
-                }
-            }
-    
-            return this;
-        }
-    
-        async onAdd(message) {
-            console.log('adding...');
-            console.log(message);
-        }
-    
-        async onRemove(message) {
-            let node = this.tree.getNode(message.path);
+    async addData(libEntry) {
+    }
 
-            if (node) {
-                node.clearValue();
-            }
-        }
-    
-        removeItem(path) {
-            this.tree.remove(path);
-            return this;
-        }
-    
-        [Symbol.iterator]() {
-            return this.filters[Symbol.iterator]();
-        }
-    });
-    
-    
-    /*****
-     * A library filter is a programmable object whose purpose is to filter out
-     * HTTP requests due to things such as bad method, unauthorized, or other
-     * issues associated with the passed request.  In fact, outside callers may
-     * add filters to their HTTP server that are specific to their application
-     * or permissions framework.
-    *****/
-    register('', class HttpLibraryFilter {
-        constructor(httpLibrary) {
-            this.httpLibrary = httpLibrary;
-        }
+    async addFile(libEntry) {
+    }
 
-        async exec(req, httpItem) {
-            return true;
-        }
+    async addHttpX(libEntry) {
+    }
 
-        async init() {
-            return this;
-        }
-    });
+    async awaitData(libEntry) {
+    }
 
+    async awaitFile(libEntry) {
+    }
 
-    /*****
-     * The most fundamental of built-in HttpLibrary filters.  This particulare
-     * filter just checks the method name from the request to determine wheterh
-     * provided httpItem had a method for handle that particular method.  The
-     * negative response is 405, which is "Method Not Allowed".
-    *****/
-    register('', class HttpMethodFilter extends HttpLibraryFilter {
-        constructor(httpLibrary) {
-            super(httpLibrary);
-        }
+    async awaitHttpX(libEntry) {
+    }
 
-        async exec(req, httpItem) {
-            if (typeof httpItem[`handle${req.getMethod()}`] == 'function') {
-                return true;
-            }
+    async handle(req) {
+        let response = await Process.callParent({
+            name: 'HttpLibraryGet',
+            path: req.getPath(),
+            method: req.getMethod(),
+            encoding: req.getAcceptEncoding(),
+            language: req.getAcceptLanguage(),
+        });
 
-            return 405;
-        }
-    });
+        return response;
+    }
 
+    async init(httpServer) {
+        this.httpServer = httpServer;
+        return this;
+    }
 
-    /*****
-     * Here's how the HTTP server works.  The HTTP request includes a URL with the
-     * path.  The path of the URL is used to search for the best matching in the path
-     * tree.  The best-match is the "subdirectory" chain starting from the root and
-     * following the branches until there's no longer a match.  Here's an example:
-     * 
-     *      available path -- /dir1/dir2
-     *      requested path -- /dir1/dir2/dir3/filename.ext
-     *      best/longest path -- /dir1/dir2
-     * 
-     * In this case, the HTTP server will be able to fetch the HttpItem in the path
-     * tree at /dir/dir2.  The remaining part of the path is /dir3/filename.txt, is
-     * passed to the item as part of the request.  It's up to the HttpItem on how to
-     * reespond the request.
-     * 
-     * Examples of some of the first built HttpItem classes are HttpFileSystem and
-     * HttpWebX.  The former pulls files off of the server's file system, while the
-     * latter is a programming object that computes its response vis-a-vis a class
-     * that extends HttpWebX.
-     * 
-     * Essentially, handling an HTTP request has three-part responsibility between
-     * the HttpServerWorker, the HttpItem base class, the HttpItem subclass that's
-     * used by the server.
-    *****/
-    register('', class HttpLibraryItem {
-        constructor(httpLibrary, entry) {
-            this.httpLibrary = httpLibrary;
-            this.entry = entry;
-            this.paths = {};
-        }
-    
-        getPath() {
-            return this.entry.path;
-        }
-    
-        getSettings() {
-            return Data.copy(this.entry);
-        }
-    
-        async init() {
-            return this;
-        }
-    });
-    
-    
-    /*****
-    *****/
-    registerIn('HttpServerWorker', '', class HttpData extends HttpLibraryItem {
-        constructor(httpLibrary, entry) {
-            super(httpLibrary, entry);
-        }
-    });
-    
-    
-    /*****
-     * The HttpFileSystem item provides the features for servering files resident on
-     * the server's file system.  This is the original and classic task assigned to
-     * HTTP servers.  As discussed above under HttpItem, the URL path is used to find
-     * the HttpFileSystem item, wheres the remaining part of the path locate a file
-     * within the filesystem itself.
-     * 
-     * HttpFileSystem items may be either static (default) or dynamic.  Dynamic
-     * files are simple.  When are request is received, a (slow) search for the file
-     * is performed and depending on whether the file was found, will be served or
-     * an error message is generated.
-     * 
-     * Static file systems are more complex because caching is part of the mix.
-     * For efficiency, dynamic files are searched for, loaded, cached and otherwise
-     * managed by the Application-processes HttpLibrary object.  It's the application
-     * process that's responsible for all file-system operations for static file
-     * systems.
-    *****/
-    registerIn('HttpServerWorker', '', class HttpFileSystem extends HttpLibraryItem {
-        constructor(httpLibrary, entry) {
-            super(httpLibrary, entry);
-        }
-    
-        async handleGET(req) {
-            let path = LibPath.join(this.entry.file, req.getPath().substring(this.entry.path.length));
-    
-            let rsp = await Process.callParent({
-                name: 'HttpLibraryGet',
-                path: path,
-                encoding: req.getAcceptEncoding(),
-            });
-    
-            if (typeof rsp == 'number') {
-                return rsp;
-            }
-            else {
-                return {
-                    status: 200,
-                    mime: rsp.mime.code,
-                    contentEncoding: rsp.encoding,
-                    content: rsp.content,
-                }
-            }
-        }
-    });
-    
-    
-    /*****
-    *****/
-    registerIn('HttpServerWorker', '', class HttpObject extends HttpLibraryItem {
-        constructor(httpLibrary, entry) {
-            super(httpLibrary, entry);
-        }
-    });
-    
-    
-    /*****
-    *****/
-    registerIn('HttpServerWorker', '', class HttpWebX extends HttpLibraryItem {
-        constructor(httpLibrary, entry) {
-            super(httpLibrary, entry);
-        }
-    
-        async handleGET(req) {
-        }
-    
-        async handlePOST(req) {
-        }
-    });
+    async refresh(path) {
+    }
+
+    async remove(path) {
+    }
 });

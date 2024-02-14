@@ -109,7 +109,6 @@ register('', class Mime {
             { code: 'application/x-7z-compressed',                                                           type: 'binary', extensions: {'7z':0} },
             { code: 'multipart/form-data',                                                                   type: 'string', extensions: {} },
             { code: 'application/x-www-form-urlencoded',                                                     type: 'string', extensions: {} },
-            { code: 'unknown/unknown',                                                                       type: 'binary', extensions: {} },
         ].forEach(mimeType => {
             Mime.byMimeCode[mimeType.code] = mimeType;
             
@@ -149,7 +148,7 @@ register('', class Mime {
             return Mime.byExtension[lower.substr(1)];
         }
 
-        return Mime.byMimeCode['unknown/unknown'];
+        return Mime.byMimeCode['application/octet-stream'];
     }
 
     getType() {

@@ -72,30 +72,33 @@ singleton('', class FileSystem extends Emitter {
     }
 
     async isDirectory(path) {
-        if (await this.pathExists(path)) {
+        try {
             let stats = await LibFiles.promises.stat(path);
             return stats.isDirectory();
         }
-    
-        return false;
+        catch (e) {
+            return false;
+        }
     }
 
     async isFile(path) {
-        if (await this.pathExists(path)) {
+        try {
             let stats = await LibFiles.promises.stat(path);
             return stats.isFile();
         }
-    
-        return false;
+        catch (e) {
+            return false;
+        }
     }
 
     async isLink(path) {
-        if (await this.pathExists(path)) {
+        try {
             let stats = await LibFiles.promises.stat(path);
             return stats.isSymbolicLink();
         }
-    
-        return false;
+        catch (e) {
+            return false;
+        }
     }
 
     async openDirectory(path, recursive) {

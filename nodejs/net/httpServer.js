@@ -56,6 +56,8 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
     constructor() {
         super();
 
+        // **********************************************************************
+        // **********************************************************************
         // ITERATE OVER all addresses and ports.
         display('\n**********  Iterate over all addresses and ports.\n');
         if (this.settings.tls instanceof Tls) {
@@ -76,6 +78,8 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
             this.server.listen(this.settings.port, this.settings.addr);
             this.server.on('upgrade', (httpReq) => this.onUpgrade(httpRsp));
         }
+        // **********************************************************************
+        // **********************************************************************
     }
 
     getLibEntries() {
@@ -96,50 +100,27 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
     }
 
     async handleRequest(httpReq, httpRsp) {
-        const req = mkHttpRequest(this, httpReq);
-        const rsp = mkHttpResponse(this, httpRsp);
-        const httpItem = this.httpLibrary.getItem(req.getPath());
+        try {
+            const req = mkHttpRequest(this, httpReq);
+            const rsp = mkHttpResponse(this, httpRsp);
+            let response = await this.httpLibrary.handle(req);
 
-        if (httpItem) {
-            try {
-                for (let httpFilter of this.httpLibrary) {
-                    let filterResult = await httpFilter.exec(req, httpItem);
-
-                    if (filterResult === true) {
-                        continue;
-                    }
-                    else if (typeof filterResult == 'object') {
-                        rsp.respond(filterResult.status, filterResult.mime, filterResult.content);
-                        return;
-                    }
-                    else if (typeof filterResult == 'number') {
-                        rsp.respondStatus(filterResult);
-                        return;
-                    }
-                    else {
-                        rsp.respondStatus(400);
-                        return;
-                    }
-                }
-
-                let response = await httpItem[`handle${req.getMethod()}`](req);
-
-                if (typeof response == 'number') {
-                    rsp.respondStatus(response);
-                }
-                else {
-                    response.contentEncoding ? rsp.setContentEncoding(response.contentEncoding) : null;
-                    response.contentLength ? rsp.setHeader('Content-Length', response.contentLength) : null;
-                    rsp.respond(response.status, response.mime, response.content);
-                }
+            if (typeof response == 'number') {
+                rsp.respondStatus(response);
             }
-            catch (e) {
-                await caught(e);
-                rsp.respndStatus(500);
+            else {
+                rsp.respond(
+                    response.status,
+                    response.contentType,
+                    response.contentEncoding,
+                    response.contentCharset,
+                    response.content,
+                );
             }
         }
-        else {
-            rsp.respondStatus(404);
+        catch (e) {
+            caught(e);
+            rsp.respondStatus(500);
         }
     }
 
@@ -172,8 +153,7 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
             this.httpStatusResponses.default = mkTextTemplate(text);
         }
 
-        this.httpLibrary = await mkHttpLibrary();
-        await this.httpLibrary.init(this.settings.libSettings, this.settings.libEntries);
+        this.httpLibrary = await mkHttpLibrary().init(this);
         return this;
     }
 
@@ -580,29 +560,9 @@ registerIn('HttpServerWorker', '', class HttpResponse {
         return this;
     }
 
-    respond(...args) {
-        let status;
-        let contentType;
-        let charset;
-        let content;
-
-        if (args.length == 3) {
-            status = args[0];
-            contentType = args[1];
-            content = args[2];
-        }
-        else if (args.length > 3) {
-            status = args[0];
-            contentType = args[1];
-            charset = args[2];
-            content = args[3];
-        }
-        else {
-            this.respondStatus(500);
-            return;
-        }
-
-        this.setContentType(contentType, charset);
+    respond(status, contentType, contentEncoding, contentCharset, content) {
+        this.setContentType(contentType, contentCharset ? contentCharset : '');
+        this.setContentEncoding(contentEncoding ? contentEncoding : '');
         this.httpRsp.writeHead(status);
         this.httpRsp.end(content);
     }
@@ -620,7 +580,7 @@ registerIn('HttpServerWorker', '', class HttpResponse {
         let template = this.httpServer.getStatusResponseTemplate(statusCode);
         
         if (statusCode in HttpResponse.statusCodes) {
-            this.respond(statusCode, 'text/html', template.toString({
+            this.respond(statusCode, 'text/html', '', '', template.toString({
                 statusCode: statusCode,
                 statusText: HttpResponse.statusCodes[statusCode].text,
             }));
@@ -628,7 +588,7 @@ registerIn('HttpServerWorker', '', class HttpResponse {
         else {
             statusCode = 500;
 
-            this.respond(statusCode, 'text/html', template.toString({
+            this.respond(statusCode, 'text/html', '', '', template.toString({
                 statusCode: statusCode,
                 statusText: HttpResponse.statusCodes[statusCode].text,
             }));

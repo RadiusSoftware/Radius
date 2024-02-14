@@ -65,6 +65,7 @@ require('./acme.js');
 require('./application.js');
 require('./element.js');
 
+require('./net/httpX.js');
 require('./net/httpLibrary.js');
 require('./net/httpClient.js');
 require('./net/httpServer.js');
