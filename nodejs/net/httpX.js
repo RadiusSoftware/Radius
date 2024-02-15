@@ -28,4 +28,8 @@ register('', class HttpX extends Emitter {
     constructor() {
         super();
     }
+
+    async handleGET(req) {
+        return 200;
+    }
 });

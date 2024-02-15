@@ -175,15 +175,9 @@ register('', function fromJson(json) {
                 return new RegExp(value['#REGEX']);
             }
             else if ('#FUNC' in value) {
-                try {
-                    let func;
-                    eval('func=' + mkBuffer(value['#FUNC'], 'base64').toString());
-                    return func;
-                }
-                catch (e) {
-                    caught(e);
-                    return mkBuffer(value['#FUNC'], 'base64').toString();
-                }
+                let func;
+                eval('func=' + mkBuffer(value['#FUNC'], 'base64').toString());
+                return func;
             }
             else if ('#BUFFER' in value) {
                 return mkBuffer(value['#BUFFER'], 'base64');

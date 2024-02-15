@@ -100,9 +100,12 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
     }
 
     async handleRequest(httpReq, httpRsp) {
+        let req;
+        let rsp;
+
         try {
-            const req = mkHttpRequest(this, httpReq);
-            const rsp = mkHttpResponse(this, httpRsp);
+            req = mkHttpRequest(this, httpReq);
+            rsp = mkHttpResponse(this, httpRsp);
             let response = await this.httpLibrary.handle(req);
 
             if (typeof response == 'number') {

@@ -67,6 +67,7 @@ registerIn('HttpServer', '', class HttpLibrary {
             once: libEntry.once === true,
             auth: libEntry.auth ? libEntry.auth : {},
             cache: { '': data },
+            watches: [],
         }
 
         return this;
@@ -84,6 +85,7 @@ registerIn('HttpServer', '', class HttpLibrary {
                     once: libEntry.once === true,
                     auth: libEntry.auth ? libEntry.auth : {},
                     cache: {},
+                    watches: [],
                 };
             };
         }
@@ -96,6 +98,7 @@ registerIn('HttpServer', '', class HttpLibrary {
                 once: libEntry.once === true,
                 auth: libEntry.auth ? libEntry.auth : {},
                 cache: {},
+                watches: [],
             };
         }
 
@@ -115,14 +118,23 @@ registerIn('HttpServer', '', class HttpLibrary {
         }
 
         if (clssName) {
-            this.paths[libEntry.path] = {
+            let entry = {
                 type: 'httpx',
                 path: libEntry.path,
                 mime: null,
                 once: libEntry.once === true,
                 auth: libEntry.auth ? libEntry.auth : {},
                 cache: { '': clssName },
-            }
+                watches: [],
+            };
+
+            this.paths[libEntry.path] = entry;
+            this.shared[libEntry.path] = entry;
+
+            Process.sendChildren({
+                name: 'HttpLibraryAdd',
+                libEntry: libEntry,
+            });
         }
         else {
             log(`Unable add HttpX libEntry to HttpLibrary.`, toJson(libEntry));
@@ -144,11 +156,17 @@ registerIn('HttpServer', '', class HttpLibrary {
             return method == 'GET';
         }
         else if (libEntry.type == 'httpx') {
+            return true;
         }
     }
 
     clearAuthHandler() {
         this.authHandler = () => true;
+        return this;
+    }
+
+    clearWatch(path) {
+        return this;
     }
 
     getAuthHandler() {
@@ -170,32 +188,31 @@ registerIn('HttpServer', '', class HttpLibrary {
     async getData(info) {
         try {
             let content;
-            let encoding = '';
-            
-            for (let key in info.encoding) {
-                if (Compression.isSupported(key)) {
-                    encoding = key;
-                    break;
-                }
-            }
 
-            if (encoding in info.libEntry.cache) {
-                content = info.libEntry.cache[encoding].content;
+            if (info.encoding in info.libEntry.cache) {
+                content = info.libEntry.cache[info.encoding].content;
             }
             else {
                 let raw = info.libEntry.cache[''];
-                content = await Compression.compress(encoding, raw);
 
-                if (content.length < this.getCacheMaxSizeMb()*1024*1024) {
-                    info.libEntry.cache[encoding] = { content: content };
-                    this.touch(info.libEntry.cache[encoding]);
+                if (info.encoding != '') {
+                    content = await Compression.compress(info.encoding, raw);
+
+                    if (content.length < this.getCacheMaxSizeMb()*1024*1024) {
+                        info.libEntry.cache[info.encoding] = { content: content };
+                        this.touch(info.libEntry.cache[info.encoding]);
+                    }
+                }
+                else {
+                    content = raw;
                 }
             }
 
             return {
+                type: 'data',
                 status: 200,
                 contentType: info.libEntry.mime.code,
-                contentEncoding: encoding,
+                contentEncoding: info.encoding,
                 contentCharset: '',
                 content: content,
             };
@@ -209,17 +226,9 @@ registerIn('HttpServer', '', class HttpLibrary {
     async getFile(info) {
         try {
             let content;
-            let encoding = '';
-            
-            for (let key in info.encoding) {
-                if (Compression.isSupported(key)) {
-                    encoding = key;
-                    break;
-                }
-            }
 
-            if (encoding in info.libEntry.cache) {
-                content = info.libEntry.cache[encoding].content;
+            if (info.encoding in info.libEntry.cache) {
+                content = info.libEntry.cache[info.encoding].content;
             }
             else {
                 let raw = info.libEntry.cache[''];
@@ -228,23 +237,29 @@ registerIn('HttpServer', '', class HttpLibrary {
                     raw = await FileSystem.readFile(info.libEntry.fspath);
                 }
 
-                content = await Compression.compress(encoding, raw);
-
                 if (raw.length < this.getCacheMaxSizeMb()*1024*1024) {
                     info.libEntry.cache[''] = { content: raw };
                     this.touch(info.libEntry.cache['']);
                 }
 
-                if (content.length < this.getCacheMaxSizeMb()*1024*1024) {
-                    info.libEntry.cache[encoding] = { content: content };
-                    this.touch(info.libEntry.cache[encoding]);
+                if (info.encoding != '') {
+                    content = await Compression.compress(info.encoding, raw);
+
+                    if (content.length < this.getCacheMaxSizeMb()*1024*1024) {
+                        info.libEntry.cache[info.encoding] = { content: content };
+                        this.touch(info.libEntry.cache[info.encoding]);
+                    }
+                }
+                else {
+                    content = raw;
                 }
             }
 
             return {
+                type: 'file',
                 status: 200,
                 contentType: info.libEntry.mime.code,
-                contentEncoding: encoding,
+                contentEncoding: info.encoding,
                 contentCharset: '',
                 content: content,
             };
@@ -255,11 +270,31 @@ registerIn('HttpServer', '', class HttpLibrary {
         }
     }
 
-    async getHttpX(libEntry) {
+    async getHttpX(info) {
+        try {
+            if (info.libEntry.type == 'httpx') {
+                return {
+                    type: 'httpx',
+                    path: info.libEntry.path,
+                    clss: info.libEntry.cache[''],
+                    encoding: info.encoding,
+                };
+            }
+
+            return 404;
+        }
+        catch (e) {
+            caught(e);
+            return 500;
+        }
+    }
+
+    async handleWatches(libEntry) {
     }
 
     async init(settings, libEntries) {
         this.paths = {};
+        this.shared = {};
         this.settings = settings;
         this.setAuthHandler(this.settings.authHandler);
 
@@ -281,6 +316,10 @@ registerIn('HttpServer', '', class HttpLibrary {
     async onAdd(message) {
     }
 
+    async onChildInit(message) {
+        return Object.values(this.shared);
+    }
+
     async onGet(message) {
         if (message.path in this.paths) {
             let libEntry = this.paths[message.path];
@@ -288,29 +327,39 @@ registerIn('HttpServer', '', class HttpLibrary {
             if (this.checkMethod(libEntry, message.method)) {
                 if (await this.checkAuth(libEntry)) {
                     let response;
+                    let encoding = '';
+            
+                    for (let key in message.encoding) {
+                        if (Compression.isSupported(key)) {
+                            encoding = key;
+                            break;
+                        }
+                    }
 
                     if (libEntry.type == 'data') {
                         response = await this.getData({
                             libEntry: libEntry,
-                            encoding: message.encoding,
-                            language: message.language,
+                            encoding: encoding,
                         });
                     }
                     else if (libEntry.type == 'file') {
                         response = await this.getFile({
                             libEntry: libEntry,
-                            encoding: message.encoding,
-                            language: message.language,
+                            encoding: encoding,
                         });
                     }
                     else if (libEntry.type == 'httpx') {
-                        response = await this.getHttpX(libEntry);
+                        response = await this.getHttpX({
+                            libEntry: libEntry,
+                            encoding: encoding,
+                        });
                     }
 
                     if (libEntry.once) {
                         this.remove(libEntry.path);
                     }
 
+                    await this.handleWatches(libEntry);
                     return response;
                 }
                 else {
@@ -352,6 +401,8 @@ registerIn('HttpServer', '', class HttpLibrary {
 
     remove(path) {
         delete this.paths[path];
+        delete this.shared[path];
+        return this;
     }
 
     setAuthHandler(func) {
@@ -361,9 +412,23 @@ registerIn('HttpServer', '', class HttpLibrary {
         else {
             this.authHandler = () => true;
         }
+
+        return this;
+    }
+
+    setWatch(path) {
+        return this;
     }
 
     touch(libEntry) {
+        if (libEntry.type == 'data') {
+        }
+        else if (libEntry.type == 'file') {
+        }
+        else if (libEntry.type == 'httpx') {
+        }
+
+        return this;
     }
 });
 
@@ -372,6 +437,7 @@ registerIn('HttpServer', '', class HttpLibrary {
 *****/
 registerIn('HttpServerWorker', '', class HttpLibrary {
     constructor() {
+        this.paths = {};
         mkHandlerProxy(Process, 'HttpLibrary', this);
     }
 
@@ -384,15 +450,6 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
     async addHttpX(libEntry) {
     }
 
-    async awaitData(libEntry) {
-    }
-
-    async awaitFile(libEntry) {
-    }
-
-    async awaitHttpX(libEntry) {
-    }
-
     async handle(req) {
         let response = await Process.callParent({
             name: 'HttpLibraryGet',
@@ -402,17 +459,74 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
             language: req.getAcceptLanguage(),
         });
 
-        return response;
+        if (typeof response == 'number') {
+            return response;
+        }
+        else if (typeof response == 'object') {
+            if (response.type == 'data') {
+                return response;
+            }
+            else if (response.type == 'file') {
+                return response;
+            }
+            else if (response.type == 'httpx') {
+                return await this.handleHttpX(response, req);
+            }
+            else {
+                return 410;
+            }
+        }
+        else {
+            return 400;
+        }
+    }
+
+    async handleHttpX(httpXInfo, req) {
+        const httpX = this.paths[httpXInfo.path];
+        const method = `handle${req.getMethod()}`;
+
+        if (typeof httpX[method] == 'function') {
+            let httpXResponse = await httpX[method](req);
+            return httpXResponse;
+        }
+        else {
+            return 405;
+        }
     }
 
     async init(httpServer) {
         this.httpServer = httpServer;
+
+        try {
+            for (let libEntry of await Process.callParent({ name: 'HttpLibraryChildInit' })) {
+                if (libEntry.type == 'httpx') {
+                    let httpX;
+                    eval(`httpX = mk${libEntry.cache['']}()`);
+                    this.paths[libEntry.path] = httpX;
+                }
+            }
+        }
+        catch (e) {
+            caught(e);
+        }
+
         return this;
+    }
+
+    async onAdd(message) {
+        console.log(message);
+    }
+
+    async onRemove(message) {
+        console.log(message);
     }
 
     async refresh(path) {
     }
 
     async remove(path) {
+    }
+
+    async watch(path) {
     }
 });
