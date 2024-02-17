@@ -69,5 +69,6 @@ require('./net/httpX.js');
 require('./net/httpLibrary.js');
 require('./net/httpClient.js');
 require('./net/httpServer.js');
+require('./net/webSocket.js');
 require('./net/tcpClient.js');
 require('./net/tcpServer.js');

@@ -25,7 +25,11 @@ const LibPath = require('path');
 /*****
 *****/
 registerIn('HttpServer', '', class HttpLibrary {
+    static watches = {};
+    static nextWatchId = 1;
+
     constructor() {
+        this.watches = mkEmitter();
         mkHandlerProxy(Process, 'HttpLibrary', this);
     }
 
@@ -65,9 +69,10 @@ registerIn('HttpServer', '', class HttpLibrary {
             path: libEntry.path,
             mime: mime,
             once: libEntry.once === true,
+            timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
             auth: libEntry.auth ? libEntry.auth : {},
             cache: { '': data },
-            watches: [],
+            watches: {},
         }
 
         return this;
@@ -83,9 +88,10 @@ registerIn('HttpServer', '', class HttpLibrary {
                     fspath: fspath,
                     mime: mkMime(LibPath.extname(fspath)),
                     once: libEntry.once === true,
+                    timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
                     auth: libEntry.auth ? libEntry.auth : {},
                     cache: {},
-                    watches: [],
+                    watches: {},
                 };
             };
         }
@@ -96,9 +102,10 @@ registerIn('HttpServer', '', class HttpLibrary {
                 fspath: libEntry.fspath,
                 mime: mkMime(LibPath.extname(libEntry.fspath)),
                 once: libEntry.once === true,
+                timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
                 auth: libEntry.auth ? libEntry.auth : {},
                 cache: {},
-                watches: [],
+                watches: {},
             };
         }
 
@@ -123,9 +130,10 @@ registerIn('HttpServer', '', class HttpLibrary {
                 path: libEntry.path,
                 mime: null,
                 once: libEntry.once === true,
+                timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
                 auth: libEntry.auth ? libEntry.auth : {},
                 cache: { '': clssName },
-                watches: [],
+                watches: {},
             };
 
             this.paths[libEntry.path] = entry;
@@ -143,9 +151,20 @@ registerIn('HttpServer', '', class HttpLibrary {
         return this;
     }
 
-    async checkAuth(libEntry, authObj) {
-        let response = this.authHandler(libEntry, authObj); 
-        return response instanceof Promise ? await response :response;
+    async checkAuth(libEntry, reqHeaders) {
+        if (typeof libEntry.auth == 'object') {
+            try {
+                let response = this.authHandler(libEntry, reqHeaders);
+                return response instanceof Promise ? await response : response;
+            }
+            catch (e) {
+                caught(e);
+                return false;
+            }
+        }
+        else {
+            return true;
+        }
     }
 
     checkMethod(libEntry, method) {
@@ -158,6 +177,8 @@ registerIn('HttpServer', '', class HttpLibrary {
         else if (libEntry.type == 'httpx') {
             return true;
         }
+
+        return false;
     }
 
     clearAuthHandler() {
@@ -165,7 +186,13 @@ registerIn('HttpServer', '', class HttpLibrary {
         return this;
     }
 
-    clearWatch(path) {
+    clearWatch(handle) {
+        // watches feature
+        return this;
+    }
+
+    clearWatches(path) {
+        // watches feature
         return this;
     }
 
@@ -200,7 +227,7 @@ registerIn('HttpServer', '', class HttpLibrary {
 
                     if (content.length < this.getCacheMaxSizeMb()*1024*1024) {
                         info.libEntry.cache[info.encoding] = { content: content };
-                        this.touch(info.libEntry.cache[info.encoding]);
+                        this.touch(info.libEntry, info.encoding);
                     }
                 }
                 else {
@@ -239,7 +266,7 @@ registerIn('HttpServer', '', class HttpLibrary {
 
                 if (raw.length < this.getCacheMaxSizeMb()*1024*1024) {
                     info.libEntry.cache[''] = { content: raw };
-                    this.touch(info.libEntry.cache['']);
+                    this.touch(info.libEntry, '');
                 }
 
                 if (info.encoding != '') {
@@ -247,7 +274,7 @@ registerIn('HttpServer', '', class HttpLibrary {
 
                     if (content.length < this.getCacheMaxSizeMb()*1024*1024) {
                         info.libEntry.cache[info.encoding] = { content: content };
-                        this.touch(info.libEntry.cache[info.encoding]);
+                        this.touch(info.libEntry, info.encoding);
                     }
                 }
                 else {
@@ -290,6 +317,7 @@ registerIn('HttpServer', '', class HttpLibrary {
     }
 
     async handleWatches(libEntry) {
+        // watches feature
     }
 
     async init(settings, libEntries) {
@@ -325,7 +353,7 @@ registerIn('HttpServer', '', class HttpLibrary {
             let libEntry = this.paths[message.path];
             
             if (this.checkMethod(libEntry, message.method)) {
-                if (await this.checkAuth(libEntry)) {
+                if (await this.checkAuth(libEntry, message.headers)) {
                     let response;
                     let encoding = '';
             
@@ -381,9 +409,6 @@ registerIn('HttpServer', '', class HttpLibrary {
     async onRemove(message) {
     }
 
-    async onWatch(message) {
-    }
-
     refresh(path) {
         if (path in this.paths) {
             let libEntry = this.paths[path];
@@ -400,6 +425,12 @@ registerIn('HttpServer', '', class HttpLibrary {
     }
 
     remove(path) {
+        let libEntry = this.paths[path];
+
+        if (timer in libEntry.cache) {
+            clearTimeout(libEntry.cache.timer);
+        }
+
         delete this.paths[path];
         delete this.shared[path];
         return this;
@@ -416,19 +447,32 @@ registerIn('HttpServer', '', class HttpLibrary {
         return this;
     }
 
-    setWatch(path) {
+    touch(libEntry, encoding) {
+        let duration;
+
+        if (typeof libEntry.timeout == 'number') {
+            duration = libEntry.timeout;
+        }
+        else {
+            duration = this.getCacheDurationMs();
+        }
+
+        if (duration > 0) {
+            if (libEntry.cache[encoding].timer) {
+                clearTimeout(libEntry.cache[encoding].timer);
+            }
+
+            libEntry.cache[encoding].timer = setTimeout(() => {
+                delete libEntry.cache[encoding];
+            }, duration);
+        }
+
         return this;
     }
 
-    touch(libEntry) {
-        if (libEntry.type == 'data') {
-        }
-        else if (libEntry.type == 'file') {
-        }
-        else if (libEntry.type == 'httpx') {
-        }
-
-        return this;
+    watch(path) {
+        // watches feature
+        // return watch handle
     }
 });
 
@@ -450,6 +494,12 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
     async addHttpX(libEntry) {
     }
 
+    async clearWatch(handle) {
+    }
+
+    async clearWatches(path) {
+    }
+
     async handle(req) {
         let response = await Process.callParent({
             name: 'HttpLibraryGet',
@@ -457,6 +507,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
             method: req.getMethod(),
             encoding: req.getAcceptEncoding(),
             language: req.getAcceptLanguage(),
+            headers: req.getHeaders(),
         });
 
         if (typeof response == 'number') {
@@ -527,6 +578,6 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
     async remove(path) {
     }
 
-    async watch(path) {
+    async setWatch(path) {
     }
 });
