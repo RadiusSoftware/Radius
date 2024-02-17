@@ -97,7 +97,7 @@ register('', class Application extends Emitter {
 
     sendWorker(worker, message) {
         const name = message.name;
-        message.name = `${this.appName}WorkerOn${name}`;
+        message.name = `${this.appName}${name}`;
         worker.sendChild(message);
         message.name = name;
         return this;

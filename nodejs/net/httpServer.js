@@ -27,6 +27,13 @@ const LibUrl = require('url');
 
 
 /*****
+ * The HTTP server primary process object's features and tasks are performed
+ * primarily by nodejs's builtin HTTP module features.  In fact, nodejs does
+ * not require any developer code in order the configure the HTTP server.  All
+ * work is performed in the worker processes.  In essence, the HttpServer
+ * class is a stub that makes the HttpServer fit the mold of what an application
+ * looks like in the Radius framework.  The main HttpServer provides features
+ * related to managing and executing watches.
 *****/
 singletonIn('HttpServer', '', class HttpServer extends Application {
     constructor() {
@@ -47,43 +54,92 @@ singletonIn('HttpServer', '', class HttpServer extends Application {
         await super.init();
         return this;
     }
+
+    async onResponded(message) {
+        let reply = {
+            name: 'Responded',
+            path: message.path,
+        };
+
+        for (let worker of this) {
+            this.sendWorker(worker, reply);
+        }
+    }
 });
 
 
 /*****
+ * The HTTP server worker is implemented as a feature-rich wrapper for the basic
+ * nodejs HTTP server framework.  Each HTTP worker may be configured to listen on
+ * more than a single netInterface, which is defined as the intersection of an
+ * IP address and  a port.  Each netInterface may have it's TLS settings on or.
+ * When on, each TLS setting may have its own certificate, as necessary.
+ * 
+ * The HttpServerWorker is responsible for handling and responsing to server
+ * requests as well as sharing responsibility for managing and executing watches
+ * with the primary HttpServer process.  The HttpServerWorker is responsible
+ * for handling requests to upgrade to a websocket connection.  If the server
+ * application registers a handler to upgrade events, the websocket upgrade
+ * request will be authorized and excuted.
 *****/
 singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWorker {
     constructor() {
         super();
+        this.watches = {};
+        this.setUpgradeHandler(this.settings.upgradeHandler);
 
-        // **********************************************************************
-        // **********************************************************************
-        // ITERATE OVER all addresses and ports.
-        display('\n**********  Iterate over all addresses and ports.\n');
-        if (this.settings.tls instanceof Tls) {
-            this.scheme = 'https';
+        for (let netInterface of this.getInterfaces()) {
+            if (netInterface.tls instanceof Tls) {
+                this.scheme = 'https';
 
-            this.server = LibHttps.createServer({
-                key: this.settings.getPrivateKey(),
-                cert: this.settings.getCert(),
-                ca: this.settings.getCaCert(),
-            }, (httpReq, httpRsp) => this.handleRequest(httpReq, httpRsp));
+                this.server = LibHttps.createServer({
+                    key: netInterface.getPrivateKey(),
+                    cert: netInterface.getCert(),
+                    ca: netInterface.getCaCert(),
+                }, (httpReq, httpRsp) => this.handleRequest(httpReq, httpRsp));
 
-            this.server.listen(this.settings.port, this.settings.addr);
-            this.server.on('upgrade', (...args) => this.onUpgrade(...args));
+                this.server.listen(netInterface.port, netInterface.addr);
+                this.server.on('upgrade', (...args) => this.onUpgrade(...args));
+            }
+            else {
+                this.scheme = 'http';
+                this.server = LibHttp.createServer({}, (...args) => this.handleRequest(...args));
+                this.server.listen(netInterface.port, netInterface.addr);
+                this.server.on('upgrade', (httpReq) => this.onUpgrade(httpRsp));
+            }
         }
-        else {
-            this.scheme = 'http';
-            this.server = LibHttp.createServer({}, (...args) => this.handleRequest(...args));
-            this.server.listen(this.settings.port, this.settings.addr);
-            this.server.on('upgrade', (httpReq) => this.onUpgrade(httpRsp));
+    }
+
+    clearUpgradeHandler() {
+        this.upgradeHandler = null;
+        return thisl;
+    }
+
+    clearWatch(path, handler) {
+        if (typeof path == 'string' && typeof handler == 'function') {
+            let watches = this.watches[path];
+            
+            if (watches) {
+                for (let i = 0; i < watches.length; i++) {
+                    let watch = watches[i];
+
+                    if (handler === watch.handler) {
+                        watches.splice(i, 1);
+                        return this;
+                    }
+                }
+            };
         }
-        // **********************************************************************
-        // **********************************************************************
+
+        return this;
     }
 
     getLibEntries() {
         return this.settings.libEntries;
+    }
+
+    getInterfaces() {
+        return this.settings.interfaces;
     }
 
     getLibSettings() {
@@ -97,6 +153,10 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
         else {
             return this.httpStatusResponses.default;
         }
+    }
+
+    getUpgradHandler() {
+        return this.upgradeHandler;
     }
 
     async handleRequest(httpReq, httpRsp) {
@@ -119,6 +179,11 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
                     response.contentCharset,
                     response.content,
                 );
+
+                this.sendApp({
+                    name: 'Responded',
+                    path: req.getPath(),
+                });
             }
         }
         catch (e) {
@@ -164,25 +229,89 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWo
         return this.settings.tls instanceof Tls;
     }
 
-    async onUpgrade(httpReq, socket, headPacket) {
-        /*
-        let req = await mkHttpRequest(this, httpReq);
-        let webItem = await WebLibrary.get(req.pathname());
+    onResponded(message) {
+        if (message.path in this.watches) {
+            let watches = this.watches[message.path];
 
-        if (webItem && webItem instanceof Webx) {
-            try {
-                await webItem.upgrade(req, socket, headPacket);
-            }
-            catch (e) {
-                log(`Web Socket Upgrade Request Error: ${req.url()}`, e);
+            for (let i = 0; i < watches.length; i++) {
+                let watch = watches[i];
+                watch.handler(message);
+
+                if (watch.once) {
+                    watches.splice(i, 1);
+                }
+             }
+        }
+    }
+
+    async onUpgrade(httpReq, socket, headPacket) {
+        try {
+            if (this.upgradeHandler) {
+                await this.upgradeHandler(req, socket, headPacket);
             }
         }
-        */
+        catch (e) {
+            caught(e);
+        }
+    }
+
+    setUpgradeHandler(upgradeHandler) {
+        if (typeof upgradeHandler == 'function') {
+            this.upgradeHandler = upgradeHandler;
+        }
+        else {
+            this.upgradeHandler = null;
+        }
+
+        return this;
+    }
+
+    setWatch(...args) {
+        let path = args[0]
+        let once = true;
+        let handler;
+
+        if (args.length == 2) {
+            handler = args[1];
+        }
+        else if (args.length == 3 && typeof args[1] == 'boolean') {
+            once = args[1];
+            handler = args[2];
+        }
+
+        if (typeof path == 'string' && typeof handler == 'function') {
+            let watchEntry;
+
+            if (path in this.watches) {
+                watchEntry = this.watches[path];
+            }
+            else {
+                this.watches[path] = watchEntry = [];
+            }
+
+            watchEntry.push({
+                path: path,
+                once: once,
+                handler: handler,
+            });
+        }
+
+        return this;
     }
 
     async start() {
         await super.start();
         return this;
+    }
+
+    watch(path) {
+        let trap = mkTrap(1);
+
+        this.setWatch(path, message => {
+            trap.handleResponse('');
+        });
+
+        return trap.promise;
     }
 });
 
