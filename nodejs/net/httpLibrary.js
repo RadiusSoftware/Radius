@@ -23,14 +23,32 @@ const LibPath = require('path');
 
 
 /*****
+ * This is the HttpLibrary class associated with the HttpServerWorker.  Content
+ * types that are serializable, such as files and static data objects, are NOT
+ * stored here.  Content types that are "active" objects, which are called by
+ * the HTTP server to dynamically generate responses, such as HttpX, are ctored
+ * here in this process.  Regardless whether it's the HttpServer or the worker,
+ * all authorization and library management occurs fully or partially in the
+ * HttpServer, which is the main application process.  When removing an item,
+ * such as after a once is triggered, the main process will remove that item
+ * from the library and then if it's an HttpX entry, the main process instructs
+ * all children to remove  that instance from it's local set of paths.
 *****/
 registerIn('HttpServer', '', class HttpLibrary {
-    static watches = {};
-    static nextWatchId = 1;
-
     constructor() {
-        this.watches = mkEmitter();
         mkHandlerProxy(Process, 'HttpLibrary', this);
+    }
+
+    async add(libEntry) {
+        if (libEntry.type == 'data') {
+            await this.addData(libEntry);
+        }
+        else if (libEntry.type == 'file') {
+            await this.addFile(libEntry)
+        }
+        else if (libEntry.type == 'httpx') {
+            await this.addHttpX(libEntry);
+        }
     }
 
     async addData(libEntry) {
@@ -72,7 +90,6 @@ registerIn('HttpServer', '', class HttpLibrary {
             timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
             auth: libEntry.auth ? libEntry.auth : {},
             cache: { '': data },
-            watches: {},
         }
 
         return this;
@@ -91,7 +108,6 @@ registerIn('HttpServer', '', class HttpLibrary {
                     timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
                     auth: libEntry.auth ? libEntry.auth : {},
                     cache: {},
-                    watches: {},
                 };
             };
         }
@@ -105,7 +121,6 @@ registerIn('HttpServer', '', class HttpLibrary {
                 timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
                 auth: libEntry.auth ? libEntry.auth : {},
                 cache: {},
-                watches: {},
             };
         }
 
@@ -133,7 +148,6 @@ registerIn('HttpServer', '', class HttpLibrary {
                 timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
                 auth: libEntry.auth ? libEntry.auth : {},
                 cache: { '': clssName },
-                watches: {},
             };
 
             this.paths[libEntry.path] = entry;
@@ -183,16 +197,6 @@ registerIn('HttpServer', '', class HttpLibrary {
 
     clearAuthHandler() {
         this.authHandler = () => true;
-        return this;
-    }
-
-    clearWatch(handle) {
-        // watches feature
-        return this;
-    }
-
-    clearWatches(path) {
-        // watches feature
         return this;
     }
 
@@ -316,10 +320,6 @@ registerIn('HttpServer', '', class HttpLibrary {
         }
     }
 
-    async handleWatches(libEntry) {
-        // watches feature
-    }
-
     async init(settings, libEntries) {
         this.paths = {};
         this.shared = {};
@@ -327,21 +327,14 @@ registerIn('HttpServer', '', class HttpLibrary {
         this.setAuthHandler(this.settings.authHandler);
 
         for (let libEntry of libEntries) {
-            if (libEntry.type == 'data') {
-                await this.addData(libEntry);
-            }
-            else if (libEntry.type == 'file') {
-                await this.addFile(libEntry)
-            }
-            else if (libEntry.type == 'httpx') {
-                await this.addHttpX(libEntry);
-            }
+            await this.add(libEntry);
         }
 
         return this;
     }
 
     async onAdd(message) {
+        await this.add(message.libEntry);
     }
 
     async onChildInit(message) {
@@ -385,9 +378,12 @@ registerIn('HttpServer', '', class HttpLibrary {
 
                     if (libEntry.once) {
                         this.remove(libEntry.path);
+
+                        if (libEntry.type in { httpx:0 }) {
+                            response.once = true;
+                        }
                     }
 
-                    await this.handleWatches(libEntry);
                     return response;
                 }
                 else {
@@ -404,20 +400,29 @@ registerIn('HttpServer', '', class HttpLibrary {
     }
 
     async onRefresh(message) {
+        this.refresh(message.path);
     }
 
     async onRemove(message) {
+        this.refresh(message.path);
     }
 
     refresh(path) {
         if (path in this.paths) {
             let libEntry = this.paths[path];
 
-            if (libEntry.type == 'data') {
-            }
-            else if (libEntry.type == 'file') {
-            }
-            else if (libEntry.type == 'httpx') {
+            if (libEntry.type in { data:0, file:0 }) {
+                let cache = libEntry.cache;
+
+                for (let encoding in cache) {
+                    if ('timer' in cache[encoding]) {
+                        clearTimeout(cache[encoding].timer);
+                    }
+                }
+
+                for (let encoding in cache) {
+                    delete cache[encoding];
+                }
             }
         }
 
@@ -427,8 +432,14 @@ registerIn('HttpServer', '', class HttpLibrary {
     remove(path) {
         let libEntry = this.paths[path];
 
-        if (timer in libEntry.cache) {
-            clearTimeout(libEntry.cache.timer);
+        if (libEntry.type in { data:0, file:0 }) {
+            let cache = libEntry.cache;
+
+            for (let encoding in cache) {
+                if ('timer' in cache[encoding]) {
+                    clearTimeout(cache[encoding].timer);
+                }
+            }
         }
 
         delete this.paths[path];
@@ -469,15 +480,20 @@ registerIn('HttpServer', '', class HttpLibrary {
 
         return this;
     }
-
-    watch(path) {
-        // watches feature
-        // return watch handle
-    }
 });
 
 
 /*****
+ * This is the HttpLibrary class associated with the HttpServerWorker.  Content
+ * types that are serializable, such as files and static data objects, are NOT
+ * stored here.  Content types that are "active" objects, which are called by
+ * the HTTP server to dynamically generate responses, such as HttpX, are ctored
+ * here in this process.  Regardless whether it's the HttpServer or the worker,
+ * all authorization and library management occurs fully or partially in the
+ * HttpServer, which is the main application process.  When removing an item,
+ * such as after a once is triggered, the main process will remove that item
+ * from the library and then if it's an HttpX entry, the main process instructs
+ * all children to remove  that instance from it's local set of paths.
 *****/
 registerIn('HttpServerWorker', '', class HttpLibrary {
     constructor() {
@@ -485,19 +501,19 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
         mkHandlerProxy(Process, 'HttpLibrary', this);
     }
 
-    async addData(libEntry) {
+    async add(libEntry) {
+        await Process.sendParent({
+            name: 'HttpLibraryAdd',
+            libEntry: libEntry,
+        })
     }
 
-    async addFile(libEntry) {
-    }
-
-    async addHttpX(libEntry) {
-    }
-
-    async clearWatch(handle) {
-    }
-
-    async clearWatches(path) {
+    async addInternal(libEntry) {
+        if (libEntry.type == 'httpx') {
+            let httpX;
+            eval(`httpX = mk${libEntry.cache['']}()`);
+            this.paths[libEntry.path] = httpX;
+        }
     }
 
     async handle(req) {
@@ -538,6 +554,11 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
 
         if (typeof httpX[method] == 'function') {
             let httpXResponse = await httpX[method](req);
+
+            if (httpXInfo.once === true) {
+                delete this.paths[httpXInfo.path];
+            }
+
             return httpXResponse;
         }
         else {
@@ -550,11 +571,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
 
         try {
             for (let libEntry of await Process.callParent({ name: 'HttpLibraryChildInit' })) {
-                if (libEntry.type == 'httpx') {
-                    let httpX;
-                    eval(`httpX = mk${libEntry.cache['']}()`);
-                    this.paths[libEntry.path] = httpX;
-                }
+                await this.addInternal(libEntry);
             }
         }
         catch (e) {
@@ -565,19 +582,20 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
     }
 
     async onAdd(message) {
-        console.log(message);
-    }
-
-    async onRemove(message) {
-        console.log(message);
+        this.addInternal(message.libEntry);
     }
 
     async refresh(path) {
+        await Process.sendParent({
+            name: 'HttpLibraryRefresh',
+            path: path,
+        });
     }
 
     async remove(path) {
-    }
-
-    async setWatch(path) {
+        await Process.sendParent({
+            name: 'HttpLibraryRefresh',
+            path: path,
+        });
     }
 });
