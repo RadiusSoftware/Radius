@@ -48,12 +48,13 @@ require('../common/textTemplate.js');
 require('../common/textTree.js');
 require('../common/textUtils.js');
 require('../common/chronos.js');
+require('../common/api.js');
 require('../common/transaction.js');
 
 require('./crypto.js');
+require('./pool.js');
 require('./network.js');
 require('./host.js');
-require('./socket.js');
 require('./tls.js');
 require('./fileSystem.js');
 require('./tempFile.js');
@@ -65,6 +66,7 @@ require('./acme.js');
 require('./application.js');
 require('./element.js');
 
+require('./net/socket.js');
 require('./net/httpX.js');
 require('./net/httpLibrary.js');
 require('./net/httpClient.js');
@@ -72,3 +74,6 @@ require('./net/httpServer.js');
 require('./net/webSocket.js');
 require('./net/tcpClient.js');
 require('./net/tcpServer.js');
+
+require('./dbms/dbms.js');
+require('./dbms/postgres.js');

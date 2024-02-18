@@ -261,6 +261,7 @@
         'textUtils.js',
         'textTree.js',
         'chronos.js',
+        'api.js',
         'transation.js',
         
         'mozilla/win.js',
