@@ -22,22 +22,22 @@
 
 
 /*****
- * An application is a construct within the Radius server framework wherein
+ * A server is a construct within the Radius environmental framework wherein
  * there is a child of the controller process with that has zero or more child
  * processes called workers.  Yes, the terminology is like the builtin Cluster
  * module in nodeJS.  The difference is that there can be multiple differenet
- * applications on the server with different "main"  or "primary" application
- * processes.  An application has two different node classes.  Best practices
- * is to have an application-named class and its accompanying workers classes:
+ * radius servers on the server with different "main"  or "primary" server
+ * processes.  A server has two different node classes.  Best practices is to
+ * have a server-named class and its accompanying workers classes:
  * 
  *          HttpServer
  *          HttpServerWorker
  * 
  * Using the nodeclass feature of the Radius framework, execIn(), registerIn(),
- * and singletonIn() can be used segregate application code to the process node
+ * and singletonIn() can be used to segregate server code to the process node
  * class, in which it will execute;
 *****/
-register('', class Application extends Emitter {
+register('', class Server extends Emitter {
     constructor() {
         super();
         this.className = this.getClassName();
@@ -134,22 +134,22 @@ register('', class Application extends Emitter {
 
 
 /*****
- * An application is a construct within the Radius server framework wherein
+ * A server is a construct within the Radius environmental framework wherein
  * there is a child of the controller process with that has zero or more child
  * processes called workers.  Yes, the terminology is like the builtin Cluster
  * module in nodeJS.  The difference is that there can be multiple differenet
- * applications on the server with different "main"  or "primary" application
- * processes.  An application has two different node classes.  Best practices
- * is to have an application-named class and its accompanying workers classes:
+ * radius servers on the server with different "main"  or "primary" server
+ * processes.  A server has two different node classes.  Best practices is to
+ * have a server-named class and its accompanying workers classes:
  * 
  *          HttpServer
  *          HttpServerWorker
  * 
  * Using the nodeclass feature of the Radius framework, execIn(), registerIn(),
- * and singletonIn() can be used segregate application code to the process node
+ * and singletonIn() can be used to segregate server code to the process node
  * class, in which it will execute;
 *****/
-register('', class ApplicationWorker extends Emitter {
+register('', class ServerWorker extends Emitter {
     constructor() {
         super();
         this.state = 'paused';
@@ -229,45 +229,45 @@ register('', class ApplicationWorker extends Emitter {
 
 
 /*****
- * Starting an application is a non-obvious and coordinated task requiring the
+ * Starting a radius server is a non-obvious and coordinated task requiring the
  * correct seequence of operations in three different process nodes: (a) the
- * controller, (b) the main application node, and (c) the application worker nodes.
- * startApplication() can be called in any process to launch a new application.
- * Note that multiple instances of an application be launched on a host, with
- * the primary issue being that each instance may require full controll of one
- * resource such as a network interface's port.
+ * controller, (b) the main server node, and (c) the server worker nodes.
+ * startServer() can be called in any process to launch a new server process
+ * tree.  Note that multiple instances of a server may be launched on a host,
+ * with the primary issue being that each instance may require full control of
+ * one resource such as a network interface's port.
  * 
- * The startApplication() function sends a message to the controller, to inform
- * the controller that a request to launch application instance was initiated.
- * The controller then launches the application process via Process.fork().
- * What's created in the application's "primary" process.  The management of
- * worker processes is under the control the the application's "primary" process.
+ * The startServer() function sends a message to the controller, to inform the
+ * controller that a request to launch a new instance was initiated.  The
+ * controller then launches the server process via Process.fork().  What's
+ * created in the server's "primary" process.  The management of worker
+ * processes is under the control the the server's "primary" process.
  * 
- * Applications only work if the process's node class matches the application
- * class's class name.  For workers, that name is {application-class}Worker.
+ * Servers only work if the process's node class matches the server class's
+ * class name.  For workers, that name is {server-class}Worker.
 *****/
-register('', async function startApplication(fqClassName, settings) {
+register('', async function startServer(fqClassName, settings) {
     Process.sendController({
-        name: '#STARTAPPLICATION',
+        name: '#StartServer',
         fqClassName: fqClassName,
         settings: settings,
     });
 });
 
 execIn(Process.nodeClassController, () => {
-    Process.on('#STARTAPPLICATION', async message => {
+    Process.on('#StartServer', async message => {
         Process.fork(message.fqClassName, message.fqClassName, message.settings);
     });
 });
 
-Process.on('#SPAWNED', async message => {
+Process.on('#Spawned', async message => {
     let nodeClass = Process.getNodeClass();
     let settings = Process.getEnv(nodeClass, 'json');
 
     if (typeof settings == 'object') {
-        let application;
-        eval(`application = ${nodeClass}`);
-        await application.init();
-        await application.start();
+        let server;
+        eval(`server = ${nodeClass}`);
+        await server.init();
+        await server.start();
     }
 });

@@ -390,7 +390,7 @@ singleton('', class Process extends Emitter {
     }
 
     onChildSpawn(childProcess, message) {
-        childProcess.sendChild({ name: '#SPAWNED' });
+        childProcess.sendChild({ name: '#Spawned' });
         message.childProcess = childProcess;
         this.emit(message);
     }

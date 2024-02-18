@@ -70,6 +70,48 @@ singletonIn(Process.nodeClassController, 'radius', class Host {
     }
 
     async launchAdminMode() {
+        /*
+        startServer('HttpServer', {
+            deflang: 'en-US',
+            workers: 1,
+            interfaces: [
+                {
+                    addr: '0.0.0.0',
+                    port: 80,
+                    tls: false,
+                },
+            ],
+            upgradHandler: (...args) => mkWebSocket(...args),
+            libSettings: {
+                blockSizeMb: 50,
+                cacheMaxSizeMb: 100,
+                cacheDurationMs: 10*60*1000,
+                HttpStatusTemplates: false,
+                authHandler: (liEntry, req) => {
+                    return true;
+                },
+            },
+            libEntries: [
+                {
+                    type: 'file',
+                    path: '/colby/dog',
+                    fspath: '/Users/christoph/Documents/RadiusTest',
+                    once: false,
+                    timeout: 10*1000,
+                },
+                {
+                    type: 'file',
+                    path: '/special',
+                    fspath: '/Users/christoph/Documents/kodeJS.json',
+                    once: false,
+                    auth: {
+                        level: 1,
+                        group: { 17:0, 18:0, 110:0 },
+                    },
+                },
+            ],
+        });
+        */
     }
 
     async launchLiveMode() {

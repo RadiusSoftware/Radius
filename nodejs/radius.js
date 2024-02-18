@@ -63,7 +63,7 @@ require('./childProcess.js');
 require('./compression.js');
 require('./jose.js');
 require('./acme.js');
-require('./application.js');
+require('./server.js');
 require('./element.js');
 
 require('./net/socket.js');

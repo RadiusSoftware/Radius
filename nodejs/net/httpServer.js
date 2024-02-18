@@ -31,11 +31,11 @@ const LibUrl = require('url');
  * primarily by nodejs's builtin HTTP module features.  In fact, nodejs does
  * not require any developer code in order the configure the HTTP server.  All
  * work is performed in the worker processes.  In essence, the HttpServer
- * class is a stub that makes the HttpServer fit the mold of what an application
+ * class is a stub that makes the HttpServer fit the mold of what an server
  * looks like in the Radius framework.  The main HttpServer provides features
  * related to managing and executing watches.
 *****/
-singletonIn('HttpServer', '', class HttpServer extends Application {
+singletonIn('HttpServer', '', class HttpServer extends Server {
     constructor() {
         super();
         this.httpLibrary = mkHttpLibrary();
@@ -79,10 +79,10 @@ singletonIn('HttpServer', '', class HttpServer extends Application {
  * requests as well as sharing responsibility for managing and executing watches
  * with the primary HttpServer process.  The HttpServerWorker is responsible
  * for handling requests to upgrade to a websocket connection.  If the server
- * application registers a handler to upgrade events, the websocket upgrade
+ * server registers a handler to upgrade events, the websocket upgrade
  * request will be authorized and excuted.
 *****/
-singletonIn('HttpServerWorker', '', class HttpServerWorker extends ApplicationWorker {
+singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker {
     constructor() {
         super();
         this.watches = {};

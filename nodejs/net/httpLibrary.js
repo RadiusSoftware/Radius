@@ -29,7 +29,7 @@ const LibPath = require('path');
  * the HTTP server to dynamically generate responses, such as HttpX, are ctored
  * here in this process.  Regardless whether it's the HttpServer or the worker,
  * all authorization and library management occurs fully or partially in the
- * HttpServer, which is the main application process.  When removing an item,
+ * HttpServer, which is the main server process.  When removing an item,
  * such as after a once is triggered, the main process will remove that item
  * from the library and then if it's an HttpX entry, the main process instructs
  * all children to remove  that instance from it's local set of paths.
