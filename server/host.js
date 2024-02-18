@@ -20,6 +20,7 @@
  * THE SOFTWARE.
 *****/
 require('../nodejs/radius.js');
+const LibPath = require('path');
 
 
 /*****
@@ -69,8 +70,12 @@ singletonIn(Process.nodeClassController, 'radius', class Host {
         }
     }
 
+    getMode() {
+        if (this.mode == this.launchLiveMode) return 'live';
+        if (this.mode == this.launchAdminMode) return 'admin';
+    }
+
     async launchAdminMode() {
-        /*
         startServer('HttpServer', {
             deflang: 'en-US',
             workers: 1,
@@ -81,7 +86,7 @@ singletonIn(Process.nodeClassController, 'radius', class Host {
                     tls: false,
                 },
             ],
-            upgradHandler: (...args) => mkWebSocket(...args),
+            upgradHandler: null,
             libSettings: {
                 blockSizeMb: 50,
                 cacheMaxSizeMb: 100,
@@ -93,25 +98,13 @@ singletonIn(Process.nodeClassController, 'radius', class Host {
             },
             libEntries: [
                 {
-                    type: 'file',
-                    path: '/colby/dog',
-                    fspath: '/Users/christoph/Documents/RadiusTest',
-                    once: false,
-                    timeout: 10*1000,
-                },
-                {
-                    type: 'file',
-                    path: '/special',
-                    fspath: '/Users/christoph/Documents/kodeJS.json',
-                    once: false,
-                    auth: {
-                        level: 1,
-                        group: { 17:0, 18:0, 110:0 },
-                    },
+                    type: 'httpx',
+                    path: '/',
+                    module: LibPath.join(__dirname, './adminApp.js'),
+                    fqClassName: 'radius.AdminApp',
                 },
             ],
         });
-        */
     }
 
     async launchLiveMode() {
@@ -151,92 +144,3 @@ singletonIn(Process.nodeClassController, 'radius', class Host {
         }
     }
 });
-/*****
-*****
-register('', class MyWebExtension extends HttpX {
-    constructor() {
-        super();
-    }
-
-    async handleGET(req) {
-        return {
-            status: 200,
-            contentType: 'application/json',
-            contentEncoding: '',
-            contentCharset: '',
-            content: toJson({
-                why: 'Because we need it',
-                how: 'Increased efficiency and productivity',
-            }),
-        };
-    }
-});
-execIn(Process.nodeClassController, async () => {
-    console.log(`***********************************`);
-    console.log(`Test App -- Radius Framework nodejs`);
-    console.log(`***********************************\n`);
-
-    startApplication('HttpServer', {
-        deflang: 'en-US',
-        workers: 1,
-        interfaces: [
-            {
-                addr: '0.0.0.0',
-                port: 80,
-                tls: false,
-            },
-        ],
-        upgradHandler: (...args) => mkWebSocket(...args),
-        libSettings: {
-            blockSizeMb: 50,
-            cacheMaxSizeMb: 100,
-            cacheDurationMs: 10*60*1000,
-            HttpStatusTemplates: false,
-            authHandler: (liEntry, req) => {
-                return true;
-            },
-        },
-        libEntries: [
-            {
-                type: 'file',
-                path: '/colby/dog',
-                fspath: '/Users/christoph/Documents/RadiusTest',
-                once: false,
-                timeout: 10*1000,
-            },
-            {
-                type: 'file',
-                path: '/special',
-                fspath: '/Users/christoph/Documents/kodeJS.json',
-                once: false,
-                auth: {
-                    level: 1,
-                    group: { 17:0, 18:0, 110:0 },
-                },
-            },
-            {
-                type: 'data',
-                path: '/data',
-                data: mkBuffer('Hello Data'),
-            },
-            {
-                type: 'data',
-                path: '/object',
-                data: {
-                    hello: 'Object',
-                    today: 'yesterday',
-                },
-            },
-            {
-                type: 'httpx',
-                path: '/httpExtension',
-                clss: MyWebExtension,
-            },
-        ],
-    });
-});
-execIn('HttpServerWorker', async () => {
-    await HttpServerWorker.watch('/special');
-    console.log('\n*** GOT IT ***');
-});
-*/

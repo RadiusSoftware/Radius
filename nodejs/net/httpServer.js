@@ -27,6 +27,75 @@ const LibUrl = require('url');
 
 
 /*****
+ * Here's an example for the HTTP server settings:
+{
+    deflang: 'en-US',
+    workers: 1,
+    interfaces: [
+        {
+            addr: '127.0.0.1',
+            port: 80,
+            tls: false,
+        },
+        {
+            addr: '102.168.26.23',
+            port: 80,
+            tls: false,
+        },
+    ],
+    upgradHandler: (...args) => mkWebSocket(...args),
+    libSettings: {
+        blockSizeMb: 50,
+        cacheMaxSizeMb: 100,
+        cacheDurationMs: 10*60*1000,
+        HttpStatusTemplates: false,
+        authHandler: (liEntry, req) => {
+            return true;
+        },
+    },
+    libEntries: [
+        {
+            type: 'file',
+            path: '/colby/dog',
+            fspath: '/Users/christoph/Documents/RadiusTest',
+            once: false,
+            timeout: 10*1000,
+        },
+        {
+            type: 'file',
+            path: '/special',
+            fspath: '/Users/christoph/Documents/kodeJS.json',
+            once: false,
+            auth: {
+                level: 1,
+                group: { 17:0, 18:0, 110:0 },
+            },
+        },
+        {
+            type: 'data',
+            path: '/data',
+            data: mkBuffer('Hello Data'),
+        },
+        {
+            type: 'data',
+            path: '/object',
+            data: {
+                hello: 'Object',
+                today: 'yesterday',
+            },
+        },
+        {
+            type: 'httpx',
+            path: '/httpExtension',
+            module: '/absolute/path/to/module.js',
+            fqnClass: 'a.b.c.MyWebExtension',
+        },
+    ],
+}
+*****/
+
+
+/*****
  * The HTTP server primary process object's features and tasks are performed
  * primarily by nodejs's builtin HTTP module features.  In fact, nodejs does
  * not require any developer code in order the configure the HTTP server.  All

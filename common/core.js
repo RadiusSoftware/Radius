@@ -158,7 +158,8 @@
                 obj[makerName] = (...args) => Reflect.construct(arg, args);
                 obj[makerName]['#NS'] = ns;
                 obj[arg.name] = arg;
-                obj[arg.name]['#NAMESPACE'] = ns;
+                obj[arg.name]['#Namespace'] = ns;
+                obj.fqn = fqn;
             }
             else {
                 throw new Error(`register(), class name must start with an upper-case letter: ${arg.name}`);

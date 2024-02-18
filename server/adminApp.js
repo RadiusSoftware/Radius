@@ -29,6 +29,13 @@ register('radius', class AdminApp extends HttpX {
     }
 
     async handleGET(req) {
+        return {
+            status: 200,
+            contentType: 'text/plain',
+            contentEncoding: '',
+            contentCharset: '',
+            content: 'Hello Application',
+        };
     }
 
     async handlePOST(req) {

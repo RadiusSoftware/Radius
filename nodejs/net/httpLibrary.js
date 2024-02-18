@@ -128,26 +128,16 @@ registerIn('HttpServer', '', class HttpLibrary {
     }
 
     async addHttpX(libEntry) {
-        let clssName;
-
-        if (typeof libEntry.clss == 'function') {
-            if (Data.classExtends(libEntry.clss, HttpX)) {
-                clssName = libEntry.clss.name;
-            }
-        }
-        else if (typeof libEntry.clss == 'string') {
-            clssName = libEntry.clss;
-        }
-
-        if (clssName) {
+        if (libEntry.fqClassName) {
             let entry = {
                 type: 'httpx',
                 path: libEntry.path,
+                module: libEntry.module,
                 mime: null,
                 once: libEntry.once === true,
                 timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
                 auth: libEntry.auth ? libEntry.auth : {},
-                cache: { '': clssName },
+                cache: { '': libEntry.fqClassName },
             };
 
             this.paths[libEntry.path] = entry;
@@ -510,9 +500,30 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
 
     async addInternal(libEntry) {
         if (libEntry.type == 'httpx') {
+            if (libEntry.module) {
+                require(libEntry.module);
+            }
+
+            let makerName;
+            let fqClassName = libEntry.cache[''];
+            let index = fqClassName.lastIndexOf('.');
+
+            if (index > 0) {
+                makerName = `${fqClassName.substring(0, index+1)}mk${fqClassName.substring(index+1)}`;
+            }
+            else {
+                makerName = `mk${fqClassName}`;
+            }
+
             let httpX;
-            eval(`httpX = mk${libEntry.cache['']}()`);
-            this.paths[libEntry.path] = httpX;
+            eval(`httpX = ${makerName}()`);
+
+            if (httpX instanceof HttpX) {
+                this.paths[libEntry.path] = httpX;
+            }
+            else {
+                this.paths[libEntry.path] = mkHttpX();
+            }
         }
     }
 

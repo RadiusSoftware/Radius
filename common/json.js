@@ -129,10 +129,10 @@ register('', function toJson(value, humanReadable) {
             }
             else {
                 let decorated = Data.copy(value);
-                decorated['#CTOR'] = ctor.name;
+                decorated['#Ctor'] = ctor.name;
 
-                if ('#NAMESPACE' in ctor) {
-                    decorated['#NAMESPACE'] = ctor['#NAMESPACE'];
+                if ('#Namespace' in ctor) {
+                    decorated['#Namespace'] = ctor['#Namespace'];
                 }
 
                 return decorated;
@@ -186,15 +186,15 @@ register('', function fromJson(json) {
                 return BigInt(value['#BIG']);
             }
             else if (typeof value == 'object') {
-                if ('#CTOR' in value) {
+                if ('#Ctor' in value) {
                     let constructed;
 
                     try {
-                        if (value['#NAMESPACE']) {
-                            eval(`constructed = Reflect.construct(${value['#NAMESPACE']}.${value['#CTOR']}, [])`);
+                        if (value['#Namespace']) {
+                            eval(`constructed = Reflect.construct(${value['#Namespace']}.${value['#Ctor']}, [])`);
                         }
                         else {
-                            eval(`constructed = Reflect.construct(${value['#CTOR']}, [])`);
+                            eval(`constructed = Reflect.construct(${value['#Ctor']}, [])`);
                         }
                     } catch (e) {}
 
