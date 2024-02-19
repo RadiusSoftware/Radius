@@ -19,7 +19,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-const LibPath = require('path');
 
 
 /*****
@@ -31,7 +30,7 @@ const LibPath = require('path');
 register('', class TempFile {
     constructor(extension) {
         this.handle = null;
-        this.path = LibPath.join(Env.getTempPath(), Crypto.generateRandomUuid());
+        this.path = Path.join(Env.getTempPath(), Crypto.generateRandomUuid());
 
         if (typeof extension == 'string' && extension != '') {
             if (extension.startsWith('.')) {

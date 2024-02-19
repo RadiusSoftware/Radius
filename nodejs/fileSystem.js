@@ -20,7 +20,6 @@
  * THE SOFTWARE.
 *****/
 const LibFiles = require('fs');
-const LibPath = require('path');
 
 
 /*****
@@ -35,15 +34,6 @@ singleton('', class FileSystem extends Emitter {
     constructor() {
         super();
         this.watches = {};
-    }
-
-    absolutePath(base, path) {
-        if (LibPath.isAbsolute(path)) {
-            return path;
-        }
-        else {
-            return LibPath.join(base, path);
-        }
     }
 
     async appendFile(path, mode) {
@@ -149,11 +139,11 @@ singleton('', class FileSystem extends Emitter {
 
     async recurseDirectories(...args) {
         let dirs = [];
-        let stack = [await LibPath.resolve(LibPath.resolve(...args))];
+        let stack = [await Path.resolve(...args)];
     
         while (stack.length) {
             let path = stack.pop();
-            let stats = await LibPath.stat(path);
+            let stats = await LibFiles.stat(path);
   
             if (stats.isDirectory()) {
                 dirs.push(path);
@@ -171,7 +161,7 @@ singleton('', class FileSystem extends Emitter {
 
     async recurseFiles(...args) {
         let files = [];
-        let stack = [await LibPath.resolve(LibPath.resolve(...args))];
+        let stack = [await Path.resolve(...args)];
     
         while (stack.length) {
             let path = stack.pop();

@@ -21,7 +21,6 @@
 *****/
 const LibHttp = require('http');
 const LibHttps = require('https');
-const LibPath = require('path');
 const LibQueryString = require('node:querystring');
 const LibUrl = require('url');
 
@@ -269,7 +268,7 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
 
             if (FileSystem.isDirectory(path)) {
                 for (let httpStatusCode in HttpResponse.statusCodes) {
-                    let htmlpath = LibPath.join(path, `httpStatusResponse${httpStatusCode}.html`);
+                    let htmlpath = Path.join(path, `httpStatusResponse${httpStatusCode}.html`);
 
                     if (await FileSystem.isFile(htmlpath)) {
                         let text = await FileSystem.readFile(htmlpath);
@@ -286,7 +285,7 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
         }
 
         if (!this.httpStatusResponses.default) {
-            let text = await FileSystem.readFile(LibPath.join(__dirname, 'statusResponse.html'));
+            let text = await FileSystem.readFile(Path.join(__dirname, 'statusResponse.html'));
             this.httpStatusResponses.default = mkTextTemplate(text);
         }
 

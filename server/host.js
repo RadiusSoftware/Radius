@@ -20,7 +20,6 @@
  * THE SOFTWARE.
 *****/
 require('../nodejs/radius.js');
-const LibPath = require('path');
 
 
 /*****
@@ -100,7 +99,7 @@ singletonIn(Process.nodeClassController, 'radius', class Host {
                 {
                     type: 'httpx',
                     path: '/',
-                    module: LibPath.join(__dirname, './adminApp.js'),
+                    module: Path.join(__dirname, './adminApp.js'),
                     fqClassName: 'radius.AdminApp',
                 },
             ],

@@ -19,7 +19,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-const LibPath = require('path');
 
 
 /*****
@@ -98,12 +97,12 @@ registerIn('HttpServer', '', class HttpLibrary {
     async addFile(libEntry) {
         if (await FileSystem.isDirectory(libEntry.fspath)) {
             for (let fspath of await FileSystem.recurseFiles(libEntry.fspath)) {
-                let path = LibPath.join(libEntry.path, fspath.substring(libEntry.fspath.length));
+                let path = Path.join(libEntry.path, fspath.substring(libEntry.fspath.length));
                 this.paths[path] = {
                     type: 'file',
                     path: path,
                     fspath: fspath,
-                    mime: mkMime(LibPath.extname(fspath)),
+                    mime: mkMime(Path.extname(fspath)),
                     once: libEntry.once === true,
                     timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
                     auth: libEntry.auth ? libEntry.auth : {},
@@ -116,7 +115,7 @@ registerIn('HttpServer', '', class HttpLibrary {
                 type: 'file',
                 path: libEntry.path,
                 fspath: libEntry.fspath,
-                mime: mkMime(LibPath.extname(libEntry.fspath)),
+                mime: mkMime(Path.extname(libEntry.fspath)),
                 once: libEntry.once === true,
                 timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
                 auth: libEntry.auth ? libEntry.auth : {},
@@ -519,6 +518,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
             eval(`httpX = ${makerName}()`);
 
             if (httpX instanceof HttpX) {
+                await httpX.init();
                 this.paths[libEntry.path] = httpX;
             }
             else {

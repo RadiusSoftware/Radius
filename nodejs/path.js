@@ -19,23 +19,37 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
+const LibPath = require('path');
 
 
 /*****
+ * A singleton wrapper for the nodejs module.  We simply want this as a global
+ * wrapper so we don't need to keep on importing the path libray and then using
+ * LibPath within those modules.
 *****/
-register('radius', class AdminApp extends WebApp {
-    constructor() {
-        super({
-            debug: true,
-            title: 'Radius Host Administrator',
-        });
+singleton('', class Path {
+    absolutePath(base, path) {
+        if (LibPath.isAbsolute(path)) {
+            return path;
+        }
+        else {
+            return LibPath.join(base, path);
+        }
     }
 
-    async init() {
-        await super.init();
-        return this;
+    extname(path) {
+        return LibPath.extname(path);
     }
 
-    async onMessage(message) {
+    isAbsolute(path) {
+        return LibPath.isAbsolute(path);
+    }
+
+    join(...args) {
+        return LibPath.join(...args);
+    }
+
+    resolve(...args) {
+        return LibPath.resolve(...args);
     }
 });

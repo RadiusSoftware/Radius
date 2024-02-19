@@ -56,6 +56,7 @@ require('./pool.js');
 require('./network.js');
 require('./host.js');
 require('./tls.js');
+require('./path.js');
 require('./fileSystem.js');
 require('./tempFile.js');
 require('./process.js');
@@ -68,6 +69,7 @@ require('./element.js');
 
 require('./net/socket.js');
 require('./net/httpX.js');
+require('./net/webApp.js');
 require('./net/httpLibrary.js');
 require('./net/httpClient.js');
 require('./net/httpServer.js');

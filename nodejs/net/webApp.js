@@ -23,40 +23,41 @@
 
 
 /*****
- * Base class for HTTP Extensions, which are the cornerstone for the Radius
- * HTTP server strategy for adding extensive features.  An HTTP Extension,
- * also known as HttpX, is a HttpServerWorker class that provides framework
- * for implementing server-side dynamic responses to requests.  This is the
- * basis for web applications and simpler algorithms such as realtime data
- * steaming.  What it does is accept an HTTP request and provides an frame-
- * work response employing shape:
- * 
- *      return {
- *          status: 200,
- *          contentType: 'application/json',
- *          contentEncoding: 'gzip',
- *          contentCharset: 'utf-8',
- *          content: toJson({
- *              why: 'WHY',
- *              how: 'HOW',
- *          }),
- *      };
- * 
- * The calling HttpServerWorker will then place this response into the HTTP
- * response object to br sent back to the browser.  For stub's sake, only
- * the GET handler is implemented in this class for demonstration purposes
- * only.  Other handlers / methods could include all of the REST methods.
 *****/
-register('', class HttpX extends Emitter {
-    constructor() {
+register('', class WebApp extends HttpX {
+    constructor(opts) {
         super();
+        this.debug = typeof opts.debug == 'boolean' ? opts.debug : false;
+        this.title = typeof opts.title == 'string' ? opts.title : 'Web Application';
+        this.htmlPath = Path.join(__dirname, 'webApp.html');
+        this.cssPath = typeof opts.css == "string" ? opts.css : Path.join(__dirname, 'webApp.css');
     }
 
     async handleGET(req) {
+        if (req.getQuery()) {
+        }
+        else {
+            return {
+                status: 200,
+                contentType: 'text/plain',
+                contentEncoding: '',
+                contentCharset: '',
+                content: 'Hello Application',
+            };
+        }
+    }
+
+    async handleMessage(message) {
+    }
+
+    async handlePOST(req) {
         return 501;
     }
 
     async init() {
+        this.css = (await FileSystem.readFile(this.cssPath)).toString();
+        this.html = (await FileSystem.readFile(this.htmlPath)).toString();
+        display(this);
         return this;
     }
 });
