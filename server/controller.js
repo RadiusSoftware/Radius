@@ -24,10 +24,15 @@ require('../nodejs/radius.js');
 
 /*****
 *****/
-singletonIn(Process.nodeClassController, 'radius', class Host {
+singletonIn(Process.nodeClassController, 'radius', class Controller {
     constructor() {
         (async () => {
             await this.parseCommandLine();
+
+            if (this.commandLine['-debug'] === true) {
+                Process.setEnv('RADIUSDEBUG', 'TRUE');
+            }
+
             await this.detectDbms();
             await this.launcher();
         })();
@@ -117,6 +122,7 @@ singletonIn(Process.nodeClassController, 'radius', class Host {
         this.commandLine = {};
 
         const supportedArgs = {
+            '-debug':  { hasValue: false },
             '-admin':  { hasValue: false },
             '-dbtype': { hasValue: true },
             '-dbhost': { hasValue: true },

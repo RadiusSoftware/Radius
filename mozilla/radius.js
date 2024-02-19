@@ -262,7 +262,6 @@
         'textTree.js',
         'chronos.js',
         'api.js',
-        'transation.js',
         
         'mozilla/win.js',
         'mozilla/doc.js',

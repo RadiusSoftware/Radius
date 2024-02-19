@@ -27,24 +27,67 @@
 register('', class WebApp extends HttpX {
     constructor(opts) {
         super();
-        this.debug = typeof opts.debug == 'boolean' ? opts.debug : false;
-        this.title = typeof opts.title == 'string' ? opts.title : 'Web Application';
-        this.htmlPath = Path.join(__dirname, 'webApp.html');
-        this.cssPath = typeof opts.css == "string" ? opts.css : Path.join(__dirname, 'webApp.css');
+        this.opts = opts;
+        this.content = {};
+    }
+
+    clearContent(name) {
+        delete this.content[name];
+        return this;
+    }
+
+    getContent(name) {
+        if (name in this.content) {
+            return this.content[name];
+        }
+        else {
+            return 404;
+        }
     }
 
     async handleGET(req) {
-        if (req.getQuery()) {
+        let contentType;
+        let contentEncoding = '';
+        let contentCharset = '';
+        let content;
+
+        for (let encoding in req.getAcceptEncoding()) {
+            if (Compression.isSupported(encoding)) {
+                contentEncoding = encoding;
+                break;
+            }
+        }
+
+        let query = req.getQuery();
+
+        if (query) {
+            let entry = this.getContent(query);
+
+            if (entry) {
+                content = entry.value;
+                contentType = entry.mime;
+            }
+            else {
+                return 404;
+            }
         }
         else {
-            return {
-                status: 200,
-                contentType: 'text/plain',
-                contentEncoding: '',
-                contentCharset: '',
-                content: 'Hello Application',
-            };
+            content = this.html;
+            contentCharset = 'utf-8';
+            contentType = 'text/html';
         }
+
+        if (contentEncoding) {
+            content = await Compression.compress(contentEncoding, content);
+        }
+
+        return {
+            status: 200,
+            contentType: contentType,
+            contentEncoding: contentEncoding,
+            contentCharset: contentCharset,
+            content: content,
+        };
     }
 
     async handleMessage(message) {
@@ -55,9 +98,20 @@ register('', class WebApp extends HttpX {
     }
 
     async init() {
-        this.css = (await FileSystem.readFile(this.cssPath)).toString();
-        this.html = (await FileSystem.readFile(this.htmlPath)).toString();
-        display(this);
+        this.title = typeof this.opts.title == 'string' ? this.opts.title : 'Web Application';
+        this.html = (await FileSystem.readFile(Path.join(__dirname, 'webApp.html'))).toString();
+        let cssPath = typeof this.opts.css == "string" ? this.opts.css : Path.join(__dirname, 'webApp.css');
+        this.setContent('css', 'text/css', (await FileSystem.readFile(cssPath)).toString());
+        return this;
+    }
+
+    setContent(name, mime, value) {
+        this.content[name] = {
+            name: name,
+            mime: mime instanceof Mime ? mime.code : mime,
+            value: value
+        };
+
         return this;
     }
 });

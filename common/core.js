@@ -225,7 +225,7 @@
      * console.log(), we can easily find all instances of debugging statements
      * in the code so we can remove them.
     *****/
-    register('', function display(...args) {
+    register('', function debug(...args) {
         for (let arg of args) {
             console.log(arg);
         }

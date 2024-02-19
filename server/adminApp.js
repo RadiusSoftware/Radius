@@ -26,8 +26,7 @@
 register('radius', class AdminApp extends WebApp {
     constructor() {
         super({
-            debug: true,
-            title: 'Radius Host Administrator',
+            title: str('Radius Host Administrator'),
         });
     }
 

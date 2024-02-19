@@ -49,7 +49,6 @@ require('../common/textTree.js');
 require('../common/textUtils.js');
 require('../common/chronos.js');
 require('../common/api.js');
-require('../common/transaction.js');
 
 require('./crypto.js');
 require('./pool.js');

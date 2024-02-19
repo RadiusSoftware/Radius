@@ -1,3 +1,5 @@
+const { debug } = require('node:console');
+
 /*****
  * Copyright (c) 2023 Radius Software
  *
@@ -318,6 +320,10 @@ singleton('', class Process extends Emitter {
         return typeof LibProcess.env[name] != 'undefined';
     }
 
+    isDebug() {
+        return this.getEnv('RADIUSDEBUG') == 'TRUE';
+    }
+
     onAbort(message) {
         this.abort();
     }
@@ -616,6 +622,11 @@ singleton('', class Process extends Emitter {
             sendHandle,
         );
 
+        return this;
+    }
+
+    setEnv(name, value) {
+        LibProcess.env[name] = value.toString();
         return this;
     }
 

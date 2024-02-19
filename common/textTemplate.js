@@ -82,9 +82,6 @@ register('', class TextTemplate {
                     if (char == '$') {
                         state = 1;
                     }
-                    else if (char == '#') {
-                        state = 3;
-                    }
                     else {
                         pushChar(char, chars);
                     }                
@@ -106,49 +103,11 @@ register('', class TextTemplate {
                         state = 0;
     
                         if (symbolName.match(/^[a-zA-Z][a-zA-Z0-9_]*$/m)) {
-                            this.symbols[symbolName] = `[[${symbolName}]]`;
-                            chars.push(`\${this.symbols.${symbolName}}`);
+                            this.symbols[symbolName] = '${' + symbolName + '}';
+                            chars.push('${this.symbols.' + symbolName + '}');
                         }
                         else {
-                            // ERROR
-                        }
-                    }
-                    else {
-                        symbolChars.push(char);
-                    }
-                }
-                else if (state == 3) {
-                    if (char == '$') {
-                        state = 4;
-                    }
-                    else {
-                        chars.push('#');
-                        pushChar(char, chars);
-                    }    
-                }
-                else if (state == 4) {
-                    if (char == '{') {
-                        state = 5;
-                    }
-                    else {
-                        state = 0;
-                        chars.push('#');
-                        chars.push('$');
-                        pushChar(char, chars);
-                    }
-                }
-                else if (state == 5) {
-                    if (char == '}') {
-                        let symbolName = symbolChars.join('').trim();
-                        symbolChars = new Array();
-                        state = 0;
-    
-                        if (symbolName.match(/^[a-zA-Z][a-zA-Z0-9_]*$/m)) {
-                            this.runtime[symbolName] = `\${${symbolName}}`;
-                            chars.push(`\${this.runtime.${symbolName}}`);
-                        }
-                        else {
-                            // ERROR
+                            chars.push('${' + symbolName + '}');
                         }
                     }
                     else {
