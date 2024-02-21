@@ -35,7 +35,6 @@ if (platform == 'nodejs') {
     });
 }
 else if (platform == 'mozilla') {
-    alert('Test and debug class Buffer');
     register('', class Buffer {
         constructor(value, encoding) {
             this.set(value, encoding);
@@ -45,12 +44,8 @@ else if (platform == 'mozilla') {
             if (typeof value == 'string') {
                 switch (encoding) {
                     case 'hex':
-                        if (value.length % 2 != 0) {
-                            throw new Error('Hex string comprised of odd character count!');
-                        }
-      
-                        this.jsArray = new Uint8Array(value.length/2);
-                        let array = new DataView(this.jsArray.buffer);
+                        this.buffer = new Uint8Array(value.length/2);
+                        let array = new DataView(this.buffer.buffer);
       
                         for (let i = 0; i < value.length; i += 2) {
                             let byte = parseInt(value[i], 16) * 16 + parseInt(value[i + 1], 16);
@@ -59,26 +54,34 @@ else if (platform == 'mozilla') {
                         break;
 
                     case 'base64':
-                        let binary = atob(value);
-                        this.jsArray = Uint8Array.from(binString, (m) => m.codePointAt(0));
+                        let binaryString = atob(value);
+                        this.buffer = new Uint8Array(binaryString.length);
+
+                        for (let i = 0; i < binaryString.length; i++) {
+                            this.buffer[i] = binaryString.charCodeAt(i);
+                        }
                         break;
 
                     default:
-                        this.jsArray = new Uint8Array(value);
-                        //this.jsArray = (new TextEncoder()).encode(value);
+                        this.buffer = new TextEncoder(encoding ? encoding : 'utf-8').encode(value);
                         break;
                 }
             }
+            else if (value instanceof Uint8Array) {
+                this.buffer = new Uint8Array(value);
+            }
             else {
-                this.jsArray = new Uint8Array(value);
+                this.buffer = new getUint8Array(0);
             }
         }
 
         toString(encoding) {
+            let decoder;
+
             switch (encoding) {
                 case 'hex':
                     let bytes = [];
-                    let array = new DataView(this.jsArray.buffer);
+                    let array = new DataView(this.buffer.buffer);
       
                     for (let i = 0; i < array.byteLength; i++) {
                         let byte = array.getUint8(i);
@@ -88,11 +91,19 @@ else if (platform == 'mozilla') {
                     return bytes.join('');
 
                 case 'base64':
-                    const binString = String.fromCodePoint(...this.jsArray);
-                    return btoa(binString);
+                    decoder = new TextDecoder('utf-8');
+                    let utf8 = decoder.decode(this.buffer);
+
+                    return btoa(encodeURIComponent(utf8).replace(
+                        /%([0-9A-F]{2})/g,
+                        (match, p1) => {
+                            return String.fromCharCode('0x' + p1);
+                        }
+                    ));
 
                 default:
-                    return String.fromCodePoint(...this.jsArray);
+                    decoder = new TextDecoder(encoding ? encoding : 'utf-8');
+                    return decoder.decode(this.buffer);
             }
         }
     });

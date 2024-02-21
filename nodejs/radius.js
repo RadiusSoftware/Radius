@@ -33,14 +33,12 @@
  * used for loading in developer application code, CSS, and HTML framents.
 *****/
 require('../common/core.js');
-require('../common/str.js');
 require('../common/buffer.js');
 require('../common/data.js');
 require('../common/emitter.js');
 require('../common/objekt.js');
 require('../common/json.js');
 require('../common/language.js');
-require('../common/messaging.js');
 require('../common/stringSet.js');
 require('../common/time.js');
 require('../common/mime.js');

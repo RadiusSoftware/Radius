@@ -26,15 +26,12 @@
 register('radius', class AdminApp extends WebApp {
     constructor() {
         super({
-            title: str('Radius Host Administrator'),
+            title: 'Radius Host Administrator',
         });
     }
 
     async init() {
         await super.init();
         return this;
-    }
-
-    async onMessage(message) {
     }
 });

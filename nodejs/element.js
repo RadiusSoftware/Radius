@@ -262,7 +262,7 @@ register('', class DocNode extends Emitter {
   
     getParentElement() {
         if (this.node.parentNode instanceof NpmHtml.HTMLElement) {
-            return wrapDocNode(this.node.parentNode);
+            return wrapNode(this.node.parentNode);
         }
     }
 

@@ -22,15 +22,10 @@
 
 
 /*****
- * The framework API wrapper for the DOM document object.  Our primary purpose
- * is to simplifiy the complexity and histority mess associated with the long
- * history of the document API.
 *****/
-register('', class Doc extends Emitter {
-    constructor(doc) {
+singleton('', class Doc extends Emitter {
+    constructor() {
         super();
-        this.doc = doc ? doc : document;
-
         [
             'animationcancel',
             'animationend',
@@ -79,21 +74,21 @@ register('', class Doc extends Emitter {
             'transitionstart',
             'visibilitychange',
             'wheel',
-        ].forEach(eventName => this.doc.addEventListener(eventName, event => {
-            this.send({
-                messageName: `${eventName}`,
+        ].forEach(eventName => document.addEventListener(eventName, event => {
+            this.emit({
+                name: `${eventName}`,
                 event: mkElementEvent(event)
             });
         }));
     }
 
     adoptNode(externalNode) {
-        let internalNode = this.doc.adoptNode(unwarpDocNode(externalMode));
-        return wrapDocNode(internalNode);
+        let internalNode = document.adoptNode(unwarpDocNode(externalMode));
+        return wrapNode(internalNode);
     }
 
     close() {
-        this.doc.close();
+        document.close();
     }
 
     async copy(value) {
@@ -105,58 +100,58 @@ register('', class Doc extends Emitter {
     }
 
     createRange() {
-        return this.doc.createRange();
+        return document.createRange();
     }
 
     createTreeWalker(node, includes) {
-        return this.doc.createTreeWalkter(node, includes);
+        return document.createTreeWalkter(node, includes);
     }
 
     exitFullScreen() {
-        this.doc.exitFullScreen();
+        document.exitFullScreen();
         return this;
     }
 
     exitPictureInPicture() {
-        this.doc.exitPictureInPicture();
+        document.exitPictureInPicture();
         return this;
     }
 
     exitPointerLock() {
-        this.doc.exitPointerLock();
+        document.exitPointerLock();
         return this;
     }
 
     getActiveElement() {
-        return wrapDocNode(this.doc.activeElement);
+        return wrapNode(document.activeElement);
     }
 
     getAdoptedStyleSheets() {
-        return this.doc.adoptedStyleSheets().map(adopted => mkCssStyleSheet(adopted));
+        return document.adoptedStyleSheets().map(adopted => mkCssStyleSheet(adopted));
     }
 
     getAnimations() {
-        return this.doc.getAnimations();
+        return document.getAnimations();
     }
 
     getBody() {
-        return wrapDocNode(this.doc.body);
+        return wrapNode(document.body);
     }
 
     getCaretPositionFromPoint(x, y) {
-        return this.doc.caretPositionFromPoint(x, y);
+        return document.caretPositionFromPoint(x, y);
     }
 
     getCharacterSet() {
-        return this.doc.characterSet;
+        return document.characterSet;
     }
 
     getCompatMode() {
-        return this.doc.compatMode;
+        return document.compatMode;
     }
 
     getContentType() {
-        return this.doc.contentType;
+        return document.contentType;
     }
 
     getCookie() {
@@ -164,133 +159,133 @@ register('', class Doc extends Emitter {
     }
 
     getCurrentScript() {
-        return mkDocNode(this.doc.currentScript);
+        return mkDocNode(document.currentScript);
     }
 
     getDesignMode() {
-        return this.doc.designMode;
+        return document.designMode;
     }
 
     getDir() {
-        return this.doc.dir;
+        return document.dir;
     }
 
     getDocType() {
-        return this.doc.doctype;
+        return document.doctype;
     }
 
     getDocumentUri() {
-        return this.doc.documentURI;
+        return document.documentURI;
     }
 
     getElementById(id) {
-        return this.doc.getElementById(id);
+        return document.getElementById(id);
     }
 
     getElementFromPoint(x, y) {
-        let element = this.doc.elementFromPoint(x, y);
-        return element ? wrapDocNode(element) : null;
+        let element = document.elementFromPoint(x, y);
+        return element ? wrapNode(element) : null;
     }
 
     getElementFromPoints(x, y) {
         let elements = [];
 
-        for (let element of this.doc.elementsFromPoint(x, y)) {
-            elements.push(wrapDocNode(element));
+        for (let element of document.elementsFromPoint(x, y)) {
+            elements.push(wrapNode(element));
         }
 
         return elements;
     }
 
     getFonts() {
-        return this.doc.fonts;
+        return document.fonts;
     }
 
     getForms() {
-        return this.doc.forms;
+        return document.forms;
     }
 
     getFullScreenElement() {
-        return this.doc.fullScreenElement;
+        return document.fullScreenElement;
     }
 
     getFullScreenEnabled() {
-        return this.doc.fullscreenEnabled;
+        return document.fullscreenEnabled;
     }
 
     getHead() {
-        return wrapDocNode(this.doc.head);
+        return wrapNode(document.head);
     }
 
     getHtml() {
-        return wrapDocNode(this.doc.documentElement);
+        return wrapNode(document.documentElement);
     }
 
     getImages() {
         let elements = [];
 
-        for (let i = 0; i < this.doc.images.length; i++) {
-            elements.push(wrapDocNode(this.doc.images.item(i)));
+        for (let i = 0; i < document.images.length; i++) {
+            elements.push(wrapNode(document.images.item(i)));
         }
 
         return elements;
     }
 
     getImplementation() {
-        return this.doc.implementation;
+        return document.implementation;
     }
 
     getLastModiied() {
-        return this.mkTime(this.doc.lastModified);
+        return this.mkTime(document.lastModified);
     }
 
     getLocation() {
-        return this.doc.location;
+        return document.location;
     }
 
     getLinks() {
         let elements = [];
 
-        for (let i = 0; i < this.doc.links.length; i++) {
-            elements.push(wrapDocNode(this.doc.links.item(i)));
+        for (let i = 0; i < document.links.length; i++) {
+            elements.push(wrapNode(document.links.item(i)));
         }
 
         return elements;      
     }
 
     getPictureInPictureElement() {
-        if (this.doc.pictureInPictureElement) {
-            return wrapDocNode(this.doc.pictureInPictureElement);
+        if (document.pictureInPictureElement) {
+            return wrapNode(document.pictureInPictureElement);
         }
 
         return null;
     }
 
     getPointerLockElement() {
-        if (this.doc.pointLockElement) {
-            return wrapDocNode(this.doc.pointLockElement);
+        if (document.pointLockElement) {
+            return wrapNode(document.pointLockElement);
         }
 
         return null;
     }
 
     getPlugins() {
-        return this.doc.plugins;
+        return document.plugins;
     }
 
     getReadyState() {
-        return this.doc.readyState;
+        return document.readyState;
     }
 
     getReferrer() {
-        return this.doc.referrer;
+        return document.referrer;
     }
 
     getScripts() {
         let elements = [];
 
-        for (let i = 0; i < this.doc.scripts.length; i++) {
-            elements.push(wrapDocNode(this.doc.scripts.item(i)));
+        for (let i = 0; i < document.scripts.length; i++) {
+            elements.push(wrapNode(document.scripts.item(i)));
         }
 
         return elements;      
@@ -307,56 +302,56 @@ register('', class Doc extends Emitter {
             return null;
         }
         else {
-            return mkCssStyleSheet(this.doc.styleSheets[0]);
+            return mkCssStyleSheet(document.styleSheets[0]);
         }
     }
 
     getStyleSheets() {
         let styleSheets = [];
 
-        for (let i = 0; i < this.doc.styleSheets.length; i++) {
-            styleSheets.push(mkCssStyleSheet(this.doc.styleSheets.item(i)));
+        for (let i = 0; i < document.styleSheets.length; i++) {
+            styleSheets.push(mkCssStyleSheet(document.styleSheets.item(i)));
         }
 
         return styleSheets;       
     }
 
     getTimeline() {
-        return this.doc.timeline;
+        return document.timeline;
     }
 
     getTitle() {
-        return this.doc.title;
+        return document.title;
     }
 
     getUrl() {
-        return this.doc.URL;
+        return document.URL;
     }
 
     getVisibilityState() {
-        return this.doc.visibilityState;
+        return document.visibilityState;
     }
 
     getWindow() {
-        return mkWin(this.doc.defaultView);
+        return mkWin(document.defaultView);
     }
 
     hasFocus() {
-        return this.doc.hasFocus();
+        return document.hasFocus();
     }
 
     isHidden() {
-        return this.doc.hidden;
+        return document.hidden;
     }
 
     queryAll(selector) {
         let selected = [];
       
         if (typeof selector == 'string' && selector != '') {
-            let nodeList = this.doc.querySelectorAll(selector);
+            let nodeList = document.querySelectorAll(selector);
       
             for (let i = 0; i < nodeList.length; i++) {
-                selected.push(wrapDocNode(nodeList.item(i)));
+                selected.push(wrapNode(nodeList.item(i)));
             }
         }
 
@@ -365,10 +360,10 @@ register('', class Doc extends Emitter {
 
     queryOne(selector) {
         if (typeof selector == 'string' && selector != '') {
-            let selected = this.doc.querySelector(selector);
+            let selected = document.querySelector(selector);
 
             if (selected) {
-                return wrapDocNode(selected);
+                return wrapNode(selected);
             }
         }
 
@@ -381,7 +376,7 @@ register('', class Doc extends Emitter {
     }
 
     setDesignMode(mode) {
-        this.doc.designMode = mode ? 'on' : 'off';
+        document.designMode = mode ? 'on' : 'off';
         return this;
     }
 
@@ -389,7 +384,7 @@ register('', class Doc extends Emitter {
         switch (dir) {
             case 'rtl':
             case 'ltr':
-                this.doc.dir = dir;
+                document.dir = dir;
                 break;
         }
 
@@ -397,7 +392,7 @@ register('', class Doc extends Emitter {
     }
 
     setTitle(title) {
-        this.doc.title = title;
+        document.title = title;
         return this;
     }
 });

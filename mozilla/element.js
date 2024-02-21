@@ -294,7 +294,7 @@
       
         getParentElement() {
             if (this.node.parentElement) {
-                return wrapDocNode(this.node.parentElement);
+                return wrapNode(this.node.parentElement);
             }
         }
 
@@ -438,7 +438,7 @@
     *****/
     register('', class DocText extends DocNode {
         constructor(arg) {
-            super(typeof arg == 'string' ? document.createTextNode(arg) : arg.node);
+            super(typeof arg == 'string' ? document.createTextNode(arg) : arg);
         }
 
         append() {
@@ -704,7 +704,7 @@
       
         getSiblingElementNext() {
             if (this.node.nextElementSibling) {
-                return wrapDocNode(this.node.nextSElementibling);
+                return wrapNode(this.node.nextSElementibling);
             }
 
             return null
@@ -712,7 +712,7 @@
       
         getSiblingElementPrev() {
             if (this.node.previousElementSibling) {
-                return wrapDocNode(this.node.previousSElementibling);
+                return wrapNode(this.node.previousSElementibling);
             }
 
             return null;

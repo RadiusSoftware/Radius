@@ -22,24 +22,24 @@
 
 
 /*****
- * All text used by this framework and supposedly within any application based
- * on the Radius framework needs to encapsulate strings with a Str() object to
- * facilitate internationalization.  By wrapping text within code in a Str
- * object, we will be able to faciliate replacing strings with strings from
- * other languages.
+ * Once the rest of the Radius Mozilla framework has been loaded, the purpose
+ * of this module is to make final preparations that are dependent on having
+ * the framework loaded.
 *****/
-(() => {
-    let nextId = 1;
-    const strings = {}
+wrapTree(document.documentElement);
 
-    register('', class Str {
-        constructor(str) {
-            this.id = nextID++;
-            this.str = str;
-        }
-    });
 
-    register('', function str(str) {
-        return str instanceof Str ? str.str : str.toString();
-    });
-})();
+let str = 'Hëllô Wõrľd D';
+let buffer = mkBuffer(str);
+debug(str);
+debug(buffer.toString());
+
+let b64 = buffer.toString('base64');
+debug(b64);
+let b64Buffer = mkBuffer(b64, 'base64');
+debug(b64Buffer.toString());
+
+let hex = buffer.toString('hex');
+debug(hex);
+let hexBuffer = mkBuffer(hex, 'hex');
+debug(hexBuffer.toString());

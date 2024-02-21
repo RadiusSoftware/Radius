@@ -22,17 +22,10 @@
 
 
 /*****
- * The framework wrapper for the window object.  Remember that a window can be
- * a browser tab, a frame, or an iframe.  Hence, there are hierarchy features
- * associated with DOM windows and we don't just have a singleton object for
- * our window wrapper.  One of the key features is that the framework window is
- * an Emitter and will send messages for all registerd window events.
 *****/
-register('', class Win extends Emitter {  
-    constructor(win) {
+singleton('', class Win extends Emitter {  
+    constructor() {
         super();
-        this.win = win ? wind : window;
-
         [
             'afterprint',
             'animationcancel',
@@ -73,196 +66,202 @@ register('', class Win extends Emitter {
             'transitionstart',
             'unhandledrejection',
             'unload',
-        ].forEach(eventName => this.win.addEventListener(eventName, event => {
-            this.send({
-                messageName: `${eventName}`,
+        ].forEach(eventName => window.addEventListener(eventName, event => {
+            this.emit({
+                name: `${eventName}`,
                 event: event
             });
         }));
     }
 
     blur() {
-        this.win.blur();
+        window.blur();
         return this;
     }
 
+    clearIdleTask(handle) {
+    }
+
     close() {
-        this.win.close();
+        window.close();
         return this;
     }
 
     focus() {
-        this.win.focus();
+        window.focus();
         return this;
     }
 
     getComputedStyle() {
-        return this.win.getComputedStyle();
+        return window.getComputedStyle();
     }
 
     getDevicePixelRatio() {
-        return this.win.devicePixelRatio;
+        return window.devicePixelRatio;
     }
 
     getDocument() {
-        return mkDoc(this.win.document);
+        return mkDoc(window.document);
     }
 
     getFrameElement() {
-        return this.win.frameElement ? wrapDocNode(this.win.frameElement) : null;
+        return window.frameElement ? wrapNode(window.frameElement) : null;
     }
 
     getFrames() {
         let frames = [];
 
-        for (let i = 0; i < this.win.frames.length; i++) {
-            frames.push(mkWin(this.win.frames[i]));
+        for (let i = 0; i < window.frames.length; i++) {
+            frames.push(mkWin(window.frames[i]));
         }
 
         return frames;
     }
 
     getInnerHeight() {
-        return this.win.innerHeight;
+        return window.innerHeight;
     }
 
     getInnerWidth() {
-        return this.win.innerWidth;
+        return window.innerWidth;
     }
 
     getLength() {
-        return this.win.length;
+        return window.length;
     }
 
     getMenuBar() {
-        return this.win.menubar;
+        return window.menubar;
     }
 
     getLocation() {
-        return this.win.location;
+        return window.location;
     }
 
     getLocationBar() {
-        return this.win.locationbar;
+        return window.locationbar;
     }
 
     getName() {
-        return this.win.name;
+        return window.name;
     }
 
     getOpener() {
-        return mkWin(this.win.opener);
+        return mkWin(window.opener);
     }
 
     getOrigin() {
-        return this.win.origin;
+        return window.origin;
     }
 
     getOuterHeight() {
-        return this.win.outerHeight;
+        return window.outerHeight;
     }
 
     getOuterWidth() {
-        return this.win.outerWidth;
+        return window.outerWidth;
     }
 
     getPageXOffset() {
-        return this.win.pageXOffset;
+        return window.pageXOffset;
     }
 
     getPageYOffset() {
-        return this.win.pageYOffset;
+        return window.pageYOffset;
     }
 
     getParent() {
-        return this.win.parent;
+        return window.parent;
     }
 
     getPersonalBar() {
-        return this.win.personalbar;
+        return window.personalbar;
     }
 
     getScreenY() {
-        return this.win.screenY;
+        return window.screenY;
     }
 
     getScrollBars() {
-        return this.win.scrollbars;
+        return window.scrollbars;
     }
 
     getScrollMaxX() {
-        return this.win.scrollMaxX;
+        return window.scrollMaxX;
     }
 
     getScrollMaxY() {
-        return this.win.scrollMaxY;
+        return window.scrollMaxY;
     }
 
     getSelection() {
-        return this.win.getSelection();
+        return window.getSelection();
     }
 
     getStatusBar() {
-        return this.win.statusbar;
+        return window.statusbar;
     }
 
     getToolBar() {
-        return this.win.toolbar;
+        return window.toolbar;
     }
 
     getTop() {
-        return this.win.top;
+        return window.top;
     }
 
     isClosed() {
-        return this.win.closed;
+        return window.closed;
     }
 
     isFullScreen() {
-        return this.win.fullScreen;
+        return window.fullScreen;
     }
 
     isSecureContext() {
-        return this.win.isSecureContext;
+        return window.isSecureContext;
     }
 
     moveBy(deltaX, deltaY) {
-        this.win.moveBy(deltaX, deltaY);
+        window.moveBy(deltaX, deltaY);
         return this;
     }
 
     moveTo(x, y) {
-        this.win.moveTo(x, y);
+        window.moveTo(x, y);
         return this;
     }
 
     resizeBy(xDelta, yDelta) {
-        this.win.resizeBy(xDelta, yDelta);
+        window.resizeBy(xDelta, yDelta);
         return this;
     }
 
     resize(width, height) {
-        this.win.resizeTo(width, height);
+        window.resizeTo(width, height);
         return this;
     }
 
     scroll(xCoord, yCoord) {
-        this.win.scroll(xCoord, yCoord);
+        window.scroll(xCoord, yCoord);
         return this;
     }
 
     scrollTo(x, y) {
-        this.win.scrollTo(x, y);
+        window.scrollTo(x, y);
         return this;
     }
 
+    setIdleTask(func, opts) {
+    }
+
     setName(name) {
-        this.win.name = name;
+        window.name = name;
         return this;
     }
 
     stop() {
-        this.win.stop();
+        window.stop();
         return this;
     }
 });

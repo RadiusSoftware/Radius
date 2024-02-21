@@ -102,7 +102,7 @@ register('', class Mutation {
         let added = [];
 
         for (let i = 0; i < this.mutationRecord.addedNodes.length; i++) {
-            added.push(wrapDocNode(this.mutationRecord.addedNodes.item(i)));
+            added.push(wrapNode(this.mutationRecord.addedNodes.item(i)));
         }
     
         return added;
@@ -124,7 +124,7 @@ register('', class Mutation {
         let removed = [];
 
         for (let i = 0; i < this.mutationRecord.addedNodes.length; i++) {
-            removed.push(wrapDocNode(this.mutationRecord.removedNodes.item(i)));
+            removed.push(wrapNode(this.mutationRecord.removedNodes.item(i)));
         }
     
         return removed;
@@ -135,7 +135,7 @@ register('', class Mutation {
     }
 
     getTarget() {
-        return wrapDocNode(this.mutationRecord.target);
+        return wrapNode(this.mutationRecord.target);
     }
 
     getType() {
