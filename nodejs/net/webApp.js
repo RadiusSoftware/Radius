@@ -63,12 +63,12 @@ register('', class WebApp extends HttpX {
         if (query) {
             let entry = this.getContent(query);
 
-            if (entry) {
-                content = entry.value;
-                contentType = entry.mime;
+            if (typeof entry == 'number') {
+                return entry;
             }
             else {
-                return 404;
+                content = entry.value;
+                contentType = entry.mime;
             }
         }
         else {
@@ -112,7 +112,7 @@ register('', class WebApp extends HttpX {
     setContent(name, mime, value) {
         this.content[name] = {
             name: name,
-            mime: mime instanceof Mime ? mime.code : mime,
+            mime: mime instanceof Mime ? mime.getCode() : mime,
             value: value
         };
 

@@ -231,7 +231,7 @@ registerIn('HttpServer', '', class HttpLibrary {
             return {
                 type: 'data',
                 status: 200,
-                contentType: info.libEntry.mime.code,
+                contentType: info.libEntry.mime.getCode(),
                 contentEncoding: info.encoding,
                 contentCharset: '',
                 content: content,
@@ -278,7 +278,7 @@ registerIn('HttpServer', '', class HttpLibrary {
             return {
                 type: 'file',
                 status: 200,
-                contentType: info.libEntry.mime.code,
+                contentType: info.libEntry.mime.getCode(),
                 contentEncoding: info.encoding,
                 contentCharset: '',
                 content: content,

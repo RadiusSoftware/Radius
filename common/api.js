@@ -21,9 +21,108 @@
 *****/
 
 
-/*****
-*****/
-register('', class Api {
-    constructor() {
-    }
-});
+(() => {
+    /*****
+    *****/
+    register('', class ApiEndpoint {
+        constructor(name, handler, permissions, ...args) {
+            this.name = name;
+            this.handler = typeof handler == 'function' ? handler : async trx => null;
+            this.permisions = typeof permissions == 'object' ? permissions : {};
+            this.args = args;
+        }
+
+        getArgAt(index) {
+            return this.args[index];
+        }
+
+        getArgs() {
+            return new Array(this.args);
+        }
+
+        getArgsLength() {
+            return this.args.length;
+        }
+
+        getHandler() {
+            return this.handler;
+        }
+
+        getName() {
+            return this.name;
+        }
+
+        getPermissions() {
+            return Object.assign(new Object(), permissions);
+        }
+
+        [Symbol.iterator]() {
+            return this.args[Symbol.iterator]();
+        }
+    });
+
+
+    /*****
+    *****/
+    const apii = Symbol('ApiInternal');
+
+    register('', class Api {
+        constructor() {
+            this[apii] = {
+                endpoints: {},
+                emitters: [],
+            };
+        }
+
+        getEmitters() {
+            return this[apii].emitters.slice(0);
+        }
+
+        getEndpoint(name) {
+            return this[apii].endpoints[name];
+        }
+
+        async handleIncoming(message) {
+        }
+
+        hasEndpoint(name) {
+            return name in this[apii].endpoints;
+        }
+
+        setEndpoint(endpoint) {
+            if (endpoint instanceof ApiEndpoint) {
+                this[apii].endpoints[endpoint.getName()] = endpoint;
+            }
+
+            return this;
+        }
+
+        setEmitter(emitter) {
+            for (let logged of this[apii].emitters) {
+                if (Object.is(emitter, logged)) {
+                    return this;
+                }
+            }
+
+            emitter.on('*', async message => this.handleIncoming(message));
+            this[apii].emitters.push(emitter);
+            return this;
+        }
+
+        setEndpoint(endpoint) {
+            if (endpoint instanceof ApiEndpoint) {
+                this[apii].endpoints[endpoint.getName()] = endpoint;
+            }
+
+            return this;
+        }
+
+        setEndpoints(...endpoints) {
+            for (let endpoint in endpoints) {
+                this[apii].setEndpoint(endpoint);
+            }
+
+            return this;
+        }
+    });
+})();

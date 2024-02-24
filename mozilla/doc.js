@@ -22,6 +22,12 @@
 
 
 /*****
+ * The singleton Radius framework object that manages the underlying document
+ * object.  The document wrap is not just a wrap, it's a value-added wrap with
+ * features such as returning framework DocElements for the queries and by
+ * providing a simplified cookie API object instead of just raw results.  Note
+ * that document events are relayed as framework messages because Doc extends
+ * Emitter.
 *****/
 singleton('', class Doc extends Emitter {
     constructor() {
@@ -85,6 +91,26 @@ singleton('', class Doc extends Emitter {
     adoptNode(externalNode) {
         let internalNode = document.adoptNode(unwarpDocNode(externalMode));
         return wrapNode(internalNode);
+    }
+
+    clearCookie(name) {
+        let cookie = this.getCookie(name);
+
+        if (cookie) {
+            cookie.setExpires(mkTime(0));
+            this.setCookie(cookie);
+        }
+
+        return this;
+    }
+
+    clearCookies() {
+        for (let cookie of this.getCookieArray()) {
+            cookie.setExpires(mkTime(0));
+            this.setCookie(cookie);
+        }
+
+        return this;
     }
 
     close() {
@@ -154,8 +180,33 @@ singleton('', class Doc extends Emitter {
         return document.contentType;
     }
 
-    getCookie() {
-        // TODO ******************        
+    getCookie(name) {
+        for (let cookieString of TextUtils.split(document.cookie, '; ')) {
+            let [ cookieName, cookieValue ] = cookieString.split('=');
+
+            if (cookieName.trim() == name) {
+                return mkCookie(cookieString);
+            }
+        }
+
+        return null;
+    }
+
+    getCookieArray() {
+        return TextUtils.split(document.cookie, '; ').map(cookieString => {
+            return mkCookie(cookieString);
+        });
+    }
+
+    getCookieMap() {
+        let cookies = {};
+
+        TextUtils.split(document.cookie, '; ').forEach(cookieString => {
+            let cookie = mkCookie(cookieString);
+            cookies[cookie.getName()] = cookie;
+        });
+
+        return cookies;
     }
 
     getCurrentScript() {
@@ -370,8 +421,11 @@ singleton('', class Doc extends Emitter {
         return null;
     }
 
-    setCookie() {
-        // TODO ****************** 
+    setCookie(cookie) {
+        if (cookie instanceof Cookie) {
+            document.cookie = cookie.toString();
+        }
+        
         return this;
     }
 

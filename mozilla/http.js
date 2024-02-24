@@ -34,26 +34,29 @@
 *****/
 register('', class HttpRequest {
     constructor(timeoutMilliseconds) {
-        this.req = new XMLHttpRequest();
-        this.setTimeout(timeoutMilliseconds);
-        this.headers = {};
-        this.monitors = [];
+        this.xhr = new XMLHttpRequest();
 
-        this.req.onreadystatechange = event => {
-            if (this.req.readyState == XMLHttpRequest.DONE) {
-                this.hook();
-            }
-        };
+        if (typeof timeoutMilliseconds == 'number' && timeoutMilliseconds > 0) {
+            this.xhr.timeout = timeoutMilliseconds;
+        }
+
+        this.xhr.addEventListener('abort', event => this.onAbort(event));
+        this.xhr.addEventListener('error', event => this.onError(event));
+        this.xhr.addEventListener('load', event => this.onLoad(event));
+        this.xhr.addEventListener('loadend', event => this.onLoadEnd(event));
+        this.xhr.addEventListener('loadstart', event => this.onLoadStart(event));
+        this.xhr.addEventListener('progress', event => this.onProgress(event));
+        this.xhr.addEventListener('readystatechange', event => this.onReadyStateChange(event));
+        this.xhr.addEventListener('timeout', event => this.onTimeout(event));
+
+        this.promise = new Promise((ok, fail) => {
+            this.done = () => ok(mkHttpResponse(this.xhr));
+            this.fail = reason => { throw new Error(reason) };
+        });
     }
 
     cancel() {
-        if (this.hook) {
-            this.req.abort();
-        }
-    }
-
-    clearHeader(name) {
-        delete this.headers[name];
+        this.xhr.abort();
         return this;
     }
 
@@ -65,18 +68,42 @@ register('', class HttpRequest {
         return this.send('GET', url);
     }
 
+    getUpload() {
+        return mkHttpUpload(this);
+    }
+
     head(url) {
         return this.send('HEAD', url);
     }
 
-    monitor(...handlers) {
-        for (let handler of handlers) {
-            this.monitors.push(
-                () => mkHttpUpload(this).on('Upload', message => handler(message))
-            )
-        }
+    onAbort(event) {
+        this.fail(event);
+    }
 
-        return this;
+    onError(event) {
+        this.fail(event);
+    }
+
+    onLoad(event) {
+    }
+
+    onLoadEnd(event) {
+    }
+
+    onLoadStart(event) {
+    }
+
+    onProgress(event) {
+    }
+
+    onReadyStateChange(event) {
+        if (this.xhr.readyState == 4) {
+            this.done();
+        }
+    }
+
+    onTimeout(event) {
+        this.fail(event);
     }
 
     post(url, ...args) {
@@ -110,39 +137,103 @@ register('', class HttpRequest {
         }
     }
 
+    put(url, arg) {
+        if (args[0] instanceof Buffer) {
+            this.setHeader('content-type', 'application/octet-stream');
+            return this.send('POST', url, toJson(args[0]));
+        }
+        else if (typeof args[0] == 'object') {
+            this.setHeader('content-type', 'applicaton/json');
+            return this.send('POST', url, toJson(args[0]));
+        }
+        else {
+            this.setHeader('content-type', 'text/plain');
+            return this.send('POST', url, args[0].toString());
+        }
+    }
+
     send(method, url, mime, payload) {
-        if (!this.hook) {
-            this.req.open(method, url, true);
-
-            for (let header of Object.entries(this.headers)) {
-                this.req.setRequestHeader(header[0], header[1]);
-            }
-
-            for (let monitor of this.monitors) {
-                monitor();
-            }
+        if (this.xhr.readyState == 0) {
+            this.xhr.open(method, url, true);
 
             if (mime && payload) {
-                this.req.setRequestHeader(
+                this.xhr.setRequestHeader(
                     'Content-Type',
                     mime instanceof Mime ? mime.getCode() : mime,
                 );
 
-                this.send(payload);
+                this.xhr.send(payload);
             }
             else {
-                this.send();
+                this.xhr.send();
             }
 
-            return new Promise((ok, fail) => {
-                this.hook = () => ok(mkHttpResponse(this.req));
-            });
+            return this.promise;
         }
     }
 
     setHeader(name, value) {
-        this.headers[name] = value;
-        return this;
+        this.xhr.setRequestHeader(name, value);
+    }
+});
+
+
+/*****
+ * The HttpResponse object provides an API to properties and methods in the
+ * XMLHttpRequest object.  Hence, it's a different view on the HTTP request.
+ * It provides a stylized approach accepting, analyzing, and fetching the
+ * response data when the request is done, aborted, errored out, or timed
+ * out.  It also provides simplicity in fetching formatted payload data.
+*****/
+register('', class HttpResponse {
+    constructor(xhr) {
+        this.xhr = xhr;
+    }
+
+    getHeader(name) {
+        return this.xhr.getResponseHeader(name);
+    }
+
+    getHeaders() {
+        return this.xhr.getAllResponseHeaders();
+    }
+
+    hasHeader(name) {
+        return this.xhr.getResponseHeader(name) != null;
+    }
+
+    getLength() {
+        return this.xhr.response.length;
+    }
+
+    getMime() {
+        return mkMime(this.xhr.getResponseHeader('content-type'));
+    }
+
+    getPayload() {
+        let type = this.xhr.responseType;
+
+        if (type == '' || type == 'text') {
+            return this.xhr.responseText;
+        }
+        else if (type == 'json') {
+            return fromJson(this.xhr);
+        }
+        else {
+            return this.xhr.respoonse;
+        }
+    }
+
+    getStatus() {
+        return this.xhr.status;
+    }
+
+    getType() {
+        return this.xhr.type ? this.xhr.type : 'text';
+    }
+
+    getUrl() {
+        return this.xhr.responseUrl;
     }
 });
 
@@ -158,78 +249,22 @@ register('', class HttpUpload extends Emitter {
         super();
 
         for (let eventName of [
-            'loadstart',
-            'progress',
             'abort',
             'error',
             'load',
-            'timeout',
             'loadend',
+            'loadstart',
+            'progress',
+            'timeout',
         ]) {
-            http.req.upload.addEventListener(eventName, event => {
-                this.send({
-                    name: 'Upload',
+            http.xhr.upload.addEventListener(eventName, event => {
+                this.emit({
+                    name: 'UploadStatus',
                     status: eventName,
                     http: http,
                     event, event,
                 })
             });
         }
-    }
-});
-
-
-/*****
- * The HttpResponse object provides an API to properties and methods in the
- * XMLHttpRequest object.  Hence, it's a different view on the HTTP request.
- * It provides a stylized approach accepting, analyzing, and fetching the
- * response data when the request is done, aborted, errored out, or timed
- * out.  It also provides simplicity in fetching formatted payload data.
-*****/
-register('', class HttpResponse {
-    constructor(xmlHttpRequest) {
-        this.xmlHttpRequest = xmlHttpRequest;
-    }
-
-    getHeader(name) {
-        return this.xmlHttpRequest.getResponseHeader(name);
-    }
-
-    getHeaders() {
-        return this.xmlHttpRequest.getAllResponseHeaders();
-    }
-
-    hasHeader(name) {
-        return this.xmlHttpRequest.getResponseHeader(name) != null;
-    }
-
-    getMime() {
-        return mkMime(this.xmlHttpRequest.getResponseHeader('content-type'));
-    }
-
-    getPayload() {
-        let type = this.xmlHttpRequest.responseType;
-
-        if (type == '' || type == 'text') {
-            return this.xmlHttpRequest.responseText;
-        }
-        else if (type == 'json') {
-            return fromJson(this.xmlHttpRequest);
-        }
-        else {
-            return this.xmlHttpRequest.respoonse;
-        }
-    }
-
-    getStatus() {
-        return this.xmlHttpRequest.status;
-    }
-
-    getType() {
-        return this.xmlHttpRequest.type ? this.xmlHttpRequest.type : 'text';
-    }
-
-    getUrl() {
-        return this.xmlHttpRequest.responseUrl;
     }
 });

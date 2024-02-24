@@ -234,6 +234,7 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
         try {
             req = mkHttpRequest(this, httpReq);
             rsp = mkHttpResponse(this, httpRsp);
+            console.log(Object.keys(req.getCookieMap()));
             let response = await this.httpLibrary.handle(req);
 
             if (typeof response == 'number') {
@@ -519,11 +520,40 @@ registerIn('HttpServerWorker', '', class HttpRequest {
     }
 
     getCookie(name) {
-        // TODO
+        if (this.hasHeader('cookie')) {
+            for (let cookieString of TextUtils.split(this.getHeader('cookie'), '; ')) {
+                let [ cookieName, cookieValue ] = cookieString.split('=');
+
+                if (cookieName.trim() == name) {
+                    return mkCookie(cookieString);
+                }
+            }
+        }
+
+        return null;
     }
 
-    getCookies() {
-        // TODO
+    getCookieArray() {
+        if (this.hasHeader('cookie')) {
+            return TextUtils.split(this.getHeader('cookie'), '; ').map(cookieString => {
+                return mkCookie(cookieString);
+            });
+        }
+
+        return [];
+    }
+
+    getCookieMap() {
+        let cookies = {};
+
+        if (this.hasHeader('cookie')) {
+            TextUtils.split(this.getHeader('cookie'), '; ').forEach(cookieString => {
+                let cookie = mkCookie(cookieString);
+                cookies[cookie.getName()] = cookie;
+            });
+        }
+
+        return cookies;
     }
 
     getEncoding() {
@@ -717,14 +747,26 @@ registerIn('HttpServerWorker', '', class HttpResponse {
     constructor(httpServer, httpRsp) {
         this.httpServer = httpServer;
         this.httpRsp = httpRsp;
+        this.cookies = {};
     }
 
-    clearCookie(name) {
-        // TODO
-    }
+    clearCookie(...args) {
+        for (let arg of args) {
+            if (arg instanceof Cookie) {
+                this.cookies[cookie.getName()] = cookie.toString();
+            }
+            else if (typeof arg == 'string') {
+                let cookie = mkCookie({
+                    name: arg,
+                    value: 'none',
+                    expires: mkTime(0),
+                });
 
-    clearCookies() {
-        // TODO
+                this.cookies[cookie.getName()] = cookie.toString();
+            }
+        }
+
+        return this;
     }
 
     getHeader(headerName) {
@@ -766,15 +808,6 @@ registerIn('HttpServerWorker', '', class HttpResponse {
         this.httpRsp.writeHead(status);
         this.httpRsp.end(content);
     }
-
-    respondChunk(chunk) {
-        // TODO
-    }
-
-    respondChunked(status, contentType, chunk) {
-        // TODO
-        // Transfer-Encoding: chunked
-    }
     
     respondStatus(statusCode) {
         let template = this.httpServer.getStatusResponseTemplate(statusCode);
@@ -814,7 +847,7 @@ registerIn('HttpServerWorker', '', class HttpResponse {
     setContentType(mimeInfo, charset) {
         let mime = mimeInfo instanceof Mime ? mimeInfo : mkMime(mimeInfo);
 
-        if (mime.getType() == 'string' && typeof charset == 'string') {
+        if (mime.getType() == 'string' && typeof charset == 'string' && charset != '') {
             this.httpRsp.setHeader('Content-Type', `${mime.getCode()}; charset="${charset}"`);
         }
         else {

@@ -6,8 +6,26 @@
         <title>${title}</title>
         <link rel="stylesheet" href="?css">
         <script src="?radius"></script>
+        <script>
+            Doc.on('DOMContentLoaded', async message => {
+                /*
+                let cookie1 = mkCookie({
+                    name: 'coordinate',
+                    value: { x: 17, y: 33 },
+                    maxAge: 23847924,
+                });
+
+                let cookie2 = mkCookie('font', 'nice-big-font').setMaxAge(54834983);
+
+                Doc.setCookie(cookie1);
+                Doc.setCookie(cookie2);
+
+                Doc.clearCookie(cookie1.getName());
+                console.log(Doc.getCookieMap());
+                */
+            });
+        </script>
     </head>
     <body>
-        New Application Body...
     </body>
 </html>

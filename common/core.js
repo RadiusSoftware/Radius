@@ -219,20 +219,6 @@
 
 
     /*****
-     * For development purposes only!  The good ole fashion console.log() is
-     * useful for debugging purposes.  Sometimes the number of console.logs()
-     * get out of hand.  Hence, if we use this function instead of
-     * console.log(), we can easily find all instances of debugging statements
-     * in the code so we can remove them.
-    *****/
-    register('', function debug(...args) {
-        for (let arg of args) {
-            console.log(arg);
-        }
-    });
-
-
-    /*****
      * By convention, the caught func is what's used in try-catch clauses in
      * the entire framework and by the application code.  Generally speaking,
      * each platform implementation and perhaps each application will have its

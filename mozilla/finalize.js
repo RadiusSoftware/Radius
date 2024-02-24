@@ -27,14 +27,3 @@
  * the framework loaded.
 *****/
 wrapTree(document.documentElement);
-
-let strBuffer = mkBuffer('hêlłö ŵořlď');
-let b64 = strBuffer.toString('base64');
-let hex = strBuffer.toString('hex');
-debug(strBuffer.toString(), b64, hex);
-
-let b64Buffer = mkBuffer(b64, 'base64');
-debug(b64Buffer.toString());
-
-let hexBuffer = mkBuffer(hex, 'hex');
-debug(hexBuffer.toString());

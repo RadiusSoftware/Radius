@@ -116,10 +116,6 @@ singleton('', class Process extends Emitter {
         return trap.promise;
     }
 
-    dump() {
-        console.log(LibProcess);
-    }
-
     execInShell(script) {
         return new Promise((ok, fail) => {
             LibChildProcess.exec(script, (error, stdout, stderr) => {

@@ -84,11 +84,11 @@ singleton('', class TextUtils {
                 return text;
             }
             else if (len > width) {
-                return fillWithChar(width, '*');
+                return this.fillWithChar(width, '*');
             }
             else {
                 return [
-                    fillWithChar(width - len, '0'),
+                    this.fillWithChar(width - len, '0'),
                     text,
                 ].join('');
             }
@@ -111,6 +111,30 @@ singleton('', class TextUtils {
         }
     
         return chars.join('');
+    }
+
+    /*****
+     * Provides a neat utility to check whether a value is a proper hex-encoded
+     * string.  Hex encoded strings are useful to use in some cases because they
+     * have no special symbols or other cap to interfer with web and URL values.
+     * Note that the big drawback for hex encoding is their length;
+    *****/
+    isHexEncoded(str) {
+        if (typeof str == 'string') {
+            if (str.length > 0) {
+                if (str.length % 2 == 0) {
+                    for (let char of str) {
+                        if (!((char >= '0' && char <= '9') || (char >= 'a' && char <= 'f'))) {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /*****
@@ -265,7 +289,7 @@ singleton('', class TextUtils {
     toCamelCase(snakeCase) {
         let first = true;
         
-        return splitSnakeCase(snakeCase).map(word => {
+        return this.splitSnakeCase(snakeCase).map(word => {
             if (first) {
                 first = false;
                 return word;
@@ -283,7 +307,7 @@ singleton('', class TextUtils {
      * passed argument.  It's up to the caller to know.
     *****/
     toPascalCase(snakeCase) {
-        return splitSnakeCase(snakeCase).map(word => {
+        return this.splitSnakeCase(snakeCase).map(word => {
             return `${word[0].toUpperCase()}${word.substr(1)}`;
         }).join('');
     }
@@ -297,7 +321,7 @@ singleton('', class TextUtils {
     toSnakeCase(camelCase) {
         let first = true;
         
-        return splitCamelCase(camelCase).map(word => {
+        return this.splitCamelCase(camelCase).map(word => {
             if (first) {
                 first = false;
                 return word;

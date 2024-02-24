@@ -48,6 +48,7 @@ exports = module.exports = async function() {
             'common/textTree.js',
             'common/chronos.js',
             'common/api.js',
+            'common/cookie.js',
             
             'mozilla/element.js',
             'mozilla/win.js',
