@@ -25,10 +25,13 @@
 /*****
 *****/
 register('', class WebApp extends HttpX {
-    constructor(opts) {
+    constructor(filename) {
         super();
-        this.opts = opts;
         this.content = {};
+        this.filename = filename;
+        this.prototype = Reflect.getPrototypeOf(this);
+        this.classname = this.prototype.constructor.name;
+        this.webAppDir = this.filename.replace('.js', '');
     }
 
     clearContent(name) {
@@ -72,10 +75,7 @@ register('', class WebApp extends HttpX {
             }
         }
         else {
-            content = this.html.toString({
-                title: this.title,
-            });
-
+            content = this.html;
             contentCharset = 'utf-8';
             contentType = 'text/html';
         }
@@ -94,6 +94,7 @@ register('', class WebApp extends HttpX {
     }
 
     async handleMessage(message) {
+        return 'No Response';
     }
 
     async handlePOST(req) {
@@ -101,9 +102,8 @@ register('', class WebApp extends HttpX {
     }
 
     async init() {
-        this.title = typeof this.opts.title == 'string' ? this.opts.title : 'Web Application';
-        this.html = mkTextTemplate((await FileSystem.readFile(Path.join(__dirname, 'webApp.html'))).toString());
-        const cssPath = typeof this.opts.css == "string" ? this.opts.css : Path.join(__dirname, 'webApp.css');
+        this.html = (await FileSystem.readFile(Path.join(this.webAppDir, `${this.classname}.html`))).toString();
+        let cssPath = Path.join(this.webAppDir, `${this.classname}.css`);
         this.setContent('css', 'text/css', (await FileSystem.readFile(cssPath)).toString());
         this.setContent('radius', 'text/javascript', await require(Path.join(__dirname, '../mozilla.js'))());
         return this;

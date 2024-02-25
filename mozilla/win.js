@@ -22,6 +22,11 @@
 
 
 /*****
+ * The singleton Radius framework object that manages the underlying window
+ * object.  The document wrap is not just a wrap, it's a value-added wrap with
+ * features such as returning framework DocElements value-add features for
+ * extending window appearance and placemeent.  Win extends Emitter to help
+ * extend make the underlying window events available as real-time messages.
 *****/
 singleton('', class Win extends Emitter {  
     constructor() {

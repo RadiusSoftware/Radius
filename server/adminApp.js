@@ -25,10 +25,7 @@
 *****/
 register('radius', class AdminApp extends WebApp {
     constructor() {
-        super({
-            title: 'Radius Host Administrator',
-            websocket: true,
-        });
+        super(__filename);
     }
 
     async init() {
