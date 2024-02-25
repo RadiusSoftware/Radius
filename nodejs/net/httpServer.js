@@ -234,7 +234,6 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
         try {
             req = mkHttpRequest(this, httpReq);
             rsp = mkHttpResponse(this, httpRsp);
-            console.log(Object.keys(req.getCookieMap()));
             let response = await this.httpLibrary.handle(req);
 
             if (typeof response == 'number') {
@@ -753,6 +752,7 @@ registerIn('HttpServerWorker', '', class HttpResponse {
     clearCookie(...args) {
         for (let arg of args) {
             if (arg instanceof Cookie) {
+                cookie.setExpires(mkTime(0));
                 this.cookies[cookie.getName()] = cookie.toString();
             }
             else if (typeof arg == 'string') {
@@ -803,9 +803,16 @@ registerIn('HttpServerWorker', '', class HttpResponse {
     }
 
     respond(status, contentType, contentEncoding, contentCharset, content) {
+        const headers = {};
         this.setContentType(contentType, contentCharset ? contentCharset : '');
         this.setContentEncoding(contentEncoding ? contentEncoding : '');
-        this.httpRsp.writeHead(status);
+        this.getHeaderArray().forEach(header => headers[header.name] = header.value);
+
+        if (Object.keys(this.cookies).length) {
+            headers['Set-Cookie'] = Object.values(this.cookies).map(cookie => cookie.toString());
+        }
+
+        this.httpRsp.writeHead(status, headers);
         this.httpRsp.end(content);
     }
     
@@ -857,8 +864,12 @@ registerIn('HttpServerWorker', '', class HttpResponse {
         return this;
     }
 
-    setCookie(cookie) {
-        // TODO
+    setCookie(...cookies) {
+        for (let cookie of cookies) {
+            this.cookies[cookie.getName()] = cookie.toString();
+        }
+
+        return this;
     }
 
     setHeader(headerName, value) {

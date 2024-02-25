@@ -108,12 +108,6 @@ register('', class Cookie {
         return this;
     }
 
-    delete() {
-        this.maxAge = null;
-        this.expires = mkTime(0);
-        return this;
-    }
-
     getDomain() {
         return this.domain;
     }
