@@ -23,7 +23,7 @@
 
 /*****
 *****/
-register('radius', class AdminApp extends WebApp {
+register('radius', class AdminApp extends radius.WebApp {
     constructor() {
         super(__filename);
     }

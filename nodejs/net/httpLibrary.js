@@ -87,7 +87,6 @@ registerIn('HttpServer', '', class HttpLibrary {
             mime: mime,
             once: libEntry.once === true,
             timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
-            auth: libEntry.auth ? libEntry.auth : {},
             cache: { '': data },
         }
 
@@ -105,7 +104,6 @@ registerIn('HttpServer', '', class HttpLibrary {
                     mime: mkMime(Path.extname(fspath)),
                     once: libEntry.once === true,
                     timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
-                    auth: libEntry.auth ? libEntry.auth : {},
                     cache: {},
                 };
             };
@@ -118,7 +116,6 @@ registerIn('HttpServer', '', class HttpLibrary {
                 mime: mkMime(Path.extname(libEntry.fspath)),
                 once: libEntry.once === true,
                 timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
-                auth: libEntry.auth ? libEntry.auth : {},
                 cache: {},
             };
         }
@@ -135,7 +132,6 @@ registerIn('HttpServer', '', class HttpLibrary {
                 mime: null,
                 once: libEntry.once === true,
                 timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
-                auth: libEntry.auth ? libEntry.auth : {},
                 cache: { '': libEntry.fqClassName },
             };
 
@@ -154,22 +150,6 @@ registerIn('HttpServer', '', class HttpLibrary {
         return this;
     }
 
-    async checkAuth(libEntry, reqHeaders) {
-        if (typeof libEntry.auth == 'object') {
-            try {
-                let response = this.authHandler(libEntry, reqHeaders);
-                return response instanceof Promise ? await response : response;
-            }
-            catch (e) {
-                caught(e);
-                return false;
-            }
-        }
-        else {
-            return true;
-        }
-    }
-
     checkMethod(libEntry, method) {
         if (libEntry.type == 'data') {
             return method == 'GET';
@@ -182,15 +162,6 @@ registerIn('HttpServer', '', class HttpLibrary {
         }
 
         return false;
-    }
-
-    clearAuthHandler() {
-        this.authHandler = () => true;
-        return this;
-    }
-
-    getAuthHandler() {
-        return this.authHandler;
     }
 
     getBlockSizeMb() {
@@ -313,7 +284,6 @@ registerIn('HttpServer', '', class HttpLibrary {
         this.paths = {};
         this.shared = {};
         this.settings = settings;
-        this.setAuthHandler(this.settings.authHandler);
 
         for (let libEntry of libEntries) {
             await this.add(libEntry);
@@ -335,49 +305,44 @@ registerIn('HttpServer', '', class HttpLibrary {
             let libEntry = this.paths[message.path];
             
             if (this.checkMethod(libEntry, message.method)) {
-                if (await this.checkAuth(libEntry, message.headers)) {
-                    let response;
-                    let encoding = '';
-            
-                    for (let key in message.encoding) {
-                        if (Compression.isSupported(key)) {
-                            encoding = key;
-                            break;
-                        }
+                let response;
+                let encoding = '';
+        
+                for (let key in message.encoding) {
+                    if (Compression.isSupported(key)) {
+                        encoding = key;
+                        break;
                     }
-
-                    if (libEntry.type == 'data') {
-                        response = await this.getData({
-                            libEntry: libEntry,
-                            encoding: encoding,
-                        });
-                    }
-                    else if (libEntry.type == 'file') {
-                        response = await this.getFile({
-                            libEntry: libEntry,
-                            encoding: encoding,
-                        });
-                    }
-                    else if (libEntry.type == 'httpx') {
-                        response = await this.getHttpX({
-                            libEntry: libEntry,
-                            encoding: encoding,
-                        });
-                    }
-
-                    if (libEntry.once) {
-                        this.remove(libEntry.path);
-
-                        if (libEntry.type in { httpx:0 }) {
-                            response.once = true;
-                        }
-                    }
-
-                    return response;
                 }
-                else {
-                    return 403;
+
+                if (libEntry.type == 'data') {
+                    response = await this.getData({
+                        libEntry: libEntry,
+                        encoding: encoding,
+                    });
                 }
+                else if (libEntry.type == 'file') {
+                    response = await this.getFile({
+                        libEntry: libEntry,
+                        encoding: encoding,
+                    });
+                }
+                else if (libEntry.type == 'httpx') {
+                    response = await this.getHttpX({
+                        libEntry: libEntry,
+                        encoding: encoding,
+                    });
+                }
+
+                if (libEntry.once) {
+                    this.remove(libEntry.path);
+
+                    if (libEntry.type in { httpx:0 }) {
+                        response.once = true;
+                    }
+                }
+
+                return response;
             }
             else {
                 return 405;
@@ -436,17 +401,6 @@ registerIn('HttpServer', '', class HttpLibrary {
         return this;
     }
 
-    setAuthHandler(func) {
-        if (typeof func == 'function') {
-            this.authHandler = func;
-        }
-        else {
-            this.authHandler = () => true;
-        }
-
-        return this;
-    }
-
     touch(libEntry, encoding) {
         let duration;
 
@@ -478,11 +432,11 @@ registerIn('HttpServer', '', class HttpLibrary {
  * stored here.  Content types that are "active" objects, which are called by
  * the HTTP server to dynamically generate responses, such as HttpX, are ctored
  * here in this process.  Regardless whether it's the HttpServer or the worker,
- * all authorization and library management occurs fully or partially in the
- * HttpServer, which is the main application process.  When removing an item,
- * such as after a once is triggered, the main process will remove that item
- * from the library and then if it's an HttpX entry, the main process instructs
- * all children to remove  that instance from it's local set of paths.
+ * all library management occurs fully or partially in the HttpServer, which is
+ * the main application process.  When removing an item, such as after a once
+ * is triggered, the main process will remove that item from the library and
+ * then if it's an HttpX entry, the main process instructs all children to remove
+ * that instance from it's local set of paths.
 *****/
 registerIn('HttpServerWorker', '', class HttpLibrary {
     constructor() {

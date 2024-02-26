@@ -64,14 +64,20 @@
 
     /*****
     *****/
-    const apii = Symbol('ApiInternal');
+    const api = Symbol('api');
 
     register('', class Api {
         constructor() {
-            this[apii] = {
+            this[api] = {
                 endpoints: {},
                 emitters: [],
             };
+        }
+
+        clearEmitter(emitter) {
+        }
+
+        clearEmitters() {
         }
 
         getEmitters() {

@@ -52,7 +52,19 @@ register('', class HttpX extends Emitter {
         super();
     }
 
+    async handleDELETE(req) {
+        return 501;
+    }
+
     async handleGET(req) {
+        return 501;
+    }
+
+    async handlePOST(req) {
+        return 501;
+    }
+
+    async handlePUT(req) {
         return 501;
     }
 

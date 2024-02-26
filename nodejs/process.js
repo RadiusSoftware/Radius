@@ -317,7 +317,7 @@ singleton('', class Process extends Emitter {
     }
 
     isDebug() {
-        return this.getEnv('RADIUSDEBUG') == 'TRUE';
+        return this.getEnv('RadiusDebug') == 'TRUE';
     }
 
     onAbort(message) {

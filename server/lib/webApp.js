@@ -24,7 +24,7 @@
 
 /*****
 *****/
-register('', class WebApp extends HttpX {
+register('radius', class WebApp extends HttpX {
     constructor(filename) {
         super();
         this.content = {};
@@ -105,7 +105,7 @@ register('', class WebApp extends HttpX {
         this.html = (await FileSystem.readFile(Path.join(this.webAppDir, `${this.classname}.html`))).toString();
         let cssPath = Path.join(this.webAppDir, `${this.classname}.css`);
         this.setContent('css', 'text/css', (await FileSystem.readFile(cssPath)).toString());
-        this.setContent('radius', 'text/javascript', await require(Path.join(__dirname, '../mozilla.js'))());
+        this.setContent('radius', 'text/javascript', await require(Path.join(__dirname, '../../nodejs/mozilla.js'))());
         return this;
     }
 

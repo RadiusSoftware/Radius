@@ -48,9 +48,6 @@ const LibUrl = require('url');
         cacheMaxSizeMb: 100,
         cacheDurationMs: 10*60*1000,
         HttpStatusTemplates: false,
-        authHandler: (liEntry, req) => {
-            return true;
-        },
     },
     libEntries: [
         {
@@ -65,10 +62,6 @@ const LibUrl = require('url');
             path: '/special',
             fspath: '/Users/christoph/Documents/kodeJS.json',
             once: false,
-            auth: {
-                level: 1,
-                group: { 17:0, 18:0, 110:0 },
-            },
         },
         {
             type: 'data',
@@ -146,9 +139,7 @@ singletonIn('HttpServer', '', class HttpServer extends Server {
  * The HttpServerWorker is responsible for handling and responsing to server
  * requests as well as sharing responsibility for managing and executing watches
  * with the primary HttpServer process.  The HttpServerWorker is responsible
- * for handling requests to upgrade to a websocket connection.  If the server
- * server registers a handler to upgrade events, the websocket upgrade
- * request will be authorized and excuted.
+ * for handling requests to upgrade to a websocket connection.
 *****/
 singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker {
     constructor() {
@@ -434,10 +425,6 @@ registerIn('HttpServerWorker', '', class HttpRequest {
         }
 
         return items;
-    }
-
-    getAuth() {
-        return this.parsedUrl.auth;
     }
 
     async getBody() {

@@ -22,130 +22,141 @@
 require('../nodejs/radius.js');
 
 
-/*****
-*****/
-singletonIn(Process.nodeClassController, 'radius', class Controller {
-    constructor() {
-        (async () => {
-            await this.parseCommandLine();
+(async () => {
+    /*****
+    *****/
+    for (let dir of ['./lib', './apps']) {
+        let path = Path.join(__dirname, dir);
 
-            if (this.commandLine['-debug'] === true) {
-                Process.setEnv('RADIUSDEBUG', 'TRUE');
-            }
-
-            await this.detectDbms();
-            await this.launcher();
-        })();
-    }
-
-    async checkRadiusDatabase(dbc) {
-        display('\nCHECK CONSISTENCY OF RADIUS TABLES.\n');
-        display('\nCHECK TABLE SCHEMAS/UPGRADE.\n');
-        //this.launcher = this.launchLiveMode;
-    }
-
-    async detectDbms() {
-        this.launcher = this.launchAdminMode;
-
-        if ('-admin' in this.commandLine) return;
-        if (!('-dbtype' in this.commandLine)) return;
-        if (!('-dbhost' in this.commandLine)) return;
-        if (!('-dbuser' in this.commandLine)) return;
-        if (!('-dbpass' in this.commandLine)) return;
-
-        const settings = {
-            type: this.commandLine['-dbtype'],
-            host: this.commandLine['-dbhost'],
-            user: this.commandLine['-dbuser'],
-            pass: this.commandLine['-dbpass'],
-        };
-
-        try {
-            settings.dbname = 'radius';
-            var dbc = await Dbms.connect(settings);
-
-            if (dbc) {
-                await this.checkRadiusDatabase(dbc);
+        for (let file of await FileSystem.recurseFiles(path)) {
+            if (file.endsWith('.js')) {
+                require(file);
             }
         }
-        catch (e) {
-            caught(e);
+    }
+
+
+    /*****
+    *****/
+    singletonIn(Process.nodeClassController, 'radius', class Controller {
+        constructor() {
+            (async () => {
+                await this.parseCommandLine();
+
+                if (this.commandLine['-debug'] === true) {
+                    Process.setEnv('RadiusDebug', 'TRUE');
+                }
+
+                await this.detectDbms();
+                await this.launcher();
+            })();
+        }
+
+        async checkRadiusDatabase(dbc) {
+            display('\nCHECK CONSISTENCY OF RADIUS TABLES.\n');
+            display('\nCHECK TABLE SCHEMAS/UPGRADE.\n');
+            //this.launcher = this.launchLiveMode;
+        }
+
+        async detectDbms() {
             this.launcher = this.launchAdminMode;
+
+            if ('-admin' in this.commandLine) return;
+            if (!('-dbtype' in this.commandLine)) return;
+            if (!('-dbhost' in this.commandLine)) return;
+            if (!('-dbuser' in this.commandLine)) return;
+            if (!('-dbpass' in this.commandLine)) return;
+
+            const settings = {
+                type: this.commandLine['-dbtype'],
+                host: this.commandLine['-dbhost'],
+                user: this.commandLine['-dbuser'],
+                pass: this.commandLine['-dbpass'],
+            };
+
+            try {
+                settings.dbname = 'radius';
+                var dbc = await Dbms.connect(settings);
+
+                if (dbc) {
+                    await this.checkRadiusDatabase(dbc);
+                }
+            }
+            catch (e) {
+                caught(e);
+                this.launcher = this.launchAdminMode;
+            }
         }
-    }
 
-    getMode() {
-        if (this.mode == this.launchLiveMode) return 'live';
-        if (this.mode == this.launchAdminMode) return 'admin';
-    }
+        getMode() {
+            if (this.mode == this.launchLiveMode) return 'live';
+            if (this.mode == this.launchAdminMode) return 'admin';
+        }
 
-    async launchAdminMode() {
-        startServer('HttpServer', {
-            deflang: 'en-US',
-            workers: 1,
-            interfaces: [
-                {
-                    addr: '0.0.0.0',
-                    port: 80,
-                    tls: false,
+        async launchAdminMode() {
+            startServer('HttpServer', {
+                deflang: 'en-US',
+                workers: 1,
+                interfaces: [
+                    {
+                        addr: '0.0.0.0',
+                        port: 80,
+                        tls: false,
+                    },
+                ],
+                upgradHandler: null,
+                libSettings: {
+                    blockSizeMb: 50,
+                    cacheMaxSizeMb: 100,
+                    cacheDurationMs: 10*60*1000,
+                    HttpStatusTemplates: false,
                 },
-            ],
-            upgradHandler: null,
-            libSettings: {
-                blockSizeMb: 50,
-                cacheMaxSizeMb: 100,
-                cacheDurationMs: 10*60*1000,
-                HttpStatusTemplates: false,
-                authHandler: (liEntry, req) => {
-                    return true;
-                },
-            },
-            libEntries: [
-                {
-                    type: 'httpx',
-                    path: '/',
-                    module: Path.join(__dirname, './adminApp.js'),
-                    fqClassName: 'radius.AdminApp',
-                },
-            ],
-        });
-    }
+                libEntries: [
+                    {
+                        type: 'httpx',
+                        path: '/',
+                        fqClassName: 'radius.AdminApp',
+                    },
+                ],
+            });
+        }
 
-    async launchLiveMode() {
-        display('\n..launching LIVE MODE\n');
-    }
+        async launchLiveMode() {
+            display('\n..launching LIVE MODE\n');
+        }
 
-    async parseCommandLine() {
-        const args = Process.getArgs();
-        this.nodePath = args[0];
-        this.serverPath = args[1];
-        this.commandLine = {};
+        async parseCommandLine() {
+            const args = Process.getArgs();
+            this.nodePath = args[0];
+            this.serverPath = args[1];
+            this.commandLine = {};
 
-        const supportedArgs = {
-            '-debug':  { hasValue: false },
-            '-admin':  { hasValue: false },
-            '-dbtype': { hasValue: true },
-            '-dbhost': { hasValue: true },
-            '-dbuser': { hasValue: true },
-            '-dbpass': { hasValue: true },
-        };
+            const supportedArgs = {
+                '-debug':  { hasValue: false },
+                '-admin':  { hasValue: false },
+                '-dbtype': { hasValue: true },
+                '-dbhost': { hasValue: true },
+                '-dbuser': { hasValue: true },
+                '-dbpass': { hasValue: true },
+            };
 
-        for (let i = 2; i < args.length; i++) {
-            let arg = args[i];
-            const supportedArg = supportedArgs[arg];
+            for (let i = 2; i < args.length; i++) {
+                let arg = args[i];
+                const supportedArg = supportedArgs[arg];
 
-            if (supportedArg) {
-                if (supportedArg.hasValue) {
-                    if (i+1 < args.length) {
-                        if (!args[i+1].startsWith('-')) {
-                            this.commandLine[arg] = args[++i];
+                if (supportedArg) {
+                    if (supportedArg.hasValue) {
+                        if (i+1 < args.length) {
+                            if (!args[i+1].startsWith('-')) {
+                                this.commandLine[arg] = args[++i];
+                            }
                         }
                     }
-                }
-                else {
-                    this.commandLine[arg] = true;
+                    else {
+                        this.commandLine[arg] = true;
+                    }
                 }
             }
         }
-    }
-});
+    });
+})();
