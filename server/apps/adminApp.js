@@ -25,7 +25,7 @@
 *****/
 register('radius', class AdminApp extends radius.WebApp {
     constructor() {
-        super(__filename);
+        super();
     }
 
     async init() {

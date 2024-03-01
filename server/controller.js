@@ -25,7 +25,7 @@ require('../nodejs/radius.js');
 (async () => {
     /*****
     *****/
-    for (let dir of ['./lib', './apps']) {
+    for (let dir of ['./lib']) {
         let path = Path.join(__dirname, dir);
 
         for (let file of await FileSystem.recurseFiles(path)) {
@@ -115,6 +115,7 @@ require('../nodejs/radius.js');
                     {
                         type: 'httpx',
                         path: '/',
+                        module: Path.join(__dirname, 'apps/adminApp.js'),
                         fqClassName: 'radius.AdminApp',
                     },
                 ],

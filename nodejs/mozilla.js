@@ -23,54 +23,55 @@
 
 /*****
 *****/
-let radius;
-
-
-/*****
-*****/
-exports = module.exports = async function() {
-    if (!radius) {
-        const modules = ['"use strict";'];
-
-        const frameworkFiles = [
-            'common/core.js',
-            'common/buffer.js',
-            'common/emitter.js',
-            'common/objekt.js',
-            'common/stringSet.js',
-            'common/textTemplate.js',
-            'common/data.js',
-            'common/json.js',
-            'common/language.js',
-            'common/time.js',
-            'common/mime.js',
-            'common/textUtils.js',
-            'common/textTree.js',
-            'common/chronos.js',
-            'common/api.js',
-            'common/cookie.js',
-            
-            'mozilla/element.js',
-            'mozilla/win.js',
-            'mozilla/doc.js',
-            'mozilla/svg.js',
-            'mozilla/math.js',
-            'mozilla/style.js',
-            'mozilla/widget.js',
-            'mozilla/entanglements.js',
-            'mozilla/controller.js',
-            'mozilla/http.js',
-            'mozilla/websocket.js',
-            'mozilla/finalize.js',
-        ];
-    
-        for (let frameworkFile of frameworkFiles) {
-            const path = Path.join(__dirname, `../${frameworkFile}`);
-            modules.push((await FileSystem.readFile(path)).toString());
-        }
-
-        radius = modules.join('\n');
+singleton('', class Mozilla {
+    constructor() {
+        this.sourceCode = null;
     }
 
-    return radius;
-};
+    async getSourceCode() {
+        if (!this.sourceCode) {
+            const modules = ['"use strict";'];
+    
+            const frameworkFiles = [
+                'common/core.js',
+                'common/buffer.js',
+                'common/emitter.js',
+                'common/objekt.js',
+                'common/stringSet.js',
+                'common/textTemplate.js',
+                'common/data.js',
+                'common/json.js',
+                'common/language.js',
+                'common/time.js',
+                'common/mime.js',
+                'common/textUtils.js',
+                'common/textTree.js',
+                'common/chronos.js',
+                'common/api.js',
+                'common/cookie.js',
+                
+                'mozilla/element.js',
+                'mozilla/win.js',
+                'mozilla/doc.js',
+                'mozilla/svg.js',
+                'mozilla/math.js',
+                'mozilla/style.js',
+                'mozilla/widget.js',
+                'mozilla/entanglements.js',
+                'mozilla/controller.js',
+                'mozilla/http.js',
+                'mozilla/websocket.js',
+                'mozilla/finalize.js',
+            ];
+        
+            for (let frameworkFile of frameworkFiles) {
+                const path = Path.join(__dirname, `../${frameworkFile}`);
+                modules.push((await FileSystem.readFile(path)).toString());
+            }
+    
+            this.sourceCode = modules.join('\n');
+        }
+
+        return this.sourceCode;
+    }
+});

@@ -39,55 +39,27 @@ registerIn('HttpServer', '', class HttpLibrary {
     }
 
     async add(libEntry) {
-        if (libEntry.type == 'data') {
-            await this.addData(libEntry);
-        }
-        else if (libEntry.type == 'file') {
-            await this.addFile(libEntry)
-        }
-        else if (libEntry.type == 'httpx') {
-            await this.addHttpX(libEntry);
+        if (libEntry.weak !== true || !(libEntry.path in this.paths)) {
+            if (libEntry.type == 'data') {
+                await this.addData(libEntry);
+            }
+            else if (libEntry.type == 'file') {
+                await this.addFile(libEntry)
+            }
+            else if (libEntry.type == 'httpx') {
+                await this.addHttpX(libEntry);
+            }
         }
     }
 
     async addData(libEntry) {
-        let data;
-        let mime;
-
-        if (typeof libEntry.data == 'object') {
-            data = toJson(libEntry.data);
-            mime = mkMime('application/json');
-        }
-        else if (typeof libEntry.data == 'string') {
-            data = libEntry.data;
-            mime = mkMime('text/plain');
-        }
-        else {
-            if (libEntry.data instanceof Buffer) {
-                data = libEntry.data;
-            }
-            else {
-                data = mkBuffer(libEntry.data);
-            }
-
-            if (libEntry.mime instanceof Mime) {
-                mime = libEntry.mime;
-            }
-            else if (typeof libEntry.mime == 'string') {
-                mime = mkMime(libEntry.mime);
-            }
-            else {
-                mime = mkMime('');
-            }
-        }
-
         this.paths[libEntry.path] = {
             type: 'data',
             path: libEntry.path,
-            mime: mime,
+            mime: mkMime(libEntry.mime),
             once: libEntry.once === true,
             timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
-            cache: { '': data },
+            cache: { '': { content: libEntry.data }},
         }
 
         return this;
@@ -184,7 +156,7 @@ registerIn('HttpServer', '', class HttpLibrary {
                 content = info.libEntry.cache[info.encoding].content;
             }
             else {
-                let raw = info.libEntry.cache[''];
+                let raw = info.libEntry.cache[''].content;
 
                 if (info.encoding != '') {
                     content = await Compression.compress(info.encoding, raw);
@@ -280,6 +252,10 @@ registerIn('HttpServer', '', class HttpLibrary {
         }
     }
 
+    async has(path) {
+        return path in this.paths;
+    }
+
     async init(settings, libEntries) {
         this.paths = {};
         this.shared = {};
@@ -353,12 +329,16 @@ registerIn('HttpServer', '', class HttpLibrary {
         }
     }
 
+    async onHas(message) {
+        return await this.has(message.path);
+    }
+
     async onRefresh(message) {
         this.refresh(message.path);
     }
 
     async onRemove(message) {
-        this.refresh(message.path);
+        this.remove(message.path);
     }
 
     refresh(path) {
@@ -453,30 +433,22 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
 
     async addInternal(libEntry) {
         if (libEntry.type == 'httpx') {
-            if (libEntry.module) {
-                require(libEntry.module);
-            }
-
-            let makerName;
-            let fqClassName = libEntry.cache[''];
-            let index = fqClassName.lastIndexOf('.');
-
-            if (index > 0) {
-                makerName = `${fqClassName.substring(0, index+1)}mk${fqClassName.substring(index+1)}`;
-            }
-            else {
-                makerName = `mk${fqClassName}`;
-            }
+            require(libEntry.module);
+            let makerName = fqnMakerName(libEntry.cache['']);
 
             let httpX;
             eval(`httpX = ${makerName}()`);
 
             if (httpX instanceof HttpX) {
+                httpX.prototype = Reflect.getPrototypeOf(httpX);
+                httpX.className = httpX.prototype.constructor.name;
+                httpX.fqClassName = libEntry.cache[''];
+                httpX.fqMakerName = makerName;
+                httpX.httpXPath = libEntry.module;
+                httpX.httpXDir = libEntry.module.replace('.js', '');
+                httpX.path = libEntry.path;
                 await httpX.init();
                 this.paths[libEntry.path] = httpX;
-            }
-            else {
-                this.paths[libEntry.path] = mkHttpX();
             }
         }
     }

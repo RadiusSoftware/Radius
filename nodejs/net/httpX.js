@@ -52,6 +52,15 @@ register('', class HttpX extends Emitter {
         super();
     }
 
+    async authorize(rsc, permissions) {
+        return true;
+    }
+
+    async clearContent(relpath) {
+        // TODO
+        return this;
+    }
+
     async handleDELETE(req) {
         return 501;
     }
@@ -69,6 +78,33 @@ register('', class HttpX extends Emitter {
     }
 
     async init() {
+        for (let path of await FileSystem.recurseFiles(this.httpXDir)) {
+            if (path.endsWith('..js')) {
+                require(path);
+            }
+        }
+
+        return this;
+    }
+
+    async setContent(relpath, mime, data, permissions) {
+        if (!Path.isAbsolute(relpath)) {
+            let urlPath = Path.join(this.path, relpath);
+
+            if (!(await Process.callParent({ name: 'HttpLibraryHas', path: urlPath }))) {
+                await Process.callParent({
+                    name: 'HttpLibraryAdd',
+                    libEntry: {
+                        type: 'data',
+                        mime: mime,
+                        path: urlPath,
+                        data: data,
+                        weak: true,
+                    }
+                });
+            }
+        }
+
         return this;
     }
 });

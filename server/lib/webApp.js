@@ -25,27 +25,23 @@
 /*****
 *****/
 register('radius', class WebApp extends HttpX {
-    constructor(filename) {
+    constructor() {
         super();
-        this.content = {};
-        this.filename = filename;
-        this.prototype = Reflect.getPrototypeOf(this);
-        this.classname = this.prototype.constructor.name;
-        this.webAppDir = this.filename.replace('.js', '');
+        this.allowWebsocket = false;
     }
 
-    clearContent(name) {
-        delete this.content[name];
+    allowWebsocket() {
+        this.allowWebsocket = true;
         return this;
     }
 
-    getContent(name) {
-        if (name in this.content) {
-            return this.content[name];
-        }
-        else {
-            return 404;
-        }
+    disallowWebsocket() {
+        this.allowWebsocket = false;
+        return this;
+    }
+
+    getAllowWebsocket() {
+        return this.allowWebsocket;
     }
 
     async handleGET(req) {
@@ -102,20 +98,12 @@ register('radius', class WebApp extends HttpX {
     }
 
     async init() {
-        this.html = (await FileSystem.readFile(Path.join(this.webAppDir, `${this.classname}.html`))).toString();
-        let cssPath = Path.join(this.webAppDir, `${this.classname}.css`);
-        this.setContent('css', 'text/css', (await FileSystem.readFile(cssPath)).toString());
-        this.setContent('radius', 'text/javascript', await require(Path.join(__dirname, '../../nodejs/mozilla.js'))());
-        return this;
-    }
-
-    setContent(name, mime, value) {
-        this.content[name] = {
-            name: name,
-            mime: mime instanceof Mime ? mime.getCode() : mime,
-            value: value
-        };
-
+        super.init();
+        this.htmlPath = `${this.className}.html`;
+        this.stylePath = `${this.className}.css`;
+        this.html = (await FileSystem.readFile(Path.join(this.httpXDir, this.htmlPath))).toString();
+        this.setContent('style', 'text/css', (await FileSystem.readFile(Path.join(this.httpXDir, this.stylePath))).toString());
+        this.setContent('radius', 'text/javascript', await Mozilla.getSourceCode());
         return this;
     }
 });

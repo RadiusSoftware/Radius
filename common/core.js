@@ -207,6 +207,23 @@
 
 
     /*****
+     * Handy utility to create a fully qualified maker name based on the classes
+     * fully qualified name.  This is actually a core feature of the framework
+     * and needs to be provided right here.
+    *****/
+    register('', function fqnMakerName(fqClassName) {
+        let index = fqClassName.lastIndexOf('.');
+
+        if (index > 0) {
+            return `${fqClassName.substring(0, index+1)}mk${fqClassName.substring(index+1)}`;
+        }
+        else {
+            return `mk${fqClassName}`;
+        }
+    });
+
+
+    /*****
      * This is a very simplistic function that's nice to have syntactically.  It
      * makes for some very nice code:  await pauseFor(800).  The input interval is
      * specified in milliseconds.

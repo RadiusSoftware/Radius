@@ -63,6 +63,7 @@ require('./compression.js');
 require('./jose.js');
 require('./server.js');
 require('./element.js');
+require('./mozilla.js');
 
 require('./net/socket.js');
 require('./net/httpX.js');
