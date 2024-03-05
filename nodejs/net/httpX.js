@@ -57,7 +57,11 @@ register('', class HttpX extends Emitter {
     }
 
     async clearContent(relpath) {
-        // TODO
+        if (relpath) {
+        }
+        else {
+        }
+        
         return this;
     }
 

@@ -101,6 +101,7 @@ registerIn('HttpServer', '', class HttpLibrary {
                 type: 'httpx',
                 path: libEntry.path,
                 module: libEntry.module,
+                uuid: Crypto.generateUuid(),
                 mime: null,
                 once: libEntry.once === true,
                 timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
@@ -273,6 +274,7 @@ registerIn('HttpServer', '', class HttpLibrary {
     }
 
     async onChildInit(message) {
+        console.log(Object.values(this.shared));
         return Object.values(this.shared);
     }
 
@@ -433,6 +435,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
 
     async addInternal(libEntry) {
         if (libEntry.type == 'httpx') {
+            console.log(libEntry);
             require(libEntry.module);
             let makerName = fqnMakerName(libEntry.cache['']);
 

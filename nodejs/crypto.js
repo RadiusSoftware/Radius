@@ -19,8 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-const LibCrpto = require('node:crypto');
-const NpmUuid = require('uuid');
+const LibCrypto = require('node:crypto');
 
 
 /*****
@@ -255,10 +254,11 @@ singleton('', class Crypto {
             });
         });
     }
-
+    /*
     generateRandomUuid() {
         return LibCrypto.randomUUID();
     }
+    */
 
     async generateSshKeyPair() {
         let pem = ServerUtils.createTempFile('pem');
@@ -279,7 +279,7 @@ singleton('', class Crypto {
     }
 
     generateUuid() {
-        return NpmUuid.v4();
+        return LibCrypto.randomUUID();
     }
 
     hash(algorithm, value) {
