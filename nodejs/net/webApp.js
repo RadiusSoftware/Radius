@@ -33,6 +33,8 @@ register('', class WebApp extends HttpX {
     constructor() {
         super();
         this.allowWebsocket = false;
+        this.webAppPath = __filename;
+        this.webAppDir = Path.join(__filename.replace('.js', ''), '../../webApp');
     }
 
     allowWebsocket() {
@@ -47,6 +49,14 @@ register('', class WebApp extends HttpX {
 
     getAllowWebsocket() {
         return this.allowWebsocket;
+    }
+
+    getWebAppDir() {
+        return this.webAppDir;
+    }
+
+    getWebAppPath() {
+        return this.webAppPath;
     }
 
     async handleGET(req) {
@@ -99,16 +109,34 @@ register('', class WebApp extends HttpX {
     }
 
     async handlePOST(req) {
-        return 501;
+        console.log(req.getFullRequest());
+        return 404;
     }
 
     async init() {
         super.init();
-        this.htmlPath = `${this.className}.html`;
-        this.stylePath = `${this.className}.css`;
+        this.htmlPath = `${this.className[0].toLowerCase()}${this.className.substring(1)}.html`;
+        this.stylePath = `${this.className[0].toLowerCase()}${this.className.substring(1)}.css`;
         this.html = (await FileSystem.readFile(Path.join(this.httpXDir, this.htmlPath))).toString();
         this.setContent('style', 'text/css', (await FileSystem.readFile(Path.join(this.httpXDir, this.stylePath))).toString());
         this.setContent('radius', 'text/javascript', await Mozilla.getSourceCode());
+        await this.loadStandardBundles();
+        await this.loadSubclassBundles();
         return this;
+    }
+
+    async loadStandardBundles() {
+        for (let filepath of await FileSystem.recurseFiles(this.getWebAppDir())) {
+            console.log(filepath);
+        }
+    }
+
+    async loadSubclassBundles() {
+        for (let filepath of await FileSystem.recurseFiles(this.getHttpXDir())) {
+            if (filepath.endsWith(this.htmlPath)) continue;
+            if (filepath.endsWith(this.stylePath)) continue;
+
+            console.log(filepath);
+        }
     }
 });

@@ -52,8 +52,40 @@ register('', class HttpX extends Emitter {
         super();
     }
 
-    async authorize(rsc, permissions) {
-        return true;
+    getClassName() {
+        return this.className;
+    }
+
+    getFqClassName() {
+        return this.fqClassName;
+    }
+
+    getFqMakerName() {
+        return this.fqMakerName;
+    }
+
+    getHttpXDir() {
+        return this.httpXDir;
+    }
+
+    getHttpXPath() {
+        return this.httpXPath;
+    }
+
+    getOnce() {
+        return this.once;
+    }
+
+    getPrototype() {
+        return this.prototype;
+    }
+
+    getUrlPath() {
+        return this.path;
+    }
+
+    getUUID() {
+        return this.uuid;
     }
 
     async handleDELETE(req) {
@@ -73,12 +105,7 @@ register('', class HttpX extends Emitter {
     }
 
     async init() {
-        for (let path of await FileSystem.recurseFiles(this.httpXDir)) {
-            if (path.endsWith('..js')) {
-                require(path);
-            }
-        }
-
+        await FileSystem.recurseModules(this.httpXDir);
         return this;
     }
 

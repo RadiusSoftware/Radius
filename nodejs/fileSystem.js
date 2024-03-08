@@ -183,16 +183,17 @@ singleton('', class FileSystem extends Emitter {
     
         while (stack.length) {
             let path = stack.pop();
-            let stats = await LibFiles.stat(path);
-  
-            if (stats.isDirectory()) {
-                dirs.push(path);
 
-                (await LibFiles.promises.readdir(path)).forEach(fileName => {
+            if (await this.isDirectory(path)) {
+                for (let fileName of await LibFiles.promises.readdir(path)) {
                     if (!fileName.startsWith('.')) {
-                        stack.push(`${path}/${fileName}`);
+                        let abspath = Path.join(path, fileName);
+
+                        if (await this.isDirectory(abspath)) {
+                            this.stack.push(abspath);
+                        }
                     }
-                });
+                }
             }
         }
       
@@ -205,17 +206,20 @@ singleton('', class FileSystem extends Emitter {
     
         while (stack.length) {
             let path = stack.pop();
-            let stats = await LibFiles.promises.stat(path);
-  
-            if (stats.isDirectory()) {
-                (await LibFiles.promises.readdir(path)).forEach(fileName => {
+
+            if (await this.isDirectory(path)) {
+                for (let fileName of await LibFiles.promises.readdir(path)) {
                     if (!fileName.startsWith('.')) {
-                        stack.push(`${path}/${fileName}`);
+                        let abspath = Path.join(path, fileName);
+
+                        if (await this.isDirectory(abspath)) {
+                            this.stack.push(abspath);
+                        }
+                        else if (await this.isFile(abspath)) {
+                            files.push(abspath);
+                        }
                     }
-                });
-            }
-            else if (stats.isFile()) {
-                files.push(path);
+                }
             }
         }
       
@@ -231,21 +235,18 @@ singleton('', class FileSystem extends Emitter {
             if (await this.isDirectory(path)) {
                 for (let fileName of await LibFiles.promises.readdir(path)) {
                     if (!fileName.startsWith('.')) {
-                        let abspath = `${path}/${fileName}`;
+                        let abspath = Path.join(path, fileName);
 
                         if (await this.isDirectory(abspath)) {
                             this.stack.push(abspath);
                         }
                         else if (await this.isFile(abspath)) {
                             if (abspath.endsWith('.js')) {
-                                require(absPath);
+                                require(abspath);
                             }
                         }
                     }
                 }
-            }
-            else if (stats.isFile()) {
-                files.push(path);
             }
         }
       
