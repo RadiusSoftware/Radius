@@ -29,7 +29,7 @@
  * for implementing server-side dynamic responses to requests.  This is the
  * basis for web applications and simpler algorithms such as realtime data
  * steaming.  What it does is accept an HTTP request and provides an frame-
- * work response employing shape:
+ * work response employing following shape:
  * 
  *      return {
  *          status: 200,
@@ -54,15 +54,6 @@ register('', class HttpX extends Emitter {
 
     async authorize(rsc, permissions) {
         return true;
-    }
-
-    async clearContent(relpath) {
-        if (relpath) {
-        }
-        else {
-        }
-        
-        return this;
     }
 
     async handleDELETE(req) {
@@ -91,7 +82,22 @@ register('', class HttpX extends Emitter {
         return this;
     }
 
-    async setContent(relpath, mime, data, permissions) {
+    async removeContent(relpath) {
+        if (!Path.isAbsolute(relpath)) {
+            let urlPath = Path.join(this.path, relpath);
+
+            if (!(await Process.callParent({ name: 'HttpLibraryHas', path: urlPath }))) {
+                await Process.callParent({
+                    name: 'HttpLibraryRemove',
+                    path: urlPath,
+                });
+            }
+        }
+
+        return this;
+    }
+
+    async setContent(relpath, mime, data) {
         if (!Path.isAbsolute(relpath)) {
             let urlPath = Path.join(this.path, relpath);
 
@@ -103,7 +109,8 @@ register('', class HttpX extends Emitter {
                         mime: mime,
                         path: urlPath,
                         data: data,
-                        weak: true,
+                        uuid: this.uuid,
+                        once: this.once === true,
                     }
                 });
             }

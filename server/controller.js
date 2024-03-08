@@ -25,13 +25,9 @@ require('../nodejs/radius.js');
 (async () => {
     /*****
     *****/
-    for (let dir of ['./lib']) {
-        let path = Path.join(__dirname, dir);
-
-        for (let file of await FileSystem.recurseFiles(path)) {
-            if (file.endsWith('.js')) {
-                require(file);
-            }
+    for (let directory of await FileSystem.enumerateDirectories(__dirname)) {
+        if (!directory.endsWith('apps')) {
+            await FileSystem.recurseModules(directory);
         }
     }
 
@@ -117,7 +113,6 @@ require('../nodejs/radius.js');
                         path: '/',
                         module: Path.join(__dirname, 'apps/adminApp.js'),
                         fqClassName: 'radius.AdminApp',
-                        once: true,
                     },
                 ],
             });

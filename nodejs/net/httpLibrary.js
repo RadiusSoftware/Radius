@@ -39,7 +39,7 @@ registerIn('HttpServer', '', class HttpLibrary {
     }
 
     async add(libEntry) {
-        if (libEntry.weak !== true || !(libEntry.path in this.paths)) {
+        if (!libEntry.uuid || !(libEntry.path in this.paths)) {
             if (libEntry.type == 'data') {
                 await this.addData(libEntry);
             }
@@ -48,6 +48,10 @@ registerIn('HttpServer', '', class HttpLibrary {
             }
             else if (libEntry.type == 'httpx') {
                 await this.addHttpX(libEntry);
+            }
+
+            if (libEntry.uuid && libEntry.type != 'httpx') {
+                this.httpxs[libEntry.uuid].paths[libEntry.path] = libEntry;
             }
         }
     }
@@ -100,6 +104,7 @@ registerIn('HttpServer', '', class HttpLibrary {
             let entry = {
                 type: 'httpx',
                 path: libEntry.path,
+                paths: {},
                 module: libEntry.module,
                 uuid: Crypto.generateUuid(),
                 mime: null,
@@ -109,7 +114,7 @@ registerIn('HttpServer', '', class HttpLibrary {
             };
 
             this.paths[libEntry.path] = entry;
-            this.shared[libEntry.path] = entry;
+            this.httpxs[entry.uuid] = entry;
 
             Process.sendChildren({
                 name: 'HttpLibraryAdd',
@@ -117,7 +122,7 @@ registerIn('HttpServer', '', class HttpLibrary {
             });
         }
         else {
-            log(`Unable add HttpX libEntry to HttpLibrary.`, toJson(libEntry));
+            log(`Unable to add HttpX libEntry to HttpLibrary.`, toJson(libEntry));
         }
 
         return this;
@@ -259,7 +264,7 @@ registerIn('HttpServer', '', class HttpLibrary {
 
     async init(settings, libEntries) {
         this.paths = {};
-        this.shared = {};
+        this.httpxs = {};
         this.settings = settings;
 
         for (let libEntry of libEntries) {
@@ -274,8 +279,7 @@ registerIn('HttpServer', '', class HttpLibrary {
     }
 
     async onChildInit(message) {
-        console.log(Object.values(this.shared));
-        return Object.values(this.shared);
+        return Object.values(this.httpxs);
     }
 
     async onGet(message) {
@@ -343,6 +347,15 @@ registerIn('HttpServer', '', class HttpLibrary {
         this.remove(message.path);
     }
 
+    async onRemoveHttpX(message) {
+        Process.sendChildren({
+            name: 'HttpLibraryRemove',
+            type: 'httpx',
+            path: message.path,
+            uuid: message.uuid,
+        });
+    }
+
     refresh(path) {
         if (path in this.paths) {
             let libEntry = this.paths[path];
@@ -378,8 +391,18 @@ registerIn('HttpServer', '', class HttpLibrary {
             }
         }
 
+        if (libEntry.uuid) {
+            let httpx = this.httpxs[libEntry.uuid];
+            delete this.httpxs[libEntry.uuid];
+
+            setTimeout(() => {
+                for (let path in httpx.paths) {
+                    delete this.paths[path];
+                }
+            }, 30000);
+        }
+
         delete this.paths[path];
-        delete this.shared[path];
         return this;
     }
 
@@ -435,7 +458,6 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
 
     async addInternal(libEntry) {
         if (libEntry.type == 'httpx') {
-            console.log(libEntry);
             require(libEntry.module);
             let makerName = fqnMakerName(libEntry.cache['']);
 
@@ -443,6 +465,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
             eval(`httpX = ${makerName}()`);
 
             if (httpX instanceof HttpX) {
+                httpX.uuid = libEntry.uuid;
                 httpX.prototype = Reflect.getPrototypeOf(httpX);
                 httpX.className = httpX.prototype.constructor.name;
                 httpX.fqClassName = libEntry.cache[''];
@@ -450,6 +473,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
                 httpX.httpXPath = libEntry.module;
                 httpX.httpXDir = libEntry.module.replace('.js', '');
                 httpX.path = libEntry.path;
+                httpX.once = libEntry.once;
                 await httpX.init();
                 this.paths[libEntry.path] = httpX;
             }
@@ -497,6 +521,12 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
 
             if (httpXInfo.once === true) {
                 delete this.paths[httpXInfo.path];
+
+                Process.sendParent({
+                    name: 'HttpLibraryRemoveHttpX',
+                    path: httpX.path,
+                    uuid: httpX.uuid,
+                });
             }
 
             return httpXResponse;
@@ -525,17 +555,37 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
         this.addInternal(message.libEntry);
     }
 
+    async onRemove(message) {
+        this.removeInternal(message.path, message.uuid);
+    }
+
     async refresh(path) {
         await Process.sendParent({
             name: 'HttpLibraryRefresh',
             path: path,
         });
+
+        return this;
     }
 
     async remove(path) {
         await Process.sendParent({
-            name: 'HttpLibraryRefresh',
+            name: 'HttpLibraryRemove',
             path: path,
         });
+
+        return this;
+    }
+
+    removeInternal(path, uuid) {
+        if (path in this.paths) {
+            let httpx = this.paths[path];
+
+            if (httpx.uuid == uuid) {
+                delete this.paths[path];
+            }
+        }
+
+        return this;
     }
 });

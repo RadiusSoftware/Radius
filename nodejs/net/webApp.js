@@ -23,8 +23,13 @@
 
 
 /*****
+ * The subclass of HttpX that's the super class for all Radius framework web
+ * applications.  The WebApp class provides the framework for handling messages,
+ * API calls, application stability, security, transsction procerssing, and
+ * transaction integrity.  Subclassing WebApp is how developers create their own
+ * applications.
 *****/
-register('radius', class WebApp extends HttpX {
+register('', class WebApp extends HttpX {
     constructor() {
         super();
         this.allowWebsocket = false;

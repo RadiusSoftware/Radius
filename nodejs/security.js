@@ -23,13 +23,23 @@
 
 /*****
 *****/
-register('radius', class AdminApp extends WebApp {
+register('', class Authorization {
     constructor() {
-        super();
     }
+});
 
-    async init() {
-        await super.init();
-        return this;
+
+/*****
+*****/
+register('', class Permission {
+    constructor() {
+    }
+});
+
+
+/*****
+*****/
+register('', class Session {
+    constructor() {
     }
 });

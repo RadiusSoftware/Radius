@@ -61,6 +61,46 @@ singleton('', class FileSystem extends Emitter {
         return this;
     }
 
+    async enumerateDirectories(...args) {
+        let dirs = [];
+
+        for (let arg of args) {
+            if (await this.isDirectory(arg)) {
+                for (let dirname of await LibFiles.promises.readdir(arg)) {
+                    if (!dirname.startsWith('.')) {
+                        let path = Path.join(arg, dirname);
+
+                        if (await this.isDirectory(path)) {
+                            dirs.push(path);
+                        }
+                    }
+                }
+            }
+        }
+
+        return dirs;
+    }
+
+    async enumerateFiles(...args) {
+        let dirs = [];
+
+        for (let arg of args) {
+            if (await this.isDirectory(arg)) {
+                for (let dirname of await LibFiles.promises.readdir(arg)) {
+                    if (!dirname.startsWith('.')) {
+                        let path = Path.join(arg, dirname);
+
+                        if (await this.isFile(path)) {
+                            dirs.push(path);
+                        }
+                    }
+                }
+            }
+        }
+
+        return dirs;
+    }
+
     async isDirectory(path) {
         try {
             let stats = await LibFiles.promises.stat(path);
@@ -180,6 +220,36 @@ singleton('', class FileSystem extends Emitter {
         }
       
         return files;
+    }
+
+    async recurseModules(...directories) {
+        let stack = [await Path.resolve(...directories)];
+    
+        while (stack.length) {
+            let path = stack.pop();
+  
+            if (await this.isDirectory(path)) {
+                for (let fileName of await LibFiles.promises.readdir(path)) {
+                    if (!fileName.startsWith('.')) {
+                        let abspath = `${path}/${fileName}`;
+
+                        if (await this.isDirectory(abspath)) {
+                            this.stack.push(abspath);
+                        }
+                        else if (await this.isFile(abspath)) {
+                            if (abspath.endsWith('.js')) {
+                                require(absPath);
+                            }
+                        }
+                    }
+                }
+            }
+            else if (stats.isFile()) {
+                files.push(path);
+            }
+        }
+      
+        return this;
     }
 
     async rename(oldPath, newPath) {
