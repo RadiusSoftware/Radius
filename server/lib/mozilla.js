@@ -23,7 +23,7 @@
 
 /*****
 *****/
-singleton('', class Mozilla {
+singleton('radius', class Mozilla {
     constructor() {
         this.sourceCode = null;
     }
@@ -61,14 +61,15 @@ singleton('', class Mozilla {
                 'mozilla/controller.js',
                 'mozilla/http.js',
                 'mozilla/websocket.js',
+                'mozilla/bundle.js',
                 'mozilla/finalize.js',
             ];
         
             for (let frameworkFile of frameworkFiles) {
-                const path = Path.join(__dirname, `../${frameworkFile}`);
+                const path = Path.join(__dirname, `../../${frameworkFile}`);
                 modules.push((await FileSystem.readFile(path)).toString());
             }
-    
+
             this.sourceCode = modules.join('\n');
         }
 

@@ -29,12 +29,13 @@
  * transaction integrity.  Subclassing WebApp is how developers create their own
  * applications.
 *****/
-register('', class WebApp extends HttpX {
+register('radius', class WebApp extends HttpX {
     constructor() {
         super();
         this.allowWebsocket = false;
         this.webAppPath = __filename;
         this.webAppDir = Path.join(__filename.replace('.js', ''), '../../webApp');
+        this.bundles = {};
     }
 
     allowWebsocket() {
@@ -57,6 +58,13 @@ register('', class WebApp extends HttpX {
 
     getWebAppPath() {
         return this.webAppPath;
+    }
+
+    async getBundle(name, encoding) {
+        if (name in this.bundles) {
+            let bundle = this.bundles[name]
+            return await bundle.get(encoding);
+        }
     }
 
     async handleGET(req) {
@@ -105,12 +113,54 @@ register('', class WebApp extends HttpX {
     }
 
     async handleMessage(message) {
-        return 'No Response';
+        console.log(message);
+
+        return {
+            //'#ContentType': '',
+            //'#ContentEncoding': '',
+            //'#ContentCharset': '',
+            //'#Error': '',
+            content: { done: true },
+        };
     }
 
     async handlePOST(req) {
-        console.log(req.getFullRequest());
-        return 404;
+        if (req.getMime() == 'application/json') {
+            try {
+                let message = await req.getBody();
+                let response = await this.handleMessage(message);
+                let encoding = response['#ContentEncoding'];
+
+                if (!encoding) {
+                    for (let algorithm in req.getAcceptEncoding()) {
+                        if (Compression.isSupported(algorithm)) {
+                            encoding = algorithm;
+                            break;
+                        }
+                    }
+                }
+
+                return {
+                    status: 200,
+                    contentType: '#ContentType' in response ? response['#ContentType'] : 'application/json',
+                    contentCharset: '#ContentCharset' in response ? response['#ContentCharset'] : 'utf-8',
+                    contentEncoding: '#ContentCharset' in response ? response['#ContentCharset'] : 'utf-8',
+                    contentEncoding: encoding,
+                    content: await Compression.compress(encoding, toJson(response.content)),
+                };
+            }
+            catch (e) {
+                caught(e, req.getFullRequest());
+                return 500;
+            }
+        }
+        else {
+            return 422;
+        }
+    }
+
+    hasBundle(name) {
+        return name in this.bundles;
     }
 
     async init() {
@@ -119,24 +169,43 @@ register('', class WebApp extends HttpX {
         this.stylePath = `${this.className[0].toLowerCase()}${this.className.substring(1)}.css`;
         this.html = (await FileSystem.readFile(Path.join(this.httpXDir, this.htmlPath))).toString();
         this.setContent('style', 'text/css', (await FileSystem.readFile(Path.join(this.httpXDir, this.stylePath))).toString());
-        this.setContent('radius', 'text/javascript', await Mozilla.getSourceCode());
-        await this.loadStandardBundles();
-        await this.loadSubclassBundles();
+        this.setContent('radius', 'text/javascript', await radius.Mozilla.getSourceCode());
+
+        for (let filePath of await FileSystem.recurseFiles(Path.join(this.getWebAppDir(), '../../mozilla/widgets'))) {
+            if (filePath.endsWith('.html')) {
+                await this.registerBundle(filePath);
+            }
+        }
+
+        for (let filePath of await FileSystem.recurseFiles(this.getWebAppDir())) {
+            if (filePath.endsWith('.html')) {
+                await this.registerBundle(filePath);
+            }
+        }
+
+        for (let filePath of await FileSystem.recurseFiles(this.getHttpXDir())) {
+            if (filePath.endsWith('.html')) {
+                await this.registerBundle(filePath);
+            }
+        }
+
         return this;
     }
 
-    async loadStandardBundles() {
-        for (let filepath of await FileSystem.recurseFiles(this.getWebAppDir())) {
-            console.log(filepath);
-        }
-    }
+    async registerBundle(filePath) {
+        try {
+            let bundle = await mkBundle(filePath).init();
 
-    async loadSubclassBundles() {
-        for (let filepath of await FileSystem.recurseFiles(this.getHttpXDir())) {
-            if (filepath.endsWith(this.htmlPath)) continue;
-            if (filepath.endsWith(this.stylePath)) continue;
-
-            console.log(filepath);
+            if (bundle.isValid()) {
+                if (bundle.getName() in this.bundles) {
+                    throw new Error(`Duplicate Bundle name: "${bundle.getName()}"`);
+                }
+                else {
+                    this.bundles[bundle.getName()] = bundle;
+                }
+            }
         }
+        catch (e) {}
+        return this;
     }
 });

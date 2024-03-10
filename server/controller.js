@@ -25,12 +25,7 @@ require('../nodejs/radius.js');
 (async () => {
     /*****
     *****/
-    for (let directory of await FileSystem.enumerateDirectories(__dirname)) {
-        if (!directory.endsWith('apps')) {
-            await FileSystem.recurseModules(directory);
-        }
-    }
-
+    await FileSystem.recurseModules(Path.join(__dirname, 'lib'));
 
     /*****
     *****/

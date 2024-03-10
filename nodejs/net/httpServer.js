@@ -430,7 +430,7 @@ registerIn('HttpServerWorker', '', class HttpRequest {
     async getBody() {
         return new Promise((ok, fail) => {
             if (this.body) {
-                ok(this.body);
+                this.object ? ok(this.object) : ok(this.body);
             }
             else {
                 let size = 0;
@@ -454,7 +454,7 @@ registerIn('HttpServerWorker', '', class HttpRequest {
                 
                 this.httpReq.on('end', () => {
                     if (chunks.length) {
-                        let mimeCode = this.header('content-type');
+                        let mimeCode = this.getHeader('content-type');
                         let mime = mkMime(mimeCode);
                         
                         if (mime.type == 'binary') {
@@ -473,12 +473,14 @@ registerIn('HttpServerWorker', '', class HttpRequest {
                         if (mimeCode == 'application/json') {
                             try {
                                 this.object = fromJson(this.body.value);
+                                ok(this.object);
                             }
                             catch (e) {}
                         }
                         else if (mimeCode == 'application/x-www-form-urlencoded') {
                             try {
                                 this.object = LibQueryString.parse(this.body.value);
+                                ok(this.object);
                             }
                             catch (e) {}
                         }
@@ -577,7 +579,7 @@ registerIn('HttpServerWorker', '', class HttpRequest {
     }
 
     getMime() {
-        return this.requestBody ? this.requestBody.mime : '';
+        return this.getHeader('Content-Type');
     }
 
     getObject() {

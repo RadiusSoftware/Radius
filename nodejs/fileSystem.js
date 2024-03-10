@@ -190,7 +190,7 @@ singleton('', class FileSystem extends Emitter {
                         let abspath = Path.join(path, fileName);
 
                         if (await this.isDirectory(abspath)) {
-                            this.stack.push(abspath);
+                            stack.push(abspath);
                         }
                     }
                 }
@@ -213,7 +213,7 @@ singleton('', class FileSystem extends Emitter {
                         let abspath = Path.join(path, fileName);
 
                         if (await this.isDirectory(abspath)) {
-                            this.stack.push(abspath);
+                            stack.push(abspath);
                         }
                         else if (await this.isFile(abspath)) {
                             files.push(abspath);
@@ -238,7 +238,7 @@ singleton('', class FileSystem extends Emitter {
                         let abspath = Path.join(path, fileName);
 
                         if (await this.isDirectory(abspath)) {
-                            this.stack.push(abspath);
+                            stack.push(abspath);
                         }
                         else if (await this.isFile(abspath)) {
                             if (abspath.endsWith('.js')) {

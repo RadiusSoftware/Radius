@@ -61,11 +61,13 @@ register('', class HttpRequest {
     }
 
     delete(url) {
-        return this.send('DELETE', url);
+        this.xhr.open('DELETE', url, true);
+        return this.send();
     }
 
     get(url) {
-        return this.send('GET', url);
+        this.xhr.open('GET', url, true);
+        return this.send();
     }
 
     getUpload() {
@@ -73,7 +75,8 @@ register('', class HttpRequest {
     }
 
     head(url) {
-        return this.send('HEAD', url);
+        this.xhr.open('HEAD', url, true);
+        return this.send();
     }
 
     onAbort(event) {
@@ -106,74 +109,57 @@ register('', class HttpRequest {
         this.fail(event);
     }
 
-    post(url, ...args) {
-        if (args.length == 1) {
-            if (args[0] instanceof Buffer) {
-                this.setHeader('content-type', 'application/octet-stream');
-                return this.send('POST', url, toJson(args[0]));
-            }
-            else if (typeof args[0] == 'object') {
-                this.setHeader('content-type', 'applicaton/json');
-                return this.send('POST', url, toJson(args[0]));
-            }
-            else {
-                this.setHeader('content-type', 'text/plain');
-                return this.send('POST', url, args[0].toString());
-            }
-        }
-        else if (args.length >= 2) {
-            let mime = args[0] instanceof Mime ? args[0].getCode() : args[0];
-            this.setHeader('content-type', mime);
-
-            if (args[0] instanceof Buffer) {
-                return this.send('POST', url, toJson(args[0]));
-            }
-            else if (typeof args[0] == 'object') {
-                return this.send('POST', url, toJson(args[0]));
-            }
-            else {
-                return this.send('POST', url, args[0].toString());
-            }
-        }
+    post(url, content, mime, headers) {
+        return this.request('POST', url, content, mime, headers);
     }
 
-    put(url, arg) {
-        if (args[0] instanceof Buffer) {
-            this.setHeader('content-type', 'application/octet-stream');
-            return this.send('POST', url, toJson(args[0]));
-        }
-        else if (typeof args[0] == 'object') {
-            this.setHeader('content-type', 'applicaton/json');
-            return this.send('POST', url, toJson(args[0]));
+    put(url, content, mime, headers) {
+        return this.request('PUT', url, content, mime, headers);
+    }
+
+    request(method, url, content, mime, headers) {
+        this.xhr.open(method, url, true);
+
+        if (typeof mime == 'text') {
+            return this.send(mime, content instanceof Buffer ? content : mkBuffer(content), headers);
         }
         else {
-            this.setHeader('content-type', 'text/plain');
-            return this.send('POST', url, args[0].toString());
-        }
-    }
+            if (typeof mime == 'object') {
+                headers = mime;
+            }
 
-    send(method, url, mime, payload) {
-        if (this.xhr.readyState == 0) {
-            this.xhr.open(method, url, true);
-
-            if (mime && payload) {
-                this.xhr.setRequestHeader(
-                    'Content-Type',
-                    mime instanceof Mime ? mime.getCode() : mime,
-                );
-
-                this.xhr.send(payload);
+            if (content instanceof Buffer) {
+                return this.send('application/octet-stream', content, headers);
+            }
+            else if (typeof content == 'object') {
+                return this.send('application/json', toJson(content), headers);
             }
             else {
-                this.xhr.send();
+                return this.send('text/plain', content.toString(), headers);
             }
-
-            return this.promise;
         }
     }
 
-    setHeader(name, value) {
-        this.xhr.setRequestHeader(name, value);
+    send(mime, payload, headers) {
+        if (headers) {
+            for (let headerName in headers) {
+                this.xhr.setRequestHeader(headerName, headers[headerName]);
+            }
+        }
+
+        if (mime && payload) {
+            this.xhr.setRequestHeader(
+                'Content-Type',
+                mime instanceof Mime ? mime.getCode() : mime,
+            );
+
+            this.xhr.send(payload);
+        }
+        else {
+            this.xhr.send();
+        }
+
+        return this.promise;
     }
 });
 

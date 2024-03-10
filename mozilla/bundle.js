@@ -22,47 +22,56 @@
 *****/
 
 
-(async () => {
-    /*****
-     * Once the rest of the Radius Mozilla framework has been loaded, the purpose
-     * of this module is to make final preparations that are dependent on having
-     * the framework loaded.
-    *****/
-    wrapTree(document.documentElement);
+/*****
+*****/
+register('', class Bundle {
+    constructor(bundle) {
+        this.registered = false;
+
+        for (let key in bundle) {
+        }
+    }
+
+    getName() {
+    }
+
+    getScripts() {
+    }
+
+    getWidgets() {
+    }
+
+    isRegistered() {
+        return this.registered;
+    }
+
+    register() {
+    }
+});
 
 
-    /*****
-    *****/
-    let websocket;
+/*****
+*****/
+singleton('', class Bundles {
+    constructor() {
+        this.bundles = {};
+    }
 
-
-    /*****
-    *****/
-    register('', async function  openWebsocket(message) {
-    });
-
-
-    /*****
-    *****/
-    register('', async function  callServer(message) {
-        if (websocket) {
+    async get(name) {
+        if (name in this.bundles) {
+            return this.bundles[name];
         }
         else {
-            let response = await mkHttpRequest().post('/', message);
-            console.log(response.getPayload());
+            let response = await callServer({
+                name: 'GetBundle',
+                bundleName: name,
+            });
+
+            console.log(response);
         }
-    });
+    }
 
-
-    /*****
-    *****/
-    register('', function  sendServer(message) {
-    });
-
-
-    /*****
-     * TEST CODE
-    *****/
-    let response = await Bundles.get('testDiv');
-    //console.log(response);
-})();
+    [Symbol.iterator]() {
+        return Object.values(this.bundles)[Symbol.iterator]();
+    }
+});
