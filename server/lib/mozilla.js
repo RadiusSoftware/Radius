@@ -90,7 +90,6 @@
                     'common/textUtils.js',
                     'common/textTree.js',
                     'common/chronos.js',
-                    'common/api.js',
                     'common/cookie.js',
                     
                     'mozilla/element.js',

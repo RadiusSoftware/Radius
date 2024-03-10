@@ -23,23 +23,11 @@
 
 /*****
 *****/
-register('', class Authorization {
-    constructor() {
-    }
-});
-
-
-/*****
-*****/
 register('', class Permission {
-    constructor() {
-    }
 });
 
 
 /*****
 *****/
-register('', class Session {
-    constructor() {
-    }
+register('', class PermissionSet {
 });

@@ -104,7 +104,6 @@ register('', class Bundle {
         }
 
         delete this.source;
-        this.valid ? console.log(this) : null;
         return this;
     }
 
@@ -122,7 +121,6 @@ register('', class Bundle {
     }
 
     async processScript(element) {
-        console.log(element.getInnerHtml());
         this.items.push({
             type: 'script',
             code: mkBuffer(element.getInnerHtml()).toString('base64'),
@@ -130,12 +128,22 @@ register('', class Bundle {
     }
 
     async processWidget(element) {
-        let widget = {};
+        let widget = {
+            permissions: {},
+        };
 
         for (let childElement of element) {
-            //console.log(childElement.getOuterHtml());
+            if (childElement.getTagName() == 'permissions') {
+                widget.permissions = fromJson(childElement.getInnerHtml());
+            }
+            else if (childElement.getTagName() == 'html') {
+                widget.html = mkBuffer(childElement.getInnerHtml().toString('base64'));
+            }
+            else if (childElement.getTagName() == 'script') {
+                widget.script = mkBuffer(childElement.getInnerHtml().toString('base64'));
+            }
         }
 
-        //this.items.push(element.getInnerHtml());
+        this.items.push(widget);
     }
 });

@@ -46,9 +46,10 @@ require('../common/textTemplate.js');
 require('../common/textTree.js');
 require('../common/textUtils.js');
 require('../common/chronos.js');
-require('../common/api.js');
 require('../common/cookie.js');
 
+require('./api.js');
+require('./permission.js');
 require('./crypto.js');
 require('./pool.js');
 require('./network.js');
