@@ -150,7 +150,7 @@ register('radius', class WebApp extends HttpX {
                 };
             }
             catch (e) {
-                caught(e, req.getFullRequest());
+                caught(e, req.getFullRequest(), req.getBody());
                 return 500;
             }
         }
@@ -169,7 +169,12 @@ register('radius', class WebApp extends HttpX {
         this.stylePath = `${this.className[0].toLowerCase()}${this.className.substring(1)}.css`;
         this.html = (await FileSystem.readFile(Path.join(this.httpXDir, this.htmlPath))).toString();
         this.setContent('style', 'text/css', (await FileSystem.readFile(Path.join(this.httpXDir, this.stylePath))).toString());
-        this.setContent('radius', 'text/javascript', await radius.Mozilla.getSourceCode());
+
+        let mozilla = await radius.Mozilla.getSourceCode({
+            webAppPath: this.path,
+        });
+        
+        this.setContent('radius', 'text/javascript', mozilla);
 
         for (let filePath of await FileSystem.recurseFiles(Path.join(this.getWebAppDir(), '../../mozilla/widgets'))) {
             if (filePath.endsWith('.html')) {
@@ -188,7 +193,7 @@ register('radius', class WebApp extends HttpX {
                 await this.registerBundle(filePath);
             }
         }
-
+        
         return this;
     }
 

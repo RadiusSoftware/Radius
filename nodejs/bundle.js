@@ -57,10 +57,10 @@ register('', class Bundle {
                 if (Path.isAbsolute(this.path)) {
                     let buffer = await FileSystem.readFile(this.path);
                     let outerHtml = buffer.toString();
-                    this.bundle = createDocElementFromOuterHtml(outerHtml);
+                    this.source = createDocElementFromOuterHtml(outerHtml);
 
-                    if (this.bundle.getTagName() == 'radius') {
-                        for (let element of this.bundle) {
+                    if (this.source.getTagName() == 'radius') {
+                        for (let element of this.source) {
                             let tag = element.getTagName();
                             let methodName = `process${tag[0].toUpperCase()}${tag.substring(1)}`;
 
@@ -86,7 +86,7 @@ register('', class Bundle {
                 }
             }
             else {
-                    this.valid = false;
+                this.valid = false;
 
                 this.error = {
                     info: `Expecting and HTML File! "${this.path}"`,
@@ -103,6 +103,8 @@ register('', class Bundle {
             };
         }
 
+        delete this.source;
+        this.valid ? console.log(this) : null;
         return this;
     }
 
@@ -119,10 +121,11 @@ register('', class Bundle {
         }
     }
 
-    async processScript(script) {
+    async processScript(element) {
+        console.log(element.getInnerHtml());
         this.items.push({
             type: 'script',
-            code: element.getInnerHtml(),
+            code: mkBuffer(element.getInnerHtml()).toString('base64'),
         });
     }
 

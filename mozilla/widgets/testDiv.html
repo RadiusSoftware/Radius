@@ -1,13 +1,18 @@
 <radius>
     <name>testDiv</name>
     <widget>
-        <permission>{
+        <permissions>{
             "perm1": "something",
             "perm2": "another thing"
-        }</permission>
+        }</permissions>
         <markup>
         </markup>
         <script>
+            regigster('', class Div extends Widget {
+                construtor() {
+                    super();
+                }
+            });
         </script>
     </widget>
     <script>

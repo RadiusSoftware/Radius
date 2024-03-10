@@ -107,35 +107,35 @@ register('', class HttpRequest {
 
     onTimeout(event) {
         this.fail(event);
+}
+
+    post(url, payload, mime, headers) {
+        return this.request('POST', url, payload, mime, headers);
     }
 
-    post(url, content, mime, headers) {
-        return this.request('POST', url, content, mime, headers);
+    put(url, payload, mime, headers) {
+        return this.request('PUT', url, payload, mime, headers);
     }
 
-    put(url, content, mime, headers) {
-        return this.request('PUT', url, content, mime, headers);
-    }
-
-    request(method, url, content, mime, headers) {
+    request(method, url, payload, mime, headers) {
         this.xhr.open(method, url, true);
 
         if (typeof mime == 'text') {
-            return this.send(mime, content instanceof Buffer ? content : mkBuffer(content), headers);
+            return this.send(mime, payload instanceof Buffer ? payload : mkBuffer(payload), headers);
         }
         else {
             if (typeof mime == 'object') {
                 headers = mime;
             }
 
-            if (content instanceof Buffer) {
-                return this.send('application/octet-stream', content, headers);
+            if (payload instanceof Buffer) {
+                return this.send('application/octet-stream', payload, headers);
             }
-            else if (typeof content == 'object') {
-                return this.send('application/json', toJson(content), headers);
+            else if (typeof payload == 'object') {
+                return this.send('application/json', toJson(payload), headers);
             }
             else {
-                return this.send('text/plain', content.toString(), headers);
+                return this.send('text/plain', payload.toString(), headers);
             }
         }
     }
