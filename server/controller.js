@@ -23,6 +23,10 @@ require('../nodejs/radius.js');
 
 
 (async () => {
+    let e = mkAdd(3, 5);
+    console.log('\n');
+    console.log(await e.eval());
+
     /*****
     *****/
     await FileSystem.recurseModules(Path.join(__dirname, 'lib'));

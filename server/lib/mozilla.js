@@ -78,6 +78,7 @@
                 const frameworkFiles = [
                     'common/core.js',
                     'common/buffer.js',
+                    'common/types.js',
                     'common/emitter.js',
                     'common/objekt.js',
                     'common/stringSet.js',
@@ -91,6 +92,7 @@
                     'common/textTree.js',
                     'common/chronos.js',
                     'common/cookie.js',
+                    'common/expression.js',
                     
                     'mozilla/element.js',
                     'mozilla/win.js',

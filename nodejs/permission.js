@@ -23,7 +23,22 @@
 
 /*****
 *****/
-register('', class Permission {
+register('', class PermissionVerse {
+    constructor(permissionSet) {
+        this.permissions = {};
+
+        if (ObjectType.is(permissionSet)) {
+            for (let permissionKey in permissionsSet) {
+                this.definePermission(key, permissionSet[permissionKey]);
+            }
+        }
+    }
+
+    authorize(required, granted) {
+    }
+
+    definePermission(key, ...values) {
+    }
 });
 
 

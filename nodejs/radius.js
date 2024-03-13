@@ -34,6 +34,7 @@
 *****/
 require('../common/core.js');
 require('../common/buffer.js');
+require('../common/types.js');
 require('../common/data.js');
 require('../common/emitter.js');
 require('../common/objekt.js');
@@ -47,6 +48,7 @@ require('../common/textTree.js');
 require('../common/textUtils.js');
 require('../common/chronos.js');
 require('../common/cookie.js');
+require('../common/expression.js');
 
 require('./api.js');
 require('./permission.js');
