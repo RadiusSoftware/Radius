@@ -33,9 +33,6 @@
         if (value instanceof Expression) {
             return value;
         }
-        else if (typeof value == 'function') {
-            return mkFunktion(value);
-        }
         else {
             return mkConst(value);
         }
@@ -59,12 +56,12 @@
 
         async evalBool() {
             let value = await this.eval();
-            return getJsType(value).toBool();
+            return getJsType(value).toBool(value);
         }
 
         async evalString() {
             let value = await this.eval();
-            return getJsType(value).toString();
+            return getJsType(value).toString(value);
         }
     });
 
@@ -72,42 +69,65 @@
      * Add
     *****/
     register('', class Add extends Expression {
-        constructor(l, r) {
+        constructor(lhs, rhs) {
             super();
-            this.l = wrapOperand(l);
-            this.r = wrapOperand(r);
+            this.lhs = wrapOperand(lhs);
+            this.rhs = wrapOperand(rhs);
         }
 
         async eval() {
-            let lev = await this.l.eval();
-            let rev = await this.r.eval();
+            let lhs = await this.lhs.eval();
+            let rhs = await this.rhs.eval();
 
-            if (BigIntType.is(lev) || BigIntType.is(rev)) {
-                return BigInt(lev) + BigInt(rev);
+            if (BigIntType.is(lhs) || BigIntType.is(rhs)) {
+                return BigInt(lhs) + BigInt(rhs);
             }
             else {
-                return lev + rev;
+                return lhs + rhs;
             }
         }
     });
 
     /*****
-    *****
+     * And
+    *****/
     register('', class And extends Expression {
-        constructor(...args) {
+        constructor(lhs, rhs) {
             super();
+            this.lhs = wrapOperand(lhs);
+            this.rhs = wrapOperand(rhs);
+        }
+
+        async eval() {
+            if (await this.lhs.evalBool()) {
+                if (await this.rhs.evalBool()) {
+                    return true;
+                }
+            }
+
+            return false;
         }
     });
-    */
 
     /*****
-    *****
+     * Concat
+    *****/
     register('', class Concat extends Expression {
         constructor(...args) {
             super();
+            this.args = args.map(arg => wrapOperand(arg));
+        }
+
+        async eval() {
+            let strings = [];
+
+            for (let arg of this.args) {
+                strings.push(await arg.eval());
+            }
+
+            return strings.join('');
         }
     });
-    */
 
     /*****
      * Const
@@ -116,12 +136,11 @@
         constructor(value) {
             super();
             this.value = value;
-            this.jsType = getJsType(value);
         }
 
         async eval() {
             if (typeof this.value == 'function') {
-                return this.value();
+                return await waitOn(this.value());
             }
             else {
                 return this.value;
@@ -130,167 +149,306 @@
     });
 
     /*****
-    *****
+     * Divide
+    *****/
     register('', class Divide extends Expression {
-        constructor(l, r) {
+        constructor(lhs, rhs) {
             super();
+            this.lhs = wrapOperand(lhs);
+            this.rhs = wrapOperand(rhs);
+        }
+
+        async eval() {
+            let lhs = await this.lhs.eval();
+            let rhs = await this.rhs.eval();
+
+            if (BigIntType.is(lhs) || BigIntType.is(rhs)) {
+                return BigInt(lhs) / BigInt(rhs);
+            }
+            else {
+                return lhs / rhs;
+            }
         }
     });
-    */
 
     /*****
-    *****
+     * Equal
+    *****/
     register('', class Equal extends Expression {
-        constructor(l, r) {
+        constructor(lhs, rhs) {
             super();
+            this.lhs = wrapOperand(lhs);
+            this.rhs = wrapOperand(rhs);
+        }
+
+        async eval() {
+            return (await this.lhs.eval()) == (await this.lhs.eval());
         }
     });
-    */
 
     /*****
-    *****
+     * Exponential
+    *****/
     register('', class Exponential extends Expression {
-        constructor(l, r) {
+        constructor(lhs, rhs) {
             super();
+            this.lhs = wrapOperand(lhs);
+            this.rhs = wrapOperand(rhs);
+        }
+
+        async eval() {
+            return Math.pow(await this.lhs.eval(), await this.rhs.eval());
         }
     });
-    */
 
     /*****
      * Funktion
-    *****
+    *****/
     register('', class Funktion extends Expression {
         constructor(func, ...args) {
             super();
             this.func = func;
-            this.args = args;
+            this.args = args.map(arg => wrapOperand(arg));
         }
 
         async eval() {
             let args = [];
 
             for (let arg of this.args) {
-                if (arg instanceof Expression) {
-                    args.push(await arg.eval());
-                }
-                else if (typeof arg == 'function') {
-                    args.push(arg());
-                }
-                else {
-                    args.push(arg);
-                }
+                args.push(await arg.eval());
             }
 
-            return Reflect.apply(this.func, args);
+            return await waitOn(Reflect.apply(this.func, null, args));
         }
     });
-    */
 
     /*****
-    *****
+     * Greater Equal
+    *****/
+    register('', class GreaterEqual extends Expression {
+        constructor(lhs, rhs) {
+            super();
+            this.lhs = wrapOperand(lhs);
+            this.rhs = wrapOperand(rhs);
+        }
+
+        async eval() {
+            return (await this.lhs.eval()) >= (await this.lhs.eval());
+        }
+    });
+
+    /*****
+     * Greater Than
+    *****/
     register('', class GreaterThan extends Expression {
-        constructor(l, r) {
+        constructor(lhs, rhs) {
             super();
+            this.lhs = wrapOperand(lhs);
+            this.rhs = wrapOperand(rhs);
+        }
+
+        async eval() {
+            return (await this.lhs.eval()) > (await this.lhs.eval());
         }
     });
-    */
 
     /*****
-    *****
-    register('', class GreaterThanEqual extends Expression {
-        constructor(l, r) {
+     * Less Equal
+    *****/
+    register('', class LessEqual extends Expression {
+        constructor(lhs, rhs) {
             super();
+            this.lhs = wrapOperand(lhs);
+            this.rhs = wrapOperand(rhs);
+        }
+
+        async eval() {
+            return (await this.lhs.eval()) <= (await this.lhs.eval());
         }
     });
-    */
 
     /*****
-    *****
+     * Less Than
+    *****/
     register('', class LessThan extends Expression {
-        constructor(l, r) {
+        constructor(lhs, rhs) {
             super();
+            this.lhs = wrapOperand(lhs);
+            this.rhs = wrapOperand(rhs);
+        }
+
+        async eval() {
+            return (await this.lhs.eval()) < (await this.lhs.eval());
         }
     });
-    */
 
     /*****
-    *****
-    register('', class LessThanEqual extends Expression {
-        constructor(l, r) {
-            super();
-        }
-    });
-    */
-
-    /*****
-    *****
+     * Multiply
+    *****/
     register('', class Multiply extends Expression {
-        constructor(l, r) {
+        constructor(lhs, rhs) {
             super();
+            this.lhs = wrapOperand(lhs);
+            this.rhs = wrapOperand(rhs);
+        }
+
+        async eval() {
+            let lhs = await this.lhs.eval();
+            let rhs = await this.rhs.eval();
+
+            if (BigIntType.is(lhs) || BigIntType.is(rhs)) {
+                return BigInt(lhs) * BigInt(rhs);
+            }
+            else {
+                return lhs * rhs;
+            }
         }
     });
-    */
 
     /*****
-    *****
+     * Nor
+    *****/
     register('', class Nor extends Expression {
-        constructor(l, r) {
+        constructor(lhs, rhs) {
             super();
+            this.lhs = wrapOperand(lhs);
+            this.rhs = wrapOperand(rhs);
+        }
+
+        async eval() {
+            if (await this.lhs.evalBool()) {
+                return false;
+            }
+            else if (await this.rhs.evalBool()) {
+                return false;
+            }
+
+            return true;
         }
     });
-    */
 
     /*****
-    *****
+    *****/
     register('', class Not extends Expression {
-        constructor(arg) {
+        constructor(expr) {
             super();
+            this.expr = wrapOperand(expr);
+        }
+
+        async eval() {
+            return !(await this.expr.evalBool());
         }
     });
-    */
 
     /*****
-    *****
+     * NotEqual
+    *****/
     register('', class NotEqual extends Expression {
-        constructor(l, r) {
+        constructor(lhs, rhs) {
             super();
+            this.lhs = wrapOperand(lhs);
+            this.rhs = wrapOperand(rhs);
+        }
+
+        async eval() {
+            return (await this.lhs.eval()) != (await this.lhs.eval());
         }
     });
-    */
 
     /*****
-    *****
+     * Or
+    *****/
     register('', class Or extends Expression {
-        constructor(l, r) {
+        constructor(lhs, rhs) {
             super();
+            this.lhs = wrapOperand(lhs);
+            this.rhs = wrapOperand(rhs);
+        }
+
+        async eval() {
+            if (await this.lhs.evalBool()) {
+                return true;
+            }
+
+            if (await this.rhs.evalBool()) {
+                return true;
+            }
+
+            return false;
         }
     });
-    */
 
     /*****
-    *****
-    register('', class Paren extends Expression {
-        constructor(arg) {
+     * Subtract
+    *****/
+    register('', class Subtract extends Expression {
+        constructor(lhs, rhs) {
             super();
+            this.lhs = wrapOperand(lhs);
+            this.rhs = wrapOperand(rhs);
+        }
+
+        async eval() {
+            let lhs = await this.lhs.eval();
+            let rhs = await this.rhs.eval();
+
+            if (BigIntType.is(lhs) || BigIntType.is(rhs)) {
+                return BigInt(lhs) - BigInt(rhs);
+            }
+            else {
+                return lhs - rhs;
+            }
         }
     });
-    */
 
     /*****
-    *****
-    register('', class Sub extends Expression {
-        constructor(l, r) {
+     * Switch
+    *****/
+    register('', class Switch extends Expression {
+        constructor(value, ifTrue, ifFalse) {
             super();
+            this.value = wrapOperand(value);
+            this.ifTrue = wrapOperand(ifTrue);
+            this.ifFalse = wrapOperand(ifFalse);
+        }
+
+        async eval() {
+            if (await this.value.evalBool()) {
+                return await this.ifTrue.eval();
+            }
+            else {
+                return await this.ifFalse.eval();                
+            }
         }
     });
-    */
 
     /*****
-    *****
+     * Xor
+    *****/
     register('', class Xor extends Expression {
-        constructor(l, r) {
+        constructor(lhs, rhs) {
             super();
+            this.lhs = wrapOperand(lhs);
+            this.rhs = wrapOperand(rhs);
+        }
+
+        async eval() {
+            if (await this.lhs.evalBool()) {
+                if (await this.rhs.evalBool()) {
+                    return false;
+                }
+                else {
+                    return true;
+                }
+            }
+            else {
+                if (await this.rhs.evalBool()) {
+                    return true;
+                }
+                else {
+                    return false;
+                }
+            }
         }
     });
-    */
 })();

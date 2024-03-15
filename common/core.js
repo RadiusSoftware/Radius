@@ -236,6 +236,21 @@
 
 
     /*****
+     * When we don't know what the response from a function is, Promise or not
+     * a Promise, this function comes in handy.  Use it to wait on promises but
+     * return straight away when the value is NOT a Promise.
+    *****/
+    register('', async function waitOn(value) {
+        if (value instanceof Promise) {
+            return await value;
+        }
+        else {
+            return value;
+        }
+    });
+
+
+    /*****
      * By convention, the caught func is what's used in try-catch clauses in
      * the entire framework and by the application code.  Generally speaking,
      * each platform implementation and perhaps each application will have its
