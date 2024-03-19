@@ -51,7 +51,6 @@ require('../common/cookie.js');
 require('../common/expression.js');
 
 require('./api.js');
-require('./permission.js');
 require('./crypto.js');
 require('./pool.js');
 require('./network.js');
@@ -62,6 +61,7 @@ require('./fileSystem.js');
 require('./tempFile.js');
 require('./process.js');
 require('./childProcess.js');
+require('./permission.js');
 require('./compression.js');
 require('./jose.js');
 require('./server.js');

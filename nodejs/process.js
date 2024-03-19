@@ -133,7 +133,7 @@ singleton('', class Process extends Emitter {
         return this;
     }
 
-    fork(nodeClass, nodeTitle, settings) {
+    async fork(nodeClass, nodeTitle, settings) {
        let childProcess = null;
        let nodeGuid = Crypto.generateUuid();
        nodeClass ? null : nodeClass = this.nodeClassUndefined;
@@ -173,7 +173,7 @@ singleton('', class Process extends Emitter {
             }
         }
         catch (e) {
-            log(e);
+            await caught(e);
         }
 
         return childProcess;
@@ -375,17 +375,17 @@ singleton('', class Process extends Emitter {
                 childProcess.sendChild(message);
             }
             else {
+                let childProcess = message.childProcess;
                 let messageCopy = Data.copy(message);
+                delete messageCopy.childProcess;
                 let methodName = `onChild${messageCopy.name}`;
-                messageCopy.name = methodName.substring(2);
 
                 if (methodName in this) {
-                    let childProcess = messageCopy.childProcess;
-                    delete messageCopy.childProcess;
+                    messageCopy.name = methodName.substring(2);
                     this[methodName](childProcess, messageCopy);
                 }
                 else {
-                    this.emit(message);
+                    this.emit(messageCopy);
                 }
             }
         }
@@ -484,7 +484,7 @@ singleton('', class Process extends Emitter {
             });
         }
         else {
-            log(e);
+            caught(e);
         }
     }
 
@@ -507,7 +507,7 @@ singleton('', class Process extends Emitter {
             });
         }
         else {
-            log(reason);
+            caught(reason);
         }
     }
 

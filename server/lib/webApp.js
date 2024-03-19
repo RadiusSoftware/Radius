@@ -150,7 +150,7 @@ register('radius', class WebApp extends HttpX {
                 };
             }
             catch (e) {
-                caught(e, req.getFullRequest(), req.getBody());
+                await caught(e, req.getFullRequest(), req.getBody());
                 return 500;
             }
         }

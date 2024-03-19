@@ -122,7 +122,7 @@ registerIn('HttpServer', '', class HttpLibrary {
             });
         }
         else {
-            log(`Unable to add HttpX libEntry to HttpLibrary.`, toJson(libEntry));
+            await log(`Unable to add HttpX libEntry to HttpLibrary.`, toJson(libEntry));
         }
 
         return this;
@@ -187,7 +187,7 @@ registerIn('HttpServer', '', class HttpLibrary {
             };
         }
         catch (e) {
-            caught(e);
+            await caught(e);
             return 500;
         }
     }
@@ -234,7 +234,7 @@ registerIn('HttpServer', '', class HttpLibrary {
             };
         }
         catch (e) {
-            caught(e);
+            await caught(e);
             return 500;
         }
     }
@@ -253,7 +253,7 @@ registerIn('HttpServer', '', class HttpLibrary {
             return 404;
         }
         catch (e) {
-            caught(e);
+            await caught(e);
             return 500;
         }
     }
@@ -545,7 +545,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
             }
         }
         catch (e) {
-            caught(e);
+            await caught(e);
         }
 
         return this;

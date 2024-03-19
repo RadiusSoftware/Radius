@@ -113,7 +113,7 @@ register('', class Server extends Emitter {
 
     async startWorker() {
         let workerClassName = `${this.className}Worker`;
-        let worker = Process.fork(workerClassName, workerClassName, this.settings);
+        let worker = await Process.fork(workerClassName, workerClassName, this.settings);
         this.workers[worker.getPid()] = worker;
         await this.callWorker(worker, { name: 'Init' });
         return worker;
@@ -256,7 +256,7 @@ register('', async function startServer(fqClassName, settings) {
 
 execIn(Process.nodeClassController, () => {
     Process.on('#StartServer', async message => {
-        Process.fork(message.fqClassName, message.fqClassName, message.settings);
+        await Process.fork(message.fqClassName, message.fqClassName, message.settings);
     });
 });
 

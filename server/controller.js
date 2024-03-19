@@ -44,9 +44,10 @@ require('../nodejs/radius.js');
         }
 
         async checkRadiusDatabase(dbc) {
-            display('\nCHECK CONSISTENCY OF RADIUS TABLES.\n');
-            display('\nCHECK TABLE SCHEMAS/UPGRADE.\n');
-            //this.launcher = this.launchLiveMode;
+            // TODO
+            //this.launcher = this.launchAdminMode;
+            //display('\nCHECK CONSISTENCY OF RADIUS TABLES.\n');
+            //display('\nCHECK TABLE SCHEMAS/UPGRADE.\n');
         }
 
         async detectDbms() {
@@ -74,7 +75,7 @@ require('../nodejs/radius.js');
                 }
             }
             catch (e) {
-                caught(e);
+                await caught(e);
                 this.launcher = this.launchAdminMode;
             }
         }
@@ -85,6 +86,12 @@ require('../nodejs/radius.js');
         }
 
         async launchAdminMode() {
+            PermissionVerse.set({
+                adminUsers: { type: 'boolean' },
+                adminSystem: { type: 'boolean' },
+                color: { type: 'enum', values: ['red', 'green', 'safe'] }
+            });
+
             startServer('HttpServer', {
                 deflang: 'en-US',
                 workers: 1,
@@ -95,7 +102,6 @@ require('../nodejs/radius.js');
                         tls: false,
                     },
                 ],
-                upgradHandler: null,
                 libSettings: {
                     blockSizeMb: 50,
                     cacheMaxSizeMb: 100,
@@ -114,7 +120,8 @@ require('../nodejs/radius.js');
         }
 
         async launchLiveMode() {
-            display('\n..launching LIVE MODE\n');
+            // TODO
+            // display('\n..launching LIVE MODE\n');
         }
 
         async parseCommandLine() {

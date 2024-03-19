@@ -23,21 +23,113 @@
 
 /*****
 *****/
-register('', class PermissionVerse {
-    constructor(permissionSet) {
-        this.permissions = {};
-
-        if (ObjectType.is(permissionSet)) {
-            for (let permissionKey in permissionsSet) {
-                this.definePermission(key, permissionSet[permissionKey]);
-            }
+singleton('', class PermissionVerse {
+    constructor() {
+        if (Process.hasEnv('#Permissions')) {
+            this.set(Process.getEnv('#Permissions', 'json'), true);
         }
     }
 
     authorize(required, granted) {
+        // TODO
     }
 
-    definePermission(key, ...values) {
+    createPermission(key, type, ...values) {
+        if (typeof key != 'string') {
+            throw new Error(`Invalid permission key type: "${key}" "${typeof key}".`);
+        }
+
+        if (key in this.permissions) {
+            return;
+        }
+
+        if (type == 'bigint') {
+            this.permissions[key] = {
+                key: key,
+                type: type,
+            };
+        }
+        else if (type == 'boolean') {
+            this.permissions[key] = {
+                key: key,
+                type: type,
+            };
+        }
+        else if (type == 'enum') {
+            let filteredValues = values.filter(v => typeof v == 'string');
+
+            if (filteredValues.length > 0) {
+                let permission = this.permissions[key] = {
+                    key: key,
+                    type: type,
+                    values: {},
+                };
+
+                filteredValues.forEach(value => {
+                    if (value in permission.values) {
+                        throw new Error(`Duplicate value for key: "${key}".`);
+                    }
+
+                    permission.values[value] = true;
+                });
+            }
+            else {
+                throw new Error(`Invalid permission values for key: "${key}".`);
+            }
+        }
+        else if (type == 'number') {
+            this.permissions[key] = {
+                key: key,
+                type: type,
+            };
+        }
+        else if (type == 'pattern') {
+            try {
+                this.permissions[key] = {
+                    key: key,
+                    type: type,
+                    values: patterns.map(regex => new RegExp(regex)),
+                };
+            }
+            catch (e) {
+                throw new Error(`Invalid pattern permission: "${key}" "${pattern}".`);
+            }
+        }
+        else {
+            throw new Error(`Invalid permission type: "${key}" "${typeof type}".`);
+        }
+    }
+
+    set(permissions, force) {
+        if (Process.getNodeClass() == Process.nodeClassController || force) {
+            if (typeof this.permissions != 'object') {
+                this.permissions = {};
+
+                if (ObjectType.is(permissions)) {
+                    for (let permissionKey in permissions) {
+                        let permission = permissions[permissionKey];
+
+                        if (Array.isArray(permission.values)) {
+                            this.createPermission(
+                                permissionKey,
+                                permission.type,
+                                ...permission.values,
+                            );
+                        }
+                        else {
+                            this.createPermission(
+                                permissionKey,
+                                permission.type,
+                            );
+                        }
+                    }
+
+                    this.createPermission('session', 'enum', 'none', 'lax', 'strict');
+                    Process.setEnv('#Permissions', toJson(permissions));
+                    console.log(this.permissions);
+                }
+            }
+        }
     }
 });
 

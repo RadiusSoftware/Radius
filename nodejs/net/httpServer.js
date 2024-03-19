@@ -145,7 +145,6 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
     constructor() {
         super();
         this.watches = {};
-        this.setUpgradeHandler(this.settings.upgradeHandler);
 
         for (let netInterface of this.getInterfaces()) {
             if (netInterface.tls instanceof Tls) {
@@ -167,11 +166,6 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
                 this.server.on('upgrade', (httpReq) => this.onUpgrade(httpRsp));
             }
         }
-    }
-
-    clearUpgradeHandler() {
-        this.upgradeHandler = null;
-        return thisl;
     }
 
     clearWatch(path, handler) {
@@ -214,10 +208,6 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
         }
     }
 
-    getUpgradHandler() {
-        return this.upgradeHandler;
-    }
-
     async handleRequest(httpReq, httpRsp) {
         let req;
         let rsp;
@@ -246,7 +236,7 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
             }
         }
         catch (e) {
-            caught(e);
+            await caught(e);
             rsp.respondStatus(500);
         }
     }
@@ -306,23 +296,13 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
     async onUpgrade(httpReq, socket, headPacket) {
         try {
             if (this.upgradeHandler) {
-                await this.upgradeHandler(req, socket, headPacket);
+                //await this.upgradeHandler(req, socket, headPacket);
+                console.log('UPGRADING TO websocket.')
             }
         }
         catch (e) {
-            caught(e);
+            await caught(e);
         }
-    }
-
-    setUpgradeHandler(upgradeHandler) {
-        if (typeof upgradeHandler == 'function') {
-            this.upgradeHandler = upgradeHandler;
-        }
-        else {
-            this.upgradeHandler = null;
-        }
-
-        return this;
     }
 
     setWatch(...args) {
