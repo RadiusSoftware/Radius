@@ -158,6 +158,41 @@ singleton('', class DoubleType extends BaseType {
 });
 
 /*****
+ * Enum
+*****/
+singleton('', class EnumType extends BaseType {
+    getDefault() {
+        return '';
+    }
+
+    is(value, values) {
+        if (typeof value == 'string') {
+            if (Array.isArray(values)) {
+                let i;
+
+                for (i = 0; i < values.length; i++) {
+                    if (value === values[i]) {
+                        break;
+                    }
+                }
+
+                return i < values.length;
+            }
+        }
+        
+        return false;
+    }
+
+    toBool(value) {
+        return value.length > 0;
+    }
+
+    toString(value) {
+        return value;
+    }
+});
+
+/*****
  * Funtion
 *****/
 singleton('', class FunctionType extends BaseType {
@@ -350,6 +385,27 @@ singleton('', class ObjectType extends BaseType {
 });
 
 /*****
+ * Pattern
+*****/
+singleton('', class PatternType extends BaseType {
+    getDefault() {
+        return new RegExp('.*');
+    }
+
+    is(value) {
+        return value instanceof RegExp;
+    }
+
+    toBool(value) {
+        return true;
+    }
+
+    toString(value) {
+        return value.toString();
+    }
+});
+
+/*****
  * String
 *****/
 singleton('', class StringType extends BaseType {
@@ -357,7 +413,7 @@ singleton('', class StringType extends BaseType {
         return '';
     }
 
-    is(value) {
+    is(value, array) {
         return typeof value == 'string';
     }
 

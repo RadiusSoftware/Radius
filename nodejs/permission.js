@@ -23,18 +23,89 @@
 
 /*****
 *****/
-singleton('', class PermissionVerse {
+register('', class PermissionSet extends Emitter {
     constructor() {
-        if (Process.hasEnv('#Permissions')) {
-            this.set(Process.getEnv('#Permissions', 'json'), true);
+        super();
+        this.permissions = {};
+    }
+
+    authorize(requiredPermissions, grantedPermissions) {
+        try {
+            if (this.validatePermissions(requiredPermissions)) {
+                if (this.validatePermissions(grantedPermissions)) {
+                    for (let requiredKey in requiredPermissions) {
+                        let definedPermission = this.permissions[requiredKey];
+                        let grantedPermission = grantedPermissions[requiredKey];
+                        let requiredPermission = requiredPermissions[requiredKey];
+
+                        if (definedPermission.type.getClass() === BigIntType.getClass()) {
+                        }
+                        else if (definedPermission.type.getClass() === BooleanType.getClass()) {
+                            if (requiredPermission === true && granted !== true) {
+                                return false;
+                            }
+                        }
+                        else if (definedPermission.type.getClass() === EnumType.getClass()) {
+                            let grantedValues = {};
+                            
+                            for (let grantedValue of grantedPermission) {
+                                grantedValues[grantedValue] = 0;
+                            }
+
+                            for (let requiredValue of requiredPermission) {
+                                if (!(requiredValue in grantedValues)) {
+                                    return false;
+                                }
+                            }
+                        }
+                        else if (definedPermission.type.getClass() === NumberType.getClass()) {
+                        }
+                        else if (definedPermission.type.getClass() === PatternType.getClass()) {
+                        }
+                        else {
+                            throw new Error(`Illogical case encountered while authorizing permissions.`);
+                        }
+                    }
+
+                    return true;
+                }
+            }
         }
+        catch (e) {
+            caught(e);
+        }
+
+        return false;
     }
 
-    authorize(required, granted) {
-        // TODO
+    clearPermission(permissionKey) {
+        if (permissionKey in this.permissions) {
+            let permission = this.permissions[permissionKey];
+            delete this.permissions[permissionKey];
+
+            this.emit({
+                name: 'PermissionsModified',
+                action: 'clear',
+                permissionKey: permissionKey,
+            });
+        }
+
+        return this;
     }
 
-    createPermission(key, type, ...values) {
+    hasPermission(permissionKey) {
+        return permissionKey in this.permissions;
+    }
+
+    getPermission(permissionKey) {
+        if (permissionKey in this.permissions) {
+            return Data.copy(this.permissions[permissionKey]);
+        }
+
+        return null;
+    }
+
+    setPermission(key, type, ...values) {
         if (typeof key != 'string') {
             throw new Error(`Invalid permission key type: "${key}" "${typeof key}".`);
         }
@@ -46,13 +117,13 @@ singleton('', class PermissionVerse {
         if (type == 'bigint') {
             this.permissions[key] = {
                 key: key,
-                type: type,
+                type: BigIntType,
             };
         }
         else if (type == 'boolean') {
             this.permissions[key] = {
                 key: key,
-                type: type,
+                type: BooleanType,
             };
         }
         else if (type == 'enum') {
@@ -61,7 +132,7 @@ singleton('', class PermissionVerse {
             if (filteredValues.length > 0) {
                 let permission = this.permissions[key] = {
                     key: key,
-                    type: type,
+                    type: EnumType,
                     values: {},
                 };
 
@@ -100,41 +171,85 @@ singleton('', class PermissionVerse {
         }
     }
 
-    set(permissions, force) {
-        if (Process.getNodeClass() == Process.nodeClassController || force) {
-            if (typeof this.permissions != 'object') {
-                this.permissions = {};
-
-                if (ObjectType.is(permissions)) {
-                    for (let permissionKey in permissions) {
-                        let permission = permissions[permissionKey];
-
-                        if (Array.isArray(permission.values)) {
-                            this.createPermission(
-                                permissionKey,
-                                permission.type,
-                                ...permission.values,
-                            );
-                        }
-                        else {
-                            this.createPermission(
-                                permissionKey,
-                                permission.type,
-                            );
-                        }
+    validatePermissions(grants) {
+        try {
+            if (typeof grants == 'object') {
+                for (let permissionKey in grants) {
+                    if (!(permissionKey in this.permissions)) {
+                        return false;
                     }
 
-                    this.createPermission('session', 'enum', 'none', 'lax', 'strict');
-                    Process.setEnv('#Permissions', toJson(permissions));
-                    console.log(this.permissions);
+                    let permission = this.permissions[permissionKey];
+
+                    if (permission.type.getClass() === EnumType.getClass()) {
+                        for (let permissionValue of grants[permissionKey]) {
+                            if (!permission.type.is(permissionValue, Object.keys(permission.values))) {
+                                return false;
+                            }
+                        }
+                    }
+                    else {
+                        if (!permission.type.is(grants[permissionKey])) {
+                            return false;
+                        }
+                    }
                 }
             }
+
+            return true;
         }
+        catch (e) {
+            caught(e);
+        }
+
+        return false;
     }
 });
 
 
 /*****
 *****/
-register('', class PermissionSet {
+singleton('', class PermissionVerse extends PermissionSet {
+    constructor() {
+        super();
+        this.on('PermissionsModified', message => this.onModified(message));
+
+        if (Process.hasEnv('#Permissions')) {
+            if (Process.getNodeClass() != Process.nodeClassController) {
+                this.setPermissions(Process.getEnv('#Permissions', 'json'), true);
+            }
+            
+        }
+    }
+
+    async onModified(message) {
+        // TODO
+    }
+
+    setPermissions(permissions) {
+        if (ObjectType.is(permissions)) {
+            for (let permissionKey in permissions) {
+                let permission = permissions[permissionKey];
+
+                if (Array.isArray(permission.values)) {
+                    this.setPermission(
+                        permissionKey,
+                        permission.type,
+                        ...permission.values,
+                    );
+                }
+                else {
+                    this.setPermission(
+                        permissionKey,
+                        permission.type,
+                    );
+                }
+            }
+
+            this.setPermission('session', 'enum', 'none', 'lax', 'strict');
+            Process.setEnv('#Permissions', toJson(permissions));
+        }
+
+        return this;
+    }
 });

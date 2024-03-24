@@ -194,6 +194,7 @@
             if (arg.toString().startsWith('class')) {
                 if (arg.name.match(/^[A-Z]/)) {
                     obj[arg.name] = Reflect.construct(arg, args);
+                    obj[arg.name].getClass = () => arg;
                 }
                 else {
                     throw new Error(`singleton(), class name must start with an upper-case letter: ${arg.name}`);

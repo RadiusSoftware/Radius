@@ -86,11 +86,35 @@ require('../nodejs/radius.js');
         }
 
         async launchAdminMode() {
-            PermissionVerse.set({
+            PermissionVerse.setPermissions({
                 adminUsers: { type: 'boolean' },
                 adminSystem: { type: 'boolean' },
                 color: { type: 'enum', values: ['red', 'green', 'safe'] }
             });
+
+            let required = {
+                adminUsers: false,
+                color: [ 'safe' ],
+            };
+
+            let granted = {
+                color: [ 'green', 'red', 'purple' ],
+            }
+
+            if (!PermissionVerse.validatePermissions(required)) {
+                console.log('.. required "failed"');
+                console.log(required);
+                Process.exit(0);
+            }
+
+            if (!PermissionVerse.validatePermissions(granted)) {
+                console.log('.. granted "failed"');
+                console.log(granted);
+                Process.exit(0);
+            }
+
+            console.log(`\nChecking authorization "${PermissionVerse.authorize(required, granted)}"\n`);
+            Process.exit(0);
 
             startServer('HttpServer', {
                 deflang: 'en-US',
@@ -114,6 +138,7 @@ require('../nodejs/radius.js');
                         path: '/',
                         module: Path.join(__dirname, 'apps/adminApp.js'),
                         fqClassName: 'radius.AdminApp',
+                        permissionSet: {},
                     },
                 ],
             });
