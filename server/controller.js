@@ -89,16 +89,17 @@ require('../nodejs/radius.js');
             PermissionVerse.setPermissions({
                 adminUsers: { type: 'boolean' },
                 adminSystem: { type: 'boolean' },
-                color: { type: 'enum', values: ['red', 'green', 'safe'] }
+                color: { type: 'enum', values: [ 'red', 'green', 'safe' ]}
             });
 
+            // ***************************************************************
             let required = {
                 adminUsers: false,
-                color: [ 'safe' ],
+                color: mkStringSet('safe', 'green'),
             };
 
             let granted = {
-                color: [ 'green', 'red', 'purple' ],
+                color: mkStringSet('safe', 'green', 'red'),
             }
 
             if (!PermissionVerse.validatePermissions(required)) {
@@ -115,6 +116,7 @@ require('../nodejs/radius.js');
 
             console.log(`\nChecking authorization "${PermissionVerse.authorize(required, granted)}"\n`);
             Process.exit(0);
+            // ***************************************************************
 
             startServer('HttpServer', {
                 deflang: 'en-US',

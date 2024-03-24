@@ -22,10 +22,16 @@
 
 
 /*****
+ * A permission set defines the set or universe of allowable permissions within
+ * an application space.  Generally speaking, a single PermissionSet defines the
+ * permission structure for an application, a server, a host, or an entire host
+ * cluster.  Permission sets are the definitive way that hosts and applications
+ * communicate with each other with regards to allowable permissions with a scope.
+ * Both required permissions and granted permissions must be validate by the
+ * permission set before authorization is allowed to be performed.
 *****/
-register('', class PermissionSet extends Emitter {
+register('', class PermissionSet {
     constructor() {
-        super();
         this.permissions = {};
     }
 
@@ -39,28 +45,24 @@ register('', class PermissionSet extends Emitter {
                         let requiredPermission = requiredPermissions[requiredKey];
 
                         if (definedPermission.type.getClass() === BigIntType.getClass()) {
+                            if (requiredPermission !== 0n && grantedPermission !== requiredPermission) {
+                                return false;
+                            }
                         }
                         else if (definedPermission.type.getClass() === BooleanType.getClass()) {
-                            if (requiredPermission === true && granted !== true) {
+                            if (requiredPermission === true && grantedPermission !== true) {
                                 return false;
                             }
                         }
                         else if (definedPermission.type.getClass() === EnumType.getClass()) {
-                            let grantedValues = {};
-                            
-                            for (let grantedValue of grantedPermission) {
-                                grantedValues[grantedValue] = 0;
-                            }
-
-                            for (let requiredValue of requiredPermission) {
-                                if (!(requiredValue in grantedValues)) {
-                                    return false;
-                                }
+                            if (!grantedPermission.isSupersetOf(requiredPermission)) {
+                                return false;
                             }
                         }
                         else if (definedPermission.type.getClass() === NumberType.getClass()) {
-                        }
-                        else if (definedPermission.type.getClass() === PatternType.getClass()) {
+                            if (grantedPermission >= requiredPermission) {
+                                return false;
+                            }
                         }
                         else {
                             throw new Error(`Illogical case encountered while authorizing permissions.`);
@@ -80,14 +82,7 @@ register('', class PermissionSet extends Emitter {
 
     clearPermission(permissionKey) {
         if (permissionKey in this.permissions) {
-            let permission = this.permissions[permissionKey];
             delete this.permissions[permissionKey];
-
-            this.emit({
-                name: 'PermissionsModified',
-                action: 'clear',
-                permissionKey: permissionKey,
-            });
         }
 
         return this;
@@ -105,7 +100,7 @@ register('', class PermissionSet extends Emitter {
         return null;
     }
 
-    setPermission(key, type, ...values) {
+    setPermission(key, type, values) {
         if (typeof key != 'string') {
             throw new Error(`Invalid permission key type: "${key}" "${typeof key}".`);
         }
@@ -127,25 +122,22 @@ register('', class PermissionSet extends Emitter {
             };
         }
         else if (type == 'enum') {
-            let filteredValues = values.filter(v => typeof v == 'string');
+            if (Array.isArray(values)) {
+                let filteredValues = values.filter(value => typeof value == 'string');
 
-            if (filteredValues.length > 0) {
-                let permission = this.permissions[key] = {
-                    key: key,
-                    type: EnumType,
-                    values: {},
-                };
-
-                filteredValues.forEach(value => {
-                    if (value in permission.values) {
-                        throw new Error(`Duplicate value for key: "${key}".`);
-                    }
-
-                    permission.values[value] = true;
-                });
+                if (filteredValues.length > 0) {
+                    let permission = this.permissions[key] = {
+                        key: key,
+                        type: EnumType,
+                        values: mkStringSet(...filteredValues),
+                    };
+                }
+                else {
+                    throw new Error(`Invalid permission values for key: "${key}".`);
+                }
             }
             else {
-                throw new Error(`Invalid permission values for key: "${key}".`);
+                throw new Error(`Expecting an array of enumeration values.`);
             }
         }
         else if (type == 'number') {
@@ -153,18 +145,6 @@ register('', class PermissionSet extends Emitter {
                 key: key,
                 type: type,
             };
-        }
-        else if (type == 'pattern') {
-            try {
-                this.permissions[key] = {
-                    key: key,
-                    type: type,
-                    values: patterns.map(regex => new RegExp(regex)),
-                };
-            }
-            catch (e) {
-                throw new Error(`Invalid pattern permission: "${key}" "${pattern}".`);
-            }
         }
         else {
             throw new Error(`Invalid permission type: "${key}" "${typeof type}".`);
@@ -183,7 +163,7 @@ register('', class PermissionSet extends Emitter {
 
                     if (permission.type.getClass() === EnumType.getClass()) {
                         for (let permissionValue of grants[permissionKey]) {
-                            if (!permission.type.is(permissionValue, Object.keys(permission.values))) {
+                            if (!permission.type.is(permissionValue, permission.values)) {
                                 return false;
                             }
                         }
@@ -208,48 +188,48 @@ register('', class PermissionSet extends Emitter {
 
 
 /*****
+ * For a single host, a PermissionVerse is the all inclusive permisstion set
+ * pertaining to all applications and servers running on that host.  Each process
+ * has a copy of the permission verse encapsulated as a singleton to ensure
+ * a local, global copy.  The PermissionVerse is typically initialized with the
+ * setPermissions() function before any of the child processes have been forked.
+ * After launch changes are performed via interprocess communications to ensure
+ * that all singleton PermessionVerses in all related processes are synchronized.
 *****/
-singleton('', class PermissionVerse extends PermissionSet {
+singleton('', class PermissionVerse {
     constructor() {
-        super();
-        this.on('PermissionsModified', message => this.onModified(message));
+        this.permissionSet = mkPermissionSet();
 
         if (Process.hasEnv('#Permissions')) {
-            if (Process.getNodeClass() != Process.nodeClassController) {
-                this.setPermissions(Process.getEnv('#Permissions', 'json'), true);
+            if (Process.getNodeClass() != Process.nodeClassController) {    
+                this.setPermissions(Process.getEnv('#Permissions', 'json'));
             }
-            
         }
     }
-
-    async onModified(message) {
-        // TODO
+    
+    authorize(requirePermissions, grantedPermissions) {
+        return this.permissionSet.authorize(requirePermissions, grantedPermissions);
     }
-
+ 
     setPermissions(permissions) {
         if (ObjectType.is(permissions)) {
             for (let permissionKey in permissions) {
                 let permission = permissions[permissionKey];
 
-                if (Array.isArray(permission.values)) {
-                    this.setPermission(
-                        permissionKey,
-                        permission.type,
-                        ...permission.values,
-                    );
-                }
-                else {
-                    this.setPermission(
-                        permissionKey,
-                        permission.type,
-                    );
-                }
+                this.permissionSet.setPermission(
+                    permissionKey,
+                    permission.type,
+                    permission.values,
+                );
             }
 
-            this.setPermission('session', 'enum', 'none', 'lax', 'strict');
             Process.setEnv('#Permissions', toJson(permissions));
         }
 
         return this;
+    }
+
+    validatePermissions(grants) {
+        return this.permissionSet.validatePermissions(grants);
     }
 });

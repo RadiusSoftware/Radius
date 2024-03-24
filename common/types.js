@@ -166,18 +166,8 @@ singleton('', class EnumType extends BaseType {
     }
 
     is(value, values) {
-        if (typeof value == 'string') {
-            if (Array.isArray(values)) {
-                let i;
-
-                for (i = 0; i < values.length; i++) {
-                    if (value === values[i]) {
-                        break;
-                    }
-                }
-
-                return i < values.length;
-            }
+        if (values instanceof StringSet) {
+            return typeof value == 'string' && values.has(value);
         }
         
         return false;
