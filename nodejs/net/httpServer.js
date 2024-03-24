@@ -369,6 +369,7 @@ registerIn('HttpServerWorker', '', class HttpRequest {
         this.object = {};
         this.params = {};
         this.parsedUrl = LibUrl.parse(this.httpReq.url);
+        this.grantedPermissions = {};
         let iterator = new LibUrl.URLSearchParams(this.getQuery()).entries();
 
         for (let param = iterator.next(); !param.done; param = iterator.next()) {
@@ -532,6 +533,10 @@ registerIn('HttpServerWorker', '', class HttpRequest {
 
     getFullRequest() {
         return `${this.getScheme()}://${this.httpReq.headers.host}${this.httpReq.url}`;
+    }
+
+    getGrantedPermissions() {
+        return this.grantedPermissions;
     }
 
     getHeader(headerName) {

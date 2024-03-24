@@ -39,19 +39,21 @@ registerIn('HttpServer', '', class HttpLibrary {
     }
 
     async add(libEntry) {
-        if (!libEntry.uuid || !(libEntry.path in this.paths)) {
-            if (libEntry.type == 'data') {
-                await this.addData(libEntry);
-            }
-            else if (libEntry.type == 'file') {
-                await this.addFile(libEntry)
-            }
-            else if (libEntry.type == 'httpx') {
-                await this.addHttpX(libEntry);
-            }
+        if (libEntry.permissions === undefined || PermissionVerse.validatePermissions(libEntry.permissions)) {
+            if (!libEntry.uuid || !(libEntry.path in this.paths)) {
+                if (libEntry.type == 'data') {
+                    await this.addData(libEntry);
+                }
+                else if (libEntry.type == 'file') {
+                    await this.addFile(libEntry)
+                }
+                else if (libEntry.type == 'httpx') {
+                    await this.addHttpX(libEntry);
+                }
 
-            if (libEntry.uuid && libEntry.type != 'httpx') {
-                this.httpxs[libEntry.uuid].paths[libEntry.path] = libEntry;
+                if (libEntry.uuid && libEntry.type != 'httpx') {
+                    this.httpxs[libEntry.uuid].paths[libEntry.path] = libEntry;
+                }
             }
         }
     }
@@ -64,6 +66,7 @@ registerIn('HttpServer', '', class HttpLibrary {
             once: libEntry.once === true,
             timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
             cache: { '': { content: libEntry.data }},
+            requiredPermissions: libEntry.permissions === undefined ? {} : libEntry.permissions,
         }
 
         return this;
@@ -81,6 +84,7 @@ registerIn('HttpServer', '', class HttpLibrary {
                     once: libEntry.once === true,
                     timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
                     cache: {},
+                    requiredPermissions: libEntry.permissions === undefined ? {} : libEntry.permissions,
                 };
             };
         }
@@ -93,6 +97,7 @@ registerIn('HttpServer', '', class HttpLibrary {
                 once: libEntry.once === true,
                 timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
                 cache: {},
+                requiredPermissions: libEntry.permissions === undefined ? {} : libEntry.permissions,
             };
         }
 
@@ -111,6 +116,7 @@ registerIn('HttpServer', '', class HttpLibrary {
                 once: libEntry.once === true,
                 timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
                 cache: { '': libEntry.fqClassName },
+                requiredPermissions: libEntry.permissions === undefined ? {} : libEntry.permissions,
             };
 
             this.paths[libEntry.path] = entry;
@@ -287,44 +293,49 @@ registerIn('HttpServer', '', class HttpLibrary {
             let libEntry = this.paths[message.path];
             
             if (this.checkMethod(libEntry, message.method)) {
-                let response;
-                let encoding = '';
-        
-                for (let key in message.encoding) {
-                    if (Compression.isSupported(key)) {
-                        encoding = key;
-                        break;
+                if (PermissionVerse.authorize(libEntry.requiredPermissions, message.grantedPermissions)) {
+                    let response;
+                    let encoding = '';
+            
+                    for (let key in message.encoding) {
+                        if (Compression.isSupported(key)) {
+                            encoding = key;
+                            break;
+                        }
                     }
-                }
 
-                if (libEntry.type == 'data') {
-                    response = await this.getData({
-                        libEntry: libEntry,
-                        encoding: encoding,
-                    });
-                }
-                else if (libEntry.type == 'file') {
-                    response = await this.getFile({
-                        libEntry: libEntry,
-                        encoding: encoding,
-                    });
-                }
-                else if (libEntry.type == 'httpx') {
-                    response = await this.getHttpX({
-                        libEntry: libEntry,
-                        encoding: encoding,
-                    });
-                }
-
-                if (libEntry.once) {
-                    this.remove(libEntry.path);
-
-                    if (libEntry.type in { httpx:0 }) {
-                        response.once = true;
+                    if (libEntry.type == 'data') {
+                        response = await this.getData({
+                            libEntry: libEntry,
+                            encoding: encoding,
+                        });
                     }
-                }
+                    else if (libEntry.type == 'file') {
+                        response = await this.getFile({
+                            libEntry: libEntry,
+                            encoding: encoding,
+                        });
+                    }
+                    else if (libEntry.type == 'httpx') {
+                        response = await this.getHttpX({
+                            libEntry: libEntry,
+                            encoding: encoding,
+                        });
+                    }
 
-                return response;
+                    if (libEntry.once) {
+                        this.remove(libEntry.path);
+
+                        if (libEntry.type in { httpx:0 }) {
+                            response.once = true;
+                        }
+                    }
+
+                    return response;
+                }
+                else {
+                    return 401;
+                }
             }
             else {
                 return 405;
@@ -453,7 +464,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
         await Process.sendParent({
             name: 'HttpLibraryAdd',
             libEntry: libEntry,
-        })
+        });
     }
 
     async addInternal(libEntry) {
@@ -474,6 +485,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
                 httpX.httpXDir = libEntry.module.replace('.js', '');
                 httpX.path = libEntry.path;
                 httpX.once = libEntry.once;
+                httpX.requiredPermissions = libEntry.requiredPermissions;
                 await httpX.init();
                 this.paths[libEntry.path] = httpX;
             }
@@ -488,6 +500,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
             encoding: req.getAcceptEncoding(),
             language: req.getAcceptLanguage(),
             headers: req.getHeaders(),
+            grantedPermissions: req.getGrantedPermissions(),
         });
 
         if (typeof response == 'number') {

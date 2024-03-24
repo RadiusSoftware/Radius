@@ -138,6 +138,7 @@ register('', class HttpX extends Emitter {
                         data: data,
                         uuid: this.uuid,
                         once: this.once === true,
+                        requiredPermissions: this.requiredPermissions,
                     }
                 });
             }
