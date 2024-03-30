@@ -111,7 +111,7 @@ registerIn('HttpServer', '', class HttpLibrary {
                 path: libEntry.path,
                 paths: {},
                 module: libEntry.module,
-                uuid: Crypto.generateUuid(),
+                uuid: Crypto.generateUUID(),
                 mime: null,
                 once: libEntry.once === true,
                 timeout: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,

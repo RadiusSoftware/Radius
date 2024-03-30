@@ -121,22 +121,7 @@ register('', function toJson(value, humanReadable) {
             return { '#BIG': value.toString() };
         }
         else if (typeof value == 'object') {
-            let prototype = Reflect.getPrototypeOf(value);
-            let ctor = prototype.constructor;
-            
-            if (ctor.name == 'Object') {
-                return value;
-            }
-            else {
-                let decorated = Data.copy(value);
-                decorated['#Ctor'] = ctor.name;
-
-                if ('#Namespace' in ctor) {
-                    decorated['#Namespace'] = ctor['#Namespace'];
-                }
-
-                return decorated;
-            }
+            return value;
         }
 
         return value;
@@ -184,24 +169,6 @@ register('', function fromJson(json) {
             }
             else if ('#BIG' in value) {
                 return BigInt(value['#BIG']);
-            }
-            else if (typeof value == 'object') {
-                if ('#Ctor' in value) {
-                    let constructed;
-
-                    try {
-                        if (value['#Namespace']) {
-                            eval(`constructed = Reflect.construct(${value['#Namespace']}.${value['#Ctor']}, [])`);
-                        }
-                        else {
-                            eval(`constructed = Reflect.construct(${value['#Ctor']}, [])`);
-                        }
-                    } catch (e) {}
-
-                    if (constructed) {
-                        return constructed;
-                    }
-                }
             }
         }
  

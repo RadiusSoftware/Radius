@@ -73,7 +73,7 @@ singleton('', class Process extends Emitter {
         }
         else {
             this.radius = {
-                nodeGuid: Crypto.generateUuid(),
+                nodeGuid: Crypto.generateUUID(),
                 nodeClass: this.nodeClassController,
                 nodeTitle: 'Radius Server',
             };
@@ -102,6 +102,19 @@ singleton('', class Process extends Emitter {
                 return (async () => await childProcess.callChild(message))();
             })
         );
+    }
+
+    async callController(message) {
+        if (this.getNodeClass() == this.nodeClassController) {
+            this.emit(message);
+        }
+        else {
+            let trap = mkTrap(1);
+            message['#TRAP'] = trap.id;
+            message['#CALL'] = true;
+            this.sendController(message);
+            return trap.promise;
+        }
     }
 
     async callParent(message) {
@@ -135,7 +148,7 @@ singleton('', class Process extends Emitter {
 
     async fork(nodeClass, nodeTitle, settings) {
        let childProcess = null;
-       let nodeGuid = Crypto.generateUuid();
+       let nodeGuid = Crypto.generateUUID();
        nodeClass ? null : nodeClass = this.nodeClassUndefined;
        nodeTitle ? null : nodeTitle = this.nodeTitleUndefined;
 
@@ -372,7 +385,13 @@ singleton('', class Process extends Emitter {
                 delete message['#CALL'];
                 let childProcess = message.childProcess;
                 delete message.childProcess;
-                childProcess.sendChild(message);
+
+                if ('#ROUTING' in message) {
+                    this.sendDescendent(message);
+                }
+                else {
+                    childProcess.sendChild(message);
+                }
             }
             else {
                 let childProcess = message.childProcess;
@@ -520,6 +539,30 @@ singleton('', class Process extends Emitter {
     }
 
     routeDown(message, sendHandle) {
+        let routing = message['#ROUTING'];
+
+        if (routing && Array.isArray(routing.path)) {
+            if (routing.path.length == 1) {
+                let childPid = routing.path[0];
+                delete message['#ROUTING'];
+
+                if (childPid in this.children) {
+                    this.children[childPid].sendChild(message, sendHandle);
+                    return true;
+                }
+            }
+            else if (routing.path.length > 1) {
+                let childPid = routing.path.shift();
+
+                if (childPid in this.children) {
+                    this.children[childPid].sendChild(message, sendHandle);
+                    return true;
+                }
+            }
+        }
+
+        return false;
+        /*
         if ('#ROUTING' in message) {
             let routing = message['#ROUTING'];
 
@@ -546,13 +589,15 @@ singleton('', class Process extends Emitter {
         }
 
         return false;
+        */
     }
-
+    /*
     routeDownRelay(message, sendHandle) {
         for (let childProcess of this) {
             childProcess.sendChild(message, sendHandfe);
         }
     }
+    */
 
     routeUp(message) {
         if ('#ROUTING' in message) {
@@ -560,7 +605,6 @@ singleton('', class Process extends Emitter {
 
             if (routing.type == 'NodeClass') {
                 if (routing.nodeClass == this.getNodeClass()) {
-                    delete message['#ROUTING'];
                     return false;
                 }
                 else {
@@ -570,7 +614,6 @@ singleton('', class Process extends Emitter {
             }
             else if (routing.type == 'Pid') {
                 if (routing.nodePid == this.getPid()) {
-                    delete message['#ROUTING'];
                     return false;
                 }
                 else {
@@ -584,6 +627,7 @@ singleton('', class Process extends Emitter {
     }
 
     routeUpRelay(message) {
+        message['#ROUTING'].path.unshift(this.getPid());
         let sendHandle = message.sendHandle;
         delete message.sendHandle;
         delete message.childProcess;
@@ -601,15 +645,22 @@ singleton('', class Process extends Emitter {
     sendController(message, sendHandle) {
         if (this.getNodeClass() == this.nodeClassController) {
             this.emit(message, sendHandle);
+            return this;
         }
         else {
             message['#ROUTING'] = {
                 type: 'NodeClass',
+                path: [ this.getPid() ],
                 nodeClass: this.nodeClassController,
             };
         
             return this.sendParent(message, sendHandle);
         }
+    }
+
+    sendDescendent(message, sendHandl3) {
+        this.routeDown(message, sendHandl3);
+        return this;
     }
 
     sendParent(message, sendHandle) {
@@ -673,6 +724,45 @@ register('', async function singletonIn(nodeClass, ns, arg, ...args) {
     }
     else if (typeof nodeClass == 'string') {
         if (nodeClass == Process.getNodeClass()) {
+            singleton(ns, arg, ...args);
+        }
+    }
+});
+
+register('', async function execNotIn(nodeClass, func) {
+    if (Array.isArray(nodeClass)) {
+        if (nodeClass.filter(nodeClass => nodeClass != Process.getNodeClass()).length) {
+            await func();
+        }
+    }
+    else if (typeof nodeClass == 'string') {
+        if (nodeClass != Process.getNodeClass()) {
+            await func();
+        }
+    }
+});
+
+register('', function registerNotIn(nodeClass, ns, arg) {
+    if (Array.isArray(nodeClass)) {
+        if (nodeClass.filter(nodeClassName => nodeClassName != Process.getNodeClass()).length) {
+            register(ns, arg);
+        }
+    }
+    else if (typeof nodeClass == 'string') {
+        if (nodeClass != Process.getNodeClass()) {
+            register(ns, arg);
+        }
+    }
+});
+
+register('', async function singletonNotIn(nodeClass, ns, arg, ...args) {
+    if (Array.isArray(nodeClass)) {
+        if (nodeClass.filter(nodeClassName => nodeClassName != Process.getNodeClass()).length) {
+            singleton(ns, arg, ...args);
+        }
+    }
+    else if (typeof nodeClass == 'string') {
+        if (nodeClass != Process.getNodeClass()) {
             singleton(ns, arg, ...args);
         }
     }

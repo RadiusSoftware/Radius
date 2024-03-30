@@ -254,11 +254,6 @@ singleton('', class Crypto {
             });
         });
     }
-    /*
-    generateRandomUuid() {
-        return LibCrypto.randomUUID();
-    }
-    */
 
     async generateSshKeyPair() {
         let pem = ServerUtils.createTempFile('pem');
@@ -278,7 +273,7 @@ singleton('', class Crypto {
         };
     }
 
-    generateUuid() {
+    generateUUID() {
         return LibCrypto.randomUUID();
     }
 

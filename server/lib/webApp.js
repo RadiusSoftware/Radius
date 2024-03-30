@@ -115,6 +115,15 @@ register('radius', class WebApp extends HttpX {
     async handleMessage(message) {
         console.log(message);
 
+        let response = await Session.createSession({
+            agentType: 'user',
+            authType: 'password',
+            agentHost: '172.0.0.1',
+            //timeout: 10*60000,
+        });
+
+        console.log(response);
+
         return {
             //'#ContentType': '',
             //'#ContentEncoding': '',

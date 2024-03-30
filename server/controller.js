@@ -114,6 +114,7 @@ require('../nodejs/radius.js');
         }
 
         async launchLiveMode() {
+            // Initialize PermissionsVerse()
             // TODO
             // display('\n..launching LIVE MODE\n');
         }
