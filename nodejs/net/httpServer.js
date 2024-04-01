@@ -215,7 +215,7 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
         try {
             req = mkHttpRequest(this, httpReq);
             rsp = mkHttpResponse(this, httpRsp);
-            let response = await this.httpLibrary.handle(req);
+            let response = await this.httpLibrary.handle(req, rsp);
 
             if (typeof response == 'number') {
                 rsp.respondStatus(response);
@@ -369,7 +369,6 @@ registerIn('HttpServerWorker', '', class HttpRequest {
         this.object = {};
         this.params = {};
         this.parsedUrl = LibUrl.parse(this.httpReq.url);
-        this.grantedPermissions = {};
         let iterator = new LibUrl.URLSearchParams(this.getQuery()).entries();
 
         for (let param = iterator.next(); !param.done; param = iterator.next()) {
@@ -535,10 +534,6 @@ registerIn('HttpServerWorker', '', class HttpRequest {
         return `${this.getScheme()}://${this.httpReq.headers.host}${this.httpReq.url}`;
     }
 
-    getGrantedPermissions() {
-        return this.grantedPermissions;
-    }
-
     getHeader(headerName) {
         return this.httpReq.headers[headerName.toLowerCase()];
     }
@@ -601,12 +596,31 @@ registerIn('HttpServerWorker', '', class HttpRequest {
         return this.parsedUrl.query !== null ? this.parsedUrl.query : '';
     }
 
-    getSearch() {
-        return this.parsedUrl.search !== null ? this.parsedUrl.search : '';
+    getRemoteHost() {
+        return this.httpReq.socket.remoteAddress;
     }
 
     getScheme() {
         return this.isTls ? 'https' : 'http';
+    }
+
+    getSearch() {
+        return this.parsedUrl.search !== null ? this.parsedUrl.search : '';
+    }
+
+    async getSession() {
+        let sessionCookie = this.getCookie(Process.getEnv('SESSIONCOOKIE'));
+
+        if (sessionCookie) {
+            let session = await Process.callController({
+                name: 'SessionManagerGetSession',
+                token: sessionCookie.getValue(),
+            });
+
+            return session;
+        }
+
+        return null;
     }
 
     getUrl() {
@@ -848,6 +862,12 @@ registerIn('HttpServerWorker', '', class HttpResponse {
 
     setHeader(headerName, value) {
         this.httpRsp.setHeader(headerName, value);
+        return this;
+    }
+
+    setSession(token) {
+        let sessionCookie = mkCookie(Process.getSessionCookie(), token);
+        this.setCookie(sessionCookie);
         return this;
     }
 });

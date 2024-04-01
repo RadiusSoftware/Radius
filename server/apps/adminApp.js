@@ -23,9 +23,48 @@
 
 /*****
 *****/
-register('radius', class AdminApp extends radius.WebApp {
+register('radius', class AdminApp extends WebApp {
     constructor() {
         super();
+    }
+
+    async handleGET(req, rsp) {
+        let session = await req.getSession();
+
+        if (!session) {
+            session = await Session.createSession({
+                agentType: 'none',
+                authType: 'none',
+                remoteHost: req.getRemoteHost(),
+                timeout: 12*60*60000,
+            });
+
+            rsp.setSession(session.token);
+        }
+        
+        return await super.handleGET(req, rsp);
+    }
+
+    async handleMessage(message) {
+        console.log(message);
+        return {
+            //'#ContentType': '',
+            //'#ContentEncoding': '',
+            //'#ContentCharset': '',
+            //'#Error': '',
+            content: { done: true },
+        };
+    }
+
+    async handlePOST(req, rsp) {
+        let session = await req.getSession();
+
+        if (session) {
+            return await super.handlePOST(req, rsp);
+        }
+        else {
+            return 401;
+        }
     }
 
     async init() {

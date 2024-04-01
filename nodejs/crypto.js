@@ -273,6 +273,23 @@ singleton('', class Crypto {
         };
     }
 
+    generateToken(algorithm, value) {
+        return new Promise((ok, fail) => {
+            const hash = LibCrypto.createHash(algorithm);
+
+            hash.on('readable', () => {
+                let hashed = hash.read();
+
+                if (hashed) {
+                    ok(hashed.toString('hex'));
+                }
+            });
+
+            hash.write(value);
+            hash.end();
+        });
+    }
+
     generateUUID() {
         return LibCrypto.randomUUID();
     }

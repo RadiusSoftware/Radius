@@ -22,95 +22,116 @@
 
 
 /*****
-*****/
-singletonIn(Process.nodeClassController, '', class SessionManager {
-    constructor() {
-        mkHandlerProxy(Process, 'SessionManager', this);
-        this.sessionsByUUID = {};
-        this.sessionsByToken = {};
-    }
-
-    clearSession(session) {
-    }
-
-    getSession(token) {
-    }
-
-    async onCloseSession(message) {
-    }
-
-    async onCreateSession(message) {
-        return await mkSession().init(message.opts);
-    }
-
-    async onGetSession(message) {
-    }
-
-    setSession(session) {
-    }
-
-    touchSession(session) {
-    }
-});
-
-
-/*****
+ * The session object, which should only exist in the controller process node.
+ * The session is responsible for tracking and maintaining data with regards
+ * to individual sessions, which include GUI applications, GUI browser apps,
+ * external hosts and applications exuting on those hosts.  A session can be
+ * self timed out or kept indefinitely.  Moreover, multiple approachs to session
+ * authtentication are available.  Once established, the application tracks the
+ * session's permission set, which is used for verifying whether an entity has
+ * been granted access to complete the current request.
 *****/
 registerIn(Process.nodeClassController, '', class Session {
-    static agentTypes = mkStringSet('user', 'host', 'app');
+    static agentTypes = mkStringSet('none', 'user', 'app');
     static authTypes = mkStringSet('none', 'password', 'key', 'oauth2');
 
-    constructor() {
-        this.status = '';
+    clearAccount() {
+        this.account = null;
+        return this;
     }
 
-    attach() {
-    }
+    clearData(key) {
+        if (key) {
+            delete this.data[key];
+        }
+        else {
+            this.data = new Object();
+        }
 
-    clearAgentHost() {
-    }
-
-    clearAgentId() {
+        return this;
     }
 
     clearPermission(permissionKey) {
+        if (permissionKey in this.permissions) {
+            delete this.permissions[permissionKey];
+        }
+
+        return this;
     }
 
     clearPermissions() {
+        this.permissions = new Object();
+        return this;
     }
 
     close() {
+        for (let websocket of this.websockets) {
+            websocket.close();
+        }
+
+        for (let socket of this.sockets) {
+            socket.close();
+        }
+
+        delete SessionManager.sessionsByUUID[this.uuid];
+        delete SessionManager.sessionsByToken[this.token];
+        return this;
     }
 
-    detach() {
-    }
-
-    getAgentHost() {
-        return this.agentHost[this.agentHost.length - 1];
-    }
-
-    getAgentId() {
+    getAccount() {
+        return this.account;
     }
 
     getAgentType() {
+        return this.agentType;
     }
 
-    getAuthenticationType() {
+    getAuthType() {
+        return this.authType;
+    }
+
+    getData(key) {
+        if (key) {
+            return this.data[key];
+        }
+        else {
+            return this.data;
+        }
     }
 
     getPermissions() {
+        return this.permissions;
     }
 
-    generateToken() {
+    getRemoteHost() {
+        return this.remoteHost[this.remoteHost.length - 1];
+    }
+
+    getRemoteHostHistory() {
+        return this.remoteHost;
+    }
+
+    getToken() {
+        return this.token;
     }
 
     getUUID() {
+        return this.uuid;
     }
 
-    hasPermission() {
+    hasPermission(name, value) {
+        if (value !== undefined) {
+        }
+        else {
+        }
     }
 
     async init(opts) {
+        this.data = {};
+        this.account = null;
+        this.timeoutMillis = 0;
+        this.setPermissions(opts.permissions);
+
         if (!EnumType.is(opts.agentType, Session.agentTypes)) {
             return false;
         }
@@ -119,55 +140,211 @@ registerIn(Process.nodeClassController, '', class Session {
             return false;
         }
 
+        console.log(opts.remoteHost);
+        if (opts.remoteHost) {
+            this.remoteHost = [ opts.remoteHost ];
+        }
+        else {
+            this.remoteHost = [ 'unknown' ];
+        }
+
         this.agentType = opts.agentType;
         this.authType = opts.authType;
-        this.agentHost = [ opts.agentHost ];
         this.sockets = [];
         this.websockets = [];
         this.timeout = null;
 
         this.uuid = Crypto.generateUUID();
-        this.token = await Crypto.hash('sha256', this.uuid);
+        this.token = await Crypto.generateToken('sha256', this.uuid);
         this.lastActivity = mkTime(0);
 
         if (typeof opts.timeout == 'number' && opts.timeout > 0) {
+            this.timeoutMillis = opts.timeout;
+
             this.timeout = setTimeout(() => {
                 this.close();
                 this.detach();
-            }, opts.timeout);
+            }, this.timeoutMillis);
         }
 
-        this.status = 'established';
-        this.attach();
+        SessionManager.sessionsByUUID[this.uuid] = this;
+        SessionManager.sessionsByToken[this.token] = this;
         return this;
     }
 
-    setAgentHost() {
+    sanitize() {
+        return {
+            account: this.account,
+            data: this.data,
+            token: this.token,
+            agentType: this.agentType,
+            authType: this.authType,
+            remoteHost: this.getRemoteHost(),
+        };
     }
 
-    setAgentId(uuid) {
+    setAccount(account) {
+        this.account = account;
+        return this;
+    }
+
+    setData(...args) {
+        if (args.length == 2) {
+            this.data[args[0]] = args[1];
+        }
+        else if (args.length == 1 && typeof args[0] == 'object') {
+            this.data = args[0];
+        }
+
+        return this;
     }
 
     setPermission(permissionKey, permissionType, values) {
+        let permission = new Object();
+        permission[permissionKey] = { type: permissionType, value: values };
+
+        if (PermissionVerse.validate(permission)) {
+            this.permissions[permissionKey] = permission[permissionKey];
+        }
+
+        return this;
     }
 
-    setPermissions() {
+    setPermissions(permissions) {
+        if (typeof permissions == 'object' && PermissionVerse.validate(permissions)) {
+            this.permissions = permissions;
+        }
+        else {
+            this.permissions = {};
+        }
+
+        return this;
     }
 
-    touch() {
+    touch(remoteHost) {
+        if (this.timeout) {
+            clearTimeout(this.timeout);
+            this.timeout = null;
+        }
+
+        if (this.timeoutMillis > 0) {
+            this.timeout = setTimeout(() => this.close(), this.timeoutMillis);
+        }
+
+        if (remoteHost && remoteHost != this.remoteHost[this.remoteHost.length - 1]) {
+            this.remoteHost.push(remoteHost);
+        }
+
+        return this;
     }
 });
 
 
 /*****
+ * The SessionManager is a controller-class-node singleton responsible for being
+ * a container for all current sessions.  There is only a single instance of the
+ * session object on the server that's right here.  Hence, subprocesses must
+ * contact the controller process in order to check session authorization.  The
+ * SessionManager also serves as an endpoint for communcating with subprocesses
+ * that require access to session and permission data.
+*****/
+singletonIn(Process.nodeClassController, '', class SessionManager {
+    constructor() {
+        mkHandlerProxy(Process, 'SessionManager', this);
+        this.sessionsByUUID = {};
+        this.sessionsByToken = {};
+    }
+
+    async onCloseSession(message) {
+        if (message.uuid && message.uuid in this.sessionsByUUID) {
+            let closing = this.sessionsByToken[message.token].sanitize();
+            closing.close();
+            return closing;
+        }
+
+        return null;
+    }
+
+    async onCreateSession(message) {
+        return (await mkSession().init(message.opts)).sanitize();
+    }
+
+    async onGetData(message) {
+        if (message.uuid && message.uuid in this.sessionsByUUID) {
+            return this.sessionsByUUID[message.uuid].getData(message.key);
+        }
+    }
+
+    async onGetSession(message) {
+        if (message.token && message.token in this.sessionsByToken) {
+            return this.sessionsByToken[message.token].sanitize();
+        }
+        
+        return false;
+    }
+
+    async onSetData(message) {
+        if (message.uuid && message.uuid in this.sessionsByUUID) {
+            if (message.data) {
+                if (message.key) {
+                    this.sessionsByUUID[message.uuid].getData(message.key, message.data);
+                }
+                else {
+                    this.sessionsByUUID[message.uuid].getData(message.data);
+                }
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+});
+
+
+/*****
+ * This is the application interface for sessions made available to the general
+ * population of processes.  Note (1) availability for managing sessions is
+ * limited to this singleton API object, and (2) 
 *****/
 singletonNotIn(Process.nodeClassController, '', class Session {
     async createSession(opts) {
-        let session = await Process.callController({
+        return await Process.callController({
             name: 'SessionManagerCreateSession',
             opts: opts,
         });
+    }
 
-        return session;
+    async closeSession(uuid) {
+        await Process.callController({
+            name: 'SessionManagerCloseSession',
+            uuid: uuid,
+        });
+
+        return this;
+    }
+
+    async getData(uuid, key) {
+        return await Process.callController({
+            name: 'SessionManagerGetData',
+            uuid: uuid,
+            key: key,
+        });
+    }
+
+    async getSession(token) {
+        return await Process.callController({
+            name: 'SessionManagerGetSession',
+            token: token,
+        });
+    }
+
+    async setData(uuid, key, data) {
+        return await Process.callController({
+            name: 'SessionManagerSetData',
+            uuid: uuid,
+            key: key,
+            data: data,
+        });
     }
 });

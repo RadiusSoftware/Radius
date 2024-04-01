@@ -492,7 +492,18 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
         }
     }
 
-    async handle(req) {
+    async handle(req, rsp) {
+        let grantedPermissions = await (async () => {
+            let session = await req.getSession();
+
+            if (session) {
+                return session.permissions;
+            }
+            else {
+                return new Object();
+            }
+        })();
+
         let response = await Process.callParent({
             name: 'HttpLibraryGet',
             path: req.getPath(),
@@ -500,7 +511,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
             encoding: req.getAcceptEncoding(),
             language: req.getAcceptLanguage(),
             headers: req.getHeaders(),
-            grantedPermissions: req.getGrantedPermissions(),
+            grantedPermissions: grantedPermissions,
         });
 
         if (typeof response == 'number') {
@@ -514,7 +525,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
                 return response;
             }
             else if (response.type == 'httpx') {
-                return await this.handleHttpX(response, req);
+                return await this.handleHttpX(response, req, rsp);
             }
             else {
                 return 410;
@@ -525,12 +536,12 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
         }
     }
 
-    async handleHttpX(httpXInfo, req) {
+    async handleHttpX(httpXInfo, req, rsp) {
         const httpX = this.paths[httpXInfo.path];
         const method = `handle${req.getMethod()}`;
 
         if (typeof httpX[method] == 'function') {
-            let httpXResponse = await httpX[method](req);
+            let httpXResponse = await httpX[method](req, rsp);
 
             if (httpXInfo.once === true) {
                 delete this.paths[httpXInfo.path];

@@ -28,7 +28,6 @@ singleton('', class Host {
     constructor() {
         this.ipV4 = {};
         this.ipV6 = {};
-        this.iid = Crypto.generateUUID();
 
         for (let interfaceName in LibOs.networkInterfaces()) {
             for (let nodeInterface of LibOs.networkInterfaces()[interfaceName]) {
@@ -61,10 +60,6 @@ singleton('', class Host {
 
     getHostname() {
         return LibOs.hostname();
-    }
-
-    getIid() {
-        return this.iid;
     }
 
     getMemory() {

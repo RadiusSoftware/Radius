@@ -71,6 +71,7 @@ require('./session.js');
 
 require('./net/socket.js');
 require('./net/httpX.js');
+require('./net/webApp.js');
 require('./net/httpLibrary.js');
 require('./net/httpClient.js');
 require('./net/httpServer.js');

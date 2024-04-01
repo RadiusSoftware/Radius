@@ -72,6 +72,8 @@ singleton('', class Process extends Emitter {
             this.radius = radius;
         }
         else {
+            this.setEnv('SESSIONCOOKIE', mkBuffer(Crypto.generateUUID()).toString('hex'));
+
             this.radius = {
                 nodeGuid: Crypto.generateUUID(),
                 nodeClass: this.nodeClassController,
@@ -147,10 +149,10 @@ singleton('', class Process extends Emitter {
     }
 
     async fork(nodeClass, nodeTitle, settings) {
-       let childProcess = null;
-       let nodeGuid = Crypto.generateUUID();
-       nodeClass ? null : nodeClass = this.nodeClassUndefined;
-       nodeTitle ? null : nodeTitle = this.nodeTitleUndefined;
+        let childProcess = null;
+        let nodeGuid = Crypto.generateUUID();
+        nodeClass ? null : nodeClass = this.nodeClassUndefined;
+        nodeTitle ? null : nodeTitle = this.nodeTitleUndefined;
 
         try {
             let env = Data.copy(LibProcess.env, {
@@ -319,6 +321,10 @@ singleton('', class Process extends Emitter {
 
     getRelease() {
         return LibProcess.release;
+    }
+
+    getSessionCookie() {
+        return this.getEnv('SESSIONCOOKIE');
     }
 
     getUid() {
@@ -562,42 +568,7 @@ singleton('', class Process extends Emitter {
         }
 
         return false;
-        /*
-        if ('#ROUTING' in message) {
-            let routing = message['#ROUTING'];
-
-            if (routing.type == 'NodeClass') {
-                if (routing.nodeClass == this.getNodeClass()) {
-                    delete message['#ROUTING'];
-                    return false;
-                }
-                else {
-                    this.routeDownRelay(message, sendHandle);
-                    return true;
-                }
-            }
-            else if (routing.type == 'Pid') {
-                if (routing.nodePid == this.getPid()) {
-                    delete message['#ROUTING'];
-                    return false;
-                }
-                else {
-                    this.routeDownRelay(message, sendHandle);
-                    return true;
-                }
-            }
-        }
-
-        return false;
-        */
     }
-    /*
-    routeDownRelay(message, sendHandle) {
-        for (let childProcess of this) {
-            childProcess.sendChild(message, sendHandfe);
-        }
-    }
-    */
 
     routeUp(message) {
         if ('#ROUTING' in message) {

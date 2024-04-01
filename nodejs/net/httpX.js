@@ -88,19 +88,19 @@ register('', class HttpX extends Emitter {
         return this.uuid;
     }
 
-    async handleDELETE(req) {
+    async handleDELETE(req, rsp) {
         return 501;
     }
 
-    async handleGET(req) {
+    async handleGET(req, rsp) {
         return 501;
     }
 
-    async handlePOST(req) {
+    async handlePOST(req, rsp) {
         return 501;
     }
 
-    async handlePUT(req) {
+    async handlePUT(req, rsp) {
         return 501;
     }
 

@@ -29,7 +29,7 @@
  * transaction integrity.  Subclassing WebApp is how developers create their own
  * applications.
 *****/
-register('radius', class WebApp extends HttpX {
+register('', class WebApp extends HttpX {
     constructor() {
         super();
         this.allowWebsocket = false;
@@ -67,7 +67,7 @@ register('radius', class WebApp extends HttpX {
         }
     }
 
-    async handleGET(req) {
+    async handleGET(req, rsp) {
         let contentType;
         let contentEncoding = '';
         let contentCharset = '';
@@ -112,28 +112,7 @@ register('radius', class WebApp extends HttpX {
         };
     }
 
-    async handleMessage(message) {
-        console.log(message);
-
-        let response = await Session.createSession({
-            agentType: 'user',
-            authType: 'password',
-            agentHost: '172.0.0.1',
-            //timeout: 10*60000,
-        });
-
-        console.log(response);
-
-        return {
-            //'#ContentType': '',
-            //'#ContentEncoding': '',
-            //'#ContentCharset': '',
-            //'#Error': '',
-            content: { done: true },
-        };
-    }
-
-    async handlePOST(req) {
+    async handlePOST(req, rsp) {
         if (req.getMime() == 'application/json') {
             try {
                 let message = await req.getBody();
