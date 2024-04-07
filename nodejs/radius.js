@@ -49,8 +49,8 @@ require('../common/textUtils.js');
 require('../common/chronos.js');
 require('../common/cookie.js');
 require('../common/expression.js');
+require('../common/api.js');
 
-require('./api.js');
 require('./crypto.js');
 require('./pool.js');
 require('./network.js');

@@ -22,13 +22,35 @@
 require('../nodejs/radius.js');
 
 
+// *******************************************************************************
+// *******************************************************************************
+(async () => {
+    let emitter = mkEmitter();
+
+    let coreAPI = mkApi()
+    .setEmitter(emitter)
+    .setEndpoint({}, function whoAmI(a, b, c) {
+        return `***  ${a}  ${b}  ${c}`;
+    })
+    .setEndpoint({}, function whoAreYou() {});
+
+    const remoteAPI = mkRemoteApi(coreAPI.getEndpointNames(), emitter, 'call');
+    console.log(await remoteAPI.whoAmI('tree', 'rock', 'flower'));
+})();
+
+// *******************************************************************************
+// *******************************************************************************
+
+
+/*
 (async () => {
     /*****
-    *****/
+    *****
     await FileSystem.recurseModules(Path.join(__dirname, 'lib'));
 
+
     /*****
-    *****/
+    *****
     singletonIn(Process.nodeClassController, 'radius', class Controller {
         constructor() {
             (async () => {
@@ -154,3 +176,4 @@ require('../nodejs/radius.js');
         }
     });
 })();
+*/

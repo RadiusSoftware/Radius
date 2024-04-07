@@ -93,6 +93,7 @@
                     'common/chronos.js',
                     'common/cookie.js',
                     'common/expression.js',
+                    'common/api.js',
                     
                     'mozilla/element.js',
                     'mozilla/win.js',

@@ -140,7 +140,6 @@ registerIn(Process.nodeClassController, '', class Session {
             return false;
         }
 
-        console.log(opts.remoteHost);
         if (opts.remoteHost) {
             this.remoteHost = [ opts.remoteHost ];
         }
