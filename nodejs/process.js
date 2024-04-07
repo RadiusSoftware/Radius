@@ -72,8 +72,6 @@ singleton('', class Process extends Emitter {
             this.radius = radius;
         }
         else {
-            this.setEnv('SESSIONCOOKIE', mkBuffer(Crypto.generateUUID()).toString('hex'));
-
             this.radius = {
                 nodeGuid: Crypto.generateUUID(),
                 nodeClass: this.nodeClassController,
@@ -321,10 +319,6 @@ singleton('', class Process extends Emitter {
 
     getRelease() {
         return LibProcess.release;
-    }
-
-    getSessionCookie() {
-        return this.getEnv('SESSIONCOOKIE');
     }
 
     getUid() {

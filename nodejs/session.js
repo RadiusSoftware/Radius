@@ -210,7 +210,7 @@ registerIn(Process.nodeClassController, '', class Session {
     }
 
     setPermissions(permissions) {
-        if (typeof permissions == 'object' && PermissionVerse.validate(permissions)) {
+        if (typeof permissions == 'object' && PermissionVerse.validatePermissions(permissions)) {
             this.permissions = permissions;
         }
         else {
@@ -252,6 +252,8 @@ singletonIn(Process.nodeClassController, '', class SessionManager {
         mkHandlerProxy(Process, 'SessionManager', this);
         this.sessionsByUUID = {};
         this.sessionsByToken = {};
+        this.sessionCookieName = 'rscn';
+        Process.setEnv('SessionCookieName', this.sessionCookieName);
     }
 
     async onCloseSession(message) {
@@ -336,6 +338,10 @@ singletonNotIn(Process.nodeClassController, '', class Session {
             name: 'SessionManagerGetSession',
             token: token,
         });
+    }
+
+    getSessionCookieName() {
+        return Process.getEnv('SessionCookieName');
     }
 
     async setData(uuid, key, data) {

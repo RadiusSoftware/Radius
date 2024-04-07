@@ -609,7 +609,7 @@ registerIn('HttpServerWorker', '', class HttpRequest {
     }
 
     async getSession() {
-        let sessionCookie = this.getCookie(Process.getEnv('SESSIONCOOKIE'));
+        let sessionCookie = this.getCookie(Session.getSessionCookieName());
 
         if (sessionCookie) {
             let session = await Process.callController({
@@ -866,7 +866,7 @@ registerIn('HttpServerWorker', '', class HttpResponse {
     }
 
     setSession(token) {
-        let sessionCookie = mkCookie(Process.getSessionCookie(), token);
+        let sessionCookie = mkCookie(Session.getSessionCookieName(), token);
         this.setCookie(sessionCookie);
         return this;
     }

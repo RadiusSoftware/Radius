@@ -29,13 +29,14 @@ register('radius', class AdminApp extends WebApp {
     }
 
     async handleGET(req, rsp) {
-        let session = await req.getSession();
+        let token = await req.getSession();
 
-        if (!session) {
-            session = await Session.createSession({
+        if (!token) {
+            const session = await Session.createSession({
                 agentType: 'none',
                 authType: 'none',
                 remoteHost: req.getRemoteHost(),
+                //permissions: { 'admin:all': true },
                 timeout: 12*60*60000,
             });
 

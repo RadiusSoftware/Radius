@@ -24,6 +24,7 @@ require('../nodejs/radius.js');
 
 // *******************************************************************************
 // *******************************************************************************
+/*
 (async () => {
     let emitter = mkEmitter();
 
@@ -34,23 +35,26 @@ require('../nodejs/radius.js');
     })
     .setEndpoint({}, function whoAreYou() {});
 
-    const remoteAPI = mkRemoteApi(coreAPI.getEndpointNames(), emitter, 'call');
-    console.log(await remoteAPI.whoAmI('tree', 'rock', 'flower'));
+    const remoteAPI = mkRemoteApi(
+        coreAPI.getEndpointNames(),
+        async message => await emitter.call(message),
+    );
+
+    console.log(await remoteAPI.whoAmI('tree', 'ROCK', 'flower'));
 })();
-
+*/
 // *******************************************************************************
 // *******************************************************************************
 
 
-/*
 (async () => {
     /*****
-    *****
+    *****/
     await FileSystem.recurseModules(Path.join(__dirname, 'lib'));
 
 
     /*****
-    *****
+    *****/
     singletonIn(Process.nodeClassController, 'radius', class Controller {
         constructor() {
             (async () => {
@@ -108,6 +112,10 @@ require('../nodejs/radius.js');
         }
 
         async launchAdminMode() {
+            PermissionVerse.setPermissions({
+                'admin:all': { type: 'boolean' }
+            });
+
             startServer('HttpServer', {
                 deflang: 'en-US',
                 workers: 1,
@@ -136,9 +144,15 @@ require('../nodejs/radius.js');
         }
 
         async launchLiveMode() {
-            // Initialize PermissionsVerse()
             // TODO
-            // display('\n..launching LIVE MODE\n');
+            console.log('Launching LIVE mode!');
+            console.log('Connect to DBMS -- for all settings!');
+            console.log('DBMS also contains permission verse.');
+
+            /*
+            PermissionVerse.setPermissions({
+            });
+            */
         }
 
         async parseCommandLine() {
@@ -176,4 +190,3 @@ require('../nodejs/radius.js');
         }
     });
 })();
-*/

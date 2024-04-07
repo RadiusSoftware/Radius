@@ -30,6 +30,9 @@
  * applications.
 *****/
 register('', class WebApp extends HttpX {
+    static ignore = Symbol('ignore');
+    static noauth = Symbol('noauth');
+
     constructor() {
         super();
         this.allowWebsocket = false;
@@ -112,30 +115,40 @@ register('', class WebApp extends HttpX {
         };
     }
 
+    async handleMessage(message) {
+        return WebApp.ignore;
+    }
+
     async handlePOST(req, rsp) {
         if (req.getMime() == 'application/json') {
             try {
                 let message = await req.getBody();
                 let response = await this.handleMessage(message);
-                let encoding = response['#ContentEncoding'];
 
-                if (!encoding) {
-                    for (let algorithm in req.getAcceptEncoding()) {
-                        if (Compression.isSupported(algorithm)) {
-                            encoding = algorithm;
-                            break;
+                if (response === WebApp.ignore) {
+                    return 404;
+                }
+                else {
+                    let encoding = response['#ContentEncoding'];
+
+                    if (!encoding) {
+                        for (let algorithm in req.getAcceptEncoding()) {
+                            if (Compression.isSupported(algorithm)) {
+                                encoding = algorithm;
+                                break;
+                            }
                         }
                     }
-                }
 
-                return {
-                    status: 200,
-                    contentType: '#ContentType' in response ? response['#ContentType'] : 'application/json',
-                    contentCharset: '#ContentCharset' in response ? response['#ContentCharset'] : 'utf-8',
-                    contentEncoding: '#ContentCharset' in response ? response['#ContentCharset'] : 'utf-8',
-                    contentEncoding: encoding,
-                    content: await Compression.compress(encoding, toJson(response.content)),
-                };
+                    return {
+                        status: 200,
+                        contentType: '#ContentType' in response ? response['#ContentType'] : 'application/json',
+                        contentCharset: '#ContentCharset' in response ? response['#ContentCharset'] : 'utf-8',
+                        contentEncoding: '#ContentCharset' in response ? response['#ContentCharset'] : 'utf-8',
+                        contentEncoding: encoding,
+                        content: await Compression.compress(encoding, toJson(response.content)),
+                    };
+                }
             }
             catch (e) {
                 await caught(e, req.getFullRequest(), req.getBody());
@@ -145,6 +158,11 @@ register('', class WebApp extends HttpX {
         else {
             return 422;
         }
+    }
+
+    async handleWebSocketMessage(message) {
+        // TODO
+        console.log('\nIMPLEMENT the websocket handler on webApp.js!');
     }
 
     hasBundle(name) {

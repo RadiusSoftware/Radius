@@ -120,6 +120,13 @@ register('', class Api {
     }
 
     async handle(message) {
+        if (typeof message.token == 'string') {
+            console.log(message.token);
+        }
+        else if (message.permissions == 'object') {
+            console.log(message.permissions);
+        }
+
         if (message.name in this.endpoints) {
             return await this.endpoints[message.name].call(...message.args);
         }
@@ -152,21 +159,28 @@ register('', class Api {
 
 /*****
 *****/
-register('', class RemoteApi {
-    static callerKey = Symbol('caller');
-    static methodKey = Symbol('method');
+(() => {
+    const call = Symbol('call');
+    const exec = Symbol('exec');
 
-    constructor(names, caller, method) {
-        this[RemoteApi.callerKey] = caller;
-        this[RemoteApi.methodKey] = method;
+    register('', class RemoteApi {
+        constructor(names, caller) {
+            this[call] = caller;
 
-        for (let name of names) {
-            this[name] = async (...args) => {
-                return await this[RemoteApi.callerKey][this[RemoteApi.methodKey]]({
-                    name: name,
-                    args: args,
-                });
-            };
+            for (let name of names) {
+                this[name] = async (...args) => {
+                    return await this[exec](name, ...args);
+                };
+            }
         }
-    }
-});
+
+        async [exec](name, ...args) {
+            let message = {
+                name: name,
+                args: args,
+            };
+
+            return await this[call](message);
+        }
+    });
+})();
