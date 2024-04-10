@@ -30,15 +30,24 @@
  * applications.
 *****/
 register('', class WebApp extends HttpX {
-    static ignore = Symbol('ignore');
-    static noauth = Symbol('noauth');
-
     constructor() {
         super();
         this.allowWebsocket = false;
         this.webAppPath = __filename;
         this.webAppDir = Path.join(__filename.replace('.js', ''), '../../webApp');
         this.bundles = {};
+        this.api = mkApi();
+        const webapp = this;
+
+        this.setEndpoints(
+            {}, function GetBundle(name) {
+                return webapp.getBundle(name);
+            },
+
+            {}, function GetApi() {
+                return webapp.api.getEndpointNames();
+            }
+        );
     }
 
     allowWebsocket() {
@@ -63,10 +72,10 @@ register('', class WebApp extends HttpX {
         return this.webAppPath;
     }
 
-    async getBundle(name, encoding) {
+    getBundle(name, encoding) {
         if (name in this.bundles) {
             let bundle = this.bundles[name]
-            return await bundle.get(encoding);
+            return bundle.get();
         }
     }
 
@@ -115,39 +124,34 @@ register('', class WebApp extends HttpX {
         };
     }
 
-    async handleMessage(message) {
-        return WebApp.ignore;
-    }
-
     async handlePOST(req, rsp) {
         if (req.getMime() == 'application/json') {
             try {
                 let message = await req.getBody();
-                let response = await this.handleMessage(message);
+                let cookie = req.getSessionToken();
+                cookie ? message['#TOKEN'] = cookie.getValue() : null;
+                let response = await this.api.handle(message);
 
-                if (response === WebApp.ignore) {
-                    return 404;
-                }
-                else {
-                    let encoding = response['#ContentEncoding'];
+                if (typeof response == 'object') {
+                    let encoding = '';
 
-                    if (!encoding) {
-                        for (let algorithm in req.getAcceptEncoding()) {
-                            if (Compression.isSupported(algorithm)) {
-                                encoding = algorithm;
-                                break;
-                            }
+                    for (let algorithm in req.getAcceptEncoding()) {
+                        if (Compression.isSupported(algorithm)) {
+                            encoding = algorithm;
+                            break;
                         }
                     }
-
+                   
                     return {
                         status: 200,
-                        contentType: '#ContentType' in response ? response['#ContentType'] : 'application/json',
-                        contentCharset: '#ContentCharset' in response ? response['#ContentCharset'] : 'utf-8',
-                        contentEncoding: '#ContentCharset' in response ? response['#ContentCharset'] : 'utf-8',
+                        contentType: 'application/json',
                         contentEncoding: encoding,
-                        content: await Compression.compress(encoding, toJson(response.content)),
+                        contentCharset: 'utf-8',
+                        content: await Compression.compress(encoding, toJson(response)),
                     };
+                }
+                else {
+                    return 404;
                 }
             }
             catch (e) {
@@ -176,8 +180,9 @@ register('', class WebApp extends HttpX {
         this.html = (await FileSystem.readFile(Path.join(this.httpXDir, this.htmlPath))).toString();
         this.setContent('style', 'text/css', (await FileSystem.readFile(Path.join(this.httpXDir, this.stylePath))).toString());
 
-        let mozilla = await radius.Mozilla.getSourceCode({
+        let mozilla = await Mozilla.getSourceCode({
             webAppPath: this.path,
+            userSocket: this.allowWebsocket,
         });
         
         this.setContent('radius', 'text/javascript', mozilla);
@@ -217,6 +222,21 @@ register('', class WebApp extends HttpX {
             }
         }
         catch (e) {}
+        return this;
+    }
+
+    setEndpoint(permissions, func) {
+        this.api.setEndpoint(permissions, func);
+        return this;
+    }
+
+    setEndpoints(...args) {
+        for (let i = 0; i < args.length; i+=2) {
+            if (args.length >= i+1) {
+                this.api.setEndpoint(args[i], args[i+1]);
+            }
+        }
+
         return this;
     }
 });

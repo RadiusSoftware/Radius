@@ -623,6 +623,16 @@ registerIn('HttpServerWorker', '', class HttpRequest {
         return null;
     }
 
+    getSessionToken() {
+        let sessionCookie = this.getCookie(Session.getSessionCookieName());
+
+        if (sessionCookie) {
+            return sessionCookie;
+        }
+
+        return null;
+    }
+
     getUrl() {
         return this.httpReq.url !== null ? this.httpReq.url : '';
     }

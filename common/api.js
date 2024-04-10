@@ -22,6 +22,10 @@
 
 
 /*****
+ * An ApiEndpoint defines a "function" that can be called by a remote API object.
+ * The endpoint represents a function that's managed by the endpoint and by the
+ * API object itself.  ApiEndpoints will not propagage errors, which are caught
+ * by the endpoint itself when the endpoint function is called.
 *****/
 register('', class ApiEndpoint {
     constructor(permissions, func) {
@@ -31,13 +35,19 @@ register('', class ApiEndpoint {
 
     call(...args) {
         return new Promise(async (ok, fail) => {
-            let result = Reflect.apply(this.func, null, args);
+            try {
+                let result = Reflect.apply(this.func, this, args);
 
-            if (result instanceof Promise) {
-                ok(await result);
+                if (result instanceof Promise) {
+                    result = await result;
+                    ok({ result: result });
+                }
+                else {
+                    ok({ result: result });
+                }
             }
-            else {
-                ok(result);
+            catch (e) {
+                ok({ error: e });
             }
         });
     }
@@ -73,10 +83,16 @@ register('', class ApiEndpoint {
 
 
 /*****
+ * The Api itself is essentially a collection of ApiEndpoints that are managed
+ * by the Api container.  The Api is responsible for handling messages from a
+ * caller, interpreting those messages, checking permissions and then responding
+ * to the incoming call request by calling the registered API function.
 *****/
 register('', class Api {
+    static ignore = Symbol('ignore');
+    static noauth = Symbol('noauth');
+
     constructor() {
-        this.emitters = [];
         this.endpoints = {};
     }
 
@@ -84,31 +100,6 @@ register('', class Api {
         if (name in this.endpoints) {
             return await this.endpoints[name].call(...args);
         }
-    }
-
-    clearEmitter(emitter) {
-        let index = this.findEmitter(emitter);
-
-        if (index >= 0) {
-            emitter.off('*', this.handle);
-            this.emitters.splice(i, 1);
-        }
-        
-        return this;
-    }
-
-    findEmitter(emitter) {
-        for (let i = 0; i < this.emitters.length; i++) {
-            if (Object.is(this.emitters[i], emitter)) {
-                return i;
-            }
-        }
-
-        return -1;
-    }
-
-    getEmitters() {
-        return this.emitters.slice(0);
     }
 
     getEndpoint(endpointName) {
@@ -120,33 +111,48 @@ register('', class Api {
     }
 
     async handle(message) {
-        if (typeof message.token == 'string') {
-            console.log(message.token);
-        }
-        else if (message.permissions == 'object') {
-            console.log(message.permissions);
-        }
+        let endpoint = this.endpoints[message.name];
 
-        if (message.name in this.endpoints) {
-            return await this.endpoints[message.name].call(...message.args);
+        if (endpoint) {
+            if ('#TOKEN' in message) {
+                let session = await Process.callController({
+                    name: 'SessionManagerGetSession',
+                    token: message['#TOKEN'],
+                });
+
+                if (session) {
+                    if (PermissionVerse.authorize(endpoint.permissions, session.permissions)) {
+                        try {
+                            if (message.args) {
+                                return await endpoint.func(...message.args);
+                            }
+                            else {
+                                return await endpoint.func([]);                                
+                            }
+                        }
+                        catch (e) {
+                            return 500;
+                        }
+                    }
+                    else {
+                        return Api.noauth;
+                    }
+                }
+                else {
+                    return Api.noauth;
+                }
+            }
+            else {
+                return 404;
+            }
+        }
+        else {
+            return Api.ignore;
         }
      }
 
-    hasEmitter(emitter) {
-        return this.findEmitter(emitter) >= 0;
-    }
-
     hasEndpoint(endpointName) {
         return endpointName in this.endpoints;
-    }
-
-    setEmitter(emitter) {
-        if (!this.hasEmitter(emitter)) {
-            emitter.on('*', async message => this.handle(message));
-            this.emitters.push(emitter);
-        }
-
-        return this;
     }
 
     setEndpoint(permissions, func) {
@@ -158,6 +164,9 @@ register('', class Api {
 
 
 /*****
+ * A RemoteApi object is constructed with a list of function names available in
+ * the remote API and a calling function, whose job is to use the required lib
+ * to call the API and return the response to the caller.
 *****/
 (() => {
     const call = Symbol('call');

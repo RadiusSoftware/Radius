@@ -46,17 +46,6 @@ register('radius', class AdminApp extends WebApp {
         return await super.handleGET(req, rsp);
     }
 
-    async handleMessage(message) {
-        console.log(message);
-        return {
-            //'#ContentType': '',
-            //'#ContentEncoding': '',
-            //'#ContentCharset': '',
-            //'#Error': '',
-            content: { done: true },
-        };
-    }
-
     async handlePOST(req, rsp) {
         let session = await req.getSession();
 

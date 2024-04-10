@@ -200,10 +200,15 @@ register('', class HttpResponse {
         let type = this.xhr.responseType;
 
         if (type == '' || type == 'text') {
-            return this.xhr.responseText;
+            if (this.xhr.getResponseHeader('content-type').startsWith('application/json')) {
+                return fromJson(this.xhr.responseText);
+            }
+            else {
+                return this.xhr.responseText;
+            }
         }
         else if (type == 'json') {
-            return fromJson(this.xhr);
+            return this.xhr.response;
         }
         else {
             return this.xhr.respoonse;

@@ -22,31 +22,6 @@
 require('../nodejs/radius.js');
 
 
-// *******************************************************************************
-// *******************************************************************************
-/*
-(async () => {
-    let emitter = mkEmitter();
-
-    let coreAPI = mkApi()
-    .setEmitter(emitter)
-    .setEndpoint({}, function whoAmI(a, b, c) {
-        return `***  ${a}  ${b}  ${c}`;
-    })
-    .setEndpoint({}, function whoAreYou() {});
-
-    const remoteAPI = mkRemoteApi(
-        coreAPI.getEndpointNames(),
-        async message => await emitter.call(message),
-    );
-
-    console.log(await remoteAPI.whoAmI('tree', 'ROCK', 'flower'));
-})();
-*/
-// *******************************************************************************
-// *******************************************************************************
-
-
 (async () => {
     /*****
     *****/

@@ -24,54 +24,24 @@
 
 /*****
 *****/
-register('', class Bundle {
-    constructor(bundle) {
-        this.registered = false;
+register('', async function bootRadius(settings) {
+    let websocket = null;
 
-        for (let key in bundle) {
-        }
-    }
-
-    getName() {
-    }
-
-    getScripts() {
-    }
-
-    getWidgets() {
-    }
-
-    isRegistered() {
-        return this.registered;
-    }
-
-    register() {
-    }
-});
-
-
-/*****
-*****/
-singleton('', class Bundles {
-    constructor() {
-        this.bundles = {};
-    }
-
-    async get(name) {
-        if (name in this.bundles) {
-            return this.bundles[name];
+    register('', async function callServer(message) {
+        if (websocket) {
         }
         else {
-            let response = await callServer({
-                name: 'GetBundle',
-                args: [ name ],
-            });
-
-            console.log(response);
+            return (await mkHttpRequest().post(settings.webAppPath, message)).getPayload();
         }
-    }
+    });
 
-    [Symbol.iterator]() {
-        return Object.values(this.bundles)[Symbol.iterator]();
-    }
+    register('', async function openWebsocket(message) {
+    });
+    
+    register('', function sendServer(message) {
+    });
+    
+    globalThis.api = mkRemoteApi(await callServer({ name: 'GetApi' }), callServer);
+    await api.GetBundle('div');
+    wrapTree(document.documentElement);
 });

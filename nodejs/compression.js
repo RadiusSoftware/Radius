@@ -34,19 +34,23 @@ const NpmGzip = require('node-gzip');
 singleton('', class Compression {
     constructor() {
         this.algorithms = {
+            '': {
+                compress: async uncompressed => uncompressed,
+                uncompress: async compressed => compressed,
+            },
             gzip: {
-                compress: async (uncompressed) => await NpmGzip.gzip(uncompressed),
-                uncompress: async (compressed) => await NpmGzip.ungzip(compressed),
+                compress: async uncompressed => await NpmGzip.gzip(uncompressed),
+                uncompress: async compressed => await NpmGzip.ungzip(compressed),
             },
             deflate: {
-                compress: (uncompressed) => {
+                compress: uncompressed => {
                     return new Promise((ok, fail) => {
                         LibZlib.deflateRaw(uncompressed, (error, compressed) => {
                             ok(compressed);
                         });
                     });
                 },
-                uncompress: (compressed) => {
+                uncompress: compressed => {
                     return new Promise((ok, fail) => {
                         LibZlib.inflateRaw(compressed, (error, uncompressed) => {
                             ok(uncompressed);

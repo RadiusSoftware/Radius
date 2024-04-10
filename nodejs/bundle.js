@@ -48,7 +48,7 @@ register('', class Bundle {
         return this.name;
     }
 
-    async get(encoding) {
+    async get() {
     }
 
     async init() {
