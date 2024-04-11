@@ -59,7 +59,7 @@ register('', class Bundle {
                     let outerHtml = buffer.toString();
                     this.source = createDocElementFromOuterHtml(outerHtml);
 
-                    if (this.source.getTagName() == 'radius') {
+                    if (this.source.getTagName() == 'bundle') {
                         for (let element of this.source) {
                             let tag = element.getTagName();
                             let methodName = `process${tag[0].toUpperCase()}${tag.substring(1)}`;

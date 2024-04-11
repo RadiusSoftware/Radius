@@ -1,4 +1,4 @@
-<radius>
+<bundle>
     <name>div</name>
     <widget>
         <permissions>{
@@ -11,6 +11,7 @@
             register('', class Div extends Widget {
                 constructor() {
                     super();
+                    this.setInnerHtml('Hello Div');
                 }
             });
         </script>
@@ -18,4 +19,4 @@
     <script>
         alert('Hello Bundle!');
     </script>
-</radius>
+</bundle>
