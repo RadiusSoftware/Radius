@@ -50,6 +50,7 @@
 register('', class HttpX extends Emitter {
     constructor() {
         super();
+        this.paths = {};
     }
 
     getClassName() {
@@ -109,7 +110,8 @@ register('', class HttpX extends Emitter {
         return this;
     }
 
-    async removeContent(relpath) {
+    async removeContent(path) {
+        /*
         if (!Path.isAbsolute(relpath)) {
             let urlPath = Path.join(this.path, relpath);
 
@@ -120,11 +122,13 @@ register('', class HttpX extends Emitter {
                 });
             }
         }
+        */
 
         return this;
     }
 
-    async setContent(relpath, mime, data) {
+    async setContent(path, mime, data) {
+        /*
         if (!Path.isAbsolute(relpath)) {
             let urlPath = Path.join(this.path, relpath);
 
@@ -143,6 +147,7 @@ register('', class HttpX extends Emitter {
                 });
             }
         }
+        */
 
         return this;
     }

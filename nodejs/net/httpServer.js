@@ -106,12 +106,8 @@ singletonIn('HttpServer', '', class HttpServer extends Server {
         return this.settings.libEntries;
     }
 
-    getLibSettings() {
-        return this.settings.libSettings;
-    }
-
     async init() {
-        await this.httpLibrary.init(this.settings.libSettings, this.settings.libEntries);
+        await this.httpLibrary.init(this.settings.libEntries);
         await super.init();
         return this;
     }
@@ -187,6 +183,26 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
         return this;
     }
 
+    async encode(req, unencodedContent) {
+        let acceptedEncoding = req.getAcceptEncoding();
+
+        if (typeof acceptedEncoding == 'object') {
+            for (let algorithm in acceptedEncoding) {
+                if (Compression.isSupported(algorithm)) {
+                    return {
+                        contentEncoding: algorithm,
+                        content: await Compression.compress(algorithm, unencodedContent)
+                    };
+                }
+            }
+        }
+
+        return {
+            contentEncoding: '',
+            content: unencodedContent,
+        };
+    }
+
     getLibEntries() {
         return this.settings.libEntries;
     }
@@ -215,18 +231,23 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
         try {
             req = mkHttpRequest(this, httpReq);
             rsp = mkHttpResponse(this, httpRsp);
-            let response = await this.httpLibrary.handle(req, rsp);
+
+            let response = await this.httpLibrary.handle({
+                method: req.getMethod(),
+                path: req.getPath(),
+            });
 
             if (typeof response == 'number') {
                 rsp.respondStatus(response);
             }
             else {
+                let encoded = await this.encode(req, response.content);
+
                 rsp.respond(
-                    response.status,
+                    200,
                     response.contentType,
-                    response.contentEncoding,
-                    response.contentCharset,
-                    response.content,
+                    encoded.contentEncoding,
+                    encoded.content,
                 );
 
                 this.sendApp({
@@ -800,9 +821,9 @@ registerIn('HttpServerWorker', '', class HttpResponse {
         return this;
     }
 
-    respond(status, contentType, contentEncoding, contentCharset, content) {
+    respond(status, contentType, contentEncoding, content) {
         const headers = {};
-        this.setContentType(contentType, contentCharset ? contentCharset : '');
+        this.setContentType(contentType);
         this.setContentEncoding(contentEncoding ? contentEncoding : '');
         this.getHeaderArray().forEach(header => headers[header.name] = header.value);
 
@@ -849,16 +870,9 @@ registerIn('HttpServerWorker', '', class HttpResponse {
         return this;
     }
 
-    setContentType(mimeInfo, charset) {
+    setContentType(mimeInfo) {
         let mime = mimeInfo instanceof Mime ? mimeInfo : mkMime(mimeInfo);
-
-        if (mime.getType() == 'string' && typeof charset == 'string' && charset != '') {
-            this.httpRsp.setHeader('Content-Type', `${mime.getCode()}; charset="${charset}"`);
-        }
-        else {
-            this.httpRsp.setHeader('Content-Type', mime.getCode());
-        }
-
+        this.httpRsp.setHeader('Content-Type', mime.getCode());
         return this;
     }
 
