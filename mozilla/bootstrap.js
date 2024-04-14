@@ -23,25 +23,54 @@
 
 
 /*****
+ * This is the code that must be called upon loading and compiling the rest of
+ * the Radius Mozilla framework.  This function initializes the HTML document,
+ * finalizes the code, and manages the data connection to the Radius server.
+ * Once the application has been initialized, we're ready to load in the app's
+ * primary bundles, which are required for launching the application.  Once the
+ * primary bundles have been loaded, they will cascade and load in dependencies
+ * during their loading cycle.
 *****/
-register('', async function bootRadius(settings) {
+register('', async function bootstrap(setup) {
     let websocket = null;
+    let settings = fromJson(mkBuffer(setup, 'hex').toString());
 
     register('', async function callServer(message) {
         if (websocket) {
+            return await websocket.call(message);
         }
         else {
-            return (await mkHttpRequest().post(settings.webAppPath, message)).getPayload();
+            const xhr = mkHttpRequest();
+            const rsp = await mkHttpRequest().post(settings.path, message);
+            return rsp.getPayload();
         }
     });
 
-    register('', async function openWebsocket(message) {
+    register('', async function openWebsocket() {
+        if (settings.enableWebsocket) {
+            if (websocket === null) {
+                websocket = await mkWebSocket().connect(settings.path);
+            }
+        }
+    });
+
+    register('', async function sendServer(message) {
+        if (websocket) {
+            return websocket.send(message);
+        }
+        else {
+            const xhr = mkHttpRequest();
+            mkHttpRequest().post(settings.path, message);
+        }
     });
     
-    register('', function sendServer(message) {
-    });
-    
-    globalThis.api = mkRemoteApi(await callServer({ name: 'GetApi' }), callServer);
-    await api.GetBundle('div');
     wrapTree(document.documentElement);
+    globalThis.server = mkRemoteApi(await callServer({ name: 'GetApi' }), callServer);
+
+    console.log(await server.GetBundle(settings.webAppSuffix));
+    /*
+    const bundleNames = await server.GetBundleNames();
+    let bundle = await server.GetBundle('div.widget');
+    console.log(bundle);
+    */
 });

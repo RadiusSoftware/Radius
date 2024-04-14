@@ -25,7 +25,7 @@
 /*****
  * Base class for HTTP Extensions, which are the cornerstone for the Radius
  * HTTP server strategy for adding extensive features.  An HTTP Extension,
- * also known as HttpX, is a HttpServerWorker class that provides framework
+ * also known as HttpX, is a HttpServerWorker class that provides a framework
  * for implementing server-side dynamic responses to requests.  This is the
  * basis for web applications and simpler algorithms such as realtime data
  * steaming.  What it does is accept an HTTP request and provides an frame-
@@ -34,8 +34,6 @@
  *      return {
  *          status: 200,
  *          contentType: 'application/json',
- *          contentEncoding: 'gzip',
- *          contentCharset: 'utf-8',
  *          content: toJson({
  *              why: 'WHY',
  *              how: 'HOW',
@@ -43,9 +41,8 @@
  *      };
  * 
  * The calling HttpServerWorker will then place this response into the HTTP
- * response object to br sent back to the browser.  For stub's sake, only
- * the GET handler is implemented in this class for demonstration purposes
- * only.  Other handlers / methods could include all of the REST methods.
+ * response object to be sent back to the browser.  The base-class restful
+ * handlers must be overriden by the subclass in order to make this functional.
 *****/
 register('', class HttpX extends Emitter {
     constructor() {
@@ -105,50 +102,18 @@ register('', class HttpX extends Emitter {
         return 501;
     }
 
-    async init() {
+    async init(libEntry) {
+        this.uuid = libEntry.uuid;
+        this.prototype = Reflect.getPrototypeOf(this);
+        this.className = this.prototype.constructor.name;
+        this.fqClassName = libEntry.fqClassName;
+        this.fqMakerName = libEntry.makerName;
+        this.httpXPath = libEntry.module;
+        this.httpXDir = libEntry.module.replace('.js', '');
+        this.path = libEntry.path;
+        this.once = libEntry.once;
+        this.requiredPermissions = libEntry.requiredPermissions;
         await FileSystem.recurseModules(this.httpXDir);
-        return this;
-    }
-
-    async removeContent(path) {
-        /*
-        if (!Path.isAbsolute(relpath)) {
-            let urlPath = Path.join(this.path, relpath);
-
-            if (!(await Process.callParent({ name: 'HttpLibraryHas', path: urlPath }))) {
-                await Process.callParent({
-                    name: 'HttpLibraryRemove',
-                    path: urlPath,
-                });
-            }
-        }
-        */
-
-        return this;
-    }
-
-    async setContent(path, mime, data) {
-        /*
-        if (!Path.isAbsolute(relpath)) {
-            let urlPath = Path.join(this.path, relpath);
-
-            if (!(await Process.callParent({ name: 'HttpLibraryHas', path: urlPath }))) {
-                await Process.callParent({
-                    name: 'HttpLibraryAdd',
-                    libEntry: {
-                        type: 'data',
-                        mime: mime,
-                        path: urlPath,
-                        data: data,
-                        uuid: this.uuid,
-                        once: this.once === true,
-                        requiredPermissions: this.requiredPermissions,
-                    }
-                });
-            }
-        }
-        */
-
         return this;
     }
 });

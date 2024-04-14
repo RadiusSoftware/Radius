@@ -120,22 +120,19 @@ register('', class Api {
                     token: message['#TOKEN'],
                 });
 
-                if (session) {
-                    if (PermissionVerse.authorize(endpoint.permissions, session.permissions)) {
-                        try {
-                            if (message.args) {
-                                return await endpoint.func(...message.args);
-                            }
-                            else {
-                                return await endpoint.func([]);                                
-                            }
+                const permissions = session ? session.permissions : {};
+
+                if (PermissionVerse.authorize(endpoint.permissions, permissions)) {
+                    try {
+                        if (message.args) {
+                            return await endpoint.func(...message.args);
                         }
-                        catch (e) {
-                            return 500;
+                        else {
+                            return await endpoint.func([]);                                
                         }
                     }
-                    else {
-                        return Api.noauth;
+                    catch (e) {
+                        return 500;
                     }
                 }
                 else {

@@ -28,6 +28,14 @@ register('radius', class AdminApp extends WebApp {
         super();
     }
 
+    async init(libEntry) {
+        await super.init(libEntry, {
+            enableWebsocket: false,
+            webAppSuffix: 'admin.app.radius',
+        });
+    }
+
+    /*
     async handleGET(req, rsp) {
         let token = await req.getSession();
 
@@ -43,9 +51,11 @@ register('radius', class AdminApp extends WebApp {
             rsp.setSession(session.token);
         }
         
-        return await super.handleGET(req, rsp);
+        return super.handleGET(req, rsp);
     }
+    */
 
+    /*
     async handlePOST(req, rsp) {
         let session = await req.getSession();
 
@@ -56,9 +66,5 @@ register('radius', class AdminApp extends WebApp {
             return 401;
         }
     }
-
-    async init() {
-        await super.init();
-        return this;
-    }
+    */
 });

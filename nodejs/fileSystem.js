@@ -163,6 +163,15 @@ singleton('', class FileSystem extends Emitter {
         );
     }
 
+    async readFileAsString(path, encoding) {
+        let buffer = await LibFiles.promises.readFile(
+            path,
+            encoding ? { encoding: encoding } : undefined,
+        );
+
+        return buffer.toString();
+    }
+
     async readLink(path, encoding) {
         return await LibFiles.promises.readFile(
             path,

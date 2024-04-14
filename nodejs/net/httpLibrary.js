@@ -38,7 +38,7 @@ registerIn('HttpServer', '', class HttpLibrary {
         mkHandlerProxy(Process, 'HttpLibrary', this);
     }
 
-    clearLibentry(libPath) {
+    clearLibEntry(libPath) {
         let libEntry = this.paths[libPath];
 
         if (libEntry) {
@@ -67,6 +67,7 @@ registerIn('HttpServer', '', class HttpLibrary {
     async init(libEntries) {
         this.paths = {};
         this.libEntries = {};
+        await this.setRadiusClientFramework();
 
         for (let libEntry of libEntries) {
             await this.setLibEntry(libEntry);
@@ -202,6 +203,57 @@ registerIn('HttpServer', '', class HttpLibrary {
         return libEntry.path;
     }
 
+    async setRadiusClientFramework() {
+        const modules = ['"use strict";'];
+    
+        const frameworkFiles = [
+            'common/core.js',
+            'common/buffer.js',
+            'common/types.js',
+            'common/emitter.js',
+            'common/objekt.js',
+            'common/stringSet.js',
+            'common/textTemplate.js',
+            'common/data.js',
+            'common/json.js',
+            'common/language.js',
+            'common/time.js',
+            'common/mime.js',
+            'common/textUtils.js',
+            'common/textTree.js',
+            'common/chronos.js',
+            'common/cookie.js',
+            'common/expression.js',
+            'common/api.js',
+            
+            'mozilla/element.js',
+            'mozilla/win.js',
+            'mozilla/doc.js',
+            'mozilla/svg.js',
+            'mozilla/math.js',
+            'mozilla/style.js',
+            'mozilla/widget.js',
+            'mozilla/entanglements.js',
+            'mozilla/controller.js',
+            'mozilla/http.js',
+            'mozilla/websocket.js',
+            'mozilla/bundle.js',
+            'mozilla/bootstrap.js',
+        ];
+    
+        for (let frameworkFile of frameworkFiles) {
+            const path = Path.join(__dirname, `../../${frameworkFile}`);
+            modules.push((await FileSystem.readFile(path)).toString());
+        }
+        
+        this.setLibEntry({
+            type: 'data',
+            path: '/radius',
+            mime: 'javascript/text',
+            data: modules.join('\n'),
+        });        
+    }
+
     touch(libPath) {
         let libEntry = this.paths[libPath];
 
@@ -232,15 +284,17 @@ registerIn('HttpServer', '', class HttpLibrary {
 *****/
 registerIn('HttpServerWorker', '', class HttpLibrary {
     constructor() {
-        this.httpxs = {};
+        this.httpXs = {};
         mkHandlerProxy(Process, 'HttpLibrary', this);
     }
 
     async checkAuthorization(req, libEntry) {
+        // TODO
         return true;
     }
 
     checkMethod(req, libEntry) {
+        // TODO
         return true;
         if (libEntry.type == 'data') {
             return method == 'GET';
@@ -256,31 +310,17 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
     }
 
     async getHttpX(libEntry) {
-        if (libEntry.uuid in this.httpxs) {
-            return this.httpxs[libEntry.uuid];
+        if (libEntry.uuid in this.httpXs) {
+            return this.httpXs[libEntry.uuid];
         }
 
         require(libEntry.module);
-        let makerName = fqnMakerName(libEntry.cache['']);
+        libEntry.makerName = fqnMakerName(libEntry.fqClassName);
 
         let httpX;
-        eval(`httpX = ${makerName}()`);
-
-        if (httpX instanceof HttpX) {
-            httpX.uuid = libEntry.uuid;
-            httpX.prototype = Reflect.getPrototypeOf(httpX);
-            httpX.className = httpX.prototype.constructor.name;
-            httpX.fqClassName = libEntry.cache[''];
-            httpX.fqMakerName = makerName;
-            httpX.httpXPath = libEntry.module;
-            httpX.httpXDir = libEntry.module.replace('.js', '');
-            httpX.path = libEntry.path;
-            httpX.once = libEntry.once;
-            httpX.requiredPermissions = libEntry.requiredPermissions;
-            await httpX.init();
-            this.paths[libEntry.path] = httpX;
-        }
-
+        eval(`httpX = ${libEntry.makerName}()`);
+        await httpX.init(libEntry);
+        this.httpXs[libEntry.uuid] = httpX;
         return httpX;
     }
 
@@ -288,8 +328,8 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
         try {
             let libEntry = await Process.callParent({
                 name: 'HttpLibraryGetLibEntry',
-                method: req.method,
-                path: req.path,
+                method: req.getMethod(),
+                path: req.getPath(),
             });
 
             if (libEntry instanceof Error) {
@@ -297,10 +337,6 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
             }
             else if (typeof libEntry == 'number') {
                 return libEntry;
-            }
-
-            if (!libEntry) {
-                return 404;
             }
 
             if (!this.checkMethod(req, libEntry)) {
@@ -318,10 +354,10 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
                 };
             }
             else if (libEntry.type == 'file') {
-                return this.getFileContent(libEntry);
+                return this.getFile(libEntry);
             }
             else if (libEntry.type == 'httpx') {
-                return await this.getHttpXContent(libEntry);
+                return await this.handleHttpX(req, libEntry);
             }
             else {
                 return 400;
@@ -333,7 +369,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
         }
     }
 
-    async getFileContent(libEntry) {
+    async handleFile(req, libEntry) {
         try {
             if (await FileSystem.isFile(libEntry.fspath)) {
                 return {
@@ -350,8 +386,28 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
         }
     }
 
-    async getHttpXContent(libEntry) {
-        let httpx = await this.getHttpX(libEntry.uuid);
+    async handleHttpX(req, libEntry) {
+        let httpx = await this.getHttpX(libEntry);
+
+        if (httpx) {
+            let methodName = `handle${req.getMethod()}`;
+
+            if (typeof httpx[methodName] == 'function') {
+                try {
+                    return await httpx[methodName](req);
+                }
+                catch (e) {
+                    caught(e);
+                    return 500
+                }
+            }
+            else {
+                return 405;
+            }
+        }
+        else {
+            return 400;
+        }
     }
 
     async init(httpServer) {
@@ -360,6 +416,6 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
     }
 
     async onClearHttpX(message) {
-        delete this.httpxs[message.uuid];
+        delete this.httpXs[message.uuid];
     }
 });

@@ -231,11 +231,7 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
         try {
             req = mkHttpRequest(this, httpReq);
             rsp = mkHttpResponse(this, httpRsp);
-
-            let response = await this.httpLibrary.handle({
-                method: req.getMethod(),
-                path: req.getPath(),
-            });
+            let response = await this.httpLibrary.handle(req);
 
             if (typeof response == 'number') {
                 rsp.respondStatus(response);
@@ -315,6 +311,7 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
     }
 
     async onUpgrade(httpReq, socket, headPacket) {
+        // TODO
         try {
             if (this.upgradeHandler) {
                 //await this.upgradeHandler(req, socket, headPacket);

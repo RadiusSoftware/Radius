@@ -104,25 +104,9 @@ require('../nodejs/radius.js');
                 libEntries: [
                     {
                         type: 'httpx',
-                        path: '/admin',
+                        path: '/',
                         module: Path.join(__dirname, 'apps/adminApp.js'),
                         fqClassName: 'radius.AdminApp',
-                    },
-                    {
-                        type: 'file',
-                        path: '/hardwired',
-                        fspath: '/Users/christoph/Documents/Radius/package-lock.json',
-                    },
-                    {
-                        type: 'file',
-                        path: '/docs',
-                        fspath: '/Users/christoph/Documents/Radius',
-                    },
-                    {
-                        type: 'data',
-                        path: '/numbers',
-                        mime: 'application/json',
-                        data: '{"one":1,"two":"TWO","three":"drei"}',
                     },
                 ],
             });

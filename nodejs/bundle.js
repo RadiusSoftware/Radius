@@ -23,6 +23,13 @@
 
 
 /*****
+ * An HTML bundle is how we dynamially transfer features from a cache on the server
+ * to the browser client.  Bundles contain a mix of different types of data such
+ * as HTML, javascript, CSS, and other text and binary data.  Bundles are created
+ * on the server as non-standard HTML.  By non-standard, we mean that HTML is used
+ * alot like XML for defining said data types.  The bundle is transfered to the
+ * client upon request as a JSON object.  It's up to the client Bundel singleton
+ * to interpret and use the provded bundle data.
 *****/
 register('', class Bundle {
     constructor(path) {
@@ -46,9 +53,6 @@ register('', class Bundle {
 
     getName() {
         return this.name;
-    }
-
-    async get() {
     }
 
     async init() {
@@ -123,6 +127,13 @@ register('', class Bundle {
     async processScript(element) {
         this.items.push({
             type: 'script',
+            code: mkBuffer(element.getInnerHtml()).toString('base64'),
+        });
+    }
+
+    async processStyle(element) {
+        this.items.push({
+            type: 'style',
             code: mkBuffer(element.getInnerHtml()).toString('base64'),
         });
     }
