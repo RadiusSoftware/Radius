@@ -181,7 +181,7 @@
             super();
 
             if (nodeKey in node) {
-                return this.node[nodeKey];
+                return node[nodeKey];
             }
             else {
                 this.node = node;

@@ -115,6 +115,22 @@ register('', class Bundle {
         return this.valid;
     }
 
+    async processAppname(element) {
+        this.items.push({
+            type: 'appname',
+            code: mkBuffer(element.getInnerHtml()).toString('base64'),
+        });
+    }
+
+    async processDependencies(element) {
+        let dependencyNames = element.getInnerHtml().split(';');
+
+        this.items.push({
+            type: 'appname',
+            code: dependencyNames,
+        });
+    }
+
     async processName(element) {
         if (this.name) {
             this.valid = false;
@@ -139,22 +155,19 @@ register('', class Bundle {
     }
 
     async processWidget(element) {
-        let widget = {
-            permissions: {},
+        let item = {
+            type: 'widget',
         };
 
         for (let childElement of element) {
-            if (childElement.getTagName() == 'permissions') {
-                widget.permissions = fromJson(childElement.getInnerHtml());
-            }
-            else if (childElement.getTagName() == 'html') {
-                widget.html = mkBuffer(childElement.getInnerHtml().toString('base64'));
+            if (childElement.getTagName() == 'html') {
+                item.html = mkBuffer(childElement.getInnerHtml().toString('base64'));
             }
             else if (childElement.getTagName() == 'script') {
-                widget.script = mkBuffer(childElement.getInnerHtml().toString('base64'));
+                item.script = mkBuffer(childElement.getInnerHtml().toString('base64'));
             }
         }
 
-        this.items.push(widget);
+        this.items.push(item);
     }
 });

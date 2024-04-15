@@ -49,17 +49,17 @@ register('', class WebApp extends HttpX {
         const webapp = this;
 
         this.setEndpoints(
+            {}, function GetApi() {
+                return webapp.api.getEndpointNames();
+            },
+
             {}, function GetBundle(name) {
                 return webapp.getBundle(name);
             },
 
-            {}, function GetBundleNames(name) {
+            {}, function ListBundles(name) {
                 return Object.keys(webapp.bundles);
             },
-
-            {}, function GetApi() {
-                return webapp.api.getEndpointNames();
-            }
         );
     }
 
@@ -80,9 +80,15 @@ register('', class WebApp extends HttpX {
     }
 
     getBundle(name) {
-        console.log(Object.keys(this.bundles));
         if (name.startsWith('~')) {
-            fullName = `${name.substring(1)}.${this.settings.webAppBundleSuffix}`;
+            let fullName = `${name.substring(1)}.${this.settings.webAppBundleSuffix}`;
+
+            if (fullName in this.bundles) {
+                return this.bundles[fullName];
+            }
+        }
+        else if (name.startsWith('#')) {
+            let fullName = `${name.substring(1)}.widget`;
 
             if (fullName in this.bundles) {
                 return this.bundles[fullName];
@@ -93,18 +99,8 @@ register('', class WebApp extends HttpX {
                 return this.bundles[name];
             }
         }
-        /*
-        for (let extName in [
-            `${name}.${this.getSetting('webAppBundleSuffix')}`,
-            `${name}.widget`,
-        ]) {
-            if (extName in this.bundles) {
-                return this.bundles[extName];
-            }
-        }
-        */
 
-        return {};
+        return null;
     }
 
     getSetting(key) {
