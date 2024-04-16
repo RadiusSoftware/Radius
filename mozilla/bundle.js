@@ -23,6 +23,14 @@
 
 
 /*****
+ * Bundles are bundles of data and programming code that are transferred from
+ * the server to the Mozilla client.  Bundles contain a variety of data and code
+ * types and uses.  When a bundle is download, it has an immeidate impact on the
+ * globalThis properties and is used to define widgets, provide GUI text that's
+ * locale or language specific, and to exeute javascript code to modify and
+ * configure the globalThis environment.  As shown below, right at initialization,
+ * the complete set of available bundles is downloaded.  Each bundle is downloaded
+ * and processed just a single time.
 *****/
 singleton('', class Bundles {
     constructor() {
@@ -53,7 +61,7 @@ singleton('', class Bundles {
                 let data = await server.GetBundle(name);
 
                 if (data) {
-                    this.bundles[name] = mkBundle(data);
+                    this.bundles[name] = await mkBundle().init(data);
                     return this.bundles[name];
                 }
                 else {
@@ -73,9 +81,27 @@ singleton('', class Bundles {
 
 
 /*****
+ * The individual bundle is downloaded from the server, processed and stored
+ * locallly, which is proof that the bundle has been downloaded.  Each bundle
+ * is downloaded, constructed, and initialized once!  That means the global
+ * environmental changes are applied only once, during execute of the imit()
+ * method.  There are a number of effects that can be processed within the
+ * registerXXX() methods, each of which are specialized registering each of their
+ * own bundle items.
 *****/
 register('', class Bundle {
-    constructor(data) {
+    constructor() {
+    }
+
+    getItem(index) {
+        return this.items[index];
+    }
+
+    getItemCount() {
+        return this.items.length;
+    }
+
+    async init(data) {
         this.items = [];
 
         for (let item of data.items) {
@@ -93,58 +119,76 @@ register('', class Bundle {
         }
     }
 
-    getItem(index) {
-        return this.items[index];
+    async registerDependencies(item) {
+        for (let dependency of item.names) {
+            await Bundles.require(name);
+        }
     }
 
-    getItemCount() {
-        return this.items.length;
+    async registerHome(item) {
+        let html = mkBuffer(item.html, 'base64').toString();
+        let script = mkBuffer(item.script, 'base64').toString();
+
+        try {
+            const element = createElementFromOuterHtml(html);
+            Doc.getBody().append(element);
+            eval(script);
+        }
+        catch (e) {
+            caught(e);
+        }
     }
 
-    registerAppname(item) {
+    async registerScript(item) {
+        try {
+            eval(mkBuffer(item.code, 'base64').toString());
+        }
+        catch (e) {
+            console.log(e);
+            caught(e);
+        }
+    }
+
+    async registerStyle(item) {
+        let style = mkHtmlElement('style').setAttribute('id', 'item.name');
+        Doc.getHead().append(style);
+        style.setInnerHtml(mkBuffer(item.code, 'base64').toString());
+    }
+
+    async registerStrings(item) {
+        let entries = mkBuffer(item.entries, 'base64').toString();
+
+        for (let line of entries.split('\n')) {
+            let trim = line.trim();
+
+            try {
+                let match = trim.match(/([a-zA-Z0-9_]+)[ \t]*=[ \t]*([^$]*)/);
+
+                if (match) {
+                    StringsLib.set(match[1], match[2]);
+                }
+            }
+            catch (e) {}
+        }
+    }
+
+    async registerTitle(item) {
         let title = Doc.getHead().queryOne('title')
         title.setInnerHtml(mkBuffer(item.code, 'base64').toString());
     }
 
-    registerDependencies(item) {
-        // TODO
-    }
+    async registerWidget(item) {
+        let html = mkBuffer(item.html, 'base64').toString();
+        let script = mkBuffer(item.script, 'base64').toString();
 
-    registerMeta(item) {
-        // TODO
-    }
-
-    registerName(item) {
-        // TODO
-    }
-
-    registerScript(item) {
-        // TODO
-    }
-
-    registerStyle(item) {
-        let style = Doc.getHead().queryOne('style');
-
-        if (!style) {
-            style = mkHtmlElement('style');
-            head.append(style);
-            style.setInnerHtml(mkBuffer(item.code, 'base64').toString());
+        try {
+            const element = createElementFromOuterHtml(html);
+            Doc.getBody().append(element);
+            eval(script);
         }
-        else {
-            style.setInnerHtml(`${style.getInnerHtml()}\n${mkBuffer(item.code, 'base64').toString()}`);
+        catch (e) {
+            caught(e);
         }
-    }
-
-    registerText(item) {
-        // TODO
-    }
-
-    registerTitle(item) {
-        // TODO
-    }
-
-    registerWidget(item) {
-        // TODO
     }
 
     [Symbol.iterator]() {
@@ -154,36 +198,19 @@ register('', class Bundle {
 
 
 /*****
+ * We want an internationalizable application!  There means we need to be able
+ * to handle text in multiple languages.  To this end, text is isolated from
+ * the HTML and other code and stored here in the StringsLib.  The StringsLib
+ * is populated as various bundles are downloaded.  So, in order to change the
+ * language, the application needs to be re-downloaded and initialized using
+ * new text.
 *****/
-singleton('', class Widgets {
+singleton('', class StringsLib {
     constructor() {
-        this.widgets = {};
+        this.lib = mkObjekt();
     }
 
-    clear() {
-    }
-
-    replace() {
-    }
-
-    set() {
-    }
-});
-
-
-/*****
-*****/
-singleton('', class LocaleText {
-    constructor() {
-        this.text = {};
-    }
-
-    clear() {
-    }
-
-    replace() {
-    }
-
-    set() {
+    set(key, value) {
+        this.lib[key] = value;
     }
 });

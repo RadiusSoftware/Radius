@@ -115,20 +115,31 @@ register('', class Bundle {
         return this.valid;
     }
 
-    async processAppname(element) {
+    async processDependencies(element) {
+        let dependencyNames = element.getInnerHtml().split(';');
+        dependencyNames = dependencyNames.filter(el => el != '' && el != undefined);
+
         this.items.push({
-            type: 'appname',
-            code: mkBuffer(element.getInnerHtml()).toString('base64'),
+            type: 'dependencies',
+            names: dependencyNames,
         });
     }
 
-    async processDependencies(element) {
-        let dependencyNames = element.getInnerHtml().split(';');
+    async processHome(element) {
+        let item = {
+            type: 'home',
+        };
 
-        this.items.push({
-            type: 'appname',
-            code: dependencyNames,
-        });
+        for (let childElement of element) {
+            if (childElement.getTagName() == 'html') {
+                item.html = mkBuffer(childElement.getInnerHtml().toString('base64'));
+            }
+            else if (childElement.getTagName() == 'script') {
+                item.script = mkBuffer(childElement.getInnerHtml().toString('base64'));
+            }
+        }
+
+        this.items.push(item);
     }
 
     async processName(element) {
@@ -147,9 +158,27 @@ register('', class Bundle {
         });
     }
 
+    async processStrings(element) {
+        let lang = element.hasAttribute('lang') ? element.getAttribute('lang') : '';
+
+        this.items.push({
+            type: 'strings',
+            lang: lang,
+            prefix: this.name,
+            entries: mkBuffer(element.getInnerHtml()).toString('base64'),
+        });
+    }
+
     async processStyle(element) {
         this.items.push({
             type: 'style',
+            code: mkBuffer(element.getInnerHtml()).toString('base64'),
+        });
+    }
+
+    async processTitle(element) {
+        this.items.push({
+            type: 'title',
             code: mkBuffer(element.getInnerHtml()).toString('base64'),
         });
     }

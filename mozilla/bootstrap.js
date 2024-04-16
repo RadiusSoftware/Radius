@@ -66,11 +66,13 @@ register('', async function bootstrap(setup) {
     
     wrapTree(document.documentElement);
     globalThis.server = mkRemoteApi(await callServer({ name: 'GetApi' }), callServer);
-    await Bundles.require(settings.webAppSuffix);
+    await Bundles.init();
 
     for (let bundleName of Bundles) {
         if (bundleName.endsWith('.widget')) {
             await Bundles.require(bundleName);
         }
     }
+
+    await Bundles.require(settings.webAppSuffix);
 });
