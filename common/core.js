@@ -160,6 +160,7 @@
                 obj[arg.name] = arg;
                 obj[arg.name]['#Namespace'] = ns;
                 obj.fqn = fqn;
+                return obj[makerName];
             }
             else {
                 throw new Error(`register(), class name must start with an upper-case letter: ${arg.name}`);

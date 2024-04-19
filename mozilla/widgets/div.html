@@ -1,19 +1,28 @@
-<bundle>
+<bundlex>
     <name>div.widget</name>
     <widget>
         <html>
-            <widget-div>
-                <div>
-                </div>
-            </widget-div>
+            <h1>Web Application Home Page</h1>
+            <table>
+                <tr>
+                    <th>Column 1</th>
+                    <th>Column 2</th>
+                    <th>Column 3</th>
+                </tr>
+                <tr>
+                    <td>Some text goes here.</td>
+                    <td>Some text goes here.</td>
+                    <td>Some text goes here.</td>
+                </tr>
+            </table>
         </html>
         <script>
-            register('', class Div extends Widget {
-                constructor() {
-                    super();
-                    this.setInnerHtml('Hello Div');
+            WidgetLibrary.register('', class DivWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                    setTimeout(() => this.setInnerHtml('Hello Widget'), 2000);
                 }
             });
         </script>
     </widget>
-</bundle>
+</bundlex>

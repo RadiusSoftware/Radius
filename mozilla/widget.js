@@ -21,60 +21,80 @@
 *****/
 
 
-(() => {
-    /*****
-     * A simplistic function responsible for massaging tag names as the widget
-     * tags are processed.  We just want to enforce that there's only one hypen
-     * in the tagname and that it starts with "widget-".  If it fails in any
-     * way, we'll set a tagname of wdget-badtagname, which should get the 
-     * attention of the developer.
-    *****/
-    function fixTagName(tagName) {
-        let parts = tagName
-                    .tolowerCase()
-                    .trim()
-                    .split('-')
-                    .map(part => part.time());
-
-        if (parts.length == 2 && parts[0] == 'widget') {
-            return `widget-${parts[1]}`;
-        }
-        else {
-            return 'widget-badtagname';
-        }
+/*****
+*****/
+singleton('', class WidgetLibrary {
+    constructor() {
+        this.widgetClasses = {};
     }
 
+    get(arg) {
+        return this.widgetClasses[arg];
+    }
 
-    /*****
-     * A new Widget can be construted and/or made using the maker of the Widget
-     * subclass.  The argument to the subclass can be either an HTML Element or
-     * string with the tagName.  If the argument is a string, we have the chance
-     * to fix the tagName before constructing the HTML Element object.   Once
-     * construction is done, the creator of the object will call setFqcn() to
-     * set both the internal fqcn value and the widget's controller.
-    *****/
-    register('', class Widget extends HtmlElement {
-        constructor(arg) {
-            if (arg instanceof HTMLElement) {
-                super(arg);
-            }
-            else if (typeof arg == 'string') {
-                super(document.createElement(fixTagName(arg)));
-            }
-            else {
-                super('widget-badtagname');
-            }
+    has(arg) {
+        return arg in this.widgetClasses;
+    }
+
+    register(ns, widgetClass) {
+        if (!Data.classExtends(widgetClass, Widget)) {
+            throw new Error(`Attempted to register class "${widgetClass.name}" as a Widget.`);
         }
 
-        setFqcn(fqcn) {
-            this.fqcn = fqcn;
+        const lib = this;
+        const tagName = TextUtils.toSnakeCase(widgetClass.name).replace('_', '-');
+        const wrapperClassName = `${widgetClass.name}CustomElementWrapper`;
+        const baseHTMLElementClass = widgetClass.baseClass ? widgetClass.baseClass : HTMLElement;
 
-            if (fqcn.getNamespaceSegments().length) {
-                this.controller = fqcn.getObject()[`${fqcn.getNamespace()}mk${fqcn.getName()}Controller`](this);
-            }
-            else {
-                this.controller = fqcn.getObject()[`mk${fqcn.getName()}Controller`](this);
-            }
+        if (tagName.indexOf('-') == -1) {
+            throw new Error(`Attempted to register Widget with tag name "${tagName}"`);
         }
-    });
-})();
+
+        if (tagName in this.widgetClasses) {
+            throw new Error(`Attempted to register a duplicate Widget tag name "${tagName}"`);
+        }
+
+        if (widgetClass.name in this.widgetClasses) {
+            throw new Error(`Attempted to register a duplicate Widget classname "${widgetClass.name}"`);
+        }
+
+        let wrapperClass;
+        eval(`wrapperClass = class ${wrapperClassName} extends ${baseHTMLElementClass.name} {
+            constructor() {
+                super();
+            }
+        
+            adoptedCallback() {
+            }
+        
+            attributeChangedCallback(name, oldValue, newValue) {
+            }
+        
+            connectedCallback() {
+                return wrapNode(this);
+            }
+        
+            disconnectedCallback() {
+            }
+        }`);
+
+        customElements.define(tagName, wrapperClass);
+        const widgetMaker = register(ns, widgetClass);
+        this.widgetClasses[tagName] = { className: widgetClass, maker: widgetMaker };
+        this.widgetClasses[wrapperClassName] = { className: widgetClass, maker: widgetMaker };
+        this.widgetClasses[widgetClass.name] = { className: widgetClass, maker: widgetMaker };
+    }
+});
+
+
+/*****
+ * The widget is the high feature wrapper for document elements and provide a
+ * number of features.  An HtmlWidget is specifically designed to wrap HTML
+ * elements with a customer tag name, which means it's a hyphenated tag name.
+ * The widget 
+*****/
+register('', class Widget extends HtmlElement {
+    constructor(arg) {
+        super(arg);
+    }
+});

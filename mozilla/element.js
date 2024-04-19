@@ -49,23 +49,16 @@
             if (node[nodeKey]) {
                 return node[nodeKey];
             }
-            
-            if (node.tagName.toLowerCase().startsWith('widget-')) {
-                let widget;
-                let fqcn = mkFqn(node.getAttribute('radius-widgetclass'));
+            else {
+                let widgetEntry = WidgetLibrary.get(node.tagName.toLowerCase());
 
-                if (fqcn.getNamespaceSegments().length) {
-                    widget = fqcn.getObject()[`${fqcn.getNamespace()}mk${fqcn.getName()}`](node);
+                if (widgetEntry) {
+                    return widgetEntry.maker(node);
+
                 }
                 else {
-                    widget = fqcn.getObject()[`mk${fqcn.getName()}`](node);
+                    return mkHtmlElement(node);
                 }
-
-                widget.setFqcn(fqcn);
-                return widget;
-            }
-            else {
-                return mkHtmlElement(node);
             }
         }
         else if (node instanceof Widget) {
@@ -543,8 +536,6 @@
         constructor(node) {
             super(node);
             this.listeners = {};
-            // TODO
-            //this.controller = null;
             this.propagation = mkStringSet();
         }
 
@@ -566,16 +557,6 @@
         clearClassNames() {
             this.node.className = '';
             return this;
-        }
-
-        clearController() {
-            // TODO
-            /*
-            if (this.controller instanceof Controller) {
-                console.log('do something with controller');
-                this.controller = null;
-            }
-            */
         }
 
         disablePropagation(eventName) {
@@ -659,23 +640,6 @@
 
         getComputedStyle(pseudoElement) {
             return window.getComputedStyle(this.node, pseudoElement);
-        }
-
-        getController() {
-            // TODO
-            /*
-            let docNode = this;
-
-            while (docNode) {
-                if (docNode.controller) {
-                    return docNode.controller;
-                }
-
-                docNode = docNode.getParent();
-            }
-
-            return null;
-            */
         }
 
         getInnerHtml() {
@@ -849,17 +813,6 @@
             }
 
             return this;
-        }
-
-        setController(controller) {
-            // TODO
-            /*
-            if (!(this.controller instanceof Controller)) {
-                // TODO
-                console.log('do something with controller');
-                this.controller = controller;
-            }
-            */
         }
 
         setInnerHtml(innerHtml) {

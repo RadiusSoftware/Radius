@@ -22,10 +22,10 @@
 
 
 /*****
- * Like the quantum physics principle of entabled particles, and Entanglement
- * is where one or more Depot properties are tied with a DocNode in a weird and
+ * Like the quantum physics principle of entabled particles, an Entanglement
+ * is where one or more Objekt properties are tied with a DocNode in a weird and
  * spooky way.  In reality, an entanglement means that a node is automatically
- * bound to a Depot property, and in the case of input elements, that property
+ * bound to Objekt properties, and in the case of input elements, those properties
  * can also be bound to the input value.  There are multiple classes of the
  * Entanglement "interface", which are used to deal with the specifics of each
  * type of implemented entanglement.  Keep in mind that a set of entanglements
@@ -34,7 +34,7 @@
 *****/
 register('', class Entanglements {
     constructor() {
-        this.depots = {};
+        this.objekts = {};
         this.entanglements = [];
     }
 
@@ -45,7 +45,7 @@ register('', class Entanglements {
             let entanglement = mkAttributeEntanglement(
                 element,
                 name,
-                dependency.depot,
+                dependency.objekt,
                 dependency.key,
                 reflection.func,
             );
@@ -61,7 +61,7 @@ register('', class Entanglements {
         for (let dependency of reflection.dependencies) {
             let entanglement = mkInnerEntanglement(
                 element,
-                dependency.depot,
+                dependency.objekt,
                 dependency.key,
                 reflection.func,
             );
@@ -71,8 +71,8 @@ register('', class Entanglements {
         }
     }
 
-    entangleInput(element, fqDepotName, key) {
-        let entanglement = mkInputEntanglement(element, fqDepotName, key);
+    entangleInput(element, fqObjektName, key) {
+        let entanglement = mkInputEntanglement(element, fqObjektName, key);
         this.setEntanglement(entanglement);
         entanglement.push();
     }
@@ -84,7 +84,7 @@ register('', class Entanglements {
             let entanglement = mkStyleEntanglement(
                 element,
                 styleProperty,
-                dependency.depot,
+                dependency.objekt,
                 dependency.key,
                 reflection.func,
             );
@@ -94,11 +94,11 @@ register('', class Entanglements {
         }
     }
 
-    entangleStyleRule(cssStyleRule, styleProperty, depot, key) {
+    entangleStyleRule(cssStyleRule, styleProperty, objekt, key) {
         let entanglement = mkStyleRuleEntanglement(
             cssStyleRule,
             styleProperty,
-            depot,
+            objekt,
             key,
         );
 
@@ -112,7 +112,7 @@ register('', class Entanglements {
         for (let dependency of reflection.dependencies) {
             let entanglement = mkTextNodeEntanglement(
                 docText,
-                dependency.depot,
+                dependency.objekt,
                 dependency.key,
                 reflection.func,
             );
@@ -157,13 +157,13 @@ register('', class Entanglements {
         return this.entanglements.slice(0);
     }
 
-    getEntanblementsByDepot(depot) {
+    getEntanblementsByObjekt(objekt) {
         let matching = [];
 
-        if (depot.state.depotId in this.depots) {
-            let depotObject = this.depots[depot.state.depotId];
+        if (objekt.state.objektId in this.objekts) {
+            let objektObject = this.objekts[objekt.state.objektId];
 
-            Object.values(depotObject)
+            Object.values(objektObject)
             .forEach(array => {
                 matching = matching.concat(array);
             });
@@ -172,13 +172,13 @@ register('', class Entanglements {
         return matching;
     }
 
-    getEntanblementsByDepotKey(depot, key) {
+    getEntanblementsByObjektKey(objekt, key) {
         let matching = [];
 
-        if (depot.state.depotId in this.depots) {
-            let depotObject = this.depots[depot.state.depotId];
+        if (objekt.state.objektId in this.objekts) {
+            let objektObject = this.objekts[objekt.state.objektId];
 
-            Object.values(depotObject)
+            Object.values(objektObject)
             .forEach(array => {
                 matching = matching.concat(array.filter(el => el.key == key));
             });
@@ -193,7 +193,7 @@ register('', class Entanglements {
 
         return {
             func: func,
-            dependencies: Depot.reflect(func),
+            dependencies: Objekt.reflect(func),
         };
     }
 
@@ -201,23 +201,23 @@ register('', class Entanglements {
         if (this.findEntanglement(entanglement) == -1) {
             this.entanglements.push(entanglement);
 
-            let depot;
+            let objekt;
             let entanglements;
 
-            if (entanglement.depot.state.depotId in this.depots) {
-                depot = this.depots[entanglement.depot.state.depotId];
+            if (entanglement.objekt.state.objektId in this.objekts) {
+                objekt = this.objekts[entanglement.objekt.state.objektId];
             }
             else {
-                depot = new Object();
-                this.depots[entanglement.depot.state.depotId] = depot;
+                objekt = new Object();
+                this.objekts[entanglement.objekt.state.objektId] = objekt;
             }
 
-            if (entanglement.key in depot) {
-                entanglements = depot[entanglement.key];
+            if (entanglement.key in objekt) {
+                entanglements = objekt[entanglement.key];
             }
             else {
                 entanglements = new Array();
-                depot[entanglement.key] = entanglements;
+                objekt[entanglement.key] = entanglements;
             }
 
             entanglements.push(entanglement);
@@ -238,13 +238,13 @@ register('', class Entanglements {
  * the expr to build it into a function and to determine its dependencies.
 *****/
 register('', class AttributeEntanglement {
-    constructor(element, attribute, depot, key, func) {
+    constructor(element, attribute, objekt, key, func) {
         this.element = element;
         this.attribute = attribute;
-        this.depot = depot;
+        this.objekt = objekt;
         this.key = key;
         this.func = func;
-        this.depot.on(message => this.push());
+        this.objekt.on(message => this.push());
     }
 
     push() {
@@ -259,12 +259,12 @@ register('', class AttributeEntanglement {
  * the expr to build it into a function and to determine its dependencies.
 *****/
 register('', class InnerEntanglement {
-    constructor(element, depot, key, func) {
+    constructor(element, objekt, key, func) {
         this.element = element;
-        this.depot = depot;
+        this.objekt = objekt;
         this.key = key;
         this.func = func;
-        this.depot.on(message => this.push());
+        this.objekt.on(message => this.push());
     }
 
     push() {
@@ -274,17 +274,17 @@ register('', class InnerEntanglement {
 
 
 /*****
- * The entanglement of an input element with a Depot key, denoted as
- * "fqDepotName" and "key".  Note that the caller, the Entanglements object,
+ * The entanglement of an input element with a Objekt key, denoted as
+ * "fqObjektName" and "key".  Note that the caller, the Entanglements object,
  * has already reflected the expr to build it into a function and to determine
  * its dependencies.
 *****/
 register('', class InputEntanglement {
-    constructor(element, fqDepotName, key) {
+    constructor(element, fqObjektName, key) {
         this.element = element;
-        this.depot = mkFqn(fqDepotName).getValue(),
+        this.objekt = mkFqn(fqObjektName).getValue(),
         this.key = key;
-        this.depot.on(message => this.push());
+        this.objekt.on(message => this.push());
         this.element.on('input', message => this.pull());
     }
 
@@ -293,20 +293,20 @@ register('', class InputEntanglement {
             let length = this.element.node.selectedOptions.length;
 
             if (length == 0) {
-                this.depot[this.key] = '';
+                this.objekt[this.key] = '';
             }
             else if (length == 1) {
-                this.depot[this.key] = this.element.node.value;
+                this.objekt[this.key] = this.element.node.value;
             }
 
             return;
         }
         
-        this.depot[this.key] = this.element.node.value;
+        this.objekt[this.key] = this.element.node.value;
     }
 
     push() {
-        this.element.node.value = this.depot[this.key];
+        this.element.node.value = this.objekt[this.key];
     }
 });
 
@@ -317,13 +317,13 @@ register('', class InputEntanglement {
  * the expr to build it into a function and to determine its dependencies.
 *****/
 register('', class StyleEntanglement {
-    constructor(element, styleProperty, depot, key, func) {
+    constructor(element, styleProperty, objekt, key, func) {
         this.element = element;
         this.styleProperty = styleProperty;
-        this.depot = depot;
+        this.objekt = objekt;
         this.key = key;
         this.func = func;
-        this.depot.on(message => this.push());
+        this.objekt.on(message => this.push());
     }
 
     push() {
@@ -338,16 +338,16 @@ register('', class StyleEntanglement {
  * the expr to build it into a function and to determine its dependencies.
 *****/
 register('', class StyleRuleEntanglement {
-    constructor(cssStyleRule, styleProperty, depot, key) {
+    constructor(cssStyleRule, styleProperty, objekt, key) {
         this.cssStyleRule = cssStyleRule;
         this.styleProperty = styleProperty;
-        this.depot = depot;
+        this.objekt = objekt;
         this.key = key;
-        this.depot.on(message => this.push());
+        this.objekt.on(message => this.push());
     }
 
     push() {
-        this.cssStyleRule.cssRule.style[this.styleProperty] = this.depot[this.key];
+        this.cssStyleRule.cssRule.style[this.styleProperty] = this.objekt[this.key];
     }
 });
 
@@ -358,12 +358,12 @@ register('', class StyleRuleEntanglement {
  * the expr to build it into a function and to determine its dependencies.
 *****/
 register('', class TextNodeEntanglement {
-    constructor(docText, depot, key, func) {
+    constructor(docText, objekt, key, func) {
         this.docText = docText;
-        this.depot = depot;
+        this.objekt = objekt;
         this.key = key;
         this.func = func;
-        this.depot.on(message => this.push());
+        this.objekt.on(message => this.push());
     }
 
     push() {

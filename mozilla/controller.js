@@ -23,10 +23,10 @@
 
 /*****
  * The Controller, which extends the Entanglements class, owns a chunk of real
- * estate on the screen, meaning that it contains the display acton logic
+ * estate on the screen, meaning that it contains the display action logic
  * pertaining to an Element and some or all of its descendents that are not
  * controlled by another controller.  The controller provides an encapsulated
- * object containing viewer and application logic in response to events.
+ * object containing a viewer and application logic in response to events.
  * A controller is how to make a specialized or specific HTML Element perform
  * specific behaviors.
 *****/
@@ -48,7 +48,7 @@ register('', class Controller extends Entanglements {
             childList: true,
             subtree: true,
             attributeOldValue: true,
-        })
+        });
     }
 
     getElement() {
@@ -89,7 +89,7 @@ register('', class Controller extends Entanglements {
  * The controller requires real-time data pertaining to changes to the DOM tree
  * to enable the controller logic respond as necessary to make the controller's
  * subtree perform its magic.  This class wraps the built in mutation record to
- * provide features that are incoporate into the Radius framework.
+ * provide features that are incoporated into the Radius framework.
 *****/
 register('', class Mutation {
     constructor(controller, mutationRecord) {
