@@ -107,5 +107,11 @@ register('', class Widget extends HtmlElement {
         if (widgetEntry.innerHtml) {
             this.setInnerHtml(widgetEntry.innerHtml);
         }
+
+        this.initialize();
+        this.emit({ name: 'initialize' });
+    }
+
+    async initialize() {
     }
 });

@@ -186,11 +186,6 @@ register('', class Bundle {
             let tagName;
             eval('tagName=' + script);
             WidgetLibrary.get(tagName).innerHtml = mkBuffer(item.html, 'base64').toString();
-            //console.log(WidgetLibrary).get(tagName);
-            //console.log(tagName);
-            //item.innerHtml = mkBuffer(item.html, 'base64').toString();
-            //delete item.html;
-            //console.log(mkBuffer(item.html, 'base64').toString());
         }
         catch (e) {
             caught(e);
