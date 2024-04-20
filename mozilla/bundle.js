@@ -117,6 +117,8 @@ register('', class Bundle {
                 }
             }
         }
+
+        return this;
     }
 
     async registerDependencies(item) {
@@ -130,9 +132,9 @@ register('', class Bundle {
         let script = mkBuffer(item.script, 'base64').toString();
 
         try {
+            eval(script);
             const element = createElementFromOuterHtml(html);
             Doc.getBody().append(element);
-            eval(script);
         }
         catch (e) {
             caught(e);
@@ -178,13 +180,17 @@ register('', class Bundle {
     }
 
     async registerWidget(item) {
-        let html = mkBuffer(item.html, 'base64').toString();
         let script = mkBuffer(item.script, 'base64').toString();
 
         try {
-            const element = createElementFromOuterHtml(html);
-            Doc.getBody().append(element);
-            eval(script);
+            let tagName;
+            eval('tagName=' + script);
+            WidgetLibrary.get(tagName).innerHtml = mkBuffer(item.html, 'base64').toString();
+            //console.log(WidgetLibrary).get(tagName);
+            //console.log(tagName);
+            //item.innerHtml = mkBuffer(item.html, 'base64').toString();
+            //delete item.html;
+            //console.log(mkBuffer(item.html, 'base64').toString());
         }
         catch (e) {
             caught(e);

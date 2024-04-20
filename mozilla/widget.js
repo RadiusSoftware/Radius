@@ -83,6 +83,7 @@ singleton('', class WidgetLibrary {
         this.widgetClasses[tagName] = { className: widgetClass, maker: widgetMaker };
         this.widgetClasses[wrapperClassName] = { className: widgetClass, maker: widgetMaker };
         this.widgetClasses[widgetClass.name] = { className: widgetClass, maker: widgetMaker };
+        return tagName;
     }
 });
 
@@ -91,10 +92,20 @@ singleton('', class WidgetLibrary {
  * The widget is the high feature wrapper for document elements and provide a
  * number of features.  An HtmlWidget is specifically designed to wrap HTML
  * elements with a customer tag name, which means it's a hyphenated tag name.
- * The widget 
+ * Note that the tag name is based on the widget class name only, not the name
+ * speace.  Hence, all widget class names must be unique.  The Widget provides
+ * features like that of a GUI controller and will entangle GUI element values
+ * and attributes using those Objekt-based entanglements.  Moreover, Widgets
+ * provide an implementation of the Mutation Obvserver to provide additional
+ * dynamic GUI support to the application.
 *****/
 register('', class Widget extends HtmlElement {
     constructor(arg) {
         super(arg);
+        let widgetEntry = WidgetLibrary.get(this.getTagName());
+
+        if (widgetEntry.innerHtml) {
+            this.setInnerHtml(widgetEntry.innerHtml);
+        }
     }
 });

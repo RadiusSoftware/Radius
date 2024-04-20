@@ -190,13 +190,13 @@ register('', class Bundle {
 
         for (let childElement of element) {
             if (childElement.getTagName() == 'html') {
-                item.html = mkBuffer(childElement.getInnerHtml().toString('base64'));
+                item.html = mkBuffer(childElement.getInnerHtml()).toString('base64');
             }
             else if (childElement.getTagName() == 'script') {
-                item.script = mkBuffer(childElement.getInnerHtml().toString('base64'));
+                item.script = mkBuffer(childElement.getInnerHtml()).toString('base64');
             }
         }
-
+        
         this.items.push(item);
     }
 });
