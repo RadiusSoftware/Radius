@@ -186,6 +186,8 @@ register('', class Bundle {
     async processWidget(element) {
         let item = {
             type: 'widget',
+            html: '',
+            script: '',
         };
 
         for (let childElement of element) {

@@ -1,0 +1,86 @@
+<bundle>
+    <name>grid.widget</name>
+    <dependencies></dependencies>
+    <widget>
+        <script>
+            WidgetLibrary.register('', class GridWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+
+                attrColgap(gap) {
+                    this.colGap = gap;
+                }
+
+                attrColcount(value) {
+                    let count = parseInt(value);
+
+                    if (count > 0) {
+                        this.cols = [];
+                        let width = `${100/count}%`;
+
+                        for (let i = 0; i < count; i++) {
+                            this.cols.push(width);
+                        }
+                    }
+                }
+
+                attrRowcount(value) {
+                    let count = parseInt(value);
+
+                    if (count > 0) {
+                        this.cols = [];
+                        let height = `${100/count}%`;
+
+                        for (let i = 0; i < count; i++) {
+                            this.rows.push(height);
+                        }
+                    }
+                }
+
+                attrRowgap(gap) {
+                    this.rowGap = gap;
+                }
+
+                init() {
+                    this.rows = [];
+                    this.rowGap = '0px';
+                    this.cols = [ '100%' ];
+                    this.colGap = '0px';
+                }
+
+                async refresh() {
+                    let rows;
+                    let childCount = this.getChildElements().length;
+
+                    if (this.rows.length == 0) {
+                        let rowCount = Math.ceil(childCount/this.cols.length);
+                        let rowHeight = `${100/rowCount}%`;
+                        rows = [];
+
+                        for (let i = 0; i < rowCount; i++) {
+                            rows.push(rowHeight);
+                        }
+                    }
+                    else {
+                        rows = this.rows;
+                    }
+
+                    this.setStyle({
+                        display: 'grid',
+                        gridTemplateRows: `${rows.join(' ')}`,
+                        gridTemplateColumns: `${this.cols.join(' ')}`,
+                        rowGap: `${this.rowGap}`,
+                        columnGap: `${this.colGap}`,
+                    });
+                }
+            });
+        </script>
+        <style>
+            .STYLE {
+                color:firebrick;
+                background-color:bisque;
+            }
+        </style>
+    </widget>
+</bundle>

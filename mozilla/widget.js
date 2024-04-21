@@ -22,6 +22,11 @@
 
 
 /*****
+ * The library of unique widgets downloaded from the server.  The primary purpose
+ * of the widget library is to ensure that the client application can spread out
+ * the downloads to (1) a burst of built-in bundles, and (2) download as needed.
+ * The point is to NOT drag out how long it takes to download the application
+ * launch time.
 *****/
 singleton('', class WidgetLibrary {
     constructor() {
@@ -100,18 +105,37 @@ singleton('', class WidgetLibrary {
  * dynamic GUI support to the application.
 *****/
 register('', class Widget extends HtmlElement {
+    static id = 1;
+
     constructor(arg) {
         super(arg);
+        this.init();
+
+        this.setId(`widget${Widget.id++}`);
+        console.log(this.getId());
         let widgetEntry = WidgetLibrary.get(this.getTagName());
 
         if (widgetEntry.innerHtml) {
             this.setInnerHtml(widgetEntry.innerHtml);
         }
 
-        this.initialize();
-        this.emit({ name: 'initialize' });
+        for (let attribute of this.getAttributes()) {
+            if (attribute.name.startsWith('@')) {
+                try {
+                    let methodName = `attr${attribute.name[1].toUpperCase()}${attribute.name.substring(2)}`;
+
+                    if (typeof this[methodName] == 'function') {
+                        this[methodName](attribute.value);
+                    }
+                }
+                catch (e) {}
+            }
+        }
     }
 
-    async initialize() {
+    init() {
+    }
+
+    async refresh() {
     }
 });

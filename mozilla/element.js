@@ -53,7 +53,9 @@
                 let widgetEntry = WidgetLibrary.get(node.tagName.toLowerCase());
 
                 if (widgetEntry) {
-                    return widgetEntry.maker(node);
+                    let widget = widgetEntry.maker(node);
+                    widget.refresh();
+                    return widget;
 
                 }
                 else {
@@ -208,7 +210,7 @@
 
         getChildAt(index) {
             if (index >= 0 && index < this.node.childNodes.length) {
-                return this.node.childNodes.item(index)[nodeKey];
+                return wrapNode(this.node.childNodes.item(index));
             }
         }
 
@@ -220,7 +222,7 @@
             let children = [];
 
             for (let i = 0; i < this.node.childNodes.length; i++) {
-                children.push(this.node.childNodes.item(i)[nodeKey]);
+                children.push(wrapNode(this.node.childNodes.item(i)));
             }
 
             return children;
@@ -251,7 +253,7 @@
 
         getFirstChild() {
             if (this.node.firstChild) {
-                return this.node.firstChild[nodeKey];
+                return wrapNode(this.node.firstChild);
             }
         }
 
@@ -261,7 +263,7 @@
 
         getLastChild() {
             if (this.node.lastChild) {
-                return this.node.lastChild[nodeKey];
+                return wrapNode(this.node.lastChild);
             }
         }
 
@@ -297,13 +299,13 @@
       
         getSiblingNext() {
             if (this.node.nextSibling) {
-                return this.node.nextSibling[nodeKey];
+                return wrapNode(this.node.nextSibling);
             }
         }
       
         getSiblingPrev() {
             if (this.node.previousSibling) {
-                return this.node.previousSibling[nodeKey];
+                return wrapNode(this.node.previousSibling);
             }
         }
 
@@ -382,6 +384,9 @@
             return this;
         }
 
+        async refresh() {
+        }
+
         remove() {
             if (this.node.parentNode) {
                 this.node.parentNode.removeChild(this.node);
@@ -415,10 +420,6 @@
         setPinned(name, value) {
             this.pinned[name] = value;
             return this;
-        }
-
-        [Symbol.iterator]() {
-            return this.getChildren()[Symbol.iterator]();
         }
     });
 
@@ -559,6 +560,11 @@
             return this;
         }
 
+        clearId() {
+            this.node.setAttriburte('id', '');
+            return this;
+        }
+
         disablePropagation(eventName) {
             this.propagation.clear(eventName);
             return this;
@@ -598,7 +604,7 @@
 
         getChildElementFirst() {
             if (this.node.firstElementChild) {
-                return this.node.firstElementChild[nodeKey];
+                return wrapNode(this.node.firstElementChild);
             }
 
             return null;
@@ -606,10 +612,14 @@
 
         getChildElementLast() {
             if (this.node.lastElementChild) {
-                return this.node.lastElementChild[nodeKey];
+                return wrapNode(this.node.lastElementChild);
             }
 
             return null;
+        }
+
+        getChildElements() {
+            return this.getChildren().filter(child => child instanceof HtmlElement);
         }
 
         getClassNames() {
@@ -640,6 +650,10 @@
 
         getComputedStyle(pseudoElement) {
             return window.getComputedStyle(this.node, pseudoElement);
+        }
+
+        getId() {
+            return this.node.getAttribute('id');
         }
 
         getInnerHtml() {
@@ -812,6 +826,11 @@
                 this.node.className = classNames;
             }
 
+            return this;
+        }
+
+        setId(id) {
+            this.node.setAttriburte('id', id);
             return this;
         }
 

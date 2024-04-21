@@ -133,8 +133,11 @@ register('', class Bundle {
 
         try {
             eval(script);
-            const element = createElementFromOuterHtml(html);
-            Doc.getBody().append(element);
+            
+            if (html.trim()) {
+                const element = createElementFromOuterHtml(html);
+                Doc.getBody().append(element);
+            }
         }
         catch (e) {
             caught(e);
@@ -152,7 +155,7 @@ register('', class Bundle {
     }
 
     async registerStyle(item) {
-        let style = mkHtmlElement('style').setAttribute('id', 'item.name');
+        let style = mkHtmlElement('style');
         Doc.getHead().append(style);
         style.setInnerHtml(mkBuffer(item.code, 'base64').toString());
     }
