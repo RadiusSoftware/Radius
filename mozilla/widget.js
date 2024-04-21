@@ -112,7 +112,6 @@ register('', class Widget extends HtmlElement {
         this.init();
 
         this.setId(`widget${Widget.id++}`);
-        console.log(this.getId());
         let widgetEntry = WidgetLibrary.get(this.getTagName());
 
         if (widgetEntry.innerHtml) {

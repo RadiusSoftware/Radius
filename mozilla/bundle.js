@@ -170,7 +170,7 @@ register('', class Bundle {
                 let match = trim.match(/([a-zA-Z0-9_]+)[ \t]*=[ \t]*([^$]*)/);
 
                 if (match) {
-                    StringsLib.set(match[1], match[2]);
+                    StringLibrary.set(item.prefix, match[1], match[2]);
                 }
             }
             catch (e) {}
@@ -197,24 +197,5 @@ register('', class Bundle {
 
     [Symbol.iterator]() {
         return this.items[Symbol.iterator]();
-    }
-});
-
-
-/*****
- * We want an internationalizable application!  There means we need to be able
- * to handle text in multiple languages.  To this end, text is isolated from
- * the HTML and other code and stored here in the StringsLib.  The StringsLib
- * is populated as various bundles are downloaded.  So, in order to change the
- * language, the application needs to be re-downloaded and initialized using
- * new text.
-*****/
-singleton('', class StringsLib {
-    constructor() {
-        this.lib = mkObjekt();
-    }
-
-    set(key, value) {
-        this.lib[key] = value;
     }
 });

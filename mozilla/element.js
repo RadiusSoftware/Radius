@@ -125,7 +125,7 @@
     };
 
     register('', function createElementFromOuterHtml(outerHtml) {
-        const match = outerHtml.match(/< *([0-9A-Za-z]+)/);
+        const match = outerHtml.match(/< *([0-9A-Za-z-]+)/);
 
         if (match) {
             let tagName = match[1];
@@ -149,7 +149,7 @@
                 parent.replaceChildren();
                 compilerElement.replaceChildren();
                 compilerElement.remove();
-                return mkHtmlElement(stub);                
+                return wrapTree(stub);
             }
             else {
                 let stub = document.createElement(tagName);
@@ -158,7 +158,7 @@
                 stub = compilerElement.children[0];
                 compilerElement.replaceChildren();
                 compilerElement.remove();
-                return mkHtmlElement(stub);
+                return wrapTree(stub);
             }
         }
     });
@@ -172,6 +172,8 @@
      * both types of derived object instances.
     *****/
     register('', class DocNode extends Emitter {
+        static emitter = mkEmitter();
+
         constructor(node) {
             super();
 
@@ -182,6 +184,12 @@
                 this.node = node;
                 this.pinned = {};
                 this.node[nodeKey] = this;
+
+                DocNode.emitter.emit({
+                    name: 'Created',
+                    docNode: this,
+                });
+
                 return this;
             }
         }

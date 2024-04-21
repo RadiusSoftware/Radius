@@ -128,6 +128,8 @@ register('', class Bundle {
     async processHome(element) {
         let item = {
             type: 'home',
+            html: '',
+            script: '',
         };
 
         for (let childElement of element) {
@@ -159,12 +161,11 @@ register('', class Bundle {
     }
 
     async processStrings(element) {
-        let lang = element.hasAttribute('lang') ? element.getAttribute('lang') : '';
+        let prefix = element.hasAttribute('prefix') ? element.getAttribute('prefix') : this.name;
 
         this.items.push({
             type: 'strings',
-            lang: lang,
-            prefix: this.name,
+            prefix: prefix,
             entries: mkBuffer(element.getInnerHtml()).toString('base64'),
         });
     }
