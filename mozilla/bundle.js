@@ -170,7 +170,7 @@ register('', class Bundle {
                 let match = trim.match(/([a-zA-Z0-9_]+)[ \t]*=[ \t]*([^$]*)/);
 
                 if (match) {
-                    StringLibrary.set(item.prefix, match[1], match[2]);
+                    StringLibrary.setText(item.prefix, match[1], match[2]);
                 }
             }
             catch (e) {}

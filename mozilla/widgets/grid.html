@@ -8,10 +8,6 @@
                     super(arg);
                 }
 
-                attrColgap(gap) {
-                    this.colGap = gap;
-                }
-
                 attrColcount(value) {
                     let count = parseInt(value);
 
@@ -23,6 +19,13 @@
                             this.cols.push(width);
                         }
                     }
+                }
+
+                attrColgap(gap) {
+                    this.colGap = gap;
+                }
+
+                attrCols(cols) {
                 }
 
                 attrRowcount(value) {
@@ -40,6 +43,9 @@
 
                 attrRowgap(gap) {
                     this.rowGap = gap;
+                }
+
+                attrRows(rows) {
                 }
 
                 init() {
