@@ -69,10 +69,10 @@ register('', async function bootstrap(setup) {
     await Bundles.init();
 
     for (let bundleName of Bundles) {
-        if (bundleName.endsWith('.widget')) {
+        if (bundleName.startsWith('widget.')) {
             await Bundles.require(bundleName);
         }
     }
 
-    await Bundles.require(settings.webAppSuffix);
+    await Bundles.require(settings.webAppBundle);
 });

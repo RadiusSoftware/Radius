@@ -405,10 +405,8 @@
 
         replace(...docNodes) {
             if (this.node.parentNode) {
-                let inserted;
-
-                if (docNode.length) {
-                    inserted = docNode;
+                if (docNodes.length) {
+                    let inserted = docNodes[0];
                     this.node.parentNode.replaceChild(inserted.node, this.node);
 
                     for (let i = 1; i < docNodes.length; i++) {
@@ -420,6 +418,8 @@
                 else {
                     this.node.parentNode.removeChild(this.node);
                 }
+            }
+            for (let docNode of docNodes) {
             }
 
             return this;

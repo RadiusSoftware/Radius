@@ -32,53 +32,79 @@
 *****/
 singleton('', class StringLibrary {
     constructor() {
+        this.strings = {};
         this.textNodes = [];
-        this.lib = mkObjekt();
         DocNode.emitter.on('Created', message => this.onDocNodeCreated(message));
     }
 
-    ensurePrefix(prefix) {
-        let objekt = this.lib;
+    ensurePrefix(dotted) {
+        let obj = this.strings;
 
-        for (let branch of prefix.split('.').reverse()) {
-            if (branch in objekt) {
-                objekt = objekt[branch];
+        for (let branch of dotted.split('.')) {
+            if (branch in obj) {
+                obj = obj[branch];
             }
             else {
-                let newObjekt = mkObjekt();
-                objekt[branch] = newObjekt;
-                objekt = newObjekt;
+                let newObj = mkObjekt();
+                obj[branch] = newObj;
+                obj = newObj;
             }
         }
 
-        return objekt;
+        return obj;
     }
 
-    get(prefix, key) {
-        let objekt = this.lib;
+    get(dotted, key) {
+        let obj = this.strings;
 
-        for (let branch of prefix.split('.').reverse()) {
-            if (branch in objekt) {
-                objekt = objekt[branch];
+        for (let branch of dotted.split('.')) {
+            if (branch in obj) {
+                obj = obj[branch];
             }
             else {
                 return '';
             }
         }
 
-        if (objekt instanceof Objekt) {
+        if (obj instanceof Object) {
             if (typeof key == 'string') {
-                return objekt[key];
+                return obj[key];
             }
         }
 
-        return objekt;
+        return obj;
     }
 
     onDocNodeCreated(message) {
         if (message.docNode instanceof DocText) {
-            this.textNodes.push(docNode);
-            console.log(message.docNode.toString());
+            let text = message.docNode.toString();
+            let wired = text;
+
+            for (let match of text.matchAll(/\${[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)+}/g)) {
+                wired = wired.replaceAll(match[0], '${this.strings.' + match[0].substring(2));
+            }
+
+            if (wired != text) {
+                let textNodeEntry = {
+                    text: text,
+                    wired: wired,
+                    filled: null,
+                    docText: null,
+                };
+
+                try {
+                    eval('textNodeEntry.filled =`' + wired + '`');
+                }
+                catch (e) {
+                    caught(e);
+                    textNodeEntry.filled = textNodeEntry.wired;
+                }
+
+                DocNode.emitter.silence();
+                textNodeEntry.docText = mkDocText(textNodeEntry.filled);
+                DocNode.emitter.resume();
+                message.docNode.replace(textNodeEntry.docText);
+            }
         }
     }
 

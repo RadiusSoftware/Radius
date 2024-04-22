@@ -35,7 +35,7 @@ register('', class WebApp extends HttpX {
 
     static settings = {
         enableWebsocket: false,
-        webAppSuffix: 'app.suffix',
+        webAppBundle: '',
 
     };
 
@@ -114,7 +114,7 @@ register('', class WebApp extends HttpX {
             uuid: this.getUUID(),
             path: this.getUrlPath(),
             enableWebsocket: this.settings.enableWebsocket,
-            webAppSuffix: this.settings.webAppSuffix,
+            webAppBundle: this.settings.webAppBundle,
         };
 
         return {

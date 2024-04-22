@@ -31,7 +31,7 @@ register('radius', class AdminApp extends WebApp {
     async init(libEntry) {
         await super.init(libEntry, {
             enableWebsocket: false,
-            webAppSuffix: 'admin.app.radius',
+            webAppBundle: 'radius.apps.admin',
         });
     }
 
