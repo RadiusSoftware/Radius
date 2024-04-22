@@ -104,6 +104,7 @@ singleton('', class StringLibrary {
                 textNodeEntry.docText = mkDocText(textNodeEntry.filled);
                 DocNode.emitter.resume();
                 message.docNode.replace(textNodeEntry.docText);
+                this.textNodes.push(textNodeEntry);
             }
         }
     }

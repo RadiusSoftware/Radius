@@ -112,6 +112,45 @@ singleton('', class TextUtils {
     
         return chars.join('');
     }
+    
+    /*****
+     * Takes a string and analyzes it by (1) searching for template parameters
+     * contained within and (2) splitting the string into segments of template
+     * parameters and static text (in the parts key).  The expr key provides an
+     * enumeration of the expressions that were discovered within the text.
+    *****/
+    formulaic(text) {
+        let formulaic = {
+            text: text,
+            expr: [],
+            parts: [],
+        };
+
+        for (let match of text.matchAll(/\${[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)+}/g)) {
+            formulaic.expr.push(match[0]);
+        }
+
+        if (formulaic.expr.length) {
+            for (let next = 0, expr = 0; next >= 0; expr++) {
+                let prev = next;
+                next = text.indexOf(formulaic.expr[expr], next);
+
+                if (next >= 0) {
+                    if (next > prev) {
+                        formulaic.parts.push(text.substring(prev, next));
+                    }
+
+                    formulaic.parts.push(formulaic.expr[expr]);
+                    next += formulaic.expr[expr].length;
+                }
+            }
+        }
+        else {
+            formulaic.parts.push(text);
+        }
+
+        return formulaic;
+    }
 
     /*****
      * Provides a neat utility to check whether a value is a proper hex-encoded
