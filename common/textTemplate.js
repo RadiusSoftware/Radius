@@ -30,125 +30,105 @@
  * then modifes the text itself for the appropiate lexical scope and creates an
  * object containing symbol names as key with the substitution text as values.
 *****/
+
+
+/*****
+ * Dynamic text containing forumals that relate to dynamic data stores is
+ * critial for making this a happy framework.  The DynamicText class analyzes
+ * a string and breaks it up into parts that are considered to be expressions
+ * within standard javascript template values, ${...}, separate with sections
+ * of staic text:  `  ${x.u.z()} + static text`.  Once analyzed and separated,
+ * the DynamicText can be useful for generating new content when the data
+ * stores have updated their values.
+*****/
 register('', class TextTemplate {
     constructor(text) {
-        this.parse(text.toString());
-    }
+        this.text = text;
+        this.exprs = [];
+        this.parts = [];
 
-    clearSymbol(symbol) {
-        if (symbol in this.symbols) {
-            this.symbols[symbol] = '${' + symbol + '}';
+        for (let match of text.matchAll(/\${.*?}/g)) {
+            this.exprs.push(match[0]);
         }
 
-        return this;
-    }
+        let next = 0;
+        let expr = 0;
 
-    clearSymbols() {
-        for (let symbol in this.symbols) {
-            this.symbols[symbol] = '${' + symbol + '}';
-        }
+        for (; next >= 0 && expr < this.exprs.length ; expr++) {
+            let prev = next;
+            next = text.indexOf(this.exprs[expr], next);
 
-        return this;
-    }
-
-    getSymbol(symbol) {
-        return this.symbols[symbol];
-    }
-
-    listSymbols() {
-        return Object.keys(this.symbols);
-    }
-
-    parse(text) {
-        if (!this.text) {
-            this.symbols = {};
-            this.runtime = {};
-
-            const pushChar = (char, chars) => {
-                if (char == '`') {
-                    chars.push('\\\`');
+            if (next >= 0) {
+                if (next > prev) {
+                    this.parts.push({ dynamic: false, value: text.substring(prev, next) });
                 }
-                else {
-                    chars.push(char);
-                }
+
+                this.parts.push({ dynamic: true, value: this.exprs[expr] });
+                next += this.exprs[expr].length;
             }
-    
-            let state = 0;
-            let chars = [];
-            let symbolChars = [];
-    
-            for (let char of text) {
-                if (state == 0) {
-                    if (char == '$') {
-                        state = 1;
-                    }
-                    else {
-                        pushChar(char, chars);
-                    }                
-                }
-                else if (state == 1) {
-                    if (char == '{') {
-                        state = 2;
-                    }
-                    else {
-                        state = 0;
-                        chars.push('$');
-                        pushChar(char, chars);
-                    }
-                }
-                else if (state == 2) {
-                    if (char == '}') {
-                        let symbolName = symbolChars.join('').trim();
-                        symbolChars = new Array();
-                        state = 0;
-    
-                        if (symbolName.match(/^[a-zA-Z][a-zA-Z0-9_]*$/m)) {
-                            this.symbols[symbolName] = '${' + symbolName + '}';
-                            chars.push('${this.symbols.' + symbolName + '}');
-                        }
-                        else {
-                            chars.push('${' + symbolName + '}');
-                        }
-                    }
-                    else {
-                        symbolChars.push(char);
-                    }
-                }
-            }
-    
-            this.text = chars.join('');
+        }
+
+        if (next < text.length) {
+            this.parts.push({ dynamic: false, value: text.substring(next) });
         }
     }
 
-    setSymbol(symbol, value) {
-        if (symbol in this.symbols) {
-            this.symbols[symbol] = value.toString();
-        }
-
-        return this;
+    getExprs() {
+        return this.exprs;
     }
 
-    setSymbols(values) {
-        if (typeof values == 'object') {
-            Object.keys(values).forEach(key => {
-                if (key in this.symbols) {
-                    this.symbols[key] = values[key].toString();
-                }
-            });
-        }
+    getParts() {
+        return this.parts;
+    }
 
-        return this;
+    isDynamic() {
+        return this.exprs.length > 0;
     }
 
     [Symbol.iterator]() {
-        return Object.keys(this.symbols)[Symbol.iterator]();
+        return this.exprs[Symbol.iterator]();
     }
 
-    toString(values) {
-        this.setSymbols(values);
+    toString(scope) {
+        let code = [];
 
-        let text;
-        eval('text=`' + this.text + '`');
-        return text;
+        function v2s(value) {
+            switch (typeof value) {
+                case 'bigint':
+                    return value.toString();
+
+                case 'boolean':
+                    return value.toString();
+
+                case 'number':
+                    return value.toString();
+
+                case 'string':
+                    return "`" + value + "`";
+
+                case 'undefined':
+                    return 'undefined';
+            }
+
+            if (value instanceof Date) {
+                return `mkTime('${value.toISOString()}')`;
+            }
+
+            if (value === null) {
+                return 'null';
+            }
+
+            return toJson(value);
+        }
+
+        for (let key in scope) {
+            let value = v2s(scope[key]);
+            code.push(`let ${key} = ${value};`);
+        }
+
+        let dynamicValue;
+        code.push('dynamicValue = `' + this.text + '`');
+        eval(code.join('\n'));
+        return dynamicValue;
     }
 });

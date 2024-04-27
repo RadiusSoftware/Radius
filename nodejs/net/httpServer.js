@@ -283,7 +283,7 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
         }
 
         if (!this.httpStatusResponses.default) {
-            let text = await FileSystem.readFile(Path.join(__dirname, 'statusResponse.html'));
+            let text = await FileSystem.readFileAsString(Path.join(__dirname, 'statusResponse.html'));
             this.httpStatusResponses.default = mkTextTemplate(text);
         }
 
@@ -836,7 +836,7 @@ registerIn('HttpServerWorker', '', class HttpResponse {
         let template = this.httpServer.getStatusResponseTemplate(statusCode);
         
         if (statusCode in HttpResponse.statusCodes) {
-            this.respond(statusCode, 'text/html', '', '', template.toString({
+            this.respond(statusCode, 'text/html', '', template.toString({
                 statusCode: statusCode,
                 statusText: HttpResponse.statusCodes[statusCode].text,
             }));
@@ -844,7 +844,7 @@ registerIn('HttpServerWorker', '', class HttpResponse {
         else {
             statusCode = 500;
 
-            this.respond(statusCode, 'text/html', '', '', template.toString({
+            this.respond(statusCode, 'text/html', '', template.toString({
                 statusCode: statusCode,
                 statusText: HttpResponse.statusCodes[statusCode].text,
             }));

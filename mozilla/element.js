@@ -449,6 +449,10 @@
         getText() {
             return this.node.wholeText;
         }
+      
+        getTextLength() {
+            return this.node.wholeText.length;
+        }
 
         insertAfter() {
         }
@@ -460,21 +464,17 @@
         }
 
         setText(arg) {
-            let text;
-
             if (typeof arg == 'undefined' || arg === null) {
-                text = '';
+                this.node.deleteData(0, this.getTextLength());
             }
             else if (typeof arg == 'string') {
-                text = arg;
+                this.node.replaceData(0, this.getTextLength(), arg);
             }
             else {
-                text = arg.toString();
+                this.node.replaceData(0, this.getTextLength(), arg.toString());
             }
-
-            let docText = mkDocText(text);
-            this.replace(docText);
-            return docText;
+            
+            return this;
         }
 
         toString() {

@@ -33,104 +33,91 @@
 singleton('', class StringLibrary {
     constructor() {
         this.strings = {};
-        this.textNodes = [];
+        this.docNodes = {};
         DocNode.emitter.on('Created', message => this.onDocNodeCreated(message));
     }
 
-    ensureEntry(dotted) {
-        let obj = this.strings;
+    ensureEntries(path, string) {
+        let strings = this.strings;
+        let docNode = this.docNodes;
+        let branches = path.split('.');
 
-        for (let branch of dotted.split('.')) {
-            if (branch in obj) {
-                obj = obj[branch];
+        for (let i = 0; i < branches.length; i++) {
+            let branch = branches[i];
+
+            if (i == branches.length - 1) {
+                if (!(branch in strings)) {
+                    strings[branch] = false;
+                    docNode[branch] = [];
+                }
+
+                if (strings[branch] === false && typeof string == 'string') {
+                    strings[branch] = string;
+                }
+    
+                return {
+                    strings: strings[branch],
+                    docNode: docNode[branch],
+                };
             }
             else {
-                let newObj = mkObjekt();
-                obj[branch] = newObj;
-                obj = newObj;
+                if (branch in strings) {
+                    strings = strings[branch];
+                    docNode = docNode[branch];
+                }
+                else {
+                    let newStrings = new Object();
+                    strings[branch] = newStrings;
+                    strings = newStrings;
+    
+                    let newDocNode = new Object();
+                    docNode[branch] = newDocNode;
+                    docNode = newDocNode;
+                }
             }
         }
-
-        return obj;
-    }
-
-    getEntry(dotted, key) {
-        let obj = this.strings;
-
-        for (let branch of dotted.split('.')) {
-            if (branch in obj) {
-                obj = obj[branch];
-            }
-            else {
-                return '';
-            }
-        }
-
-        if (obj instanceof Object) {
-            if (typeof key == 'string') {
-                return obj[key];
-            }
-        }
-
-        return obj;
-    }
-
-    getText(prefix, key) {
-        let entry = this.getEntry(prefix);
-
-        if (typeof entry == 'object') {
-            if (typeof entry[key] == 'string') {
-                return entry[key];
-            }
-        }
-        else if (typeof entry == 'string') {
-            return entry;
-        }
-
-        return '';
     }
 
     onDocNodeCreated(message) {
         if (message.docNode instanceof DocText) {
-            this.setTextNode(message.docNode);
+            let docText = message.docNode;
+
+            for (let match of docText.toString().matchAll(/\${(Str\.([a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)+))}/g)) {
+                let entries = this.ensureEntries(match[2]);
+
+                if (entries.strings === false) {
+                    entries.docNode.push(message.docNode);
+                }
+                else {
+                    this.refreshNode(message.docNode);
+                }
+            }
         }
     }
 
-    setText(prefix, key, value) {
-        let entry = this.ensureEntry(prefix);
-        entry[key] = value;
+    refreshNode(node) {
+        let dynamic;
+        let Str = this.strings;
+
+        try {
+            eval('dynamic = `' + node.toString() + '`');
+        }
+        catch (e) {
+            dynamic = '{String Value Error}';
+        }
+
+        node.setText(dynamic);
         return this;
     }
+    
+    setText(path, string) {
+        let entries = this.ensureEntries(path, string);
 
-    setTextNode(docText) {
-        let text = docText.toString();
-        let wired = text;
-
-        for (let match of text.matchAll(/\${string:([a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)+)}/g)) {
-            wired = wired.replaceAll(match[0], '${this.strings.' + match[1] + '}');
+        for (let docNode of entries.docNode) {
+            this.refreshNode(docNode);
         }
 
-        if (wired != text) {
-            let textNodeEntry = {
-                text: text,
-                wired: wired,
-                filled: null,
-                docText: null,
-            };
-
-            try {
-                eval('textNodeEntry.filled =`' + wired + '`');
-            }
-            catch (e) {
-                caught(e);
-                textNodeEntry.filled = textNodeEntry.wired;
-            }
-
-            DocNode.emitter.silence();
-            textNodeEntry.docText = mkDocText(textNodeEntry.filled);
-            DocNode.emitter.resume();
-            docText.replace(textNodeEntry.docText);
-            this.textNodes.push(textNodeEntry);
-        }
+        entries.docNode.splice(0, entries.docNode.length);
+        return this;
     }
 });
