@@ -47,11 +47,11 @@ singleton('', class StringLibrary {
 
             if (i == branches.length - 1) {
                 if (!(branch in strings)) {
-                    strings[branch] = false;
+                    strings[branch] = '${Str.' + path + '}';
                     docNode[branch] = [];
                 }
 
-                if (strings[branch] === false && typeof string == 'string') {
+                if (strings[branch].startsWith('${') && typeof string == 'string') {
                     strings[branch] = string;
                 }
     
@@ -85,7 +85,7 @@ singleton('', class StringLibrary {
             for (let match of docText.toString().matchAll(/\${(Str\.([a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)+))}/g)) {
                 let entries = this.ensureEntries(match[2]);
 
-                if (entries.strings === false) {
+                if (entries.strings.startsWith('${')) {
                     entries.docNode.push(message.docNode);
                 }
                 else {

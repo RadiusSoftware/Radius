@@ -36,7 +36,6 @@ register('', class WebApp extends HttpX {
     static settings = {
         enableWebsocket: false,
         webAppBundle: '',
-
     };
 
     constructor(settings) {
@@ -46,6 +45,7 @@ register('', class WebApp extends HttpX {
         this.widgetsDirPath = Path.join(__filename.replace('.js', ''), '../../../mozilla/widgets');
         this.api = mkApi();
         this.bundles = {};
+        this.strings = {};
         const webapp = this;
 
         this.setEndpoints(
@@ -53,14 +53,30 @@ register('', class WebApp extends HttpX {
                 return webapp.api.getEndpointNames();
             },
 
-            {}, function GetBundle(name) {
-                return webapp.getBundle(name);
+            {}, function GetBundle(name, lang) {
+                return webapp.getBundle(name, lang);
             },
 
             {}, function ListBundles(name) {
                 return Object.keys(webapp.bundles);
             },
         );
+    }
+
+    getLanguage(langs) {
+        let supported = {};
+
+        Object.values(this.strings).forEach(strings => {
+            Object.keys(strings).forEach(lang => supported[lang] = true);
+        });
+
+        for (let lang of Object.keys(langs)) {
+            if (lang in supported) {
+                return lang;
+            }
+        }
+
+        return Object.keys(supported)[0];
     }
 
     checkSetting(key, value) {
@@ -79,28 +95,18 @@ register('', class WebApp extends HttpX {
         return this.widgetsDirPath;
     }
 
-    getBundle(name) {
-        if (name.startsWith('~')) {
-            let fullName = `${name.substring(1)}.${this.settings.webAppBundleSuffix}`;
+    getBundle(name, lang) {
+        let box = { name: name, bundle: {}, strings: {} };
 
-            if (fullName in this.bundles) {
-                return this.bundles[fullName];
-            }
-        }
-        else if (name.startsWith('#')) {
-            let fullName = `${name.substring(1)}.widget`;
-
-            if (fullName in this.bundles) {
-                return this.bundles[fullName];
-            }
-        }
-        else {
-            if (name in this.bundles) {
-                return this.bundles[name];
-            }
+        if (name in this.bundles) {
+            box.bundle = this.bundles[name];
         }
 
-        return null;
+        if (name in this.strings) {
+            box.strings = this.strings[name][lang];
+        }
+
+        return box;
     }
 
     getSetting(key) {
@@ -115,6 +121,7 @@ register('', class WebApp extends HttpX {
             path: this.getUrlPath(),
             enableWebsocket: this.settings.enableWebsocket,
             webAppBundle: this.settings.webAppBundle,
+            lang: this.getLanguage(req.getAcceptLanguage()),
         };
 
         return {
@@ -196,6 +203,7 @@ register('', class WebApp extends HttpX {
                             throw new Error(`Duplicate Bundle name: "${bundle.getName()}"`);
                         }
                         else {
+                            this.registerBundleStrings(bundle);
                             this.bundles[bundle.getName()] = bundle;
                         }
                     }
@@ -205,6 +213,35 @@ register('', class WebApp extends HttpX {
         }
 
         return this;
+    }
+
+    registerBundleStrings(bundle) {
+        for (let i = 0; i < bundle.items.length; i++) {
+            let item = bundle.items[i];
+
+            if (item.type == 'strings') {
+                let langGroup;
+                let nameGroup;
+
+                if (bundle.name in this.strings) {
+                    nameGroup = this.strings[bundle.name];
+                }
+                else {
+                    nameGroup = new Object();
+                    this.strings[bundle.name] = nameGroup;
+                }
+
+                if (item.lang in nameGroup) {
+                    langGroup = nameGroup[item.lang];
+                }
+                else {
+                    langGroup = new Object();
+                    nameGroup[item.lang] = langGroup;
+                }
+
+                Object.assign(langGroup, item.values);
+            }
+        }
     }
 
     setEndpoint(permissions, func) {

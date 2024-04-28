@@ -37,7 +37,9 @@ singleton('', class Bundles {
         this.bundles = {};
     }
 
-    async init() {
+    async init(lang) {
+        this.lang = lang;
+
         for (let bundleName of await server.ListBundles()) {
             if (bundleName in this.bundles) {
 
@@ -54,23 +56,28 @@ singleton('', class Bundles {
         }
 
         if (name in this.bundles) {
-            if (this.bundles[name]) {
-                return this.bundles[name];
-            }
-            else {
-                let data = await server.GetBundle(name);
+            if (!(this.bundles[name])) {
+                let box = await server.GetBundle(name, this.lang);
 
-                if (data) {
-                    this.bundles[name] = await mkBundle().init(data);
-                    return this.bundles[name];
+                if (box) {
+                    for (let key in box.strings) {
+                        StringLibrary.setText(`${name}.${key}`, box.strings[key]);
+                    }
+
+                    await mkBundle().init(box.bundle);
+                    this.bundles[name] = true;
+                    return true;
                 }
                 else {
-                    return null;
+                    return false;
                 }
+            }
+            else {
+                return true;
             }
         }
         else {
-            return null;
+            return false;
         }
     }
 
@@ -158,23 +165,6 @@ register('', class Bundle {
         let style = mkHtmlElement('style');
         Doc.getHead().append(style);
         style.setInnerHtml(mkBuffer(item.code, 'base64').toString());
-    }
-
-    async registerStrings(item) {
-        let entries = mkBuffer(item.entries, 'base64').toString();
-
-        for (let line of entries.split('\n')) {
-            let trim = line.trim();
-
-            try {
-                let match = trim.match(/([a-zA-Z0-9_]+)[ \t]*=[ \t]*([^$]*)/);
-
-                if (match) {
-                    StringLibrary.setText(`${item.prefix}.${match[1]}`, match[2]);
-                }
-            }
-            catch (e) {}
-        }
     }
 
     async registerTitle(item) {

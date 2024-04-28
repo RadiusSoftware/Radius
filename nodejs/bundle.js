@@ -161,13 +161,90 @@ register('', class Bundle {
     }
 
     async processStrings(element) {
-        let prefix = element.hasAttribute('prefix') ? element.getAttribute('prefix') : this.name;
+        let strings = {};
 
-        this.items.push({
-            type: 'strings',
-            prefix: prefix,
-            entries: mkBuffer(element.getInnerHtml()).toString('base64'),
-        });
+        if (element.hasAttribute('lang')) {
+            let state = 0;
+            let key = [];
+            let text = [];
+
+            for (let char of element.getInnerHtml()) {
+                if (state == 0) {
+                    if (char.match(/[a-zA-z]/)) {
+                        state = 1;
+                        key.push(char);
+                    }
+                    else if (!char.match(/\s/)) {
+                        state = -1;
+                        break;
+                    }
+                }
+                else if (state == 1) {
+                    if (char.match(/[a-zA-z0-9_]/)) {
+                        key.push(char);
+                    }
+                    else {
+                        state = 2;
+                    }
+                }
+                else if (state == 2) {
+                    if (char == '=') {
+                        state = 3;
+                    }
+                    else if (!char.match(/\s/)) {
+                        break;
+                    }
+                }
+                else if (state == 3) {
+                    if (char == '\\') {
+                        this.processStringValue(strings, key, text);
+                        state = 0;
+                        key = [];
+                        text = [];
+                    }
+                    else {
+                        text.push(char);
+                    }
+                }
+            }
+
+            if (state != 0) {
+                throw new Error(`Bad strings bundle ensountered: ${element.getInnerHtml()}`)
+            }
+            else {
+                this.items.push({
+                    type: 'strings',
+                    lang: element.getAttribute('lang'),
+                    values: strings,
+                });
+            }
+        }
+    }
+
+    processStringValue(strings, keyArray, textArray) {
+        let key = keyArray.join('');
+        let scrubbedTextArray = [];
+        let state = 0;
+
+        for (let char of textArray) {
+            if (state == 0) {
+                if (char == '\n') {
+                    state = 1;
+                }
+                else {
+                    scrubbedTextArray.push(char);
+                }
+            }
+            else if (state == 1) {
+                if (!char.match(/\s/)) {
+                    state = 0;
+                    scrubbedTextArray.push(' ');
+                    scrubbedTextArray.push(char);
+                }
+            }
+        }
+
+        strings[key] = scrubbedTextArray.join('').trim();
     }
 
     async processStyle(element) {

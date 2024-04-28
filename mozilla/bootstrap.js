@@ -66,7 +66,7 @@ register('', async function bootstrap(setup) {
     
     wrapTree(document.documentElement);
     globalThis.server = mkRemoteApi(await callServer({ name: 'GetApi' }), callServer);
-    await Bundles.init();
+    await Bundles.init(settings.lang);
 
     for (let bundleName of Bundles) {
         if (bundleName.startsWith('widget.')) {
