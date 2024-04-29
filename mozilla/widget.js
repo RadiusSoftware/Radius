@@ -127,7 +127,7 @@ register('', class Widget extends HtmlElement {
                         this[methodName](attribute.value);
                     }
                 }
-                catch (e) {}
+                catch (e) {console.log(e)};
             }
         }
     }

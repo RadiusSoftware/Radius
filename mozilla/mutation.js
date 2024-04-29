@@ -22,23 +22,18 @@
 
 
 /*****
- * The Controller, which extends the Entanglements class, owns a chunk of real
- * estate on the screen, meaning that it contains the display action logic
- * pertaining to an Element and some or all of its descendents that are not
- * controlled by another controller.  The controller provides an encapsulated
- * object containing a viewer and application logic in response to events.
- * A controller is how to make a specialized or specific HTML Element perform
- * specific behaviors.
+ * The controller requires real-time data pertaining to changes to the DOM tree
+ * to enable the controller logic respond as necessary to make the controller's
+ * subtree perform its magic.  This class wraps the built in mutation record to
+ * provide features that are incoporated into the Radius framework.
 *****/
-register('', class Controller extends Entanglements {
-    static controllers = [];
-
-    constructor(element) {
+register('', class Mutation extends Emitter {
+    constructor(controller, mutationRecord) {
         super();
-        this.element = element;
-        this.element.setController(this);
-        Controller.controllers.push(this);
-
+        this.controller = controller;
+        this.mutationRecord = mutationRecord;
+        this.ownership = Object.is(this.getTarget().getController(), this.controller);
+        /*
         this.observer = new MutationObserver((records, observer) => {
             this.onMutation(records, observer);
         });
@@ -49,53 +44,7 @@ register('', class Controller extends Entanglements {
             subtree: true,
             attributeOldValue: true,
         });
-    }
-
-    getElement() {
-        return this.element;
-    }
-
-    async init() {
-        return this;
-    }
-
-    onAttributeChanged(mutation) {
-    }
-
-    onChildListChanged(mutation) {
-    }
-
-    onMutation(mutationRecords, observer) {
-        for (let mutationRecord of mutationRecords) {
-            let mutation = mkMutation(this, mutationRecord);
-
-            if (mutation.isOwned()) {
-                switch (mutation.getType()) {
-                    case 'attributes':
-                        this.onAttributeChanged(mutation);
-                        break;
-
-                    case 'childList':
-                        this.onChildListChanged(mutation);
-                        break;
-                }
-            }
-        }
-    }
-});
-
-
-/*****
- * The controller requires real-time data pertaining to changes to the DOM tree
- * to enable the controller logic respond as necessary to make the controller's
- * subtree perform its magic.  This class wraps the built in mutation record to
- * provide features that are incoporated into the Radius framework.
-*****/
-register('', class Mutation {
-    constructor(controller, mutationRecord) {
-        this.controller = controller;
-        this.mutationRecord = mutationRecord;
-        this.ownership = Object.is(this.getTarget().getController(), this.controller);
+        */
     }
 
     getAddedNodes() {

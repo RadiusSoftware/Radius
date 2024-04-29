@@ -38,6 +38,10 @@ register('', class Entanglements {
         this.entanglements = [];
     }
 
+    clearEntanglement(entanglement) {
+    }
+
+    /*
     entangleAttribute(element, name, expr) {
         let reflection = this.reflect(expr);
 
@@ -54,16 +58,17 @@ register('', class Entanglements {
             entanglement.push();
         }
     }
+    */
 
-    entangleInner(element, expr) {
-        let reflection = this.reflect(expr);
+    entangleInner(element, func) {
+        let reflection = Objekt.reflect(func);
 
-        for (let dependency of reflection.dependencies) {
+        for (let dependency of reflection) {
             let entanglement = mkInnerEntanglement(
                 element,
                 dependency.objekt,
                 dependency.key,
-                reflection.func,
+                func,
             );
 
             this.setEntanglement(entanglement);
@@ -71,12 +76,15 @@ register('', class Entanglements {
         }
     }
 
+    /*
     entangleInput(element, fqObjektName, key) {
         let entanglement = mkInputEntanglement(element, fqObjektName, key);
         this.setEntanglement(entanglement);
         entanglement.push();
     }
+    */
 
+    /*
     entangleStyle(element, styleProperty, expr) {
         let reflection = this.reflect(expr);
 
@@ -93,7 +101,9 @@ register('', class Entanglements {
             entanglement.push();
         }
     }
+    */
 
+    /*
     entangleStyleRule(cssStyleRule, styleProperty, objekt, key) {
         let entanglement = mkStyleRuleEntanglement(
             cssStyleRule,
@@ -105,7 +115,9 @@ register('', class Entanglements {
         this.setEntanglement(entanglement);
         entanglement.push();
     }
+    */
 
+    /*
     entangleTextNode(docText, expr) {
         let reflection = this.reflect(expr);
 
@@ -121,6 +133,7 @@ register('', class Entanglements {
             entanglement.push();
         }
     }
+    */
 
     findEntanglement(entanglement) {
         let prototype = Reflect.getPrototypeOf(entanglement);
@@ -149,19 +162,15 @@ register('', class Entanglements {
         return -1;
     }
 
-    getDocNode() {
-        return this.docNode;
-    }
-
     getEntanglements() {
         return this.entanglements.slice(0);
     }
 
-    getEntanblementsByObjekt(objekt) {
+    getEntanglementsByObjekt(objekt) {
         let matching = [];
 
-        if (objekt.state.objektId in this.objekts) {
-            let objektObject = this.objekts[objekt.state.objektId];
+        if (objekt.reflectId in this.objekts) {
+            let objektObject = this.objekts[objekt.reflectId];
 
             Object.values(objektObject)
             .forEach(array => {
@@ -172,11 +181,11 @@ register('', class Entanglements {
         return matching;
     }
 
-    getEntanblementsByObjektKey(objekt, key) {
+    getEntanglementsByObjektKey(objekt, key) {
         let matching = [];
 
-        if (objekt.state.objektId in this.objekts) {
-            let objektObject = this.objekts[objekt.state.objektId];
+        if (objekt.reflectId in this.objekts) {
+            let objektObject = this.objekts[objekt.reflectId];
 
             Object.values(objektObject)
             .forEach(array => {
@@ -187,16 +196,6 @@ register('', class Entanglements {
         return matching;
     }
 
-    reflect(expr) {
-        let func;
-        eval(`func = () => { return ( ${expr} )}`);
-
-        return {
-            func: func,
-            dependencies: Objekt.reflect(func),
-        };
-    }
-
     setEntanglement(entanglement) {
         if (this.findEntanglement(entanglement) == -1) {
             this.entanglements.push(entanglement);
@@ -204,12 +203,12 @@ register('', class Entanglements {
             let objekt;
             let entanglements;
 
-            if (entanglement.objekt.state.objektId in this.objekts) {
-                objekt = this.objekts[entanglement.objekt.state.objektId];
+            if (entanglement.objekt.reflectId in this.objekts) {
+                objekt = this.objekts[entanglement.objekt.reflectId];
             }
             else {
                 objekt = new Object();
-                this.objekts[entanglement.objekt.state.objektId] = objekt;
+                this.objekts[entanglement.objekt.reflectId] = objekt;
             }
 
             if (entanglement.key in objekt) {
@@ -236,7 +235,7 @@ register('', class Entanglements {
  * The entanglement of an element's attribute with an expression, denoted as
  * "expr".  Note that the caller, the Entanglements object, has already reflected
  * the expr to build it into a function and to determine its dependencies.
-*****/
+*****
 register('', class AttributeEntanglement {
     constructor(element, attribute, objekt, key, func) {
         this.element = element;
@@ -251,6 +250,7 @@ register('', class AttributeEntanglement {
         this.element.setAttribute(this.attribute, this.func());
     }
 });
+*/
 
 
 /*****
@@ -264,7 +264,7 @@ register('', class InnerEntanglement {
         this.objekt = objekt;
         this.key = key;
         this.func = func;
-        this.objekt.on(message => this.push());
+        this.objekt.on('Update', message => this.push());
     }
 
     push() {
@@ -278,7 +278,7 @@ register('', class InnerEntanglement {
  * "fqObjektName" and "key".  Note that the caller, the Entanglements object,
  * has already reflected the expr to build it into a function and to determine
  * its dependencies.
-*****/
+*****
 register('', class InputEntanglement {
     constructor(element, fqObjektName, key) {
         this.element = element;
@@ -309,13 +309,14 @@ register('', class InputEntanglement {
         this.element.node.value = this.objekt[this.key];
     }
 });
+*/
 
 
 /*****
  * The entanglement of an element's style value with an expression, denoted as
  * "expr".  Note that the caller, the Entanglements object, has already reflected
  * the expr to build it into a function and to determine its dependencies.
-*****/
+*****
 register('', class StyleEntanglement {
     constructor(element, styleProperty, objekt, key, func) {
         this.element = element;
@@ -330,13 +331,14 @@ register('', class StyleEntanglement {
         this.element.setStyle(this.styleProperty, this.func());
     }
 });
+*/
 
 
 /*****
  * The entanglement of an cssStyleRule value with an expression, denoted as
  * "expr".  Note that the caller, the Entanglements object, has already reflected
  * the expr to build it into a function and to determine its dependencies.
-*****/
+*****
 register('', class StyleRuleEntanglement {
     constructor(cssStyleRule, styleProperty, objekt, key) {
         this.cssStyleRule = cssStyleRule;
@@ -350,13 +352,14 @@ register('', class StyleRuleEntanglement {
         this.cssStyleRule.cssRule.style[this.styleProperty] = this.objekt[this.key];
     }
 });
+*/
 
 
 /*****
  * The entanglement of TextNode's inner HTML with an expression, denoted as
  * "expr".  Note that the caller, the Entanglements object, has already reflected
  * the expr to build it into a function and to determine its dependencies.
-*****/
+*****
 register('', class TextNodeEntanglement {
     constructor(docText, objekt, key, func) {
         this.docText = docText;
@@ -370,3 +373,4 @@ register('', class TextNodeEntanglement {
         this.docText.setText(this.func());
     }
 });
+*/

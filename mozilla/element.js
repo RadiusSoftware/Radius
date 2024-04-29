@@ -633,7 +633,7 @@
         getClassNames() {
             let set = mkStringSet();
 
-            for (let key of this.node.classList.keys()) {
+            for (let key of this.node.classList) {
                 set.set(key)
             }
 

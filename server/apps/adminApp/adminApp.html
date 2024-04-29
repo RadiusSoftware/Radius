@@ -15,17 +15,48 @@
             margin: 0px;
             padding: 0px;
         }
+        .one {
+            color: white;
+            background-color: steelblue;
+        }
+        .two {
+            color: steelblue;
+            background-color: gainsboro;
+        }
+        .three {
+            color: limegreen;
+            background-color: darkslategray;
+        }
+        .four {
+            color: gainsboro;
+            background-color: crimson;
+        }
     </style>
     <home>
         <html>
             <grid-widget style="height:300px;" @colcount="2">
-                <div>${Str.radius.apps.admin.key1}</div>
-                <div>${Str.radius.apps.admin.key2}</div>
-                <div>${Str.radius.apps.admin.key3}</div>
-                <div>${Str.radius.apps.admin.key4} = ${Str.radius.apps.admin.key3} + ${Str.radius.apps.admin.key1}</div>
+                <div class="one"></div>
+                <div class="two">
+                    <div>
+                        Type Something here: <input type="text">
+                    </div>
+                </div>
+                <div class="three"></div>
+                <div class="four"></div>
             </grid-widget>
         </html>
         <script>
+            let data = mkObjekt({
+                one: 'One',
+            });
+
+            let e = mkEntanglements();
+            let one = home.queryOne('.one');
+            e.entangleInner(one, ()=>`TILE ${data.one}`);
+
+            setTimeout(() => {
+                data.one = 'ONE';
+            }, 1500);
         </script>
     </home>
     <strings lang="en">

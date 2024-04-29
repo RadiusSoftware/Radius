@@ -139,11 +139,11 @@ register('', class Bundle {
         let script = mkBuffer(item.script, 'base64').toString();
 
         try {
-            eval(script);
-            
             if (html.trim()) {
                 const element = createElementFromOuterHtml(html);
                 Doc.getBody().append(element);
+                const hook = `const home = Doc.queryOne('#${element.getAttribute('id')}');\n`;
+                eval(hook + script);
             }
         }
         catch (e) {

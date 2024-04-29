@@ -234,7 +234,7 @@ registerIn('HttpServer', '', class HttpLibrary {
             'mozilla/style.js',
             'mozilla/widget.js',
             'mozilla/entanglements.js',
-            'mozilla/controller.js',
+            'mozilla/mutation.js',
             'mozilla/stringLibrary.js',
             'mozilla/http.js',
             'mozilla/websocket.js',
