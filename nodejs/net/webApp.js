@@ -33,16 +33,11 @@
 register('', class WebApp extends HttpX {
     static html = '';
 
-    static settings = {
-        enableWebsocket: false,
-        webAppBundle: '',
-    };
-
-    constructor(settings) {
-        super();
+    constructor(libEntry, settings) {
+        super(libEntry, settings);
         this.webAppPath = __filename;
         this.webAppHtmlPath = Path.join(__filename.replace('.js', ''), '../webApp.html');
-        this.widgetsDirPath = Path.join(__filename.replace('.js', ''), '../../../mozilla/widgets');
+
         this.api = mkApi();
         const webapp = this;
 
@@ -93,18 +88,14 @@ register('', class WebApp extends HttpX {
         return this.widgetsDirPath;
     }
 
-    getSetting(key) {
-        return this.settings[key];
-    }
-
     async handleGET(req, rsp) {
         let template = mkTextTemplate(WebApp.html);
 
         const settings = {
             uuid: this.getUUID(),
             path: this.getUrlPath(),
-            enableWebsocket: this.settings.enableWebsocket,
-            webAppBundle: this.settings.webAppBundle,
+            enableWebsocket: this.getSetting('enableWebsocket'),
+            webAppBundle: this.getSetting('webAppBundle'),
             lang: Bundles.getLanguage(Object.keys(req.getAcceptLanguage())),
         };
 
@@ -151,30 +142,26 @@ register('', class WebApp extends HttpX {
         console.log('\nIMPLEMENT the websocket handler on webApp.js!');
     }
 
-    async init(libEntry, settings) {
-        super.init(libEntry);
-        this.settings = {};
-
-        for (let key in WebApp.settings) {
-            if (key in settings) {
-                this.settings[key] = this.checkSetting(key, settings[key]);
-            }
-            else {
-                this.settings[key] = WebApp.settings[key];
-            }
-        }
+    async init() {
+        super.init();
 
         if (!WebApp.html) {
             WebApp.html = await FileSystem.readFileAsString(this.webAppHtmlPath);
         }
 
-        await this.registerBundles(this.getWidgetsDirPath(), this.getHttpXDir());
-        return this;
-    }
+        const bundlePaths = [
+            Path.join(__filename.replace('.js', ''), '../../../mozilla/widgets'),
+            this.getHttpXDir(),
+        ];
 
-    async registerBundles(...paths) {
-        for (let path of paths) {
-            for (let filePath of await FileSystem.recurseFiles(path)) {
+        if (Array.isArray(this.libEntry.bundlePaths)) {
+            this.libEntry.bundlePaths.forEach(bundlePath => {
+                bundlePaths.push(Path.join(this.getHttpXDir(), bundlePath));
+            });
+        }
+
+        for (let bundlePath of bundlePaths) {
+            for (let filePath of await FileSystem.recurseFiles(bundlePath)) {
                 await Bundles.load(filePath);
             }
         }

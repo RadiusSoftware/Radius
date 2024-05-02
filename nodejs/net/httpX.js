@@ -45,9 +45,21 @@
  * handlers must be overriden by the subclass in order to make this functional.
 *****/
 register('', class HttpX extends Emitter {
-    constructor() {
+    constructor(libEntry, settings) {
         super();
-        this.paths = {};
+        this.libEntry = libEntry;
+
+        if (typeof settings == 'object') {
+            this.settings = settings;
+        }
+        else {
+            this.settings = {};
+        }
+    }
+
+    clearSetting(key) {
+        delete this.settings[key];
+        return this;
     }
 
     getClassName() {
@@ -70,12 +82,25 @@ register('', class HttpX extends Emitter {
         return this.httpXPath;
     }
 
+    getLibEntry() {
+        return this.libEntry;
+    }
+
     getOnce() {
         return this.once;
     }
 
     getPrototype() {
         return this.prototype;
+    }
+
+    getSetting(key) {
+        if (key in this.settings) {
+            return this.settings[key];
+        }
+        else {
+            return false;
+        }
     }
 
     getUrlPath() {
@@ -102,18 +127,23 @@ register('', class HttpX extends Emitter {
         return 501;
     }
 
-    async init(libEntry) {
-        this.uuid = libEntry.uuid;
+    async init() {
+        this.uuid = this.libEntry.uuid;
         this.prototype = Reflect.getPrototypeOf(this);
         this.className = this.prototype.constructor.name;
-        this.fqClassName = libEntry.fqClassName;
-        this.fqMakerName = libEntry.makerName;
-        this.httpXPath = libEntry.module;
-        this.httpXDir = libEntry.module.replace('.js', '');
-        this.path = libEntry.path;
-        this.once = libEntry.once;
-        this.requiredPermissions = libEntry.requiredPermissions;
+        this.fqClassName = this.libEntry.fqClassName;
+        this.fqMakerName = this.libEntry.makerName;
+        this.httpXPath = this.libEntry.module;
+        this.httpXDir = this.libEntry.module.replace('.js', '');
+        this.path = this.libEntry.path;
+        this.once = this.libEntry.once;
+        this.requiredPermissions = this.libEntry.requiredPermissions;
         await FileSystem.recurseModules(this.httpXDir);
+        return this;
+    }
+
+    setSetting(key, value) {
+        this.settings[key] = value;
         return this;
     }
 });

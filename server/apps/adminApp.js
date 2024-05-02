@@ -24,12 +24,8 @@
 /*****
 *****/
 register('radius', class AdminApp extends WebApp {
-    constructor() {
-        super();
-    }
-
-    async init(libEntry) {
-        await super.init(libEntry, {
+    constructor(libEntry) {
+        super(libEntry, {
             enableWebsocket: false,
             webAppBundle: 'radius.apps.admin',
         });

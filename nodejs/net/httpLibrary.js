@@ -193,6 +193,7 @@ registerIn('HttpServer', '', class HttpLibrary {
             type: 'httpx',
             path: libEntry.path,
             module: libEntry.module,
+            bundlePaths: libEntry.bundlePaths,
             uuid: Crypto.generateUUID(),
             once: libEntry.once === true,
             timeoutMillis: typeof libEntry.timeout == 'number' ? libEntry.timeout : null,
@@ -319,8 +320,8 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
         libEntry.makerName = fqnMakerName(libEntry.fqClassName);
 
         let httpX;
-        eval(`httpX = ${libEntry.makerName}()`);
-        await httpX.init(libEntry);
+        eval(`httpX = ${libEntry.makerName}(libEntry)`);
+        await httpX.init();
         this.httpXs[libEntry.uuid] = httpX;
         return httpX;
     }

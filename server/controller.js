@@ -107,6 +107,7 @@ require('../nodejs/radius.js');
                         path: '/',
                         module: Path.join(__dirname, 'apps/adminApp.js'),
                         fqClassName: 'radius.AdminApp',
+                        bundlePaths: [ '../../lib' ],
                     },
                 ],
             });
