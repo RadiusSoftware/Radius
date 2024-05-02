@@ -1,7 +1,33 @@
-<bundle>
-    <name>radius.apps.admin</name>
+<bundle name="radius.apps.admin">
     <dependencies></dependencies>
-    <title>Radius Server Administration</title>
+    <application>
+        <title>Radius Server Administration</title>
+        <html>
+            <grid-widget style="height:300px;" @colcount="2">
+                <div class="one"></div>
+                <div class="two">
+                    <div>
+                        Type Something here: <input type="text">
+                    </div>
+                </div>
+                <div class="three">${Str.radius.apps.admin.key3}</div>
+                <div class="four">${Str.radius.apps.admin.key4}</div>
+            </grid-widget>
+        </html>
+        <script>
+            let data = mkObjekt({
+                one: 'One',
+            });
+
+            let e = mkEntanglements();
+            let one = home.queryOne('.one');
+            e.entangleInner(one, ()=>`TILE ${data.one}`);
+
+            setTimeout(() => {
+                data.one = 'ONE';
+            }, 1500);
+        </script>
+    </application>
     <style>
         html {
             width: 100vw;
@@ -32,33 +58,6 @@
             background-color: crimson;
         }
     </style>
-    <home>
-        <html>
-            <grid-widget style="height:300px;" @colcount="2">
-                <div class="one"></div>
-                <div class="two">
-                    <div>
-                        Type Something here: <input type="text">
-                    </div>
-                </div>
-                <div class="three"></div>
-                <div class="four"></div>
-            </grid-widget>
-        </html>
-        <script>
-            let data = mkObjekt({
-                one: 'One',
-            });
-
-            let e = mkEntanglements();
-            let one = home.queryOne('.one');
-            e.entangleInner(one, ()=>`TILE ${data.one}`);
-
-            setTimeout(() => {
-                data.one = 'ONE';
-            }, 1500);
-        </script>
-    </home>
     <strings lang="en">
         key1 = One\
         key2 = Two\

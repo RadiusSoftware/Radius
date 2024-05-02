@@ -23,152 +23,286 @@
 
 
 /*****
- * An HTML bundle is how we dynamially transfer features from a cache on the server
- * to the browser client.  Bundles contain a mix of different types of data such
- * as HTML, javascript, CSS, and other text and binary data.  Bundles are created
- * on the server as non-standard HTML.  By non-standard, we mean that HTML is used
- * alot like XML for defining said data types.  The bundle is transfered to the
- * client upon request as a JSON object.  It's up to the client Bundel singleton
- * to interpret and use the provded bundle data.
+ * This is the library of bundles on the server.  Each webapp process will have
+ * a copy of this libryar, which has bundles contributed to it every time a
+ * webapp is created and initialized.  During initialization, directories are
+ * scanned for available bundles for loading.  Although bundles are loaded by
+ * file, they are stored by their name: <bundle name="x.y.z">.  Hence, contents
+ * of multiple files may be merged together into a single bundle depending on
+ * the bundle name.  The overall loop is that the client application calls the
+ * webapp API to request a bundle.  The webapp uses the library services ot see
+ * if there's something available and then retrieves the requesrted bundle from
+ * the bundle library in order to return that bundle to the browser.
+*****/
+singleton('', class Bundles {
+    constructor() {
+        this.paths = {};
+        this.bundles = {};
+    }
+
+    getBundle(name, lang) {
+        let bundle = this.bundles[name];
+
+        if (bundle) {
+            return {
+                bundle: bundle.getCore(),
+                strings: bundle.getStrings(lang),
+            };
+        }
+        else {
+            return {};
+        }
+    }
+
+    getLanguage(langs) {
+        let supported = this.getSupportedLanguages();
+
+        for (let lang of langs) {
+            if (lang in supported) {
+                return lang;
+            }
+        }
+
+        return Object.keys(supported)[0];
+    }
+
+    getSupportedLanguages() {
+        let supported = {};
+
+        for (let bundle of Object.values(this.bundles)) {
+            Object.keys(bundle.strings).forEach(lang => supported[lang] = true);
+        }
+
+        return supported;
+    }
+
+    hasBundle(name) {
+        return name in this.bundles;
+    }
+
+    hasPath(path) {
+        return path in this.paths;
+    }
+
+    listBundles() {
+        return Object.keys(this.bundles);
+    }
+
+    async load(path) {
+        if (!(path in this.paths)) {
+            try {
+                this.paths[path] = true;
+
+                if (path.endsWith('.html')) {
+                    if (Path.isAbsolute(path)) {
+                        let bundleElement = createDocElementFromOuterHtml(await FileSystem.readFileAsString(path));
+
+                        if (bundleElement.getTagName() == 'bundle') {
+                            let bundle = mkBundle(bundleElement);
+                            this.paths[path] = bundle;
+                            this.setBundle(bundle);
+                        }
+                        else {
+                            throw new Error(`Bundle at "${path}" NOT a BUNDLE element.`);
+                        }
+                    }
+                    else {
+                        throw new Error(`Bundle path "${path}" is not an ABSOLUTE path.`);
+                    }
+                }
+                else {
+                    throw new Error(`File "${path}" NOT an HTML file.`);
+                }
+            }
+            catch (e) {
+                caught(e);
+            }
+        }
+    }
+
+    setBundle(bundle) {
+        let libBundle = this.bundles[bundle.getName()];
+
+        if (libBundle) {
+            if (bundle.application) {
+                if (libBundle.application) {
+                    throw new Error(`Two or more applications per bundle not allowed.  "${bundle.name}"`)
+                }
+                else {
+                    libBundle.application = bundle.application;
+                }
+
+                for (dependency in bundle.dependencies) {
+                    libBundle.dependencies[dependency] = dependency;
+                }
+
+                libBundle.scripts = libBundle.scripts.concat(bundle.scripts);
+                libBundle.styleSheets = libBundle.scripts.concat(bundle.styleSheets);
+                libBundle.widgets = libBundle.scripts.concat(bundle.widgets);
+
+                for (let lang in bundle.strings) {
+                    if (!(lang in libBundle.strings)) {
+                        libBundle.strings[lang] = {};
+                    }
+
+                    for (let key in bundle.strings[lang]) {
+                        libBundle.strings[lang][key] = bundle.strings[lang][key];
+                    }
+                }
+            }
+        }
+        else {
+            this.bundles[bundle.getName()] = bundle;
+        }
+    }
+
+    [Symbol.iterator]() {
+        return Object.values(this.bundles)[Symbol.iterator]();
+    }
+});
+
+
+/*****
+ * The bundle is the basic unit of aggregation for transferring programs and
+ * resources from the server to the browser client.  Resource types include
+ * CSS style sheets, international text, and HTML code.  Program blocks provide
+ * definitions of widgets as well as any other type of javascript code.  Note
+ * that the support for building, transferring, and compiling bundles are built
+ * into the Radius framework for Mozilla.
 *****/
 register('', class Bundle {
-    constructor(path) {
-        this.path = path;
-        this.error = null;
-        this.valid = true;
-        this.items = [];
+    constructor(bundleElement) {
+        this.name = bundleElement.getAttribute('name');
+
+        if (!this.name) {
+            throw new Error(`Unnamed bundle Encountered!`);
+        }
+
+        let match = this.name.trim().match(/(?:[a-zA-Z](?:[a-zA-Z0-9_])*)(?:\.(?:[a-zA-Z](?:[a-zA-Z0-9_])*))*/);
+        
+        if (!match) {
+            throw new Error(`Invalid bundle name: "${this.name}"`);
+        }
+
+        this.application = null;
+        this.branches = this.name.trim().split('.');
+        this.dependencies = {};
+        this.scripts = [];
+        this.strings = {};
+        this.styleSheets = [];
+        this.widgets = [];
+
+        for (let childElement of bundleElement) {
+            let methodName = `process${childElement.getTagName()[0].toUpperCase()}${childElement.getTagName().substring(1)}`;
+
+            if (methodName in this) {
+                this[methodName](childElement);
+            }
+        }
+    } 
+
+    getApplication() {
+        return this.application;
     }
 
-    getError() {
-        return this.error;
+    getBranches() {
+        return this.branches;
     }
 
-    getErrorInfo() {
-        return this.error.info;
+    getCore() {
+        let core = {};
+        
+        Object.entries(this).forEach(entry => {
+            let [ key, value ] = entry;
+
+            if (key != 'strings') {
+                if (typeof value != 'function') {
+                    core[key] = value;
+                }
+            }
+        });
+
+        return core;
     }
 
-    getErrorStack() {
-        return this.error.stack;
+    getDependencies() {
+        return this.dependencies;
+    }
+
+    getLangs() {
+        return Object.keys(this.strings);
     }
 
     getName() {
         return this.name;
     }
 
-    async init() {
-        try {
-            if (this.path.endsWith('.html')) {
-                if (Path.isAbsolute(this.path)) {
-                    let buffer = await FileSystem.readFile(this.path);
-                    let outerHtml = buffer.toString();
-                    this.source = createDocElementFromOuterHtml(outerHtml);
-
-                    if (this.source.getTagName() == 'bundle') {
-                        for (let element of this.source) {
-                            let tag = element.getTagName();
-                            let methodName = `process${tag[0].toUpperCase()}${tag.substring(1)}`;
-
-                            if (typeof this[methodName] == 'function') {
-                                await this[methodName](element);
-                            }
-                            else {
-                                this.valid = false;
-                            }
-                        }
-                    }
-                    else {
-                        this.valid = false;
-                    }
-                }
-                else {
-                    this.valid = false;
-
-                    this.error = {
-                        info: `Expecting an absolute path! "${this.path}"`,
-                        stack: '',
-                    };
-                }
-            }
-            else {
-                this.valid = false;
-
-                this.error = {
-                    info: `Expecting and HTML File! "${this.path}"`,
-                    stack: '',
-                };
-            }
-        }
-        catch (e) {
-            this.valid = false;
-
-            this.error = {
-                info: e.toString(),
-                stack: e.stack,
-            };
-        }
-
-        delete this.source;
-        return this;
+    getScripts() {
+        return this.scripts;
     }
 
-    isValid() {
-        return this.valid;
-    }
-
-    async processDependencies(element) {
-        let dependencyNames = element.getInnerHtml().split(';');
-        dependencyNames = dependencyNames.filter(el => el != '' && el != undefined);
-
-        this.items.push({
-            type: 'dependencies',
-            names: dependencyNames,
-        });
-    }
-
-    async processHome(element) {
-        let item = {
-            type: 'home',
-            html: '',
-            script: '',
-        };
-
-        for (let childElement of element) {
-            if (childElement.getTagName() == 'html') {
-                item.html = mkBuffer(childElement.getInnerHtml().toString('base64'));
-            }
-            else if (childElement.getTagName() == 'script') {
-                item.script = mkBuffer(childElement.getInnerHtml().toString('base64'));
-            }
-        }
-
-        this.items.push(item);
-    }
-
-    async processName(element) {
-        if (this.name) {
-            this.valid = false;
+    getStrings(lang) {
+        if (lang in this.strings) {
+            return this.strings[lang];
         }
         else {
-            this.name = element.getInnerHtml();
+            return {};
         }
     }
 
-    async processScript(element) {
-        this.items.push({
-            type: 'script',
-            code: mkBuffer(element.getInnerHtml()).toString('base64'),
+    getStyleSheets() {
+        return this.styleSheets;
+    }
+
+    hasApplication() {
+        return this.application != null;
+    }
+
+    hasLang(lang) {
+        return lang in this.strings;
+    }
+
+    processApplication(applicationElement) {
+        let application = { html: null, script: null, title: null };
+
+        for (let childElement of applicationElement) {
+            let tagName = childElement.getTagName();
+
+            if (tagName in application) {
+                application[tagName] = mkBuffer(childElement.getInnerHtml()).toString('base64');
+            }
+        }
+
+        if (this.application) {
+            throw new Error(`Bundle "${this.name}" has more than one application object.`);
+        }
+        else {
+            this.application = application;
+        }
+    }
+
+    processDependencies(dependenciesElement) {
+        dependenciesElement.getInnerHtml().split(';')
+        .forEach(dependencyName => {
+            if (dependencyName) {
+                this.dependencies[dependencyName] = dependencyName;
+            }
         });
     }
 
-    async processStrings(element) {
-        let strings = {};
+    processScript(scriptElement) {
+        this.scripts.push(mkBuffer(scriptElement.getInnerHtml()).toString('base64'));
+    }
 
-        if (element.hasAttribute('lang')) {
+    processStrings(stringsElement) {
+        let lang = stringsElement.getAttribute('lang');
+
+        if (lang) {
             let state = 0;
             let key = [];
             let text = [];
 
-            for (let char of element.getInnerHtml()) {
+            for (let char of stringsElement.getInnerHtml()) {
                 if (state == 0) {
                     if (char.match(/[a-zA-z]/)) {
                         state = 1;
@@ -197,7 +331,7 @@ register('', class Bundle {
                 }
                 else if (state == 3) {
                     if (char == '\\') {
-                        this.processStringValue(strings, key, text);
+                        this.processStringValue(lang, key, text);
                         state = 0;
                         key = [];
                         text = [];
@@ -209,19 +343,15 @@ register('', class Bundle {
             }
 
             if (state != 0) {
-                throw new Error(`Bad strings bundle ensountered: ${element.getInnerHtml()}`)
+                throw new Error(`Bad strings bundle ensountered: ${stringsElement.getInnerHtml()}`)
             }
-            else {
-                this.items.push({
-                    type: 'strings',
-                    lang: element.getAttribute('lang'),
-                    values: strings,
-                });
-            }
+        }
+        else {
+            throw new Error(`Strings element must always have a non-empty "lang" attribute.`);
         }
     }
 
-    processStringValue(strings, keyArray, textArray) {
+    processStringValue(lang, keyArray, textArray) {
         let key = keyArray.join('');
         let scrubbedTextArray = [];
         let state = 0;
@@ -244,39 +374,31 @@ register('', class Bundle {
             }
         }
 
-        strings[key] = scrubbedTextArray.join('').trim();
+        let langGroup = this.strings[lang];
+
+        if (!langGroup) {
+            langGroup = {};
+            this.strings[lang] = langGroup;
+        }
+
+        langGroup[key] = scrubbedTextArray.join('').trim();
     }
 
-    async processStyle(element) {
-        this.items.push({
-            type: 'style',
-            code: mkBuffer(element.getInnerHtml()).toString('base64'),
-        });
+    processStyle(styleElement) {
+        this.styleSheets.push(mkBuffer(styleElement.getInnerHtml()).toString('base64'));
     }
 
-    async processTitle(element) {
-        this.items.push({
-            type: 'title',
-            code: mkBuffer(element.getInnerHtml()).toString('base64'),
-        });
-    }
+    processWidget(widgetElement) {
+        let widget = { script: '', html: '' };
 
-    async processWidget(element) {
-        let item = {
-            type: 'widget',
-            html: '',
-            script: '',
-        };
+        for (let childElement of widgetElement) {
+            let tagName = childElement.getTagName();
 
-        for (let childElement of element) {
-            if (childElement.getTagName() == 'html') {
-                item.html = mkBuffer(childElement.getInnerHtml()).toString('base64');
-            }
-            else if (childElement.getTagName() == 'script') {
-                item.script = mkBuffer(childElement.getInnerHtml()).toString('base64');
+            if (tagName in widget) {
+                widget[tagName] = mkBuffer(childElement.getInnerHtml()).toString('base64');
             }
         }
-        
-        this.items.push(item);
+
+        this.widgets.push(widget);
     }
 });

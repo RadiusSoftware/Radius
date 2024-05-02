@@ -44,8 +44,6 @@ register('', class WebApp extends HttpX {
         this.webAppHtmlPath = Path.join(__filename.replace('.js', ''), '../webApp.html');
         this.widgetsDirPath = Path.join(__filename.replace('.js', ''), '../../../mozilla/widgets');
         this.api = mkApi();
-        this.bundles = {};
-        this.strings = {};
         const webapp = this;
 
         this.setEndpoints(
@@ -54,11 +52,11 @@ register('', class WebApp extends HttpX {
             },
 
             {}, function GetBundle(name, lang) {
-                return webapp.getBundle(name, lang);
+                return Bundles.getBundle(name, lang);
             },
 
-            {}, function ListBundles(name) {
-                return Object.keys(webapp.bundles);
+            {}, function ListBundles() {
+                return Bundles.listBundles();
             },
         );
     }
@@ -95,20 +93,6 @@ register('', class WebApp extends HttpX {
         return this.widgetsDirPath;
     }
 
-    getBundle(name, lang) {
-        let box = { name: name, bundle: {}, strings: {} };
-
-        if (name in this.bundles) {
-            box.bundle = this.bundles[name];
-        }
-
-        if (name in this.strings) {
-            box.strings = this.strings[name][lang];
-        }
-
-        return box;
-    }
-
     getSetting(key) {
         return this.settings[key];
     }
@@ -121,7 +105,7 @@ register('', class WebApp extends HttpX {
             path: this.getUrlPath(),
             enableWebsocket: this.settings.enableWebsocket,
             webAppBundle: this.settings.webAppBundle,
-            lang: this.getLanguage(req.getAcceptLanguage()),
+            lang: Bundles.getLanguage(Object.keys(req.getAcceptLanguage())),
         };
 
         return {
@@ -167,10 +151,6 @@ register('', class WebApp extends HttpX {
         console.log('\nIMPLEMENT the websocket handler on webApp.js!');
     }
 
-    hasBundle(name) {
-        return name in this.bundles;
-    }
-
     async init(libEntry, settings) {
         super.init(libEntry);
         this.settings = {};
@@ -195,53 +175,11 @@ register('', class WebApp extends HttpX {
     async registerBundles(...paths) {
         for (let path of paths) {
             for (let filePath of await FileSystem.recurseFiles(path)) {
-                try {
-                    let bundle = await mkBundle(filePath).init();
-        
-                    if (bundle.isValid()) {
-                        if (bundle.getName() in this.bundles) {
-                            throw new Error(`Duplicate Bundle name: "${bundle.getName()}"`);
-                        }
-                        else {
-                            this.registerBundleStrings(bundle);
-                            this.bundles[bundle.getName()] = bundle;
-                        }
-                    }
-                }
-                catch (e) {}
+                await Bundles.load(filePath);
             }
         }
 
         return this;
-    }
-
-    registerBundleStrings(bundle) {
-        for (let i = 0; i < bundle.items.length; i++) {
-            let item = bundle.items[i];
-
-            if (item.type == 'strings') {
-                let langGroup;
-                let nameGroup;
-
-                if (bundle.name in this.strings) {
-                    nameGroup = this.strings[bundle.name];
-                }
-                else {
-                    nameGroup = new Object();
-                    this.strings[bundle.name] = nameGroup;
-                }
-
-                if (item.lang in nameGroup) {
-                    langGroup = nameGroup[item.lang];
-                }
-                else {
-                    langGroup = new Object();
-                    nameGroup[item.lang] = langGroup;
-                }
-
-                Object.assign(langGroup, item.values);
-            }
-        }
     }
 
     setEndpoint(permissions, func) {

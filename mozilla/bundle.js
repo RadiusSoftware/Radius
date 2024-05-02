@@ -23,48 +23,89 @@
 
 
 /*****
- * Bundles are bundles of data and programming code that are transferred from
- * the server to the Mozilla client.  Bundles contain a variety of data and code
- * types and uses.  When a bundle is download, it has an immeidate impact on the
- * globalThis properties and is used to define widgets, provide GUI text that's
- * locale or language specific, and to exeute javascript code to modify and
- * configure the globalThis environment.  As shown below, right at initialization,
- * the complete set of available bundles is downloaded.  Each bundle is downloaded
- * and processed just a single time.
+ * This is the bundle library for the Mozilla or browser client.  It's not a
+ * library in the strict sense because it's not a repository of data / programs.
+ * The bundle library downloads bundles from the server, "compiles" the bundles
+ * on the browser, and keeps track of downloaded bundles.  When code requires
+ * a specifically named bundle, the bundle library is used to download and compile
+ * the required bundle.  If repeated requires are executed after the initial
+ * require, no action is taken.  The main thing to understand is that the require
+ * operation neither stores the bundle nor returns the bundle to the caller.
 *****/
 singleton('', class Bundles {
     constructor() {
+        this.strings = {};
         this.bundles = {};
     }
 
     async init(lang) {
-        this.lang = lang;
+        if (Object.keys(this.bundles).length == 0) {
+            this.lang = lang;
 
-        for (let bundleName of await server.ListBundles()) {
-            if (bundleName in this.bundles) {
-
-            }
-            else {
-                this.bundles[bundleName] = null;
+            for (let bundleName of await server.ListBundles()) {
+                this.bundles[bundleName] = false;
             }
         }
     }
 
-    async require(name) {
-        if (Object.keys(this.bundles).length == 0) {
-            await this.init();
-        }
+    registerApplication(application) {
+        if (application) {
+            let titleText = mkBuffer(application.title, 'base64').toString();
+            let titleElement = mkHtmlElement('title').setInnerHtml(titleText);
+            Doc.getHead().append(titleElement)
 
+            let homeHtml = mkBuffer(application.html, 'base64').toString();
+            const homeElement = createElementFromOuterHtml(homeHtml);
+            Doc.getBody().append(homeElement);
+
+            let script = mkBuffer(application.script, 'base64').toString();
+            const hook = `const home = Doc.queryOne('#${homeElement.getAttribute('id')}');\n`;
+            eval(hook + script);
+        }
+    }
+
+    registerScripts(scripts) {
+        for (let script of scripts) {
+            eval(mkBuffer(script, 'base64').toString());
+        }
+    }
+
+    registerStyleSheets(styleSheets) {
+        for (let styleSheet of styleSheets) {
+            let styleElement = mkHtmlElement('style');
+            styleElement.setInnerHtml(mkBuffer(styleSheet, 'base64').toString());
+            Doc.getHead().append(styleElement);
+        }
+    }
+
+    registerWidgets(widgets) {
+        for (let widget of widgets) {
+            let script = mkBuffer(widget.script, 'base64').toString();
+
+            let tagName;
+            eval('tagName=' + script);
+            WidgetLibrary.get(tagName).innerHtml = mkBuffer(widget.html, 'base64').toString();
+        }
+    }
+
+    async require(name) {
         if (name in this.bundles) {
             if (!(this.bundles[name])) {
                 let box = await server.GetBundle(name, this.lang);
 
                 if (box) {
+                    for (let dependency in box.bundle.dependencies) {
+                        await this.require(dependency);
+                    }
+
                     for (let key in box.strings) {
                         StringLibrary.setText(`${name}.${key}`, box.strings[key]);
                     }
 
-                    await mkBundle().init(box.bundle);
+                    this.registerStyleSheets(box.bundle.styleSheets);
+                    this.registerWidgets(box.bundle.widgets);
+                    this.registerScripts(box.bundle.scripts);
+                    this.registerApplication(box.bundle.application);
                     this.bundles[name] = true;
                     return true;
                 }
@@ -83,109 +124,5 @@ singleton('', class Bundles {
 
     [Symbol.iterator]() {
         return Object.keys(this.bundles)[Symbol.iterator]();
-    }
-});
-
-
-/*****
- * The individual bundle is downloaded from the server, processed and stored
- * locallly, which is proof that the bundle has been downloaded.  Each bundle
- * is downloaded, constructed, and initialized once!  That means the global
- * environmental changes are applied only once, during execute of the imit()
- * method.  There are a number of effects that can be processed within the
- * registerXXX() methods, each of which are specialized registering each of their
- * own bundle items.
-*****/
-register('', class Bundle {
-    constructor() {
-    }
-
-    getItem(index) {
-        return this.items[index];
-    }
-
-    getItemCount() {
-        return this.items.length;
-    }
-
-    async init(data) {
-        this.items = [];
-
-        for (let item of data.items) {
-            this.items.push(item);
-            let methodName = `register${item.type[0].toUpperCase()}${item.type.substring(1)}`;
-
-            if (typeof this[methodName] == 'function') {
-                try {
-                    this[methodName](item);
-                }
-                catch (e) {
-                    item.error = e;
-                }
-            }
-        }
-
-        return this;
-    }
-
-    async registerDependencies(item) {
-        for (let dependency of item.names) {
-            await Bundles.require(name);
-        }
-    }
-
-    async registerHome(item) {
-        let html = mkBuffer(item.html, 'base64').toString();
-        let script = mkBuffer(item.script, 'base64').toString();
-
-        try {
-            if (html.trim()) {
-                const element = createElementFromOuterHtml(html);
-                Doc.getBody().append(element);
-                const hook = `const home = Doc.queryOne('#${element.getAttribute('id')}');\n`;
-                eval(hook + script);
-            }
-        }
-        catch (e) {
-            caught(e);
-        }
-    }
-
-    async registerScript(item) {
-        try {
-            eval(mkBuffer(item.code, 'base64').toString());
-        }
-        catch (e) {
-            console.log(e);
-            caught(e);
-        }
-    }
-
-    async registerStyle(item) {
-        let style = mkHtmlElement('style');
-        Doc.getHead().append(style);
-        style.setInnerHtml(mkBuffer(item.code, 'base64').toString());
-    }
-
-    async registerTitle(item) {
-        let title = Doc.getHead().queryOne('title')
-        title.setInnerHtml(mkBuffer(item.code, 'base64').toString());
-    }
-
-    async registerWidget(item) {
-        let script = mkBuffer(item.script, 'base64').toString();
-
-        try {
-            let tagName;
-            eval('tagName=' + script);
-            WidgetLibrary.get(tagName).innerHtml = mkBuffer(item.html, 'base64').toString();
-        }
-        catch (e) {
-            caught(e);
-        }
-    }
-
-    [Symbol.iterator]() {
-        return this.items[Symbol.iterator]();
     }
 });
