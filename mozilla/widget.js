@@ -119,17 +119,34 @@ register('', class Widget extends HtmlElement {
         }
 
         for (let attribute of this.getAttributes()) {
-            if (attribute.name.startsWith('@')) {
-                try {
+            try {
+                if (attribute.name.startsWith('@@')) {
+                    let methodName = `attr${attribute.name[2].toUpperCase()}${attribute.name.substring(3)}`;
+                    
+                    if (typeof this[methodName] == 'function') {
+                        //this[methodName](attribute.value);
+                        // TODO - something with a serialized function
+                        console.log('something with a serialized function');
+                    }
+                }
+                else if (attribute.name.startsWith('@')) {
                     let methodName = `attr${attribute.name[1].toUpperCase()}${attribute.name.substring(2)}`;
 
                     if (typeof this[methodName] == 'function') {
                         this[methodName](attribute.value);
                     }
                 }
-                catch (e) {console.log(e)};
+            }
+            catch (e) {
+                caught(e);
             }
         }
+    }
+
+    attrAnimate(value) {
+    }
+
+    attrTransition(value) {
     }
 
     init() {

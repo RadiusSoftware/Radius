@@ -233,6 +233,7 @@ registerIn('HttpServer', '', class HttpLibrary {
             'mozilla/svg.js',
             'mozilla/math.js',
             'mozilla/style.js',
+            'mozilla/animation.js',
             'mozilla/widget.js',
             'mozilla/entanglements.js',
             'mozilla/mutation.js',

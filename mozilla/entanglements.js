@@ -39,11 +39,11 @@ register('', class Entanglements {
     }
 
     clearEntanglement(entanglement) {
+        // TODO
     }
 
-    /*
-    entangleAttribute(element, name, expr) {
-        let reflection = this.reflect(expr);
+    entangleAttribute(element, name, func) {
+        let reflection = this.reflect(func);
 
         for (let dependency of reflection.dependencies) {
             let entanglement = mkAttributeEntanglement(
@@ -51,14 +51,13 @@ register('', class Entanglements {
                 name,
                 dependency.objekt,
                 dependency.key,
-                reflection.func,
+                func,
             );
 
             this.setEntanglement(entanglement);
             entanglement.push();
         }
     }
-    */
 
     entangleInner(element, func) {
         let reflection = Objekt.reflect(func);
@@ -235,7 +234,7 @@ register('', class Entanglements {
  * The entanglement of an element's attribute with an expression, denoted as
  * "expr".  Note that the caller, the Entanglements object, has already reflected
  * the expr to build it into a function and to determine its dependencies.
-*****
+*****/
 register('', class AttributeEntanglement {
     constructor(element, attribute, objekt, key, func) {
         this.element = element;
@@ -250,7 +249,6 @@ register('', class AttributeEntanglement {
         this.element.setAttribute(this.attribute, this.func());
     }
 });
-*/
 
 
 /*****

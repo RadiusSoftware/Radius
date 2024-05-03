@@ -548,7 +548,7 @@
             this.propagation = mkStringSet();
         }
 
-        animate() {
+        animate(keyFrames, options) {
             // TODO
             console.log('TBD DocElement.animate()');
         }
@@ -583,7 +583,7 @@
             return this;
         }
 
-        getAnimation() {
+        getAnimations(options) {
             // TODO
             console.log('TBD DocElement.getAnimation()');
         }
