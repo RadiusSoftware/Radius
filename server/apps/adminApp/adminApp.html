@@ -8,7 +8,7 @@
                 <div class="one"></div>
                 <div class="two">
                     <div>
-                        Type Something here: <text-widget></text-widget>
+                        Type Something here: <textinput-widget/>
                     </div>
                 </div>
                 <div class="three">${Str.radius.apps.admin.key3}</div>
@@ -18,18 +18,24 @@
         <script>
             let data = mkObjekt({
                 one: 'One',
+                clss: 'three',
             });
 
             let e = mkEntanglements();
+
             let one = home.queryOne('.one');
             e.entangleInner(one, ()=>`TILE ${data.one}`);
+            /*
+            let three = home.queryOne('.three');
+            e.entangleAttribute(three, 'class', ()=>data.clss);
+            */
 
             setTimeout(() => {
                 data.one = 'ONE';
+                data.clss = 'boldx';
             }, 1500);
         </script>
     </application>
-
     <style>
         html {
             width: 100vw;
@@ -59,8 +65,12 @@
             color: gainsboro;
             background-color: crimson;
         }
+        .boldx {
+            color: darkorange;
+            background-color: steelblue;
+            font-weight: bold;
+        }
     </style>
-
     <strings lang="en">
         key1 = One\
         key2 = Two\

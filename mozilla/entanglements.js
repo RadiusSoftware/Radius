@@ -43,9 +43,9 @@ register('', class Entanglements {
     }
 
     entangleAttribute(element, name, func) {
-        let reflection = this.reflect(func);
+        let reflection = Objekt.reflect(func);
 
-        for (let dependency of reflection.dependencies) {
+        for (let dependency of reflection) {
             let entanglement = mkAttributeEntanglement(
                 element,
                 name,
@@ -242,7 +242,7 @@ register('', class AttributeEntanglement {
         this.objekt = objekt;
         this.key = key;
         this.func = func;
-        this.objekt.on(message => this.push());
+        this.objekt.on('Update', message => this.push());
     }
 
     push() {
@@ -322,7 +322,7 @@ register('', class StyleEntanglement {
         this.objekt = objekt;
         this.key = key;
         this.func = func;
-        this.objekt.on(message => this.push());
+        this.objekt.on('Update', message => this.push());
     }
 
     push() {
@@ -343,7 +343,7 @@ register('', class StyleRuleEntanglement {
         this.styleProperty = styleProperty;
         this.objekt = objekt;
         this.key = key;
-        this.objekt.on(message => this.push());
+        this.objekt.on('Update', message => this.push());
     }
 
     push() {
@@ -359,12 +359,13 @@ register('', class StyleRuleEntanglement {
  * the expr to build it into a function and to determine its dependencies.
 *****
 register('', class TextNodeEntanglement {
-    constructor(docText, objekt, key, func) {
+    constructor(docText, objekt
+        , key, func) {
         this.docText = docText;
         this.objekt = objekt;
         this.key = key;
         this.func = func;
-        this.objekt.on(message => this.push());
+        this.objekt.on('Update', message => this.push());
     }
 
     push() {

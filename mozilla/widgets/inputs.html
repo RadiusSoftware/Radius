@@ -1,14 +1,14 @@
 <bundle name="widget.inputs">
     <widget>
         <script>
-            WidgetLibrary.register('', class TextWidget extends Widget {
+            WidgetLibrary.register('', class TextInputWidget extends Widget {
                 constructor(arg) {
                     super(arg);
                 }
-
-                init() {
-                }
             });
         </script>
+        <html>
+            <input type="text" style="margin:0">
+        </html>
     </widget>
 </bundle>

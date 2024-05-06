@@ -47,9 +47,9 @@ singleton('', class WidgetLibrary {
         }
 
         const lib = this;
-        const tagName = TextUtils.toSnakeCase(widgetClass.name).replace('_', '-');
+        let className = widgetClass.name;
+        const tagName = `${className.substring(0, className.length-6).toLowerCase()}-widget`;
         const wrapperClassName = `${widgetClass.name}CustomElementWrapper`;
-        const baseHTMLElementClass = widgetClass.baseClass ? widgetClass.baseClass : HTMLElement;
 
         if (tagName.indexOf('-') == -1) {
             throw new Error(`Attempted to register Widget with tag name "${tagName}"`);
@@ -64,7 +64,7 @@ singleton('', class WidgetLibrary {
         }
 
         let wrapperClass;
-        eval(`wrapperClass = class ${wrapperClassName} extends ${baseHTMLElementClass.name} {
+        eval(`wrapperClass = class ${wrapperClassName} extends HTMLElement {
             constructor() {
                 super();
             }
