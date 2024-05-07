@@ -546,11 +546,80 @@
             super(node);
             this.listeners = {};
             this.propagation = mkStringSet();
+            this.init();
+
+            for (let attribute of this.getAttributes()) {
+                try {
+                   if (attribute.name.startsWith('@')) {
+                        let methodName = `attr${attribute.name[1].toUpperCase()}${attribute.name.substring(2)}`;
+    
+                        if (typeof this[methodName] == 'function') {
+                            this[methodName](attribute.value);
+                        }
+                        else if (attribute.name.startsWith('@bind')) {
+                            let attributeName = attribute.name.substring(5);
+                            this.attrBindAttr(attributeName, attribute.value);
+                        }
+                    }
+                }
+                catch (e) {
+                    caught(e);
+                }
+            }
         }
 
         animate(keyFrames, options) {
             // TODO
-            console.log('TBD DocElement.animate()');
+            console.log('DocElement.animate()');
+        }
+
+        attrAnimate(value) {
+            // TODO
+            console.log('DocElement.attrAnimate()');
+        }
+
+        attrBind(key) {
+            let controller = this.getController();
+
+            if (controller) {
+                if (this.getTagName() in { input:0, select:0 }) {
+                    console.log(`Bind value to "${key}"`);
+                }
+                else {
+                    controller.entangleInner(this, key);
+                }
+            }
+        }
+
+        attrBindAttr(key, value) {
+            // TODO -- NOW
+            console.log(`Bind attribute ${key} to "${value}"`);
+        }
+
+        attrSet(value) {
+            if (typeof value == 'string') {
+                let controller = this.getController();
+
+                if (controller) {
+                    for (let pair of value.trim().split(',')) {
+                        if (pair) {
+                            try {
+                                let [ key, string ] = pair.split(':');
+                                let value = TextUtils.stringToValue(string);
+                                controller.set(key.trim(), value);
+                            }
+                            catch (e) {
+                                caught(e);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    
+        attrTransition(value) {
+            // TODO
+            console.log('DocElement.attrTransition()');
         }
 
         clearAttribute(name) {
@@ -585,7 +654,7 @@
 
         getAnimations(options) {
             // TODO
-            console.log('TBD DocElement.getAnimation()');
+            console.log('TBD DocElement.getAnimations()');
         }
 
         getAttribute(name) {
@@ -658,6 +727,20 @@
 
         getComputedStyle(pseudoElement) {
             return window.getComputedStyle(this.node, pseudoElement);
+        }
+
+        getController() {
+            let node = this;
+
+            while (node) {
+                if (node.isController()) {
+                    break;
+                }
+
+                node = node.getParent();
+            }
+
+            return node;
         }
 
         getId() {
@@ -733,6 +816,13 @@
         insertAdjacentHtml(where, data) {
             this.node.insertAdjacentText(where, data);
             return this;
+        }
+
+        init() {
+        }
+
+        isController() {
+            return false;
         }
 
         off(name, handler) {

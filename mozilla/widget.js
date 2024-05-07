@@ -76,7 +76,7 @@ singleton('', class WidgetLibrary {
             }
         
             connectedCallback() {
-                return wrapNode(this);
+                return this;
             }
         
             disconnectedCallback() {
@@ -109,7 +109,6 @@ register('', class Widget extends HtmlElement {
 
     constructor(arg) {
         super(arg);
-        this.init();
 
         this.setId(`widget${Widget.id++}`);
         let widgetEntry = WidgetLibrary.get(this.getTagName());
@@ -117,41 +116,65 @@ register('', class Widget extends HtmlElement {
         if (widgetEntry.innerHtml) {
             this.setInnerHtml(widgetEntry.innerHtml);
         }
+    }
 
-        for (let attribute of this.getAttributes()) {
-            try {
-                if (attribute.name.startsWith('@@')) {
-                    let methodName = `attr${attribute.name[2].toUpperCase()}${attribute.name.substring(3)}`;
-                    
-                    if (typeof this[methodName] == 'function') {
-                        //this[methodName](attribute.value);
-                        // TODO - something with a serialized function
-                        console.log('something with a serialized function');
-                    }
-                }
-                else if (attribute.name.startsWith('@')) {
-                    let methodName = `attr${attribute.name[1].toUpperCase()}${attribute.name.substring(2)}`;
+    attrController(value) {
+        this.objekt = mkObjekt();
+        this.entanglements = mkEntanglements();
+        this.attrSet(value);
+    }
+    
+    clear(key) {
+        if (this.isController()) {
+            delete this.objekt[key];
+        }
 
-                    if (typeof this[methodName] == 'function') {
-                        this[methodName](attribute.value);
-                    }
-                }
+        return this;
+    }
+
+    entangleInner(element, key) {
+        if (this.isController()) {
+            this.entanglements.entangleInner(element, ()=>this.objekt[key]);
+        }
+
+        return this;
+    }
+    
+    get(key) {
+        if (this.isController()) {
+            if (typeof key == 'string') {
+                return this.objekt[key];
             }
-            catch (e) {
-                caught(e);
+            else {
+                let values = {};
+                Object.keys(this.objekt).forEach(key => values[key] = this.objekt[key]);
+                return values;
             }
         }
-    }
 
-    attrAnimate(value) {
-    }
-
-    attrTransition(value) {
+        return null;
     }
 
     init() {
+        this.objekt = null;
+        this.entanglements = null;
     }
 
-    async refresh() {
+    isController() {
+        return this.objekt != null;
+    }
+    
+    set(key, value) {
+        if (this.isController()) {
+            if (typeof key == 'string') {
+                this.objekt[key] = value;
+            }
+            else {
+                let obj = key;
+                Objekt.keys(obj).forEach(key => this.object[key] = obj[key]);
+            }
+        }
+
+        return this;
     }
 });

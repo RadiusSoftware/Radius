@@ -356,11 +356,70 @@ singleton('', class TextUtils {
             }
         }).join('');
     }
+    
+    /*****
+     * A useful albeit slow function that makes multiple attempts to interpret
+     * a string as a non-string value.  This utility was originally writtten to
+     * facilitate the interpretation of text-based or programming-based values.
+     * If a non-string value is matched, then a non-string value is returned.
+    *****/
+    stringToValue(string) {
+        let text = string.trim();
 
+        switch (text) {
+            case 'null':
+                return null;
+
+            case 'undefined':
+                return undefined;
+
+            case 'true':
+                return true;
+
+            case 'false':
+                return false;
+        }
+
+        if (parseInt(text).toString() == text) {
+            return parseInt(text);
+        }
+
+        try {
+            if (BigInt(text).toString() == text) {
+                return BigInt(text);
+            }
+        }
+        catch (e) {}
+
+        try {
+            if (text.match(/^[0-9]+n$/)) {
+                return BigInt(text.substring(0, text.length-1));
+            }
+        }
+        catch (e) {}
+
+        try {
+            let obj  = fromJson(string);
+        }
+        catch (e) {}
+
+        try {
+            let obj;
+            eval('obj = ' + text);
+        }
+        catch (e) {}
+    
+        return text;
+    }
+    
+    /*****
+    *****/
     urlDecodeBase64() {
         // TODO
     }
-
+    
+    /*****
+    *****/
     urlEncodeBase64() {
         // TODO
     }

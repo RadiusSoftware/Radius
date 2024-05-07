@@ -1,41 +1,6 @@
 <bundle name="radius.apps.admin">
     <dependencies></dependencies>
 
-    <application>
-        <title>Radius Server Administration</title>
-        <html>
-            <grid-widget style="height:300px;" @colcount="2">
-                <div class="one"></div>
-                <div class="two">
-                    <div>
-                        Type Something here: <textinput-widget/>
-                    </div>
-                </div>
-                <div class="three">${Str.radius.apps.admin.key3}</div>
-                <div class="four">${Str.radius.apps.admin.key4}</div>
-            </grid-widget>
-        </html>
-        <script>
-            let data = mkObjekt({
-                one: 'One',
-                clss: 'three',
-            });
-
-            let e = mkEntanglements();
-
-            let one = home.queryOne('.one');
-            e.entangleInner(one, ()=>`TILE ${data.one}`);
-            /*
-            let three = home.queryOne('.three');
-            e.entangleAttribute(three, 'class', ()=>data.clss);
-            */
-
-            setTimeout(() => {
-                data.one = 'ONE';
-                data.clss = 'boldx';
-            }, 1500);
-        </script>
-    </application>
     <style>
         html {
             width: 100vw;
@@ -71,6 +36,29 @@
             font-weight: bold;
         }
     </style>
+
+    <application>
+        <title>Radius Server Administration</title>
+        <html>
+            <grid-widget style="height:300px;" @colcount="2", @controller="one:One, class:three">
+                <div class="one" @bind="one"></div>
+                <div class="two">
+                    <div>
+                        Type Something here: <input type="text" @bind="class"/>
+                    </div>
+                </div>
+                <div @bindclass="class">${Str.radius.apps.admin.key3}</div>
+                <div class="four">${Str.radius.apps.admin.key4}</div>
+            </grid-widget>
+        </html>
+        <script>
+            setTimeout(() => {
+                home.set('one', 'ONE');
+                home.set('class', 'boldx');
+            }, 1500);
+        </script>
+    </application>
+
     <strings lang="en">
         key1 = One\
         key2 = Two\

@@ -33,7 +33,7 @@ register('', class Mutation extends Emitter {
         this.controller = controller;
         this.mutationRecord = mutationRecord;
         this.ownership = Object.is(this.getTarget().getController(), this.controller);
-        /*
+        
         this.observer = new MutationObserver((records, observer) => {
             this.onMutation(records, observer);
         });
@@ -44,7 +44,6 @@ register('', class Mutation extends Emitter {
             subtree: true,
             attributeOldValue: true,
         });
-        */
     }
 
     getAddedNodes() {
