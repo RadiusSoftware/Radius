@@ -121,6 +121,8 @@ register('', class Widget extends HtmlElement {
     attrController(value) {
         this.objekt = mkObjekt();
         this.entanglements = mkEntanglements();
+        this.mutations = mkMutationNotifier(this);
+        this.mutations.on('Mutation', message => this.emit(message));
         this.attrSet(value);
     }
     
@@ -187,6 +189,7 @@ register('', class Widget extends HtmlElement {
     init() {
         this.objekt = null;
         this.entanglements = null;
+        this.mutations = null;
     }
 
     isController() {

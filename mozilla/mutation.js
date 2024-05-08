@@ -22,14 +22,42 @@
 
 
 /*****
- * The controller requires real-time data pertaining to changes to the DOM tree
- * to enable the controller logic respond as necessary to make the controller's
- * subtree perform its magic.  This class wraps the built in mutation record to
- * provide features that are incoporated into the Radius framework.
 *****/
-register('', class Mutation extends Emitter {
-    constructor(controller, mutationRecord) {
+register('', class MutationNotifier extends Emitter {
+    constructor(element) {
         super();
+        this.element = element;
+
+        this.mutationObserver = new MutationObserver((...args) => {
+            this.onMutation(...args);
+        });
+
+        this.mutationObserver.observe(this.element, {
+            childList: true,
+            subtree: true,
+        });
+    }
+
+    async onMutation(records, observer) {
+        for (let record of records) {
+        }
+    }
+
+    off() {
+    }
+
+    on() {
+    }
+
+    once() {
+    }
+});
+
+
+/*****
+*****/
+register('', class Mutation {
+    constructor(controller, mutationRecord) {
         this.controller = controller;
         this.mutationRecord = mutationRecord;
         this.ownership = Object.is(this.getTarget().getController(), this.controller);

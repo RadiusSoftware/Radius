@@ -546,6 +546,7 @@
             super(node);
             this.listeners = {};
             this.propagation = mkStringSet();
+            this.mutation
             this.init();
 
             for (let attribute of this.getAttributes()) {
@@ -582,7 +583,7 @@
             let controller = this.getController();
 
             if (controller) {
-                if (this.getTagName() in { input:0, select:0 }) {
+                if (this.getTagName() in { input:0, select:0, textarea:0 }) {
                     controller.entangleInput(this, controller.objekt, key);
                 }
                 else {
