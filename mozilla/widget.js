@@ -105,108 +105,12 @@ singleton('', class WidgetLibrary {
  * dynamic GUI support to the application.
 *****/
 register('', class Widget extends HtmlElement {
-    static id = 1;
-
     constructor(arg) {
         super(arg);
-
-        this.setId(`widget${Widget.id++}`);
         let widgetEntry = WidgetLibrary.get(this.getTagName());
 
         if (widgetEntry.innerHtml) {
             this.setInnerHtml(widgetEntry.innerHtml);
         }
-    }
-
-    attrController(value) {
-        this.objekt = mkObjekt();
-        this.entanglements = mkEntanglements();
-        this.mutations = mkMutationNotifier(this);
-        this.mutations.on('Mutation', message => this.emit(message));
-        this.attrSet(value);
-    }
-    
-    clear(key) {
-        if (this.isController()) {
-            delete this.objekt[key];
-        }
-
-        return this;
-    }
-
-    entangleAttribute(element, name, key) {
-        if (this.isController()) {
-            if (!(key in this.objekt) || !this.objekt[key]) {
-                this.objekt[key] = element.getAttribute(name);
-            }
-
-            this.entanglements.entangleAttribute(element, name, ()=>this.objekt[key]);
-        }
-
-        return this;
-    }
-
-    entangleInner(element, key) {
-        if (this.isController()) {
-            if (!(key in this.objekt) || !this.objekt[key]) {
-                this.objekt[key] = element.getInnerHtml();
-            }
-
-            this.entanglements.entangleInner(element, ()=>this.objekt[key]);
-        }
-
-        return this;
-    }
-
-    entangleInput(element, objekt, key) {
-        if (this.isController()) {
-            console.log(element.getAttribute('value'));
-            if (!(key in this.objekt) || !this.objekt[key]) {
-                this.objekt[key] = element.getAttribute('value');
-            }
-
-            this.entanglements.entangleInput(element, objekt, key);
-        }
-
-        return this;
-    }
-    
-    get(key) {
-        if (this.isController()) {
-            if (typeof key == 'string') {
-                return this.objekt[key];
-            }
-            else {
-                let values = {};
-                Object.keys(this.objekt).forEach(key => values[key] = this.objekt[key]);
-                return values;
-            }
-        }
-
-        return null;
-    }
-
-    init() {
-        this.objekt = null;
-        this.entanglements = null;
-        this.mutations = null;
-    }
-
-    isController() {
-        return this.objekt != null;
-    }
-    
-    set(key, value) {
-        if (this.isController()) {
-            if (typeof key == 'string') {
-                this.objekt[key] = value;
-            }
-            else {
-                let obj = key;
-                Objekt.keys(obj).forEach(key => this.object[key] = obj[key]);
-            }
-        }
-
-        return this;
     }
 });

@@ -546,7 +546,9 @@
             super(node);
             this.listeners = {};
             this.propagation = mkStringSet();
-            this.mutation
+            this.objekt = null;
+            this.entanglements = null;
+            this.mutations = null;
             this.init();
 
             for (let attribute of this.getAttributes()) {
@@ -600,6 +602,14 @@
             }
         }
 
+        attrController(value) {
+            this.objekt = mkObjekt();
+            this.entanglements = mkEntanglements();
+            this.mutations = mkMutationNotifier(this);
+            this.mutations.on('Mutation', message => this.emit(message));
+            this.attrSet(value);
+        }
+
         attrSet(value) {
             if (typeof value == 'string') {
                 let controller = this.getController();
@@ -624,6 +634,14 @@
         attrTransition(value) {
             // TODO
             console.log('DocElement.attrTransition()');
+        }
+    
+        clear(key) {
+            if (this.isController()) {
+                delete this.objekt[key];
+            }
+    
+            return this;
         }
 
         clearAttribute(name) {
@@ -654,6 +672,57 @@
         enablePropagation(eventName) {
             this.propagation.set(eventName);
             return this;
+        }
+
+        entangleAttribute(element, name, key) {
+            if (this.isController()) {
+                if (!(key in this.objekt) || !this.objekt[key]) {
+                    this.objekt[key] = element.getAttribute(name);
+                }
+    
+                this.entanglements.entangleAttribute(element, name, ()=>this.objekt[key]);
+            }
+    
+            return this;
+        }
+    
+        entangleInner(element, key) {
+            if (this.isController()) {
+                if (!(key in this.objekt) || !this.objekt[key]) {
+                    this.objekt[key] = element.getInnerHtml();
+                }
+    
+                this.entanglements.entangleInner(element, ()=>this.objekt[key]);
+            }
+    
+            return this;
+        }
+    
+        entangleInput(element, objekt, key) {
+            if (this.isController()) {
+                if (!(key in this.objekt) || !this.objekt[key]) {
+                    this.objekt[key] = element.getAttribute('value');
+                }
+    
+                this.entanglements.entangleInput(element, objekt, key);
+            }
+    
+            return this;
+        }
+    
+        get(key) {
+            if (this.isController()) {
+                if (typeof key == 'string') {
+                    return this.objekt[key];
+                }
+                else {
+                    let values = {};
+                    Object.keys(this.objekt).forEach(key => values[key] = this.objekt[key]);
+                    return values;
+                }
+            }
+    
+            return null;
         }
 
         getAnimations(options) {
@@ -826,7 +895,7 @@
         }
 
         isController() {
-            return false;
+            return this.objekt != null;
         }
 
         off(name, handler) {
@@ -902,6 +971,20 @@
             }
 
             return null;
+        }
+    
+        set(key, value) {
+            if (this.isController()) {
+                if (typeof key == 'string') {
+                    this.objekt[key] = value;
+                }
+                else {
+                    let obj = key;
+                    Objekt.keys(obj).forEach(key => this.object[key] = obj[key]);
+                }
+            }
+    
+            return this;
         }
 
         setAttribute(name, value) {

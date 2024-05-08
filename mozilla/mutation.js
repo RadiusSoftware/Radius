@@ -32,7 +32,7 @@ register('', class MutationNotifier extends Emitter {
             this.onMutation(...args);
         });
 
-        this.mutationObserver.observe(this.element, {
+        this.mutationObserver.observe(this.element.node, {
             childList: true,
             subtree: true,
         });
