@@ -90,20 +90,19 @@
      * manner, we can take an entire tree of Npm Nodes objects and ensure that they
      * have all been wrapped.
     *****/
-    register('', function wrapTree(node) {
-        const root = wrapNode(node);
-        let stack = [root.node];
+    register('', function wrapTree(root) {
+        let stack = [root];
     
         while (stack.length) {
             let node = stack.pop();
             wrapNode(node);
 
-            for (let i = 0; i < node.childNodes.length; i++) {
-                stack.push(node.childNodes.item(i));
+            for (let i = node.childNodes.length; i > 0; i--) {
+                stack.push(node.childNodes.item(i-1));
             }
         }
     
-        return root;
+        return wrapNode(root);
     });
 
 
@@ -559,6 +558,10 @@
                         if (typeof this[methodName] == 'function') {
                             this[methodName](attribute.value);
                         }
+                        else if (attribute.name.startsWith('@bindinit')) {
+                            let attributeName = attribute.name.substring(9);
+                            this.attrBindinitAttr(attributeName, attribute.value);
+                        }
                         else if (attribute.name.startsWith('@bind')) {
                             let attributeName = attribute.name.substring(5);
                             this.attrBindAttr(attributeName, attribute.value);
@@ -586,10 +589,23 @@
 
             if (controller) {
                 if (this.getTagName() in { input:0, select:0, textarea:0 }) {
-                    controller.entangleInput(this, controller.objekt, key);
+                    controller.entangleInput(this, controller.objekt, key, false);
                 }
                 else {
-                    controller.entangleInner(this, key);
+                    controller.entangleInner(this, key, false);
+                }
+            }
+        }
+
+        attrBindinit(key) {
+            let controller = this.getController();
+
+            if (controller) {
+                if (this.getTagName() in { input:0, select:0, textarea:0 }) {
+                    controller.entangleInput(this, controller.objekt, key, true);
+                }
+                else {
+                    controller.entangleInner(this, key, true);
                 }
             }
         }
@@ -598,7 +614,15 @@
             let controller = this.getController();
 
             if (controller) {
-                controller.entangleAttribute(this, name, key);
+                controller.entangleAttribute(this, name, key, false);
+            }
+        }
+
+        attrBindinitAttr(name, key) {
+            let controller = this.getController();
+
+            if (controller) {
+                controller.entangleAttribute(this, name, key, true);
             }
         }
 
@@ -674,9 +698,9 @@
             return this;
         }
 
-        entangleAttribute(element, name, key) {
+        entangleAttribute(element, name, key, init) {
             if (this.isController()) {
-                if (!(key in this.objekt) || !this.objekt[key]) {
+                if (init) {
                     this.objekt[key] = element.getAttribute(name);
                 }
     
@@ -686,9 +710,10 @@
             return this;
         }
     
-        entangleInner(element, key) {
+        entangleInner(element, key, init) {
             if (this.isController()) {
-                if (!(key in this.objekt) || !this.objekt[key]) {
+                if (init) {
+                    console.log(element.getInnerHtml());
                     this.objekt[key] = element.getInnerHtml();
                 }
     
@@ -698,9 +723,9 @@
             return this;
         }
     
-        entangleInput(element, objekt, key) {
+        entangleInput(element, objekt, key, init) {
             if (this.isController()) {
-                if (!(key in this.objekt) || !this.objekt[key]) {
+                if (init) {
                     this.objekt[key] = element.getAttribute('value');
                 }
     

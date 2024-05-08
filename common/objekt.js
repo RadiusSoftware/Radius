@@ -61,7 +61,7 @@
 
                 if (!(reflectId in reflection)) {
                     reflection[reflectId] = {
-                        objekt: objekt,
+                        objekt: objekt[proxyKey],
                         key: key,
                     };
                 }

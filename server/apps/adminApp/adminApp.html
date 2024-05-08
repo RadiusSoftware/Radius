@@ -40,20 +40,20 @@
     <application>
         <title>Radius Server Administration</title>
         <html>
-            <grid-widget style="height:300px;" @colcount="2", @controller>
+            <grid-widget class="x43" style="height:300px;" @colcount="2", @controller>
                 <div class="one" @bind="one"></div>
                 <div class="two">
                     <div>
-                        Type Something here: <input type="text" @bind="one" value="un"/>
+                        Type Something here: <input type="text" @bindinit="one" value="un"/>
                     </div>
                     <div>
-                        <select @bind="class" @set="two: 2">
+                        <select @bind="class">
                             <option value="three">THREE</option>
                             <option value="boldx">BOLDX</option>
                         </select>
                     </div>
                 </div>
-                <div class="three" @bindclass="class">${Str.radius.apps.admin.key3}</div>
+                <div class="three" @bindinitclass="class" @bind="class">${Str.radius.apps.admin.key3}</div>
                 <div class="four" @bindstyle="style" style="background-color:whitesmoke; color:slategray; font-weight:bold;">${Str.radius.apps.admin.key4}</div>
             </grid-widget>
         </html>
