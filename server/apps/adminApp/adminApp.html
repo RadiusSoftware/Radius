@@ -40,27 +40,28 @@
     <application>
         <title>Radius Server Administration</title>
         <html>
-            <grid-widget style="height:300px;" @colcount="2", @controller="one:One, class:three">
+            <grid-widget style="height:300px;" @colcount="2", @controller>
                 <div class="one" @bind="one"></div>
                 <div class="two">
                     <div>
-                        Type Something here: <input type="text" @bind="class"/>
+                        Type Something here: <input type="text" @bind="one" value="un"/>
                     </div>
                     <div>
-                        <select @bind="class">
+                        <select @bind="class" @set="two: 2">
                             <option value="three">THREE</option>
                             <option value="boldx">BOLDX</option>
                         </select>
                     </div>
                 </div>
-                <div @bindclass="class">${Str.radius.apps.admin.key3}</div>
-                <div class="four">${Str.radius.apps.admin.key4}</div>
+                <div class="three" @bindclass="class">${Str.radius.apps.admin.key3}</div>
+                <div class="four" @bindstyle="style" style="background-color:whitesmoke; color:slategray; font-weight:bold;">${Str.radius.apps.admin.key4}</div>
             </grid-widget>
         </html>
         <script>
             setTimeout(() => {
                 home.set('one', 'ONE');
                 home.set('class', 'boldx');
+                home.set('style', 'background-color:green; color:slategray; font-weight:bold;');
             }, 1500);
         </script>
     </application>

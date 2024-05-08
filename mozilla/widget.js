@@ -134,6 +134,10 @@ register('', class Widget extends HtmlElement {
 
     entangleAttribute(element, name, key) {
         if (this.isController()) {
+            if (!(key in this.objekt) || !this.objekt[key]) {
+                this.objekt[key] = element.getAttribute(name);
+            }
+
             this.entanglements.entangleAttribute(element, name, ()=>this.objekt[key]);
         }
 
@@ -142,6 +146,10 @@ register('', class Widget extends HtmlElement {
 
     entangleInner(element, key) {
         if (this.isController()) {
+            if (!(key in this.objekt) || !this.objekt[key]) {
+                this.objekt[key] = element.getInnerHtml();
+            }
+
             this.entanglements.entangleInner(element, ()=>this.objekt[key]);
         }
 
@@ -150,6 +158,11 @@ register('', class Widget extends HtmlElement {
 
     entangleInput(element, objekt, key) {
         if (this.isController()) {
+            console.log(element.getAttribute('value'));
+            if (!(key in this.objekt) || !this.objekt[key]) {
+                this.objekt[key] = element.getAttribute('value');
+            }
+
             this.entanglements.entangleInput(element, objekt, key);
         }
 

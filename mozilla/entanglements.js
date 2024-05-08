@@ -38,10 +38,6 @@ register('', class Entanglements {
         this.entanglements = [];
     }
 
-    clearEntanglement(entanglement) {
-        // TODO
-    }
-
     entangleAttribute(element, name, func) {
         let reflection = Objekt.reflect(func);
 
@@ -80,39 +76,6 @@ register('', class Entanglements {
         this.setEntanglement(entanglement);
         entanglement.push();
     }
-
-    /*
-    entangleStyle(element, styleProperty, expr) {
-        let reflection = this.reflect(expr);
-
-        for (let dependency of reflection.dependencies) {
-            let entanglement = mkStyleEntanglement(
-                element,
-                styleProperty,
-                dependency.objekt,
-                dependency.key,
-                reflection.func,
-            );
-
-            this.setEntanglement(entanglement);
-            entanglement.push();
-        }
-    }
-    */
-
-    /*
-    entangleStyleRule(cssStyleRule, styleProperty, objekt, key) {
-        let entanglement = mkStyleRuleEntanglement(
-            cssStyleRule,
-            styleProperty,
-            objekt,
-            key,
-        );
-
-        this.setEntanglement(entanglement);
-        entanglement.push();
-    }
-    */
 
     findEntanglement(entanglement) {
         let prototype = Reflect.getPrototypeOf(entanglement);
@@ -287,46 +250,3 @@ register('', class InputEntanglement {
         this.element.node.value = this.objekt[this.key];
     }
 });
-
-
-/*****
- * The entanglement of an element's style value with an expression, denoted as
- * "expr".  Note that the caller, the Entanglements object, has already reflected
- * the expr to build it into a function and to determine its dependencies.
-*****
-register('', class StyleEntanglement {
-    constructor(element, styleProperty, objekt, key, func) {
-        this.element = element;
-        this.styleProperty = styleProperty;
-        this.objekt = objekt;
-        this.key = key;
-        this.func = func;
-        this.objekt.on('Update', message => this.push());
-    }
-
-    push() {
-        this.element.setStyle(this.styleProperty, this.func());
-    }
-});
-*/
-
-
-/*****
- * The entanglement of an cssStyleRule value with an expression, denoted as
- * "expr".  Note that the caller, the Entanglements object, has already reflected
- * the expr to build it into a function and to determine its dependencies.
-*****
-register('', class StyleRuleEntanglement {
-    constructor(cssStyleRule, styleProperty, objekt, key) {
-        this.cssStyleRule = cssStyleRule;
-        this.styleProperty = styleProperty;
-        this.objekt = objekt;
-        this.key = key;
-        this.objekt.on('Update', message => this.push());
-    }
-
-    push() {
-        this.cssStyleRule.cssRule.style[this.styleProperty] = this.objekt[this.key];
-    }
-});
-*/

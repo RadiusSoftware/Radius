@@ -345,7 +345,7 @@ singleton('', class Doc extends Emitter {
     getStyleSheet(title) {
         if (title) {
             for (let styleSheet of this.getStyleSheets()) {
-                if (styleSheet.title() == title) {
+                if (styleSheet.getTitle() == title) {
                     return styleSheet;
                 }
             }
