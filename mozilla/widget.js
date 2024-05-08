@@ -132,9 +132,25 @@ register('', class Widget extends HtmlElement {
         return this;
     }
 
+    entangleAttribute(element, name, key) {
+        if (this.isController()) {
+            this.entanglements.entangleAttribute(element, name, ()=>this.objekt[key]);
+        }
+
+        return this;
+    }
+
     entangleInner(element, key) {
         if (this.isController()) {
             this.entanglements.entangleInner(element, ()=>this.objekt[key]);
+        }
+
+        return this;
+    }
+
+    entangleInput(element, objekt, key) {
+        if (this.isController()) {
+            this.entanglements.entangleInput(element, objekt, key);
         }
 
         return this;

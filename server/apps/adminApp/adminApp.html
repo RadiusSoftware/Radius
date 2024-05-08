@@ -46,6 +46,12 @@
                     <div>
                         Type Something here: <input type="text" @bind="class"/>
                     </div>
+                    <div>
+                        <select @bind="class">
+                            <option value="three">THREE</option>
+                            <option value="boldx">BOLDX</option>
+                        </select>
+                    </div>
                 </div>
                 <div @bindclass="class">${Str.radius.apps.admin.key3}</div>
                 <div class="four">${Str.radius.apps.admin.key4}</div>

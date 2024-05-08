@@ -22,7 +22,7 @@
 
 
 (() => {
-/*****
+    /*****
      * A dynamic wrapper for a single DOM stylesheet object.  Like all other wrappers,
      * when a value is returned, such as a rules list, the return value is also a
      * wrapper object.  Our mission here is to allow application developers to cleanly

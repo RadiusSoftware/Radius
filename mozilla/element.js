@@ -583,7 +583,7 @@
 
             if (controller) {
                 if (this.getTagName() in { input:0, select:0 }) {
-                    console.log(`Bind value to "${key}"`);
+                    controller.entangleInput(this, controller.objekt, key);
                 }
                 else {
                     controller.entangleInner(this, key);
@@ -591,9 +591,12 @@
             }
         }
 
-        attrBindAttr(key, value) {
-            // TODO -- NOW
-            console.log(`Bind attribute ${key} to "${value}"`);
+        attrBindAttr(name, key) {
+            let controller = this.getController();
+
+            if (controller) {
+                controller.entangleAttribute(this, name, key);
+            }
         }
 
         attrSet(value) {
@@ -833,7 +836,7 @@
         on(name, handler, filter) {
             if (!(name in this.listeners)) {
                 this.node.addEventListener(name, event => {
-                    this.send({
+                    this.emit({
                         name: name,
                         htmlElement: this,
                         event: mkElementEvent(event),
@@ -855,7 +858,7 @@
         once(name, handler, filter) {
             if (!(name in this.listeners)) {
                 this.node.addEventListener(name, event => {
-                    this.send({
+                    this.emit({
                         name: name,
                         htmlElement: this,
                         event: mkElementEvent(event),
