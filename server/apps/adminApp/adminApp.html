@@ -58,6 +58,9 @@
             </grid-widget>
         </html>
         <script>
+            const home = Doc.queryOne('#ApplicationHomeView');
+            home.on('Mutation', message => console.log(message));
+
             setTimeout(() => {
                 home.set('one', 'ONE');
                 home.set('class', 'boldx');

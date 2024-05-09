@@ -22,6 +22,11 @@
 
 
 /*****
+ * A Radius object wrapper for the mutation observer features provided by the
+ * MDN browser framework.  The primary usage for this class within the framework
+ * is to enable controller elements to emit mutation and other related events
+ * as the controller's subtree is modified.  These events are provide the ability
+ * to cleanly develop dynamic HTML, SVG, MATHML, and Widgets for an application.
 *****/
 register('', class MutationNotifier extends Emitter {
     constructor(element) {
@@ -40,97 +45,11 @@ register('', class MutationNotifier extends Emitter {
 
     async onMutation(records, observer) {
         for (let record of records) {
+            this.emit({
+                name: 'Mutation',
+                element: this,
+                mutation: record,
+            });
         }
-    }
-
-    off() {
-    }
-
-    on() {
-    }
-
-    once() {
-    }
-});
-
-
-/*****
-*****/
-register('', class Mutation {
-    constructor(controller, mutationRecord) {
-        this.controller = controller;
-        this.mutationRecord = mutationRecord;
-        this.ownership = Object.is(this.getTarget().getController(), this.controller);
-        
-        this.observer = new MutationObserver((records, observer) => {
-            this.onMutation(records, observer);
-        });
-
-        this.observer.observe(this.element.node, {
-            attributes: true,
-            childList: true,
-            subtree: true,
-            attributeOldValue: true,
-        });
-    }
-
-    getAddedNodes() {
-        let added = [];
-
-        for (let i = 0; i < this.mutationRecord.addedNodes.length; i++) {
-            added.push(wrapNode(this.mutationRecord.addedNodes.item(i)));
-        }
-    
-        return added;
-    }
-
-    getAddedNodesCount() {
-        return this.mutationRecord.addedNodes.length;
-    }
-
-    getAttributeName() {
-        return this.mutationRecord.attributeName;
-    }
-
-    getOldValue() {
-        return 'oldValue' in this.mutationRecord ? this.mutationRecord.oldValue : '';
-    }
-
-    getRemovedNodes() {
-        let removed = [];
-
-        for (let i = 0; i < this.mutationRecord.addedNodes.length; i++) {
-            removed.push(wrapNode(this.mutationRecord.removedNodes.item(i)));
-        }
-    
-        return removed;
-    }
-
-    getRemovedNodesCount() {
-        return this.mutationRecord.removedNodes.length;
-    }
-
-    getTarget() {
-        return wrapNode(this.mutationRecord.target);
-    }
-
-    getType() {
-        return this.mutationRecord.type;
-    }
-
-    isOwned() {
-        return this.ownership;
-    }
-
-    toString() {
-        if (this.mutationRecord.type == 'attributes') {
-            console.log(this.mutationRecord);
-            return `Attribute: "${this.getAttributeName()}"; TagName: "${this.getTarget().getTagName()}"`;
-        }
-        else if (this.mutationRecord.type == 'childList') {
-            return `Added: ${this.getAddedNodesCount()}; Removed: ${this.getRemovedNodesCount()}`;
-        }
-        
-        return '';
     }
 });

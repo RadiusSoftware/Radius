@@ -56,12 +56,9 @@ singleton('', class Bundles {
 
             let homeHtml = mkBuffer(application.html, 'base64').toString();
             const homeElement = createElementFromOuterHtml(homeHtml);
-            homeElement.setAttribute('id', 'ApplicationHome');
+            homeElement.setAttribute('id', 'ApplicationHomeView');
             Doc.getBody().append(homeElement);
-
-            let script = mkBuffer(application.script, 'base64').toString();
-            const hook = `const home = Doc.queryOne('#ApplicationHome');\n`;
-            eval(hook + script);
+            eval(mkBuffer(application.script, 'base64').toString());
         }
     }
 
