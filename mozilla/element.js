@@ -558,9 +558,9 @@
                         if (typeof this[methodName] == 'function') {
                             this[methodName](attribute.value);
                         }
-                        else if (attribute.name.startsWith('@bindinit')) {
-                            let attributeName = attribute.name.substring(9);
-                            this.attrBindinitAttr(attributeName, attribute.value);
+                        else if (attribute.name.startsWith('@bindset')) {
+                            let attributeName = attribute.name.substring(8);
+                            this.attrBindsetAttr(attributeName, attribute.value);
                         }
                         else if (attribute.name.startsWith('@bind')) {
                             let attributeName = attribute.name.substring(5);
@@ -597,7 +597,7 @@
             }
         }
 
-        attrBindinit(key) {
+        attrBindset(key) {
             let controller = this.getController();
 
             if (controller) {
@@ -618,7 +618,7 @@
             }
         }
 
-        attrBindinitAttr(name, key) {
+        attrBindsetAttr(name, key) {
             let controller = this.getController();
 
             if (controller) {
@@ -627,11 +627,13 @@
         }
 
         attrController(value) {
-            this.objekt = mkObjekt();
-            this.entanglements = mkEntanglements();
-            this.mutations = mkMutationNotifier(this);
-            this.mutations.on('Mutation', message => this.emit(message));
-            this.attrSet(value);
+            if (!this.objekt) {
+                this.objekt = mkObjekt();
+                this.entanglements = mkEntanglements();
+                this.mutations = mkMutationNotifier(this);
+                this.mutations.on('Mutation', message => this.emit(message));
+                this.attrSet(value);
+            }
         }
 
         attrSet(value) {
@@ -698,9 +700,9 @@
             return this;
         }
 
-        entangleAttribute(element, name, key, init) {
+        entangleAttribute(element, name, key, set) {
             if (this.isController()) {
-                if (init) {
+                if (set) {
                     this.objekt[key] = element.getAttribute(name);
                 }
     
@@ -710,9 +712,9 @@
             return this;
         }
     
-        entangleInner(element, key, init) {
+        entangleInner(element, key, set) {
             if (this.isController()) {
-                if (init) {
+                if (set) {
                     console.log(element.getInnerHtml());
                     this.objekt[key] = element.getInnerHtml();
                 }
@@ -723,9 +725,9 @@
             return this;
         }
     
-        entangleInput(element, objekt, key, init) {
+        entangleInput(element, objekt, key, set) {
             if (this.isController()) {
-                if (init) {
+                if (set) {
                     this.objekt[key] = element.getAttribute('value');
                 }
     
