@@ -44,12 +44,30 @@ register('', class MutationNotifier extends Emitter {
     }
 
     async onMutation(records, observer) {
-        for (let record of records) {
-            this.emit({
+        for (let mutationRecord of records) {
+            let mutation = {
                 name: 'Mutation',
-                element: this,
-                mutation: record,
-            });
+                added: [],
+                attributeName: mutationRecord.attributeName,
+                attributeNamespace: mutationRecord.attributeNamespace,
+                nextSibling: mutationRecord.nextSibling,
+                oldValue: mutationRecord.oldValue,
+                previousSibling: mutationRecord.previousSibling,
+                removed: [],
+                target: wrapTree(mutationRecord.target),
+                type: mutationRecord.type,
+                owner: this.element,
+            };
+
+            for (let i = 0; i < mutationRecord.addedNodes.length; i++) {
+                mutation.added.push(wrapTree(mutationRecord.addedNodes.item(i)));
+            }
+
+            for (let i = 0; i < mutationRecord.removedNodes.length; i++) {
+                mutation.removed.push(wrapTree(mutationRecord.removedNodes.item(i)));
+            }
+
+            this.emit(mutation);
         }
     }
 });

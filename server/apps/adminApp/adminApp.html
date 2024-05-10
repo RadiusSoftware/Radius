@@ -40,7 +40,7 @@
     <application>
         <title>Radius Server Administration</title>
         <html>
-            <grid-widget class="x43" style="height:300px;" @colcount="2", @controller>
+            <grid-widget class="x43" style="height:300px;" @colcount="2" @controller>
                 <div class="one" @bind="one"></div>
                 <div class="two">
                     <div>
@@ -59,13 +59,13 @@
         </html>
         <script>
             const home = Doc.queryOne('#ApplicationHomeView');
-            home.on('Mutation', message => console.log(message));
+            //home.on('Mutation', message => console.log(message));
 
             setTimeout(() => {
                 home.set('one', 'ONE');
                 home.set('class', 'boldx');
                 home.set('style', 'background-color:limegreen; color:slategray; font-weight:bold;');
-            }, 1500);
+            }, 4000);
         </script>
     </application>
 
