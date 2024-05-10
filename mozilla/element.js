@@ -582,6 +582,7 @@
         attrAnimate(value) {
             // TODO
             console.log('DocElement.attrAnimate()');
+            return this;
         }
 
         attrBind(key) {
@@ -595,6 +596,8 @@
                     controller.entangleInner(this, key, false);
                 }
             }
+
+            return this;
         }
 
         attrBindset(key) {
@@ -608,6 +611,8 @@
                     controller.entangleInner(this, key, true);
                 }
             }
+
+            return this;
         }
 
         attrBindAttr(name, key) {
@@ -616,6 +621,8 @@
             if (controller) {
                 controller.entangleAttribute(this, name, key, false);
             }
+
+            return this;
         }
 
         attrBindsetAttr(name, key) {
@@ -624,6 +631,8 @@
             if (controller) {
                 controller.entangleAttribute(this, name, key, true);
             }
+
+            return this;
         }
 
         attrController(value) {
@@ -634,6 +643,8 @@
                 this.mutations.on('Mutation', message => this.emit(message));
                 this.attrSet(value);
             }
+
+            return this;
         }
 
         attrSet(value) {
@@ -641,25 +652,42 @@
                 let controller = this.getController();
 
                 if (controller) {
-                    for (let pair of value.trim().split(',')) {
-                        if (pair) {
-                            try {
-                                let [ key, string ] = pair.split(':');
-                                let value = TextUtils.stringToValue(string);
-                                controller.set(key.trim(), value);
-                            }
-                            catch (e) {
-                                caught(e);
-                            }
-                        }
+                    for (let entry of Object.entries(TextUtils.parseAttributeEncoded(value))) {
+                        let [ key, string ] = entry;
+                        controller.set(key, TextUtils.stringToValue(string))
                     }
                 }
             }
+
+            return this;
         }
     
         attrTransition(value) {
-            // TODO
-            console.log('DocElement.attrTransition()');
+            try {
+                this.transition = {};
+
+                for (let entry of (Object.entries(TextUtils.parseAttributeEncoded(value)))) {
+                    let [ key, value ] = entry;
+                    let [ value0, valuen, control ] = value.split(',');
+
+                    this.transition[key] = {
+                        key: key,
+                        value0: value0.trim(),
+                        valuen: valuen.trim(),
+                        control: control ? control.trim() : '',
+                    };
+                }
+
+                for (let key in this.transition) {
+                    this.setStyle(key, this.transition[key].value0);
+                    this.setStyle(key, `transition: ${this.transition[key].control}`);
+                }
+            }
+            catch (e) {
+                caught(e);
+            }
+            
+            return this;
         }
     
         clear(key) {

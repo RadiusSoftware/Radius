@@ -17,14 +17,18 @@
                             this.cols.push(width);
                         }
                     }
+
+                    return this;
                 }
 
                 attrColgap(gap) {
                     this.colGap = gap;
+                    return this;
                 }
 
                 attrCols(cols) {
                     this.cols = cols;
+                    return this;
                 }
 
                 attrRowcount(value) {
@@ -38,14 +42,18 @@
                             this.rows.push(height);
                         }
                     }
+
+                    return this;
                 }
 
                 attrRowgap(gap) {
                     this.rowGap = gap;
+                    return this;
                 }
 
                 attrRows(rows) {
                     this.rows = rows;
+                    return this;
                 }
 
                 init() {

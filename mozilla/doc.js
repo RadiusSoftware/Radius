@@ -86,6 +86,9 @@ singleton('', class Doc extends Emitter {
                 event: mkElementEvent(event)
             });
         }));
+
+        this.mutationNotifier = mkMutationNotifier(this.getHtml());
+        this.mutationNotifier.on('Mutation', message => this.onMutation(message));
     }
 
     adoptNode(externalNode) {
@@ -393,6 +396,20 @@ singleton('', class Doc extends Emitter {
 
     isHidden() {
         return document.hidden;
+    }
+
+    onMutation(message) {
+        for (let docNode of message.added) {
+            if (docNode instanceof DocElement) {
+                if (typeof docNode.transition == 'object' && Object.keys(docNode.transition).length > 0) {
+                    Win.awaitIdle(() => {
+                        for (let key in docNode.transition) {
+                            docNode.setStyle(key, docNode.transition[key].valuen);
+                        }
+                    });
+                }
+            }
+        }
     }
 
     queryAll(selector) {

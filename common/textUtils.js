@@ -138,6 +138,26 @@ singleton('', class TextUtils {
     }
 
     /*****
+     * Utility to parse what I call attribute-encoded strings: key1: value; key2: value.
+     * This has a lot of utility on the browser side when processing and is useful in
+     * multiple application and infrastructure areas.
+    *****/
+    parseAttributeEncoded(str) {
+        let values = {};
+
+        try {
+            for (let pair of str.trim().split(';')) {
+                if (pair.trim()) {
+                    let [ key, string ] = pair.split(':');
+                    values[key.trim()] = string.trim();
+                }
+            }            
+        }
+        catch (e) {}
+        return values;
+    }
+
+    /*****
      * What a hellacious function to code.  It just takes internet-based blobs of
      * text that are formatted using the mime code multipart/form-data and generates
      * an array of objects that represent that parse form of the entire blob.  Note

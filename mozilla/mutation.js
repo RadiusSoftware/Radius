@@ -45,6 +45,12 @@ register('', class MutationNotifier extends Emitter {
 
     async onMutation(records, observer) {
         for (let mutationRecord of records) {
+            let targetTagName = '';
+
+            if (mutationRecord.target instanceof Element) {
+                targetTagName = mutationRecord.target.tagName.toLowerCase();
+            }
+
             let mutation = {
                 name: 'Mutation',
                 added: [],
@@ -55,6 +61,7 @@ register('', class MutationNotifier extends Emitter {
                 previousSibling: mutationRecord.previousSibling,
                 removed: [],
                 target: wrapTree(mutationRecord.target),
+                targetTagName: targetTagName,
                 type: mutationRecord.type,
                 owner: this.element,
             };

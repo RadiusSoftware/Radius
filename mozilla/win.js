@@ -79,6 +79,10 @@ singleton('', class Win extends Emitter {
         }));
     }
 
+    awaitIdle(func) {
+        window.requestIdleCallback(() => func());
+    }
+
     blur() {
         window.blur();
         return this;
