@@ -70,16 +70,21 @@
             return node;
         }
         else if (node instanceof SVGElement) {
-            return node[nodeKey] ? node[nodeKey] : mkSvgElement(node);
+            if (node[nodeKey]) {
+                return node[nodeKey];
+            }
+            else if (node instanceof SVGSVGElement) {
+                return mkSvgGraphics(node);
+            }
+            else {
+                return mkSvgElement(node);
+            }
         }
-        else if (node instanceof SvgElement) {
+        else if (node instanceof MathElement) {
             return node;
         }
         else if (node instanceof MathMLElement) {
             return node[nodeKey] ? node[nodeKey] : mkMathElement(node);
-        }
-        else if (node instanceof MathElement) {
-            return node;
         }
     });
 
@@ -272,6 +277,10 @@
             if (this.node.lastChild) {
                 return wrapNode(this.node.lastChild);
             }
+        }
+
+        getNode() {
+            return this.node;
         }
 
         getNodeIndex() {
@@ -541,6 +550,8 @@
      * SvgElement, and MathElement.
     *****/
     register('', class DocElement extends DocNode {
+        static nextHandle = 1;
+
         constructor(node) {
             super(node);
             this.listeners = {};
@@ -680,7 +691,7 @@
 
                 for (let key in this.transition) {
                     this.setStyle(key, this.transition[key].value0);
-                    this.setStyle(key, `transition: ${this.transition[key].control}`);
+                    this.setStyle('transition', `${this.transition[key].control}`);
                 }
             }
             catch (e) {
@@ -716,6 +727,16 @@
         clearId() {
             this.node.setAttriburte('id', '');
             return this;
+        }
+
+        createId() {
+            let id = this.getAttribute('id');
+
+            if (id == null) {
+                id = `${Reflect.getPrototypeOf(this).constructor.name}${DocElement.nextHandle++}`;
+            }
+            
+            return id;
         }
 
         disablePropagation(eventName) {
@@ -1009,7 +1030,7 @@
                 let nodeList = this.node.querySelectorAll(selector);
       
                 for (let i = 0; i < nodeList.length; i++) {
-                    selected.push(mkHtmlElement(nodeList.item(i)));
+                    selected.push(wrapNode(nodeList.item(i)));
                 }
             }
       
@@ -1021,7 +1042,7 @@
                 let selected = this.node.querySelector(selector);
 
                 if (selected) {
-                    return mkHtmlElement(selected);
+                    return wrapNode(selected);
                 }
             }
 

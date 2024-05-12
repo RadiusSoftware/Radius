@@ -28,14 +28,20 @@ register('', class MathElement extends DocElement {
         if (arg instanceof MathMLElement) {
             super(arg);
         }
-        else if (arg instanceof MathElement) {
-            super(arg.node);
-        }
         else if (typeof arg == 'string') {
             super(document.createElementNS('http://www.w3.org/1998/Math/MathML', arg));
         }
         else {
-            super(document.createElementNS('http://www.w3.org/1998/Math/MathML', 'math'));
+            throw new Error(`Invalid argument provided to mkMathElement(): "${arg}"`);
         }
+    }
+});
+
+
+/*****
+*****/
+register('', class MathGraphics extends MathElement {
+    constructor(arg) {
+        super(arg instanceof SVGSVGElement ? arg : 'math');
     }
 });

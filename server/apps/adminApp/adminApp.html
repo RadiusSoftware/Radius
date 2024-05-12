@@ -15,66 +15,50 @@
             padding: 0px;
         }
         .one {
-            color: white;
+            color: lightsteelblue;
             background-color: steelblue;
+            height: 200px;
         }
         .two {
-            color: steelblue;
+            color: gray;
             background-color: gainsboro;
+            height: 200px;
         }
         .three {
-            color: limegreen;
-            background-color: darkslategray;
+            color: green;
+            background-color: limegreen;
+            height: 200px;
         }
         .four {
-            color: gainsboro;
-            background-color: crimson;
+            color: red;
+            background-color: darkorange;
+            height: 200px;
         }
-        .boldx {
-            color: darkorange;
-            background-color: steelblue;
-            font-weight: bold;
-        }
-        .x43 {
-            height: 500px;
-            opacity: 1;
-            transition: opacity 2s;
-        }
-        .x43:hover {
-            opacity: .6;
+        #graphics {
+            background-color: lightsteelblue;
+            margin: 0px;
+            padding: 0px;
         }
     </style>
 
     <application>
         <title>Radius Server Administration</title>
         <html>
-            <grid-widget class="x43" @colcount="2" @controller="class:three" @transition="opacity: 0,1,400ms">
-                <div class="one" @bind="one"></div>
-                <div class="two">
-                    <div>
-                        Type Something here: <input type="text" @bindset="one" value="un"/>
-                    </div>
-                    <div>
-                        <select @bind="class">
-                            <option value="three">THREE</option>
-                            <option value="boldx">BOLDX</option>
-                        </select>
-                    </div>
+            <grid-widget @colcount="2" @controller @transition="opacity: 0,1,600ms">
+                <div class="one">${Str.radius.apps.admin.key1}</div>
+                <div class="two">${Str.radius.apps.admin.key2}</div>
+                <div class="three">${Str.radius.apps.admin.key3}</div>
+                <div class="four">
+                    ${Str.radius.apps.admin.key4}
+                    <svg id="graphics" >
+                        <circle ></circle>
+                    </svg>
                 </div>
-                <div @bindclass="class" @bind="class">${Str.radius.apps.admin.key3}</div>
-                <div class="four" @bindstyle="style" style="background-color:whitesmoke; color:slategray; font-weight:bold;">${Str.radius.apps.admin.key4}</div>
             </grid-widget>
         </html>
         <script>
             const home = Doc.queryOne('#ApplicationHomeView');
-            //home.on('Mutation', message => console.log(message));
-            /*
-            setTimeout(() => {
-                home.set('one', 'ONE');
-                home.set('class', 'boldx');
-                home.set('style', 'background-color:limegreen; color:slategray; font-weight:bold;');
-            }, 1000);
-            */
+            let svg = home.queryOne('#graphics');
         </script>
     </application>
 

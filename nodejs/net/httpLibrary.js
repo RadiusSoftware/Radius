@@ -241,12 +241,22 @@ registerIn('HttpServer', '', class HttpLibrary {
             'mozilla/http.js',
             'mozilla/websocket.js',
             'mozilla/bundle.js',
+            'mozilla/svg/',
             'mozilla/bootstrap.js',
         ];
     
         for (let frameworkFile of frameworkFiles) {
-            const path = Path.join(__dirname, `../../${frameworkFile}`);
-            modules.push((await FileSystem.readFile(path)).toString());
+            if (frameworkFile.endsWith('.js')) {
+                const path = Path.join(__dirname, `../../${frameworkFile}`);
+                modules.push((await FileSystem.readFile(path)).toString());
+            }
+            else {
+                const dirPath = Path.join(__dirname, `../../${frameworkFile}`);
+
+                for (let filePath of await FileSystem.recurseFiles(dirPath)) {
+                    modules.push((await FileSystem.readFile(filePath)).toString());
+                }
+            }
         }
         
         this.setLibEntry({

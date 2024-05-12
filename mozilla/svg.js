@@ -22,20 +22,38 @@
 
 
 /*****
+ * A simple wrapper for handling nodes of type SVGElement.  It's also use for
+ * constructing SVGElements given a tagName.  It's just DocElement extension,
+ * and is the base class for any of the SVG...Element objects.  Extension of
+ * SVGElement will only occur where it adds value.  Most or prehaps all of the
+ * SVGElement classes, with the exception of SVGSVGElement, may not need to be
+ * extended.
 *****/
 register('', class SvgElement extends DocElement {
     constructor(arg) {
         if (arg instanceof SVGElement) {
             super(arg);
         }
-        else if (arg instanceof SvgElement) {
-            super(arg.node);
-        }
         else if (typeof arg == 'string') {
             super(document.createElementNS('http://www.w3.org/2000/svg', arg));
         }
         else {
-            super(document.createElementNS('http://www.w3.org/2000/svg', 'svg'));
+            throw new Error(`Invalid argument provided to mkSvgElement(): "${arg}"`);
         }
+    }
+});
+
+
+/*****
+ * An extension of the SVGSVGElement class as provided in the Scalable Vector
+ * Graphics, SVG, specification.  The class provides an array of calls for
+ * managing the graphics element.  Some calls will construct and insert a new
+ * element with the specified tagName at the specified location in the graphics.
+ * Other methods will get or remove items.  Remember that all of the standard
+ * DocElement features are alrady provided here.
+*****/
+register('', class SvgGraphics extends SvgElement {
+    constructor(arg) {
+        super(arg instanceof SVGSVGElement ? arg : 'svg');
     }
 });

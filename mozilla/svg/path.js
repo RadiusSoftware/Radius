@@ -23,33 +23,59 @@
 
 /*****
 *****/
-register('', class Animashion extends Emitter {
-    constructor(effect, timeline) {
-        super();
+register('', class SvgPath {
+    static regexp = new RegExp(
+        '',
+        'g'
+    );
 
-        if (effect instanceof animation) {
-            this.animation = effect;
+    constructor(arg) {
+        this.cmmds = [];
+
+        if (typeof arg == 'string') {
         }
-        else {
-            this.animation = new Animation(effect, timeline);
+        else if (typeof arg == 'array') {
+        }
+    }
+
+    clear() {
+        this.cmmds = [];
+        return this;
+    }
+
+    getAt(index) {
+        return this.cmmds[index];
+    }
+
+    insertAt(index, ...cmmds) {
+        return this;
+    }
+
+    removeAt(index) {
+        this.cmmds.splice(index, 1);
+        return this;
+    }
+
+    setPath(string) {
+        this.clear();
+
+        for (let cmmd of string.trim().matchAll(SvgPath.regexp)) {
         }
 
-        this.animation.addEventListener('cancel', event => this.emit({
-            name: 'Cancel',
-            animation: this,
-            details: event,
-        }));
+        return this;
+    }
 
-        this.animation.addEventListener('finish', event => this.emit({
-            name: 'Finish',
-            animation: this,
-            details: event,
-        }));
+    [Symbol.iterator]() {
+        return this.cmmds[Symbol.iterator]();
+    }
 
-        this.animation.addEventListener('remove', event => this.emit({
-            name: 'Remove',
-            animation: this,
-            details: event,
-        }));
+    toArray(opts) {
+        return new Array(this.cmmds);
+    }
+
+    toString(opts) {
+    }
+
+    toStringArray(opts) {
     }
 });
