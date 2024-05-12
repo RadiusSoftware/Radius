@@ -1,19 +1,7 @@
-<bundle name="radius.apps.admin">
+<bundle name="server.apps.admin">
     <dependencies></dependencies>
 
     <style>
-        html {
-            width: 100vw;
-            height: 100vh;
-            font-family: Arial, Helvetica, sans-serif;
-            font-size: 18px;
-        }
-        body {
-            width: 100vw;
-            height: 100vh;
-            margin: 0px;
-            padding: 0px;
-        }
         .one {
             color: lightsteelblue;
             background-color: steelblue;
@@ -45,11 +33,11 @@
         <title>Radius Server Administration</title>
         <html>
             <grid-widget @colcount="2" @controller @transition="opacity: 0,1,600ms">
-                <div class="one">${Str.radius.apps.admin.key1}</div>
-                <div class="two">${Str.radius.apps.admin.key2}</div>
-                <div class="three">${Str.radius.apps.admin.key3}</div>
+                <div class="one">${Str.server.apps.admin.key1}</div>
+                <div class="two">${Str.server.apps.admin.key2}</div>
+                <div class="three">${Str.server.apps.admin.key3}</div>
                 <div class="four">
-                    ${Str.radius.apps.admin.key4}
+                    ${Str.server.apps.admin.key4}
                     <svg id="graphics" >
                         <circle ></circle>
                     </svg>
@@ -59,6 +47,8 @@
         <script>
             const home = Doc.queryOne('#ApplicationHomeView');
             let svg = home.queryOne('#graphics');
+            let circle = svg.queryOne('circle');
+            console.log(circle);
         </script>
     </application>
 

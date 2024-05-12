@@ -51,8 +51,7 @@ singleton('', class Bundles {
     registerApplication(application) {
         if (application) {
             let titleText = mkBuffer(application.title, 'base64').toString();
-            let titleElement = mkHtmlElement('title').setInnerHtml(titleText);
-            Doc.getHead().append(titleElement)
+            Doc.getHead().queryOne('title').setInnerHtml(titleText);
 
             let homeHtml = mkBuffer(application.html, 'base64').toString();
             const homeElement = createElementFromOuterHtml(homeHtml);
