@@ -56,4 +56,32 @@ register('', class SvgGraphics extends SvgElement {
     constructor(arg) {
         super(arg instanceof SVGSVGElement ? arg : 'svg');
     }
+
+    addOption(option) {
+        return this;
+    }
+
+    addShape(shape) {
+        return this;
+    }
+
+    getOption(id) {
+    }
+
+    getOptions() {
+    }
+
+    getShape(id) {
+    }
+
+    getShapes() {
+    }
+
+    removeOption(arg) {
+        return this;
+    }
+
+    removeShape(arg) {
+        return this;
+    }
 });

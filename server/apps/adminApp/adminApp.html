@@ -3,29 +3,34 @@
 
     <style>
         .one {
+            height: 200px;
             color: lightsteelblue;
             background-color: steelblue;
-            height: 200px;
         }
         .two {
+            height: 200px;
             color: gray;
             background-color: gainsboro;
-            height: 200px;
         }
         .three {
+            height: 200px;
             color: green;
             background-color: limegreen;
-            height: 200px;
         }
         .four {
+            height: 200px;
             color: red;
             background-color: darkorange;
-            height: 200px;
         }
         #graphics {
-            background-color: lightsteelblue;
             margin: 0px;
             padding: 0px;
+            width: 150px;
+            height: 150px;
+            stroke: black;
+            stroke-width: 4px;
+            fill: green;
+            background-color: lightsteelblue;
         }
     </style>
 
@@ -36,11 +41,15 @@
                 <div class="one">${Str.server.apps.admin.key1}</div>
                 <div class="two">${Str.server.apps.admin.key2}</div>
                 <div class="three">${Str.server.apps.admin.key3}</div>
-                <div class="four">
-                    ${Str.server.apps.admin.key4}
-                    <svg id="graphics" >
-                        <circle ></circle>
-                    </svg>
+                <div class="four flexhcc">
+                    <div>
+                        <div class="flexhcc">${Str.server.apps.admin.key4}</div>
+                        <div>
+                            <svg id="graphics" viewbox="-100 -100 200 200">
+                                <circle cx="-45" cy="-23" r="10"></circle>
+                            </svg>
+                        </div>
+                    </div>
                 </div>
             </grid-widget>
         </html>

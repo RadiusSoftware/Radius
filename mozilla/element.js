@@ -729,16 +729,6 @@
             return this;
         }
 
-        createId() {
-            let id = this.getAttribute('id');
-
-            if (id == null) {
-                id = `${Reflect.getPrototypeOf(this).constructor.name}${DocElement.nextHandle++}`;
-            }
-            
-            return id;
-        }
-
         disablePropagation(eventName) {
             this.propagation.clear(eventName);
             return this;
@@ -747,6 +737,16 @@
         enablePropagation(eventName) {
             this.propagation.set(eventName);
             return this;
+        }
+
+        ensureId() {
+            let id = this.getAttribute('id');
+
+            if (id == null) {
+                id = `${Reflect.getPrototypeOf(this).constructor.name}${DocElement.nextHandle++}`;
+            }
+            
+            return id;
         }
 
         entangleAttribute(element, name, key, set) {

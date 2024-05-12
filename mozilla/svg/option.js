@@ -23,33 +23,24 @@
 
 /*****
 *****/
-register('', class Animationer extends Emitter {
-    constructor(effect, timeline) {
+register('', class SvgOption extends SvgElement {
+    constructor() {
         super();
+    }
 
-        if (effect instanceof animation) {
-            this.animation = effect;
-        }
-        else {
-            this.animation = new Animation(effect, timeline);
-        }
+    addOption(option) {
+        return this;
+    }
 
-        this.animation.addEventListener('cancel', event => this.emit({
-            name: 'Cancel',
-            animation: this,
-            details: event,
-        }));
+    getOption(id) {
+        return null;
+    }
 
-        this.animation.addEventListener('finish', event => this.emit({
-            name: 'Finish',
-            animation: this,
-            details: event,
-        }));
+    getOptions() {
+        return null;
+    }
 
-        this.animation.addEventListener('remove', event => this.emit({
-            name: 'Remove',
-            animation: this,
-            details: event,
-        }));
+    removeOption(option) {
+        return this;
     }
 });
