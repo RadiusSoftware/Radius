@@ -57,7 +57,11 @@ singleton('', class Bundles {
             const homeElement = createElementFromOuterHtml(homeHtml);
             homeElement.setAttribute('id', 'ApplicationHomeView');
             Doc.getBody().append(homeElement);
-            eval(mkBuffer(application.script, 'base64').toString());
+
+            Win.awaitIdle(() => {
+                DocElement.processLibraryElements();
+                eval(mkBuffer(application.script, 'base64').toString());
+            });
         }
     }
 

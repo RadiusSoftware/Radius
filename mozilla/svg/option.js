@@ -24,6 +24,9 @@
 /*****
 *****/
 register('', class SvgOption extends SvgElement {
+    static tags = {
+    };
+
     constructor() {
         super();
     }

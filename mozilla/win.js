@@ -80,7 +80,12 @@ singleton('', class Win extends Emitter {
     }
 
     awaitIdle(func) {
-        window.requestIdleCallback(() => func());
+        return new Promise((ok, fail) => {
+            window.requestIdleCallback(() => {
+                func();
+                ok();
+            });
+        });
     }
 
     blur() {

@@ -551,6 +551,7 @@
     *****/
     register('', class DocElement extends DocNode {
         static nextHandle = 1;
+        static libElements = [];
 
         constructor(node) {
             super(node);
@@ -559,6 +560,7 @@
             this.objekt = null;
             this.entanglements = null;
             this.mutations = null;
+            this.lib = {};
             this.init();
 
             for (let attribute of this.getAttributes()) {
@@ -658,6 +660,11 @@
             return this;
         }
 
+        attrLib(key) {
+            DocElement.libElements.push({ key: key, docElement: this });
+            return this;
+        }
+
         attrSet(value) {
             if (typeof value == 'string') {
                 let controller = this.getController();
@@ -726,6 +733,11 @@
 
         clearId() {
             this.node.setAttriburte('id', '');
+            return this;
+        }
+
+        clearLib(key) {
+            delete this.lib[key];
             return this;
         }
 
@@ -900,6 +912,12 @@
             return this.node.innerHTML;
         }
 
+        getLibElement(key) {
+            let libraryElement = this.lib[key];
+            let clone = createElementFromOuterHtml(libraryElement.getOuterHtml());
+            return clone;
+        }
+
         getOuterHtml() {
             return this.node.outerHTML;
         }
@@ -1023,6 +1041,20 @@
             return this;
         }
 
+        static processLibraryElements() {
+            for (let libElement of DocElement.libElements) {
+                let { key, docElement } = libElement;
+                let parent = docElement.getParentElement();
+    
+                if (parent) {
+                    parent.setLib(key, docElement);
+                    docElement.remove();
+                }
+            }
+
+            return this;
+        }
+
         queryAll(selector) {
             let selected = [];
       
@@ -1097,6 +1129,11 @@
 
         setInnerHtml(innerHtml) {
             this.node.innerHTML = innerHtml;
+            return this;
+        }
+
+        setLib(key, docElement) {
+            this.lib[key] = docElement;
             return this;
         }
 

@@ -24,6 +24,11 @@
 /*****
 *****/
 register('', class SvgShape extends SvgElement {
+    static tags = {
+        circle: true,
+        ellipse: true,
+    };
+
     constructor(arg) {
         super(arg);
     }
