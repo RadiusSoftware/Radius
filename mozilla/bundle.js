@@ -59,7 +59,7 @@ singleton('', class Bundles {
             Doc.getBody().append(homeElement);
 
             Win.awaitIdle(() => {
-                DocElement.processLibraryElements();
+                DocElement.processDefElements();
                 eval(mkBuffer(application.script, 'base64').toString());
             });
         }

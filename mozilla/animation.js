@@ -23,7 +23,7 @@
 
 /*****
 *****/
-register('', class Animationer extends Emitter {
+register('', class Animatione extends Emitter {
     constructor(effect, timeline) {
         super();
 

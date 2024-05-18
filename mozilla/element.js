@@ -551,7 +551,7 @@
     *****/
     register('', class DocElement extends DocNode {
         static nextHandle = 1;
-        static libElements = [];
+        static defElements = [];
 
         constructor(node) {
             super(node);
@@ -560,7 +560,7 @@
             this.objekt = null;
             this.entanglements = null;
             this.mutations = null;
-            this.lib = {};
+            this.defElements = {};
             this.init();
 
             for (let attribute of this.getAttributes()) {
@@ -660,8 +660,8 @@
             return this;
         }
 
-        attrLib(key) {
-            DocElement.libElements.push({ key: key, docElement: this });
+        attrDef(key) {
+            DocElement.defElements.push({ key: key, docElement: this });
             return this;
         }
 
@@ -679,7 +679,7 @@
 
             return this;
         }
-    
+        
         attrTransition(value) {
             try {
                 this.transition = {};
@@ -731,13 +731,13 @@
             return this;
         }
 
-        clearId() {
-            this.node.setAttriburte('id', '');
+        clearDefElement(key) {
+            delete this.defElements[key];
             return this;
         }
 
-        clearLib(key) {
-            delete this.lib[key];
+        clearId() {
+            this.node.setAttriburte('id', '');
             return this;
         }
 
@@ -904,18 +904,18 @@
             return node;
         }
 
+        getDefElement(key) {
+            let defElement = this.defElements[key];
+            let clone = createElementFromOuterHtml(defElement.getOuterHtml());
+            return clone;
+        }
+
         getId() {
             return this.node.getAttribute('id');
         }
 
         getInnerHtml() {
             return this.node.innerHTML;
-        }
-
-        getLibElement(key) {
-            let libraryElement = this.lib[key];
-            let clone = createElementFromOuterHtml(libraryElement.getOuterHtml());
-            return clone;
         }
 
         getOuterHtml() {
@@ -1041,13 +1041,13 @@
             return this;
         }
 
-        static processLibraryElements() {
-            for (let libElement of DocElement.libElements) {
+        static processDefElements() {
+            for (let libElement of DocElement.defElements) {
                 let { key, docElement } = libElement;
                 let parent = docElement.getParentElement();
     
                 if (parent) {
-                    parent.setLib(key, docElement);
+                    parent.setDefElement(key, docElement);
                     docElement.remove();
                 }
             }
@@ -1122,6 +1122,11 @@
             return this;
         }
 
+        setDefElement(key, docElement) {
+            this.defElements[key] = docElement;
+            return this;
+        }
+
         setId(id) {
             this.node.setAttriburte('id', id);
             return this;
@@ -1129,11 +1134,6 @@
 
         setInnerHtml(innerHtml) {
             this.node.innerHTML = innerHtml;
-            return this;
-        }
-
-        setLib(key, docElement) {
-            this.lib[key] = docElement;
             return this;
         }
 
