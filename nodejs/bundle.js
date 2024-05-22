@@ -191,6 +191,7 @@ register('', class Bundle {
         this.strings = {};
         this.styleSheets = [];
         this.widgets = [];
+        this.animations = [];
 
         for (let childElement of bundleElement) {
             let methodName = `process${childElement.getTagName()[0].toUpperCase()}${childElement.getTagName().substring(1)}`;
@@ -260,6 +261,10 @@ register('', class Bundle {
 
     hasLang(lang) {
         return lang in this.strings;
+    }
+
+    processAnimation(animationElement) {
+        this.animations.push(mkBuffer(animationElement.getInnerHtml()).toString('base64'));
     }
 
     processApplication(applicationElement) {

@@ -36,6 +36,8 @@ singleton('', class Bundles {
     constructor() {
         this.strings = {};
         this.bundles = {};
+        this.style = mkHtmlElement('style');
+        Doc.getHead().append(this.style);
     }
 
     async init(lang) {
@@ -44,6 +46,19 @@ singleton('', class Bundles {
 
             for (let bundleName of await server.ListBundles()) {
                 this.bundles[bundleName] = false;
+            }
+        }
+    }
+
+    registerAnimations(animations) {
+        for (let animation of animations) {
+            let effect = mkBuffer(animation, 'base64').toString();
+            let keyframes = effect.match(/@keyframes[ \t]+([a-zA-Z][a-zA-Z0-9_]*)[ \t]*{/);
+
+            if (keyframes) {
+                let name = keyframes[1];
+                let tn = mkDocText(effect);
+                this.style.append(tn);
             }
         }
     }
@@ -104,6 +119,7 @@ singleton('', class Bundles {
                     }
 
                     this.registerStyleSheets(box.bundle.styleSheets);
+                    this.registerAnimations(box.bundle.animations);
                     this.registerWidgets(box.bundle.widgets);
                     this.registerScripts(box.bundle.scripts);
                     this.registerApplication(box.bundle.application);

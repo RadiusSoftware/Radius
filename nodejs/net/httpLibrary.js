@@ -235,7 +235,6 @@ registerIn('HttpServer', '', class HttpLibrary {
             'mozilla/svg.js',
             'mozilla/math.js',
             'mozilla/style.js',
-            'mozilla/animation.js',
             'mozilla/entanglements.js',
             'mozilla/stringLibrary.js',
             'mozilla/http.js',

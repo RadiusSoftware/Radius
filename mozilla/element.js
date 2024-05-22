@@ -552,6 +552,7 @@
     register('', class DocElement extends DocNode {
         static nextHandle = 1;
         static defElements = [];
+        static animationId = 1;
 
         constructor(node) {
             super(node);
@@ -587,15 +588,40 @@
             }
         }
 
-        animate(keyFrames, options) {
-            // TODO
-            console.log('DocElement.animate()');
+        animate(effect, options) {
+            let opts;
+
+            if (typeof options == 'object') {
+                opts = options;
+            }
+            else {
+                opts = {
+                    duration: options,
+                    iterations: 1,
+                };
+            }
+            
+            if (!opts.id) {
+                opts.id = `animation${DocElement.animationId++}`;
+            }
+
+            this.node.animate(effect, opts);
+            return opts.id;
         }
 
         attrAnimate(value) {
-            // TODO
-            console.log('DocElement.attrAnimate()');
-            return this;
+            let args = TextUtils.parseAttributeEncoded(value);
+
+            if ('name' in args) {
+                this.setStyle('animation-name', args.name);
+
+                if ('duration' in args) {
+                    this.setStyle('animation-duration', args.duration);
+                }
+                else {
+                    this.setStyle('animation-duration', '1s');
+                }
+            }
         }
 
         attrBind(key) {
@@ -677,34 +703,6 @@
                 }
             }
 
-            return this;
-        }
-        
-        attrTransition(value) {
-            try {
-                this.transition = {};
-
-                for (let entry of (Object.entries(TextUtils.parseAttributeEncoded(value)))) {
-                    let [ key, value ] = entry;
-                    let [ value0, valuen, control ] = value.split(',');
-
-                    this.transition[key] = {
-                        key: key,
-                        value0: value0.trim(),
-                        valuen: valuen.trim(),
-                        control: control ? control.trim() : '',
-                    };
-                }
-
-                for (let key in this.transition) {
-                    this.setStyle(key, this.transition[key].value0);
-                    this.setStyle('transition', `${this.transition[key].control}`);
-                }
-            }
-            catch (e) {
-                caught(e);
-            }
-            
             return this;
         }
     
@@ -813,9 +811,21 @@
             return null;
         }
 
-        getAnimations(options) {
-            // TODO
-            console.log('TBD DocElement.getAnimations()');
+        getAnimation(name) {
+            for (let animation of this.node.getAnimations()) {
+                if (animation.animationName == name) {
+                    return animation;
+                }
+                else if (animation.id == name) {
+                    return animation;
+                }
+            }
+
+            return null;
+        }
+
+        getAnimations() {
+            return this.node.getAnimations();
         }
 
         getAttribute(name) {
