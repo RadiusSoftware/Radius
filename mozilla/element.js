@@ -76,6 +76,12 @@
             else if (node instanceof SVGSVGElement) {
                 return mkSvgGraphics(node);
             }
+            else if (node.tagName.toLowerCase() in SvgShape.tags) {
+                return mkSvgShape(node);
+            }
+            else if (node.tagName.toLowerCase() in SvgOption.tags) {
+                return mkSvgOption(node);
+            }
             else {
                 return mkSvgElement(node);
             }

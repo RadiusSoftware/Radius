@@ -31,17 +31,21 @@ register('', class SvgShape extends SvgElement {
 
     constructor(arg) {
         super(arg);
+        console.log(this.getCx());
+        console.log(this.getCy());
+        console.log(this.getRadius());
+    }
+
+    getCx() {
+        return this.node.cx;
+    }
+
+    getCy() {
+        return this.node.cy;
+    }
+
+    getRadius() {
+        return this.node.r;
     }
 });
 
-
-/*****
-*****/
-register('', class SvgCircle extends SvgShape {
-    constructor(cx, cy, r) {
-        super(tagName);
-        this.setAttribute('cx', cx);
-        this.setAttribute('cy', cy);
-        this.setAttribute('r', r);
-    }
-});

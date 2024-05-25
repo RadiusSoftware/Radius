@@ -20,7 +20,8 @@
  * THE SOFTWARE.
 *****/
 const LibZlib = require('node:zlib');
-const NpmGzip = require('node-gzip');
+const NpmYauzl = require('yauzl');
+const NpmYazl = require('yazl');
 
 
 /*****
@@ -38,10 +39,7 @@ singleton('', class Compression {
                 compress: async uncompressed => uncompressed,
                 uncompress: async compressed => compressed,
             },
-            gzip: {
-                compress: async uncompressed => await NpmGzip.gzip(uncompressed),
-                uncompress: async compressed => await NpmGzip.ungzip(compressed),
-            },
+
             deflate: {
                 compress: uncompressed => {
                     return new Promise((ok, fail) => {
@@ -57,7 +55,20 @@ singleton('', class Compression {
                         });
                     });
                 },
-            }
+            },
+            
+            gzip: {
+                compress: uncompressed => {
+                    return new Promise((ok, fail) => {
+                        LibZlib.gzip(uncompressed, (error, buffer) => ok(buffer));
+                    });
+                },
+                uncompress: compressed => {
+                    return new Promise((ok, fail) => {
+                        LibZlib.gunzip(compressed, (error, buffer) => ok(buffer));
+                    });
+                },
+            },
         };
     }
     
@@ -79,5 +90,81 @@ singleton('', class Compression {
     
     isSupported(algorithm) {
         return algorithm in this.algorithms;
+    }
+});
+
+
+/*****
+*****/
+register('', class Unzpper {
+    constructor(buffer) {
+        this.buffer = buffer;
+        this.entries = { type: 'directory', entries: {} };
+        
+        NpmYauzl.fromBuffer(this.buffer, (error, zipFile) => {
+            this.zipFile = zipFile;
+
+            zipFile.on('entry', entry => {
+                if (/\/$/.test(entry.fileName)) {
+                    // ADD DIRECTORY
+                }
+                else {
+                    // ADD ENTRY
+                }
+            });
+    
+            zipFile.on('error', error => {
+                throw new Error(error);
+            });
+    
+            zipFile.on('end', entry => {
+                delete this.zipFile;
+            });
+        });
+    }
+
+    getEntry(path) {
+        //let entry = ;
+        let buffers = [];
+
+        this.zipFile.openReadStream(entry, (error, readStream) => {
+            if (error) {
+                throw error;
+            }
+            else {
+                readStream.on('data', buffer => {
+                    buffers.push(data.toString());
+                });
+
+                readStream.on('end', () => {
+                    // join blocks 
+                });
+            }
+        });
+    }
+
+    listEntries(path) {
+        if (path) {
+        }
+        else {
+        }
+    }
+});
+
+
+/*****
+*****/
+register('', class Zipper {
+    constructor() {
+        this.entries = [];
+    }
+
+    async add(name, data) {
+    }
+
+    async remove(name) {
+    }
+
+    toBuffer() {
     }
 });
