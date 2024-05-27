@@ -22,6 +22,33 @@
 
 
 /*****
+*****/
+singletonIn(Process.nodeClassController, '', class WebSockets extends Emitter {
+    constructor() {
+        super();
+        this.sockets = {};
+        mkHandlerProxy(Process, 'WebsocketManager', this);
+    }
+
+    async onSocketCall(message) {
+    }
+
+    async onSocketCreated(message) {
+        //console.log('\n*** SOCKET CREATED!');
+        //console.log(message);
+    }
+
+    async onSocketDestroyed(message) {
+        //console.log('\n*** SOCKET DESTROYED!');
+        //console.log(message);
+    }
+
+    async onSocketSend(message) {
+    }
+});
+
+
+/*****
  * The websocket object for the server.  Websockets are single-use and discarded
  * after they have been closed.  The WebSocket class is primarily an initializer
  * and a container for the frame builder and frame parser.  The frame build is
@@ -31,7 +58,7 @@
  * the WebSocket instances to assemble frames, and then to emit a notification
  * when a complete message has been received.
 *****/
-registerIn('HttpServerworker', '', class WebSocket extends Emitter {
+registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
     /*
     static nextSocketNumber = 1;
     static webSockets = {};
@@ -53,18 +80,23 @@ registerIn('HttpServerworker', '', class WebSocket extends Emitter {
     constructor(socket, extensions, headData) {
         super();
         this.socket = socket;
-        this.workerId = CLUSTER.isWorker ? CLUSTER.worker.id : '';
-        this.socketId = `${PROC.pid}.${WebSocket.nextSocketNumber++}`;
-        WebSocket.webSockets[this.socketId] = this;
+        this.uuid = Crypto.generateUUID();
+        console.log('set websocket default timeout...');
         this.socket.setTimeout(0);
         this.socket.setNoDelay();
         this.analyzeExtensions(extensions);
-        this.frameParser = new FrameParser(this, headData);
-        this.frameBuilder = new FrameBuilder(this.extensions);
+        this.frameParser = mkFrameParser(this, headData);
+        this.frameBuilder = mkFrameBuilder(this.extensions);
         this.type = '';
         this.payload = [];
         this.state = 'Ready';
         this.socket.on('close', (...args) => this.onClose(...args));
+
+        Process.sendController({
+            name: 'WebsocketManagerSocketCreated',
+            pid: Process.getPid(),
+            uuid: this.uuid,
+        });
     }
   
     analyzeExtensions(extensions) {
@@ -105,7 +137,11 @@ registerIn('HttpServerworker', '', class WebSocket extends Emitter {
             this.state = 'Closed';
             this.socket.destroy();
             this.socket = null;
-            delete WebSocket.webSockets[this.socketId];
+
+            Process.sendController({
+                name: 'WebsocketManagerSocketCreated',
+                uuid: this.uuid,
+            });
         }
     }
 
@@ -169,8 +205,8 @@ registerIn('HttpServerworker', '', class WebSocket extends Emitter {
     }
   
     async onMessage(payload) {
-        this.send({
-            messageName: '#MessageReceived',
+        this.emit({
+            name: 'MessageReceived',
             type: this.type,
             payload: payload,
         });
@@ -178,14 +214,9 @@ registerIn('HttpServerworker', '', class WebSocket extends Emitter {
 
     queryMessage(message) {
         if (this.socket) {
-            if (!(message instanceof Message)) {
-                message = mkMessage(message);
-            }
-
             let trap = mkTrap();
-            Trap.setExpected(trap, 1);
-            message['#Trap'] = trap.id;
-
+            trap.setExpected(trap, 1);
+            message['#TRAP'] = trap.id;
             let frames = this.frameBuilder.build(toJson(message), 0x1);
             frames.forEach(frame => this.socket.write(frame));
             return trap.promise;
@@ -211,10 +242,6 @@ registerIn('HttpServerworker', '', class WebSocket extends Emitter {
 
     sendMessage(message) {
         if (this.socket) {
-            if (!(message instanceof Message)) {
-                message = mkMessage(message);
-            }
-
             let frames = this.frameBuilder.build(toJson(message), 0x1);
             frames.forEach(frame => this.socket.write(frame));
         }
@@ -229,7 +256,7 @@ registerIn('HttpServerworker', '', class WebSocket extends Emitter {
  * laying them out according to RFC 6455, https://www.rfc-editor.org/rfc/rfc6455.
  * This code implements that protocol by building one or more outgoing frames.
 *****/
-class FrameBuilder {
+registerIn('HttpServerWorker', '', class FrameBuilder {
     static maxPayLoadLength = 50000;
 
     constructor(extensions) {
@@ -289,7 +316,7 @@ class FrameBuilder {
 
         return frame;
     }
-}
+});
 
 
 /*****
@@ -302,7 +329,7 @@ class FrameBuilder {
  * this protocol will recognize the frame regardless of the chunk size of the
  * incoming data.
 *****/
-class FrameParser {
+registerIn('HttpServerWorker', '', class FrameParser {
     constructor(webSocket, headData) {
         this.webSocket = webSocket;
         this.socket = webSocket.socket;
@@ -435,4 +462,4 @@ class FrameParser {
 
         return decoded;
     }
-}
+});

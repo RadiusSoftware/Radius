@@ -39,14 +39,11 @@ register('', class Websocket extends Emitter {
         this.pending = [];
         this.awaiting = {};
 
-        if (url.indexOf('https:') == 0) {
-            this.url = url.replace('https', 'wss');
+        if (window.location.protocol == 'https:') {
+            this.url = `wss${window.location.origin.substring(5)}${url}`;
         }
-        else if (url.indexOf('http:') == 0) {
-            this.url = url.replace('http', 'ws');
-        }
-        else {
-            this.url = url;
+        else if (window.location.protocol == 'http:') {
+            this.url = `ws${window.location.origin.substring(4)}${url}`;
         }
 
         setInterval(() => {
@@ -54,6 +51,16 @@ register('', class Websocket extends Emitter {
                 this.sendServer({ name: '#Ping' });
             }
         }, 20000);
+    }
+
+    callServer(message) {
+        let trap = mkTrap();
+        trap.setExpected(1);
+        message['#TRAP'] = trap.id;
+        this.pending.push(message);
+        this.awaiting[trap.id] = trap;
+        this.sendPending();
+        return trap.promise;
     }
 
     close() {
@@ -66,7 +73,7 @@ register('', class Websocket extends Emitter {
         this.ws = new WebSocket(this.url);
 
         this.ws.onopen = event => {
-            this.send({
+            this.emit({
                 name: 'open',
                 event: event,
                 websocket: this,
@@ -76,7 +83,7 @@ register('', class Websocket extends Emitter {
         };
 
         this.ws.onerror = error => {
-            this.send({
+            this.emit({
                 name: 'error',
                 event: event,
                 websocket: this,
@@ -86,7 +93,7 @@ register('', class Websocket extends Emitter {
         }
 
         this.ws.onclose = () => {
-            this.send({
+            this.emit({
                 name: 'close',
                 event: event,
                 websocket: this,
@@ -96,6 +103,7 @@ register('', class Websocket extends Emitter {
         };
 
         this.ws.onmessage = event => this.onMessage(fromJson(event.data));
+        return this;
     }
 
     onMessage(message) {
@@ -104,42 +112,17 @@ register('', class Websocket extends Emitter {
         }
         else if ('#TRAP' in message) {
             let trapId = message['#TRAP'];
+            let trap = this.awaiting[trapId];
             delete this.awaiting[trapId];
-            Trap.pushReply(trapId, message.response);
+            trap.handleResponse(message['#RESPONSE']);
         }
         else {
-            globalThis.send(message);
+            globalThis.emit(message);
         }
-    }
-
-    queryServer(message) {
-        let trap = mkTrap();
-        Trap.setExpected(trap, 1);
-        message['#TRAP'] = trap.id;
-        message['#SESSION'] = webAppSettings.session();
-
-        if (message instanceof Message) {
-            this.pending.push(message);
-        }
-        else {
-            this.pending.push(mkMessage(message));
-        }
-
-        this.awaiting[trap.id] = trap;
-        this.sendPending();
-        return trap.promise;
     }
 
     sendServer(message) {
-        message['#SESSION'] = webAppSettings.session();
-
-        if (message instanceof Message) {
-            this.pending.push(message);
-        }
-        else {
-            this.pending.push(mkMessage(message));
-        }
-
+        this.pending.push(message);
         this.sendPending();
     }
 

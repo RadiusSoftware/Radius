@@ -159,7 +159,7 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
                 this.scheme = 'http';
                 this.server = LibHttp.createServer({}, (...args) => this.handleRequest(...args));
                 this.server.listen(netInterface.port, netInterface.addr);
-                this.server.on('upgrade', (httpReq) => this.onUpgrade(httpRsp));
+                this.server.on('upgrade', (...args) => this.onUpgrade(...args));
             }
         }
     }
@@ -310,12 +310,30 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
         }
     }
 
-    async onUpgrade(httpReq, socket, headPacket) {
-        // TODO
+    async onUpgrade(httpReq, socket, headData) {
         try {
-            if (this.upgradeHandler) {
-                //await this.upgradeHandler(req, socket, headPacket);
-                console.log('UPGRADING TO websocket.')
+            let req = mkHttpRequest(this, httpReq);
+            let httpX = await this.httpLibrary.getHttpX(req.getPath());
+
+            if (httpX.settings.enableWebsocket === true) {
+                let secureKey = req.getHeader('sec-websocket-key');
+                let hash = await Crypto.hash('sha1', `${secureKey}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`);
+                let webSocket = mkWebSocket(socket, req.getHeader('sec-websocket-extensions'), headData);
+                
+                let headers = [
+                    'HTTP/1.1 101 Switching Protocols',
+                    'Upgrade: websocket',
+                    'Connection: upgrade',
+                    `Sec-WebSocket-Accept: ${hash}`,
+                ];
+
+                if (webSocket.extensions.length) {
+                    headers.push(`Sec-WebSocket-Extensions: ${webSocket.secWebSocketExtensions()}`);
+                }
+            
+                headers.push('\r\n');
+                socket.write(headers.join('\r\n'));
+                webSocket.on('MessageReceived', data => httpX.handleWebSocket(webSocket, data.payload));
             }
         }
         catch (e) {

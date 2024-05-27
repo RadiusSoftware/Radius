@@ -37,7 +37,8 @@ register('', async function bootstrap(setup) {
 
     register('', async function callServer(message) {
         if (websocket) {
-            return await websocket.call(message);
+            message['#TOKEN'] = Doc.getCookie(settings.sessionCookie).value;
+            return await websocket.callServer(message);
         }
         else {
             const xhr = mkHttpRequest();
@@ -46,17 +47,18 @@ register('', async function bootstrap(setup) {
         }
     });
 
-    register('', async function openWebsocket() {
+    register('', async function createWebsocket() {
         if (settings.enableWebsocket) {
             if (websocket === null) {
-                websocket = await mkWebSocket().connect(settings.path);
+                websocket = await mkWebsocket(settings.path).connect();
             }
         }
     });
 
     register('', async function sendServer(message) {
         if (websocket) {
-            return websocket.send(message);
+            message['#TOKEN'] = Doc.getCookie(settings.sessionCookie).value;
+            return websocket.sendServer(message);
         }
         else {
             const xhr = mkHttpRequest();
@@ -64,6 +66,7 @@ register('', async function bootstrap(setup) {
         }
     });
     
+    await createWebsocket();
     wrapTree(document.documentElement);
     globalThis.server = mkRemoteApi(await callServer({ name: 'GetApi' }), callServer);
     await Bundles.init(settings.lang);

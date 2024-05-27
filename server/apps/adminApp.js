@@ -26,7 +26,7 @@
 register('radius', class AdminApp extends WebApp {
     constructor(libEntry) {
         super(libEntry, {
-            enableWebsocket: false,
+            enableWebsocket: true,
             webAppBundle: 'server.apps.admin',
         });
     }

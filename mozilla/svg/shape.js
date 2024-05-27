@@ -31,9 +31,6 @@ register('', class SvgShape extends SvgElement {
 
     constructor(arg) {
         super(arg);
-        console.log(this.getCx());
-        console.log(this.getCy());
-        console.log(this.getRadius());
     }
 
     getCx() {

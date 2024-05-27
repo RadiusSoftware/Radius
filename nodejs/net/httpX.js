@@ -127,6 +127,9 @@ register('', class HttpX extends Emitter {
         return 501;
     }
 
+    async handleWebSocket(data) {
+    }
+
     async init() {
         this.uuid = this.libEntry.uuid;
         this.prototype = Reflect.getPrototypeOf(this);
@@ -138,6 +141,7 @@ register('', class HttpX extends Emitter {
         this.path = this.libEntry.path;
         this.once = this.libEntry.once;
         this.requiredPermissions = this.libEntry.requiredPermissions;
+        this.settings.sessionCookie = Session.getSessionCookieName();
         await FileSystem.recurseModules(this.httpXDir);
         return this;
     }

@@ -296,7 +296,8 @@ registerIn('HttpServer', '', class HttpLibrary {
 *****/
 registerIn('HttpServerWorker', '', class HttpLibrary {
     constructor() {
-        this.httpXs = {};
+        this.httpXByUuid = {};
+        this.httpXByPath = [];
         mkHandlerProxy(Process, 'HttpLibrary', this);
     }
 
@@ -322,18 +323,24 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
     }
 
     async getHttpX(libEntry) {
-        if (libEntry.uuid in this.httpXs) {
-            return this.httpXs[libEntry.uuid];
+         if (typeof libEntry == 'object') {
+            if (libEntry.uuid in this.httpXByUuid) {
+                return this.httpXByUuid[libEntry.uuid];
+            }
+
+            require(libEntry.module);
+            libEntry.makerName = fqnMakerName(libEntry.fqClassName);
+
+            let httpX;
+            eval(`httpX = ${libEntry.makerName}(libEntry)`);
+            await httpX.init();
+            this.httpXByUuid[libEntry.uuid] = httpX;
+            this.httpXByPath[httpX.path] = httpX;
+            return httpX;
         }
-
-        require(libEntry.module);
-        libEntry.makerName = fqnMakerName(libEntry.fqClassName);
-
-        let httpX;
-        eval(`httpX = ${libEntry.makerName}(libEntry)`);
-        await httpX.init();
-        this.httpXs[libEntry.uuid] = httpX;
-        return httpX;
+        else if (typeof libEntry == 'string') {
+            return this.httpXByPath[libEntry];
+        }
     }
 
     async handle(req) {
@@ -428,6 +435,11 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
     }
 
     async onClearHttpX(message) {
-        delete this.httpXs[message.uuid];
+        let httpx = this.httpXByUuid[message.uuid];
+
+        if (httpx) {
+            delete this.httpXByPath[httpx.path];
+            delete this.httpXByUuid[message.uuid];
+        }
     }
 });

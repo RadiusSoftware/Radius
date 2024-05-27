@@ -95,6 +95,7 @@ register('', class WebApp extends HttpX {
             uuid: this.getUUID(),
             path: this.getUrlPath(),
             enableWebsocket: this.getSetting('enableWebsocket'),
+            sessionCookie: this.getSetting('sessionCookie'),
             webAppBundle: this.getSetting('webAppBundle'),
             lang: Bundles.getLanguage(Object.keys(req.getAcceptLanguage())),
         };
@@ -137,9 +138,21 @@ register('', class WebApp extends HttpX {
         }
     }
 
-    async handleWebSocket(message) {
-        // TODO
-        console.log('\nIMPLEMENT the websocket handler on webApp.js!');
+    async handleWebSocket(webSocket, data) {
+        try {
+            let message = fromJson(data.toString());
+
+            if ('#TRAP' in message) {
+                message['#RESPONSE'] = await this.api.handle(message);
+                webSocket.sendMessage(message)
+            }
+            else {
+                this.api.handle(message);
+            }
+        }
+        catch (e) {
+            await caught(e);
+        }
     }
 
     async init() {
