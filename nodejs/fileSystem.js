@@ -199,6 +199,7 @@ singleton('', class FileSystem extends Emitter {
                         let abspath = Path.join(path, fileName);
 
                         if (await this.isDirectory(abspath)) {
+                            dirs.push(abspath);
                             stack.push(abspath);
                         }
                     }

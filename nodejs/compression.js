@@ -95,76 +95,206 @@ singleton('', class Compression {
 
 
 /*****
+ * The implementation of a memory-based ZIP archive unzipper.  Remember that zip
+ * files are NOT just compression/decompression!  They are akin to TAR or other
+ * types of archive files.  Hence, there are directories and multiple files within
+ * that zip archive file.  The Unzipper is provided a buffer representing a valid
+ * zip file and then the init() method catalogs the directories and files contained
+ * within the archive.  Upon request, getEntry() method, the uncompressed / original
+ * contents of the specified file can be pulled from the zip archive.
 *****/
-register('', class Unzpper {
+register('', class Unzipper {
     constructor(buffer) {
         this.buffer = buffer;
-        this.entries = { type: 'directory', entries: {} };
-        
-        NpmYauzl.fromBuffer(this.buffer, (error, zipFile) => {
-            this.zipFile = zipFile;
+        this.entries = {};
+    }
 
-            zipFile.on('entry', entry => {
-                if (/\/$/.test(entry.fileName)) {
-                    // ADD DIRECTORY
+    ensureEntry(path) {
+        let entry = this.entries;
+
+        for (let segment of path.split('/')) {
+            if (segment) {
+                if (segment in entry) {
+                    entry = entry[segment];
                 }
                 else {
-                    // ADD ENTRY
+                    let subEntry = {};
+                    entry[segment] = subEntry;
+                    entry = subEntry
                 }
-            });
-    
-            zipFile.on('error', error => {
-                throw new Error(error);
-            });
-    
-            zipFile.on('end', entry => {
-                delete this.zipFile;
-            });
-        });
+            }
+        }
+
+        return entry;
+    }
+
+    findEntry(path) {
+        let entry = this.entries;
+
+        for (let segment of path.split('/')) {
+            if (segment) {
+                if (!(entry instanceof NpmYauzl.Entry)) {
+                    if (segment in entry) {
+                        entry = entry[segment];
+                    }
+                    else {
+                        entry = false;
+                        break;
+                    }
+                }
+                else {
+                    entry = false;
+                    break;
+                }
+            }
+        }
+
+        return entry;
     }
 
     getEntry(path) {
-        //let entry = ;
-        let buffers = [];
+        return new Promise((ok, fail) => {
+            let entry = this.findEntry(path);
 
-        this.zipFile.openReadStream(entry, (error, readStream) => {
-            if (error) {
-                throw error;
+            if (entry instanceof NpmYauzl.Entry) {
+                let buffers = [];
+
+                this.zipFile.openReadStream(entry, (error, readStream) => {
+                    if (error) {
+                        throw error;
+                    }
+                    else {
+                        readStream.on('data', buffer => {
+                            buffers.push(buffer.toString());
+                        });
+        
+                        readStream.on('end', () => {
+                            ok(buffers[0].concat(...buffers.slice(1)));
+                        });
+                    }
+                });
             }
             else {
-                readStream.on('data', buffer => {
-                    buffers.push(data.toString());
-                });
-
-                readStream.on('end', () => {
-                    // join blocks 
-                });
+                ok(false);
             }
         });
     }
 
-    listEntries(path) {
-        if (path) {
+    hasEntry(path) {
+        return this.findEntry(path) !== false;
+    }
+
+    init() {
+        return new Promise((ok, fail) => {
+            NpmYauzl.fromBuffer(this.buffer, (error, zipFile) => {
+                this.zipFile = zipFile;
+    
+                zipFile.on('entry', entry => {
+                    if (/\/$/.test(entry.fileName)) {
+                        this.ensureEntry(entry.fileName);
+                    }
+                    else {
+                        let directory;
+                        let entryName;
+                        let slash = entry.fileName.lastIndexOf('/');
+
+                        if (slash > 0) {
+                            directory = this.findEntry(entry.fileName.substring(0, slash));
+                            entryName = entry.fileName.substring(slash+1);
+                        }
+                        else {
+                            directory = this.findEntry(entry.fileName);
+                            entryName = entry.fileName;
+                        }
+
+                        if (directory && entryName) {
+                            directory[entryName] = entry;
+                        }
+                    }
+                });
+        
+                zipFile.on('error', error => {
+                    throw new Error(error);
+                });
+        
+                zipFile.on('end', entry => {
+                    ok(this);
+                });
+            });
+        });
+    }
+
+    listEntries() {
+        let list = [];
+        let stack = [];
+
+        for (let key in this.entries) {
+            stack.push({ path: key, value: this.entries[key] });
         }
-        else {
+
+        while (stack.length) {
+            let entry = stack.pop();
+            
+            if (entry.value instanceof NpmYauzl.Entry) {
+                list.push(entry.path);
+            }
+            else {
+                for (let key in entry.value) {
+                    stack.push({ path: `${entry.path}/${key}`, value: entry.value[key] });
+                }
+            }
         }
+
+        return list;
     }
 });
 
 
 /*****
+ * The implementation of a memory-base zipper is used for creating the memory
+ * image of a zip archive file.  In essence, the Zipper is made after which data
+ * files are added to it.  When the zip is ready, its then converter to a bimary
+ * blob, which is ready for data transfer or writing to a zip archive file with
+ * an .zip extension.
 *****/
 register('', class Zipper {
     constructor() {
-        this.entries = [];
+        this.zipFile = new NpmYazl.ZipFile();
     }
 
-    async add(name, data) {
+    async addBuffer(buffer, path) {
+        this.zipFile.addBuffer(buffer, path);
+        return this;
     }
 
-    async remove(name) {
+    async addEmptyDirectory(path) {
+        this.zipFile.addEmptyDirectory(path);
+        return this;
     }
 
-    toBuffer() {
+    async addFile(filePath, path) {
+        this.zipFile.addFile(filePath, path);
+        return this;
+    }
+
+    async addReadStream(readStream, path) {
+        this.zipFile.addReadStream(readStream, path);
+        return this;
+    }
+
+    getBuffer() {
+        return new Promise((ok, fail) => {
+            let buffers = [];
+
+            this.zipFile.outputStream.on('data', buffer => {
+                buffers.push(buffer);
+            });
+
+            this.zipFile.outputStream.on('end', () => {
+                ok(Buffer.concat(buffers));
+            });
+
+            this.zipFile.end();
+        });
     }
 });
