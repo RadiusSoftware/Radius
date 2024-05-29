@@ -63,7 +63,7 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         super();
         this.socket = socket;
         this.uuid = Crypto.generateUUID();
-        console.log('websocket.js: set websocket default timeout...');
+        console.log('\nwebsocket.js: set websocket default timeout...\n');
         this.socket.setTimeout(0);
         this.socket.setNoDelay();
         this.analyzeExtensions(extensions);
@@ -82,24 +82,24 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
     }
   
     analyzeExtensions(extensions) {
-        this.extensions = [];
+        this.extensions = {};
 
         const supported = mkStringSet(
-            //'permessage-deflate',
+            'permessage-deflate',
         );
 
         extensions.split(';').forEach(extension => {
             let [ left, right ] = extension.trim().split('=');
 
             if (supported.has(left)) {
-                let rsv = this.extensions.length + 1;
+                let rsv = Object.keys(this.extensions).length + 1;
 
-                if (rsv >=1 && rsv <= 3) {
-                    this.extensions.push({
+                if (rsv >= 1 && rsv <= 3) {
+                    this.extensions[left] = {
                         rsv: rsv,
                         name: left,
                         value: right,
-                    });
+                    };
                 }
             }
         });
@@ -128,7 +128,7 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
     }
 
     getSecWebSocketExtensions() {
-        return this.extensions.map(ext => {
+        return Object.values(this.extensions).map(ext => {
             if (ext.value === undefined) {
                 return ext.name;
             }
@@ -153,8 +153,11 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
             payload = Buffer.concat(payload, this.frames[i].getPayload());
         }
 
-        if (this.hasExtensions('permessage-deflate')) {
-            // TODO -- inflate the payload...
+        if (this.hasExtension('permessage-deflate')) {
+            console.log(payload.length);
+            console.log(payload.toString('hex'));
+            let inflated = await Compression.uncompress('deflate', payload);
+            console.log(inflated);
         }
         else {
             return payload;
@@ -271,9 +274,11 @@ registerIn('HttpServerWorker', '', class FrameBuilder {
 
     build(payload, opcode) {
         let frames = [];
-        this.payload = payload;
         this.messageOpcode = opcode;
         this.frameOpcode = this.messageOpcode;
+
+        console.log('\nFramebuilder.build() TODO -- deflate if so specified!\n')
+        this.payload = payload;
 
         while (this.payload.length) {
             if (this.payload.length <= FrameBuilder.maxPayLoadLength) {

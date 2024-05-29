@@ -49,6 +49,7 @@ require('../common/textUtils.js');
 require('../common/chronos.js');
 require('../common/cookie.js');
 require('../common/expression.js');
+require('../common/dataTable.js');
 require('../common/api.js');
 
 require('./crypto.js');
