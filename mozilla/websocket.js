@@ -136,6 +136,8 @@ register('', class Websocket extends Emitter {
                 return;
             }
             else {
+                console.log(toJson(this.pending[this.pending.length - 1]));
+                console.log(mkBuffer(toJson(this.pending[this.pending.length - 1])));
                 this.ws.send(toJson(this.pending.shift()));
             }
         }

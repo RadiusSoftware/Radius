@@ -59,36 +59,18 @@ singletonIn(Process.nodeClassController, '', class WebSockets extends Emitter {
  * when a complete message has been received.
 *****/
 registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
-    /*
-    static nextSocketNumber = 1;
-    static webSockets = {};
-
-    static onNotify = (() => {
-        let handler = message => {
-            let webSocket = WebSocket.webSockets[message.socketId];
-
-            if (webSocket) {
-                webSocket.sendMessage(message);
-            }
-        };
-
-        Ipc.on('#NotifyClient', message => handler(message));
-        return handler;
-    })();
-    */
-
     constructor(socket, extensions, headData) {
         super();
         this.socket = socket;
         this.uuid = Crypto.generateUUID();
-        console.log('set websocket default timeout...');
+        console.log('websocket.js: set websocket default timeout...');
         this.socket.setTimeout(0);
         this.socket.setNoDelay();
         this.analyzeExtensions(extensions);
         this.frameParser = mkFrameParser(this, headData);
         this.frameBuilder = mkFrameBuilder(this.extensions);
         this.type = '';
-        this.payload = [];
+        this.frames = [];
         this.state = 'Ready';
         this.socket.on('close', (...args) => this.onClose(...args));
 
@@ -145,6 +127,40 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         }
     }
 
+    getSecWebSocketExtensions() {
+        return this.extensions.map(ext => {
+            if (ext.value === undefined) {
+                return ext.name;
+            }
+            else {
+                return `${ext.name}=${ext.value}`;
+            }
+        }).join('; ');
+    }
+
+    hasExtension(extensionName) {
+        return extensionName in this.extensions;
+    }
+
+    hasExtensions() {
+        return Object.keys(this.extensions).length > 0;
+    }
+
+    async getPayload() {
+        let payload = this.frames[0].getPayload();
+
+        for (let i = 1; i < this.frames.length; i++) {
+            payload = Buffer.concat(payload, this.frames[i].getPayload());
+        }
+
+        if (this.hasExtensions('permessage-deflate')) {
+            // TODO -- inflate the payload...
+        }
+        else {
+            return payload;
+        }
+    }
+
     onClose(hasError) {
         this.destroy();
     }
@@ -153,7 +169,7 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         this.destroy();
     }
 
-    onFrame(frame) {
+    async onFrame(frame) {
         if (this.state == 'Ready') {
             if (frame.opcode == 0x1) {
                 this.type = 'string';
@@ -181,24 +197,25 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
             }
 
             if (frame.fin) {
-                this.onMessage(frame.payload());
+                this.frames.push(frame);
+                this.onMessage(await this.getPayload());
                 this.reset();
             }
             else {
                 this.state = 'Fragmented';
-                this.payload.push(frame.payload());
+                this.frames.push(frame);
             }
         }
         else if (this.state == 'Fragmented') {
             if (frame.opcode == 0x0) {
-                this.payload.push(frame.payload());
+                this.frames.push(frame);
             }
             else {
                 this.close();
             }
 
             if (frame.fin) {
-                this.onMessage(Buffer.concat(this.payload));
+                this.onMessage(await this.getPayload());
                 this.reset();
             }
         }
@@ -225,19 +242,8 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
 
     reset() {
         this.type = '';
-        this.payload = [];
+        this.frames = [];
         this.state = 'Ready';
-    }
-
-    secWebSocketExtensions() {
-        return this.extensions.map(ext => {
-            if (ext.value === undefined) {
-                return ext.name;
-            }
-            else {
-                return `${ext.name}=${ext.value}`;
-            }
-        }).join('; ');
     }
 
     sendMessage(message) {
@@ -342,8 +348,14 @@ registerIn('HttpServerWorker', '', class FrameParser {
             GetInfo: this.getInfo,
             GetExtended: this.getExtended,
             GetMask: this.getMask,
-            GetPayload: this.getPayload,
+            CheckPayload: this.checkPayload,
             HaveFrame: this.onFrame,
+        }
+    }
+
+    checkPayload() {
+        if (this.rawFrame.length >= this.headerLength + this.payloadLength) {
+            this.state = 'HaveFrame';
         }
     }
 
@@ -404,14 +416,19 @@ registerIn('HttpServerWorker', '', class FrameParser {
                 this.mask.push(this.rawFrame[i + this.maskOffset]);
             }
 
-            this.state = 'GetPayload';
+            this.state = 'CheckPayload';
         }
     }
 
     getPayload() {
-        if (this.rawFrame.length >= this.headerLength + this.payloadLength) {
-            this.state = 'HaveFrame';
+        let slice = this.rawFrame.slice(this.headerLength);
+        let decoded = Buffer.alloc(slice.length);
+
+        for (let i = 0; i < slice.length; i++) {
+            decoded[i] = slice[i] ^ this.mask[i % 4];
         }
+
+        return decoded;
     }
 
     onData(buffer) {
@@ -450,16 +467,5 @@ registerIn('HttpServerWorker', '', class FrameParser {
         delete this.headerLength;
         delete this.payloadExtention;
         delete this.mask;
-    }
-
-    payload() {
-        let slice = this.rawFrame.slice(this.headerLength);
-        let decoded = Buffer.alloc(slice.length);
-
-        for (let i = 0; i < slice.length; i++) {
-            decoded[i] = slice[i] ^ this.mask[i % 4];
-        }
-
-        return decoded;
     }
 });

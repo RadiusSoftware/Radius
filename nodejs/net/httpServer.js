@@ -326,9 +326,9 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
                     'Connection: upgrade',
                     `Sec-WebSocket-Accept: ${hash}`,
                 ];
-
-                if (webSocket.extensions.length) {
-                    headers.push(`Sec-WebSocket-Extensions: ${webSocket.secWebSocketExtensions()}`);
+                
+                if (webSocket.hasExtensions()) {
+                    headers.push(`Sec-WebSocket-Extensions: ${webSocket.getSecWebSocketExtensions()}`);
                 }
             
                 headers.push('\r\n');

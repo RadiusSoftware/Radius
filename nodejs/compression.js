@@ -19,9 +19,9 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-const LibZlib = require('node:zlib');
 const NpmYauzl = require('yauzl');
 const NpmYazl = require('yazl');
+const LibZlib = require('node:zlib');
 
 
 /*****
@@ -51,6 +51,7 @@ singleton('', class Compression {
                 uncompress: compressed => {
                     return new Promise((ok, fail) => {
                         LibZlib.inflateRaw(compressed, (error, uncompressed) => {
+                            console.log(error);
                             ok(uncompressed);
                         });
                     });
