@@ -136,8 +136,10 @@ register('', class Websocket extends Emitter {
                 return;
             }
             else {
-                console.log(toJson(this.pending[this.pending.length - 1]));
-                console.log(mkBuffer(toJson(this.pending[this.pending.length - 1])).toString('hex'));
+                let inflated = toJson(this.pending[this.pending.length - 1]);
+                console.log(inflated.length);
+                console.log(inflated);
+                console.log(mkBuffer(inflated).toString('hex'));
                 this.ws.send(toJson(this.pending.shift()));
             }
         }

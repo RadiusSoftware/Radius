@@ -85,7 +85,7 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         this.extensions = {};
 
         const supported = mkStringSet(
-            'permessage-deflate',
+            //'permessage-deflate',
         );
 
         extensions.split(';').forEach(extension => {
@@ -147,19 +147,16 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
     }
 
     async getPayload() {
-        let payload = this.frames[0].getPayload();
+        const payload = Buffer.concat(this.frames.map(frame => frame.getPayload()));
 
-        for (let i = 1; i < this.frames.length; i++) {
-            payload = Buffer.concat(payload, this.frames[i].getPayload());
-        }
-
+        console.log(payload.length);
+        console.log(payload.toString('hex'));
         if (this.hasExtension('permessage-deflate')) {
-            console.log(payload.length);
-            console.log(payload.toString('hex'));
             let inflated = await Compression.uncompress('deflate', payload);
             console.log(inflated);
         }
         else {
+            console.log(payload.toString());
             return payload;
         }
     }
