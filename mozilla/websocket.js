@@ -57,7 +57,7 @@ register('', class Websocket extends Emitter {
         let trap = mkTrap();
         trap.setExpected(1);
         message['#TRAP'] = trap.id;
-        this.pending.push(message);
+        this.pending.push(toJson(message));
         this.awaiting[trap.id] = trap;
         this.sendPending();
         return trap.promise;
@@ -121,8 +121,13 @@ register('', class Websocket extends Emitter {
         }
     }
 
-    sendServer(message) {
-        this.pending.push(message);
+    sendServerData(data) {
+        this.pending.push(data);
+        this.sendPending();
+    }
+
+    sendServerMessage(message) {
+        this.pending.push(toJson(message));
         this.sendPending();
     }
 
@@ -136,11 +141,8 @@ register('', class Websocket extends Emitter {
                 return;
             }
             else {
-                let inflated = toJson(this.pending[this.pending.length - 1]);
-                console.log(inflated.length);
-                console.log(inflated);
-                console.log(mkBuffer(inflated).toString('hex'));
-                this.ws.send(toJson(this.pending.shift()));
+                //this.ws.send(toJson({ name: 'RoadHouse', value: 'Peter Griffin' }));
+                this.ws.send(this.pending.shift());
             }
         }
     }

@@ -151,7 +151,10 @@ register('', class WebApp extends HttpX {
             }
         }
         catch (e) {
-            await caught(e);
+            this.on({
+                name: 'Data',
+                data: data,
+            })
         }
     }
 
