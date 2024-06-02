@@ -200,7 +200,13 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
 
             if (frame.fin) {
                 this.frames.push(frame);
-                this.onMessage(this.getPayload());
+
+                this.emit({
+                    name: 'DataReceived',
+                    type: this.type,
+                    payload: this.getPayload(),
+                });
+                
                 this.reset();
             }
             else {
@@ -217,18 +223,15 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
             }
 
             if (frame.fin) {
-                this.onMessage(this.getPayload());
+                this.emit({
+                    name: 'DataReceived',
+                    type: this.type,
+                    payload: this.getPayload(),
+                });
+
                 this.reset();
             }
         }
-    }
-  
-    async onMessage(payload) {
-        this.emit({
-            name: 'MessageReceived',
-            type: this.type,
-            payload: payload,
-        });
     }
 
     queryMessage(message) {

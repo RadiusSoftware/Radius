@@ -48,7 +48,7 @@ register('', class Websocket extends Emitter {
 
         setInterval(() => {
             if (this.ws) {
-                this.sendServer({ name: '#Ping' });
+                this.sendServerMessage({ name: '#Ping' });
             }
         }, 20000);
     }

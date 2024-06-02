@@ -138,24 +138,24 @@ register('', class WebApp extends HttpX {
         }
     }
 
-    async handleWebSocket(webSocket, data) {
-        try {
-            let message = fromJson(data.toString());
+    async handleWebSocket(webSocket, message) {
+        if (message.type == 'string') {
+            try {
+                let payloadMessage = fromJson(message.payload.toString());
+    
+                if ('#TRAP' in payloadMessage) {
+                    payloadMessage['#RESPONSE'] = await this.api.handle(payloadMessage);
+                    webSocket.sendMessage(payloadMessage)
+                }
+                else {
+                    this.api.handle(payloadMessage);
+                }
+            }
+            catch (e) {}
+            return;
+        }
 
-            if ('#TRAP' in message) {
-                message['#RESPONSE'] = await this.api.handle(message);
-                webSocket.sendMessage(message)
-            }
-            else {
-                this.api.handle(message);
-            }
-        }
-        catch (e) {
-            this.on({
-                name: 'Data',
-                data: data,
-            })
-        }
+        this.emit(message);
     }
 
     async init() {

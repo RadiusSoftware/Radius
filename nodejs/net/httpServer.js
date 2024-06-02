@@ -333,7 +333,7 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
             
                 headers.push('\r\n');
                 socket.write(headers.join('\r\n'));
-                webSocket.on('MessageReceived', data => httpX.handleWebSocket(webSocket, data.payload));
+                webSocket.on('DataReceived', message => httpX.handleWebSocket(webSocket, message));
             }
         }
         catch (e) {
