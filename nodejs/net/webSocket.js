@@ -149,10 +149,8 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
     getPayload() {
         const payload = Buffer.concat(this.frames.map(frame => frame.getPayload()));
 
-        console.log(payload.length);
-        console.log(payload.toString('hex'));
-
         if (this.hasExtension('permessage-deflate')) {
+            console.log(payload.length);
             console.log(payload.toString('hex'));
             console.log();
             //let inflated = await Compression.uncompress('deflate', payload);
