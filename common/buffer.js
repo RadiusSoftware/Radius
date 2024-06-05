@@ -31,7 +31,12 @@
 *****/
 if (platform == 'nodejs') {
     register('', function mkBuffer(...args) {
-        return Buffer.from(...args);
+        if (args.length) {
+            return Buffer.from(...args);
+        }
+        else {
+            return Buffer.from('');
+        }
     });
 }
 else if (platform == 'mozilla') {
