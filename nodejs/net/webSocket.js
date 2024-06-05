@@ -22,6 +22,7 @@
 
 
 /*****
+ * https://datatracker.ietf.org/doc/html/rfc7692#section-7.2.2
 *****/
 singletonIn(Process.nodeClassController, '', class WebSockets extends Emitter {
     constructor() {
@@ -85,7 +86,7 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         this.extensions = {};
 
         const supported = mkStringSet(
-            //'permessage-deflate',
+            'permessage-deflate',
         );
 
         extensions.split(';').forEach(extension => {
@@ -105,11 +106,11 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         });
     }
 
-    close() {
+    async close() {
         this.state = 'Closing';
 
         if (this.socket) {
-            let frames = this.frameBuilder.build('', 0x8);
+            let frames = await this.frameBuilder.buildFrames('', 0x8);
             frames.forEach(frame => this.socket.write(frame));
         }
     }
@@ -146,15 +147,13 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         return Object.keys(this.extensions).length > 0;
     }
 
-    getPayload() {
+    async getPayload() {
         const payload = Buffer.concat(this.frames.map(frame => frame.getPayload()));
-
+        
         if (this.hasExtension('permessage-deflate')) {
-            console.log(payload.length);
-            console.log(payload.toString('hex'));
-            console.log();
-            //let inflated = await Compression.uncompress('deflate', payload);
-            //console.log(inflated);
+            let deflated = Buffer.concat([ payload, mkBuffer('0000ffff', 'hex') ]);
+            let inflated = await Compression.uncompress('deflate', deflated);
+            return inflated;
         }
         else {
             return payload;
@@ -202,7 +201,7 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
                 this.emit({
                     name: 'DataReceived',
                     type: this.type,
-                    payload: this.getPayload(),
+                    payload: await this.getPayload(),
                 });
                 
                 this.reset();
@@ -224,7 +223,7 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
                 this.emit({
                     name: 'DataReceived',
                     type: this.type,
-                    payload: this.getPayload(),
+                    payload: await this.getPayload(),
                 });
 
                 this.reset();
@@ -232,12 +231,12 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         }
     }
 
-    queryMessage(message) {
+    async queryMessage(message) {
         if (this.socket) {
             let trap = mkTrap();
             trap.setExpected(trap, 1);
             message['#TRAP'] = trap.id;
-            let frames = this.frameBuilder.build(toJson(message), 0x1);
+            let frames = await this.frameBuilder.buildFrames(toJson(message), 0x1);
             frames.forEach(frame => this.socket.write(frame));
             return trap.promise;
         }
@@ -249,9 +248,9 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         this.state = 'Ready';
     }
 
-    sendMessage(message) {
+    async sendMessage(message) {
         if (this.socket) {
-            let frames = this.frameBuilder.build(toJson(message), 0x1);
+            let frames = await this.frameBuilder.buildFrames(toJson(message), 0x1);
             frames.forEach(frame => this.socket.write(frame));
         }
     }
@@ -270,31 +269,6 @@ registerIn('HttpServerWorker', '', class FrameBuilder {
 
     constructor(extensions) {
         this.extensions = extensions;
-    }
-
-    build(payload, opcode) {
-        let frames = [];
-        this.messageOpcode = opcode;
-        this.frameOpcode = this.messageOpcode;
-
-        console.log('\nFramebuilder.build() TODO -- deflate if so specified!\n')
-        this.payload = payload;
-
-        while (this.payload.length) {
-            if (this.payload.length <= FrameBuilder.maxPayLoadLength) {
-                frames.push(this.buildFrame(this.payload.length, 0x80));
-                this.payload = '';
-            }
-            else {
-                let slice = payload.slice(0, FrameBuilder.maxPayLoadLength);
-                frames.push(this.buildFrame(slice.length, 0x00));
-                this.payload = this.payload.slice(FrameBuilder.maxPayLoadLength)
-            }
-
-            this.frameOpcode = 0;
-        }
-
-        return frames;
     }
 
     buildFrame(payloadLength, ctl) {
@@ -322,10 +296,52 @@ registerIn('HttpServerWorker', '', class FrameBuilder {
         }
 
         for (let i = 0; i < payloadLength; i++) {
-            frame[i + headerLength] = this.payload.charCodeAt(i);
+            frame[i + headerLength] = this.payload.readUInt8(i);
         }
 
         return frame;
+    }
+
+    async buildFrames(payload, opcode) {
+        let frames = [];
+        this.messageOpcode = opcode;
+        this.frameOpcode = this.messageOpcode;
+
+        if ('permessage-deflate' in this.extensions) {
+            this.payload = await Compression.compress('deflate', payload);
+            let lastByte = this.payload.readUInt8(this.payload.length - 1);
+            console.log(this.payload.toString('hex'));
+
+            if (lastByte != 0) {
+                this.payload = Buffer.concat([this.payload, mkBuffer('00', 'hex')]);
+            }
+
+            console.log(this.payload.toString('hex'));
+        }
+        else {
+            if (payload instanceof Buffer) {
+                this.payload = payload;
+            }
+            else {
+                this.payload = mkBuffer(payload);
+            }
+        }
+
+        while (this.payload.length) {
+            if (this.payload.length <= FrameBuilder.maxPayLoadLength) {
+                frames.push(this.buildFrame(this.payload.length, 0x80));
+                this.payload = '';
+            }
+            else {
+                let slice = payload.subarray(0, FrameBuilder.maxPayLoadLength);
+                frames.push(this.buildFrame(slice.length, 0x00));
+                this.payload = this.payload.subarray(FrameBuilder.maxPayLoadLength)
+            }
+
+            this.frameOpcode = 0;
+        }
+
+        return frames;
     }
 });
 
@@ -465,12 +481,12 @@ registerIn('HttpServerWorker', '', class FrameParser {
         delete this.rsv1;
         delete this.rsv2;
         delete this.rsv3;
+        delete this.mask;
         delete this.masking;
-        delete this.payloadLength;
-        delete this.payloadExtention;
         delete this.maskOffset;
         delete this.headerLength;
+        delete this.payloadLength;
         delete this.payloadExtention;
-        delete this.mask;
+        delete this.payloadExtention;
     }
 });

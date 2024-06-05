@@ -141,7 +141,6 @@ register('', class Websocket extends Emitter {
                 return;
             }
             else {
-                //this.ws.send(toJson({ name: 'RoadHouse', value: 'Peter Griffin' }));
                 this.ws.send(this.pending.shift());
             }
         }

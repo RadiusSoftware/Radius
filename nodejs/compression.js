@@ -42,16 +42,17 @@ singleton('', class Compression {
 
             deflate: {
                 compress: uncompressed => {
-                    return new Promise((ok, fail) => {
-                        LibZlib.deflateRaw(uncompressed, (error, compressed) => {
+                    return new Promise(async (ok, fail) => {
+                        LibZlib.deflateRaw(uncompressed, { windowBits: 15 }, (error, compressed) => {
                             ok(compressed);
                         });
                     });
                 },
                 uncompress: compressed => {
                     return new Promise((ok, fail) => {
-                        LibZlib.inflateRaw(compressed, (error, uncompressed) => {
-                            console.log(error);
+                        let inflator = LibZlib.createInflateRaw({ windowBits: 15 });
+                        inflator.write(compressed);
+                        inflator.on('data', uncompressed => {
                             ok(uncompressed);
                         });
                     });

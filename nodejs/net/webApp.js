@@ -145,7 +145,7 @@ register('', class WebApp extends HttpX {
     
                 if ('#TRAP' in payloadMessage) {
                     payloadMessage['#RESPONSE'] = await this.api.handle(payloadMessage);
-                    webSocket.sendMessage(payloadMessage)
+                    await webSocket.sendMessage(payloadMessage)
                 }
                 else {
                     this.api.handle(payloadMessage);
