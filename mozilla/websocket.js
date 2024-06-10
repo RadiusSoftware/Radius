@@ -102,7 +102,11 @@ register('', class Websocket extends Emitter {
             this.ws = null;
         };
 
-        this.ws.onmessage = event => this.onMessage(fromJson(event.data));
+        this.ws.onmessage = event => {
+            alert(event.data);
+            this.onMessage(fromJson(event.data));
+        };
+        
         return this;
     }
 

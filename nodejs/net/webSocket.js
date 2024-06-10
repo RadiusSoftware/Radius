@@ -83,7 +83,7 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         this.extensions = {};
 
         const supported = mkStringSet(
-            //'permessage-deflate',
+            'permessage-deflate',
         );
 
         extensions.split(';').forEach(extension => {
@@ -202,6 +202,7 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
  * incoming data.
  * 
  * https://datatracker.ietf.org/doc/html/rfc7692#section-7.2.2
+ * http://zsync.moria.org.uk/paper/ch03s02.html
 *****/
 registerIn('HttpServerWorker', '', class WebSocketMessageParser {
     constructor(webSocket, headData) {
@@ -365,18 +366,17 @@ registerIn('HttpServerWorker', '', class WebSocketMessageParser {
     onMessage() {
         let type = this.type;
         let payload = this.payload;
+        this.reset();
 
         if ('permessage-deflate' in this.webSocket.extensions) {
             (async () => {
                 let deflated = Buffer.concat([ payload, mkBuffer('0000ffff', 'hex') ]);
-                let inflated = await Compression.uncompress('deflate', deflated);
+                let inflated = await Compression.uncompress('deflate-raw', deflated);
                 this.webSocket.onMessage(type, inflated);
-                this.reset();
             })();
         }
         else {
             this.webSocket.onMessage(type, payload);
-            this.reset();
         }
     }
 
@@ -457,17 +457,20 @@ registerIn('HttpServerWorker', '', class WebSocketFrameBuilder {
         }
 
         if ('permessage-deflate' in this.extensions) {
-            payload = await Compression.compress('deflate', payload);
-            /*
-            let lastByte = this.payload.readUInt8(this.payload.length - 1);
-            console.log(this.payload.toString('hex'));
+            payload = (await Compression.compress('deflate-raw', payload));
 
-            if (lastByte != 0) {
-                this.payload = Buffer.concat([this.payload, mkBuffer('00', 'hex')]);
+            console.log(payload.toString('hex'));
+            console.log();
+            console.log(payload.toBitString());
+            console.log();
+            //let lastByte = payload.readUInt8(payload.length - 1);
+
+            if (true) {//lastByte != 1) {
+                payload = Buffer.concat([payload, mkBuffer('06', 'hex')]);
             }
-
-            console.log(this.payload.toString('hex'));
-            */
+            
+            console.log(payload.toString('hex'));
+            console.log();
         }
 
         while (payload.length) {

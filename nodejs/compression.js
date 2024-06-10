@@ -43,18 +43,30 @@ singleton('', class Compression {
             deflate: {
                 compress: uncompressed => {
                     return new Promise(async (ok, fail) => {
-                        LibZlib.deflateRaw(uncompressed, { windowBits: 15 }, (error, compressed) => {
-                            ok(compressed);
-                        });
+                        LibZlib.deflate(uncompressed, (error, compressed) => ok(compressed));
                     });
                 },
                 uncompress: compressed => {
                     return new Promise((ok, fail) => {
-                        let inflator = LibZlib.createInflateRaw({ windowBits: 15 });
+                        LibZlib.deflate(compressed, (error, uncompressed) => ok(uncompressed));
+                    });
+                },
+            },
+
+            'deflate-raw': {
+                compress: uncompressed => {
+                    return new Promise(async (ok, fail) => {
+                        let deflator = LibZlib.createDeflateRaw();
+                        deflator.on('data', compressed => ok(compressed));
+                        deflator.write(uncompressed);
+                        deflator.end();
+                    });
+                },
+                uncompress: compressed => {
+                    return new Promise((ok, fail) => {
+                        let inflator = LibZlib.createInflateRaw();
+                        inflator.on('data', uncompressed => ok(uncompressed));
                         inflator.write(compressed);
-                        inflator.on('data', uncompressed => {
-                            ok(uncompressed);
-                        });
                     });
                 },
             },
