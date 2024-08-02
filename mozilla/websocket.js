@@ -66,6 +66,7 @@ register('', class Websocket extends Emitter {
     close() {
         if (this.ws && this.ws.readyState == 1) {
             this.ws.close();
+            this.ws = null;
         }
     }
 
@@ -85,7 +86,7 @@ register('', class Websocket extends Emitter {
         this.ws.onerror = error => {
             this.emit({
                 name: 'error',
-                event: event,
+                error: error,
                 websocket: this,
             });
 
@@ -95,7 +96,6 @@ register('', class Websocket extends Emitter {
         this.ws.onclose = () => {
             this.emit({
                 name: 'close',
-                event: event,
                 websocket: this,
             });
 
@@ -103,10 +103,9 @@ register('', class Websocket extends Emitter {
         };
 
         this.ws.onmessage = event => {
-            alert(event.data);
             this.onMessage(fromJson(event.data));
         };
-        
+
         return this;
     }
 

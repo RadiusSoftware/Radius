@@ -19,6 +19,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
+const LibZlib = require('zlib');
 
 
 /*****
@@ -31,19 +32,23 @@ singletonIn(Process.nodeClassController, '', class WebSockets extends Emitter {
     }
 
     async onSocketCall(message) {
+        // TODO
     }
 
     async onSocketCreated(message) {
+        // TODO
         //console.log('\n*** SOCKET CREATED!');
         //console.log(message);
     }
 
     async onSocketDestroyed(message) {
+        // TODO
         //console.log('\n*** SOCKET DESTROYED!');
         //console.log(message);
     }
 
     async onSocketSend(message) {
+        // TODO
     }
 });
 
@@ -59,17 +64,23 @@ singletonIn(Process.nodeClassController, '', class WebSockets extends Emitter {
  * when a complete message has been received.
 *****/
 registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
+    static supportedExtensions = {
+        'permessage-deflate': () => mkPerMessageDeflator,
+    };
+
     constructor(socket, extensions, headData) {
         super();
         this.socket = socket;
         this.uuid = Crypto.generateUUID();
+        // TODO
         console.log('\nwebsocket.js: set websocket default timeout...\n');
+        // TODO
         this.socket.setTimeout(0);
         this.socket.setNoDelay();
 
         this.analyzeExtensions(extensions);
         mkWebSocketMessageParser(this, headData);
-        this.frameBuilder = mkWebSocketFrameBuilder(this.extensions);
+        this.frameBuilder = mkWebSocketFrameBuilder(this);
         this.socket.on('close', (...args) => this.onClose(...args));
         
         Process.sendController({
@@ -79,27 +90,45 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         });
     }
   
-    analyzeExtensions(extensions) {
+    analyzeExtensions(extensionsHeader) {
         this.extensions = {};
 
-        const supported = mkStringSet(
-            'permessage-deflate',
-        );
+        extensionsHeader.split(',').forEach(extensionSpecification => {
+            let extension = null;
+            let parameters = {};
+            let parts = extensionSpecification.split(';');
+            let name = parts[0].trim();
 
-        extensions.split(';').forEach(extension => {
-            let [ left, right ] = extension.trim().split('=');
+            for (let i = 1; i < parts.length; i++) {
+                let part = parts[i].trim();
 
-            if (supported.has(left)) {
-                let rsv = Object.keys(this.extensions).length + 1;
-
-                if (rsv >= 1 && rsv <= 3) {
-                    this.extensions[left] = {
-                        rsv: rsv,
-                        name: left,
-                        value: right,
-                    };
+                if (part.indexOf('=') > 0) {
+                    let [ left, right ] = part.split('=');
+                    parameters[left.trim()] = right.trim();
+                }
+                else {
+                    parameters[part] = null;
                 }
             }
+
+            let settings;
+            let supportedExtension = WebSocket.supportedExtensions[name];
+
+            if (supportedExtension) {
+                if (!(name in this.extensions)) {
+                    let rsv = Object.keys(this.extensions).length + 1;
+
+                    settings =  {
+                        rsv: rsv,
+                        name: name,
+                        parameters: parameters,
+                    };
+
+                    extension = supportedExtension()(settings);
+                }
+            }
+
+            extension ? this.extensions[settings.name] = extension : null;
         });
 
         return this;
@@ -107,7 +136,7 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
 
     async close() {
         if (this.socket) {
-            for (let frame of await this.frameBuilder.buildFrames('', 0x8)) {
+            for (let frame of await this.frameBuilder.buildFrames('', 'close')) {
                 this.socket.write(frame);
             }
         }
@@ -130,14 +159,19 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
     }
 
     getSecWebSocketExtensions() {
-        return Object.values(this.extensions).map(ext => {
-            if (ext.value === undefined) {
-                return ext.name;
+        return Object.values(this.extensions).map(extension => {
+            let specification = [ extension.settings.name ];
+
+            for (let parameterName in extension.settings.parameters) {
+                let parameterValue = extension.settings.parameters[parameterName];
+
+                if (parameterValue != null) {
+                    specification.push(`${parameterName}=${parameterValue}`);
+                }
             }
-            else {
-                return `${ext.name}=${ext.value}`;
-            }
-        }).join('; ');
+
+            return specification.join('; ');
+        }).join(', ');
     }
 
     hasExtension(extensionName) {
@@ -148,7 +182,7 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         return Object.keys(this.extensions).length > 0;
     }
 
-    onClose(hasError) {
+    onClose() {
         this.destroy();
     }
 
@@ -164,13 +198,33 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         });
     }
 
+    async ping() {
+        if (this.socket) {
+            for (let frame of await this.frameBuilder.buildFrames('', 'ping')) {
+                this.socket.write(frame);
+            }
+        }
+
+        return this;
+    }
+
+    async pong() {
+        if (this.socket) {
+            for (let frame of await this.frameBuilder.buildFrames('', 'pong')) {
+                this.socket.write(frame);
+            }
+        }
+
+        return this;
+    }
+
     async queryMessage(message) {
         if (this.socket) {
             let trap = mkTrap();
             trap.setExpected(trap, 1);
             message['#TRAP'] = trap.id;
 
-            for (let frame of await this.frameBuilder.buildFrames(mkBuffer(toJson(message)), 0x1)) {
+            for (let frame of await this.frameBuilder.buildFrames(mkBuffer(toJson(message)), 'text')) {
                 this.socket.write(frame);
             }
             
@@ -180,13 +234,125 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
 
     async sendMessage(message) {
         if (this.socket) {
-
-            for (let frame of await this.frameBuilder.buildFrames(mkBuffer(toJson(message)), 0x1)) {
+            for (let frame of await this.frameBuilder.buildFrames(mkBuffer(toJson(message)), 'text')) {
                 this.socket.write(frame);
             }
         }
 
         return this;
+    }
+});
+
+
+/*****
+ * The frame builder object is responsible for implementing the framing protocol
+ * for outgoing messages.  In websocket protocol, messages are sent and received
+ * as a series of one or more frames, which have very specific instructions for
+ * laying them out according to RFC 6455, https://www.rfc-editor.org/rfc/rfc6455.
+ * This code implements that protocol by building one or more outgoing frames.
+ * 
+ * https://datatracker.ietf.org/doc/html/rfc7692#page-10
+ * https://datatracker.ietf.org/doc/html/rfc7692#section-7.2.2
+ * https://www.ietf.org/rfc/rfc1951.txt
+ * https://thuc.space/posts/deflate/
+ * https://github.com/libyal/assorted/blob/main/documentation/Deflate%20(zlib)%20compressed%20data%20format.asciidoc#
+ * 
+*****/
+registerIn('HttpServerWorker', '', class WebSocketFrameBuilder {
+    static maxPayLoadLength = 50000;
+
+    constructor(webSocket) {
+        this.webSocket = webSocket;
+        this.extensions = webSocket.extensions;
+    }
+
+    buildFrame(payload, opcode, fin) {
+        let headerLength = 2;
+        let finBit = fin ? 0x80 : 0x00;
+
+        if (payload.length > 65536) {
+            headerLength += 4;
+            var frame = Buffer.alloc(headerLength + payload.length);
+            frame[0] = finBit | opcode;
+            frame[1] = 127;
+            frame.writeUInt32BE((payload.length & 0xffff0000) >> 32, 2);
+            frame.writeUInt32BE(payload.length & 0x0000ffff, 6);
+        }
+        else if (payload.length > 125) {
+            headerLength += 2;
+            var frame = Buffer.alloc(headerLength + payload.length);
+            frame[0] = finBit | opcode;
+            frame[1] = 126;
+            frame.writeUInt16BE(payload.length, 2);
+        }
+        else {
+            var frame = Buffer.alloc(headerLength + payload.length);
+            frame[0] = finBit | opcode;
+            frame[1] = payload.length;
+        }
+
+        for (let extension of Object.values(this.extensions)) {
+            switch (extension.settings.rsv) {
+                case 1:
+                    frame[0] = frame[0] | 0x40;
+                    break;
+
+                case 2:
+                    frame[0] = frame[0] | 0x20;
+                    break;
+
+                case 3:
+                    frame[0] = frame[0] | 0x10;
+                    break;
+            }
+        }
+
+        for (let i = 0; i < payload.length; i++) {
+            frame[i + headerLength] = payload.readUInt8(i);
+        }
+        
+        return frame;
+    }
+
+    async buildFrames(payload, opcodeName) {
+        let frames = [];
+        let opcode = WebSocketFrameBuilder.convertOpcodeName(opcodeName);
+
+        if (typeof payload == 'string') {
+            payload = mkBuffer(payload);
+        }
+
+        for (let extension of Object.values(this.webSocket.extensions)) {
+            payload = await extension.processOutgoing(payload);
+        }
+
+        while (payload.length) {
+            if (payload.length <= WebSocketFrameBuilder.maxPayLoadLength) {
+                frames.push(this.buildFrame(payload, opcode, true));
+                break;
+            }
+            else {
+                let subarray = payload.subarray(0, WebSocketFrameBuilder.maxPayLoadLength);
+                frames.push(this.buildFrame(subarray, opcode, false));
+                payload = payload.subarray(WebSocketFrameBuilder.maxPayLoadLength);
+            }
+
+            opcode = 0;
+        }
+
+        return frames;
+    }
+
+    static convertOpcodeName(name) {
+        const opcodes = {
+            'text': 1,
+            'binary': 2,
+            'close': 8,
+            'ping': 9,
+            'pong': 10,
+        };
+
+        return opcodes[name];
     }
 });
 
@@ -201,8 +367,12 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
  * this protocol will recognize the frame regardless of the chunk size of the
  * incoming data.
  * 
+ * https://datatracker.ietf.org/doc/html/rfc7692#page-10
  * https://datatracker.ietf.org/doc/html/rfc7692#section-7.2.2
- * http://zsync.moria.org.uk/paper/ch03s02.html
+ * https://www.ietf.org/rfc/rfc1951.txt
+ * https://thuc.space/posts/deflate/
+ * https://github.com/libyal/assorted/blob/main/documentation/Deflate%20(zlib)%20compressed%20data%20format.asciidoc#
+ * 
 *****/
 registerIn('HttpServerWorker', '', class WebSocketMessageParser {
     constructor(webSocket, headData) {
@@ -226,13 +396,13 @@ registerIn('HttpServerWorker', '', class WebSocketMessageParser {
     }
 
     checkExtended() {
-        if (this.payloadExtention == 'large') {
+        if (this.payloadExtension == 'large') {
             if (this.buffered.length >= this.maskOffset) {
                 this.payloadLength = this.buffered.readUInt32BE(2) << 32 | this.buffered.readUInt32BE(6);
                 this.state = 'CheckMask';
             }
         }
-        else if (this.payloadExtention == 'medium') {
+        else if (this.payloadExtension == 'medium') {
             if (this.buffered.length >= this.maskOffset) {
                 this.payloadLength = this.buffered.readUInt16BE(2);
                 this.state = 'CheckMask';
@@ -253,17 +423,17 @@ registerIn('HttpServerWorker', '', class WebSocketMessageParser {
 
             this.masking = (this.buffered[1] & 0x08);
             this.payloadLength = this.buffered[1] & 0x7f;
-            this.payloadExtention = 'none';
+            this.payloadExtension = 'none';
 
             if (this.payloadLength == 126) {
                 this.maskOffset = 4;
                 this.headerLength = 8;
-                this.payloadExtention = 'medium';
+                this.payloadExtension = 'medium';
             }
             else if (this.payloadLength == 127) {
                 this.maskOffset = 10;
                 this.headerLength = 14;
-                this.payloadExtention = 'large';
+                this.payloadExtension = 'large';
             }
             else {
                 this.maskOffset = 2;
@@ -303,7 +473,7 @@ registerIn('HttpServerWorker', '', class WebSocketMessageParser {
     onData(buffer) {
         this.buffered = Buffer.concat([this.buffered, buffer]);
 
-        while(this.state in this.analyzers) {
+        while(this.buffered.length > 0 && this.state in this.analyzers) {
             let state = this.state;
             Reflect.apply(this.analyzers[this.state], this, []);
 
@@ -363,21 +533,19 @@ registerIn('HttpServerWorker', '', class WebSocketMessageParser {
         }
     }
 
-    onMessage() {
+    async onMessage() {
         let type = this.type;
         let payload = this.payload;
-        this.reset();
 
-        if ('permessage-deflate' in this.webSocket.extensions) {
-            (async () => {
-                let deflated = Buffer.concat([ payload, mkBuffer('0000ffff', 'hex') ]);
-                let inflated = await Compression.uncompress('deflate-raw', deflated);
-                this.webSocket.onMessage(type, inflated);
-            })();
+        for (let i = 0; i < Object.values(this.webSocket.extensions).length; i++) {
+            if (this[`rsv${i + 1}`]) {
+                let extension = Object.values(this.webSocket.extensions)[i];
+                payload = await extension.processIncoming(payload);
+            }
         }
-        else {
-            this.webSocket.onMessage(type, payload);
-        }
+
+        this.reset();
+        this.webSocket.onMessage(type, payload);
     }
 
     reset() {
@@ -385,14 +553,14 @@ registerIn('HttpServerWorker', '', class WebSocketMessageParser {
         delete this.rsv1;
         delete this.rsv2;
         delete this.rsv3;
+        delete this.type;
         delete this.mask;
         delete this.masking;
         delete this.maskOffset;
         delete this.fragmented;
         delete this.headerLength;
         delete this.payloadLength;
-        delete this.payloadExtention;
-        delete this.payloadExtention;
+        delete this.payloadExtension;
 
         this.payload = mkBuffer();
         this.fragmented = false;
@@ -403,88 +571,61 @@ registerIn('HttpServerWorker', '', class WebSocketMessageParser {
 
 
 /*****
- * The frame builder object is responsible for implementing the framing protocol
- * for outgoing messages.  In websocket protocol, messages are sent and received
- * as a series of one or more frames, which have very specific instructions for
- * laying them out according to RFC 6455, https://www.rfc-editor.org/rfc/rfc6455.
- * This code implements that protocol by building one or more outgoing frames.
+ * This is the most important and most commonly used extension for a websocket
+ * permessage-deflate.  This should always be used to help improve application
+ * performance.  The key to making this work is to create a persistent raw
+ * deflator and raw inflator object.  The need to be persistent so they can
+ * maintain their LZ77 sliding window with
  * 
- * https://datatracker.ietf.org/doc/html/rfc7692#section-7.2.2
+ * Additionally, this extension demonstrates how a websocket extension plugs
+ * into the overall application framework.  There's a constructor, which must
+ * run synchronously.  Moreover, the extension object must have two async
+ * methods: processesIncoming and processOutgoing.  Each of these methods
+ * performs the extension's algorithm based on the settings provided to the
+ * constructor.
 *****/
-registerIn('HttpServerWorker', '', class WebSocketFrameBuilder {
-    static maxPayLoadLength = 50000;
+registerIn('HttpServerWorker', '', class PerMessageDeflator {
+    constructor(settings) {
+        this.settings = settings;
+        this.deflatorDone = null;
+        this.inflatorDone = null;
 
-    constructor(extensions) {
-        this.extensions = extensions;
+        this.deflator = LibZlib.createDeflateRaw({ flush: 2 });
+        this.inflator = LibZlib.createInflateRaw();
+
+        this.deflator.on('data', deflated => {
+            let deflatorDone = this.deflatorDone;
+            this.deflatorDone = null;
+            deflatorDone(deflated.subarray(0, deflated.length - 4));
+        });
+
+        this.inflator.on('data', inflated => {
+            let inflatorDone = this.inflatorDone;
+            this.inflatorDone = null;
+            inflatorDone(inflated);
+        });
     }
 
-    buildFrame(payload, opcode, ctl) {
-        let headerLength = 2;
-
-        if (payload.length > 65536) {
-            headerLength += 4;
-            var frame = Buffer.alloc(headerLength + payload.length);
-            frame[0] = ctl | opcode;
-            frame[1] = 127;
-            frame.writeUInt32BE((payload.length & 0xffff0000) >> 32, 2);
-            frame.writeUInt32BE(payload.length & 0x0000ffff, 6);
-        }
-        else if (payload.length > 125) {
-            headerLength += 2;
-            var frame = Buffer.alloc(headerLength + payload.length);
-            frame[0] = ctl | opcode;
-            frame[1] = 126;
-            frame.writeUInt16BE(payload.length, 2);
-        }
-        else {
-            var frame = Buffer.alloc(headerLength + payload.length);
-            frame[0] = ctl | opcode;
-            frame[1] = payloadLength;
-        }
-
-        for (let i = 0; i < payload.length; i++) {
-            frame[i + headerLength] = payload.readUInt8(i);
-        }
-
-        return frame;
+    getParameter(name) {
+        return this.settings.parameters[name];
     }
 
-    async buildFrames(payload, opcode) {
-        let frames = [];
+    hasParameter(name) {
+        return name in this.settings.parameters;
+    }
 
-        if (typeof payload == 'string') {
-            payload = mkBuffer(payload);
-        }
+    async processIncoming(deflated) {
+        return new Promise((ok, fail) => {
+            this.inflatorDone = ok;
+            deflated = Buffer.concat([ deflated, mkBuffer('0000ffff', 'hex') ]);
+            this.inflator.write(deflated);
+        });
+    }
 
-        if ('permessage-deflate' in this.extensions) {
-            payload = (await Compression.compress('deflate-raw', payload));
-
-            console.log(payload.toString('hex'));
-            console.log();
-            console.log(payload.toBitString());
-            console.log();
-            //let lastByte = payload.readUInt8(payload.length - 1);
-
-            if (true) {//lastByte != 1) {
-                payload = Buffer.concat([payload, mkBuffer('06', 'hex')]);
-            }
-            
-            console.log(payload.toString('hex'));
-            console.log();
-        }
-
-        while (payload.length) {
-            if (payload.length <= WebSocketFrameBuilder.maxPayLoadLength) {
-                frames.push(this.buildFrame(payload, opcode, 0x80));
-                break;
-            }
-            else {
-                let subarray = payload.subarray(0, WebSocketFrameBuilder.maxPayLoadLength);
-                frames.push(this.buildFrame(subarray, opcode, 0x00));
-                payload = payload.subarray(WebSocketFrameBuilder.maxPayLoadLength);
-            }
-        }
-
-        return frames;
+    async processOutgoing(inflated) {
+        return new Promise((ok, fail) => {
+            this.deflatorDone = ok;
+            this.deflator.write(inflated);
+        });
     }
 });

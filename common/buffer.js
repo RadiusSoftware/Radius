@@ -153,15 +153,27 @@
     
     Buffer.prototype.toBitArray = function(endianism) {
         let array = [];
-        const endian = endianism == 'big' ? bigEndian : littleEndian;
 
-        for (let i = 0; i < this.length; i++) {
-            for (let bit of endian[this.readUInt8(i) & 0x0F].array) {
-                array.push(bit);
+        if (endianism == 'big') {
+            for (let i = 0; i < this.length; i++) {
+                for (let bit of bigEndian[this.readUInt8(i) & 0x0F].array) {
+                    array.push(bit);
+                }
+
+                for (let bit of bigEndian[((this.readUInt8(i) & 0xF0) >> 4)].array) {
+                    array.push(bit);
+                }
             }
+        }
+        else {
+            for (let i = 0; i < this.length; i++) {
+                for (let bit of littleEndian[((this.readUInt8(i) & 0xF0) >> 4)].array) {
+                    array.push(bit);
+                }
 
-            for (let bit of endian[((this.readUInt8(i) & 0xF0) >> 4)].array) {
-                array.push(bit);
+                for (let bit of littleEndian[this.readUInt8(i) & 0x0F].array) {
+                    array.push(bit);
+                }
             }
         }
 
@@ -170,10 +182,16 @@
     
     Buffer.prototype.toBitString = function(endianism) {
         let string = [];
-        const endian = endianism == 'big' ? bigEndian : littleEndian;
 
-        for (let i = 0; i < this.length; i++) {
-            string.push(`${endian[this.readUInt8(i) & 0x0F].string}:${endian[((this.readUInt8(i) & 0xF0) >> 4)].string}`);
+        if (endianism == 'big') {
+            for (let i = 0; i < this.length; i++) {
+                string.push(`${bigEndian[this.readUInt8(i) & 0x0F].string}:${bigEndian[((this.readUInt8(i) & 0xF0) >> 4)].string}`);
+            }
+        }
+        else {
+            for (let i = 0; i < this.length; i++) {
+                string.push(`${littleEndian[((this.readUInt8(i) & 0xF0) >> 4)].string}:${littleEndian[this.readUInt8(i) & 0x0F].string}`);
+            }
         }
 
         return string.join('_');
