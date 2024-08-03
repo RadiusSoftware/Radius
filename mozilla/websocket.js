@@ -63,9 +63,9 @@ register('', class Websocket extends Emitter {
         return trap.promise;
     }
 
-    close() {
+    close(code, reason) {
         if (this.ws && this.ws.readyState == 1) {
-            this.ws.close();
+            this.ws.close(code, reason);
             this.ws = null;
         }
     }

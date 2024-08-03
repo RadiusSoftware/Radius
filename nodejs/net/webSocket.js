@@ -23,32 +23,63 @@ const LibZlib = require('zlib');
 
 
 /*****
+ * For big server applications, there are multiple processes that may require
+ * the ability to observer or control sockets in processes.  This singleton in
+ * the controller process is provided for that purpose.  Websockets register
+ * and deregister over the course of their lifecycle, and they will provided
+ * info to this singleton to help track what's going on.  Moreover, processes
+ * may message the singleton to send and call the sockets' clients.  Moreover,
+ * services for checking stats and closing sockets are also available.
 *****/
-singletonIn(Process.nodeClassController, '', class WebSockets extends Emitter {
+singletonIn(Process.nodeClassController, '', class WebSockets {
     constructor() {
-        super();
         this.sockets = {};
         mkHandlerProxy(Process, 'WebsocketManager', this);
     }
 
-    async onSocketCall(message) {
-        // TODO
+    async onSocketClosed(message) {
+        if (message.uuid in this.sockets) {
+            delete this.sockets[message.uuid];
+        }
     }
 
     async onSocketCreated(message) {
-        // TODO
-        //console.log('\n*** SOCKET CREATED!');
-        //console.log(message);
+        if (!(message.uuid in this.sockets)) {
+            this.sockets[message.uuid] = {
+                pid: message.pid,
+                uuid: message.uuid,
+                path: message['#ROUTING'].path,
+                monitors: {},
+            };
+        }
     }
 
-    async onSocketDestroyed(message) {
-        // TODO
-        //console.log('\n*** SOCKET DESTROYED!');
-        //console.log(message);
+    async onSocketRecv(message) {
+        // TODO **********************************************************************
+        if (message.uuid in this.sockets) {
+            let socket = this.sockets[message.uuid];
+        }
     }
 
     async onSocketSend(message) {
-        // TODO
+        // TODO **********************************************************************
+        if (message.uuid in this.sockets) {
+            let socket = this.sockets[message.uuid];
+        }
+    }
+
+    async onStartMonitor(message) {
+        // TODO **********************************************************************
+        if (message.uuid in this.sockets) {
+            let socket = this.sockets[message.uuid];
+        }
+    }
+
+    async onStopMonitor(message) {
+        // TODO **********************************************************************
+        if (message.uuid in this.sockets) {
+            let socket = this.sockets[message.uuid];
+        }
     }
 });
 
@@ -62,6 +93,13 @@ singletonIn(Process.nodeClassController, '', class WebSockets extends Emitter {
  * When the frame parse finishes a frame, the onFrame() method is called to enable
  * the WebSocket instances to assemble frames, and then to emit a notification
  * when a complete message has been received.
+ * 
+ * https://en.wikipedia.org/wiki/WebSocket#Frame-based_message
+ * https://datatracker.ietf.org/doc/html/rfc7692#page-10
+ * https://datatracker.ietf.org/doc/html/rfc7692#section-7.2.2
+ * https://www.ietf.org/rfc/rfc1951.txt
+ * https://thuc.space/posts/deflate/
+ * https://github.com/libyal/assorted/blob/main/documentation/Deflate%20(zlib)%20compressed%20data%20format.asciidoc#
 *****/
 registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
     static supportedExtensions = {
@@ -72,16 +110,15 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         super();
         this.socket = socket;
         this.uuid = Crypto.generateUUID();
-        // TODO
+        // TODO **********************************************************************
         console.log('\nwebsocket.js: set websocket default timeout...\n');
-        // TODO
+        // TODO **********************************************************************
         this.socket.setTimeout(0);
         this.socket.setNoDelay();
 
         this.analyzeExtensions(extensions);
         mkWebSocketMessageParser(this, headData);
         this.frameBuilder = mkWebSocketFrameBuilder(this);
-        this.socket.on('close', (...args) => this.onClose(...args));
         
         Process.sendController({
             name: 'WebsocketManagerSocketCreated',
@@ -134,25 +171,18 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         return this;
     }
 
-    async close() {
+    async close(code, reason) {
         if (this.socket) {
-            for (let frame of await this.frameBuilder.buildFrames('', 'close')) {
+            code = code ? code : 1000;
+            reason = reason ? reason : 'none';
+            let buffer = Buffer.concat([ mkBuffer('0000', 'hex'), mkBuffer(reason) ]);
+            buffer.writeUint16BE(code, 0);
+
+            for (let frame of await this.frameBuilder.buildFrames(buffer, 'close')) {
                 this.socket.write(frame);
             }
-        }
 
-        return this;
-    }
-
-    destroy() {
-        if (this.socket) {
-            this.socket.destroy();
-            this.socket = null;
-
-            Process.sendController({
-                name: 'WebsocketManagerSocketDestroyed',
-                uuid: this.uuid,
-            });
+            this.onClose(buffer);
         }
 
         return this;
@@ -182,20 +212,55 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         return Object.keys(this.extensions).length > 0;
     }
 
-    onClose() {
-        this.destroy();
+    onClose(payload) {
+        let code = -1;
+        let reason = '';
+
+        if (payload.length >= 2) {
+            code = payload.readUInt16BE(0);
+        }
+
+        if (payload.length > 2) {
+            reason = payload.subarray(2).toString();
+        }
+
+        Process.sendController({
+            name: 'WebsocketManagerSocketClosed',
+            uuid: this.uuid,
+            code: code,
+            reason: reason,
+        });
+
+        this.socket.destroy();
+        this.socket = null;
     }
 
     onError(error) {
-        this.destroy();
+        // TODO **********************************************************************
+        //this.destroy();
     }
 
     onMessage(type, payload) {
-        this.emit({
-            name: 'DataReceived',
-            type: type,
-            payload: payload,
-        });
+        if (type == 'close') {
+            this.onClose(payload);
+        }
+        else if (type == 'ping') {
+        }
+        else if (type == 'pong') {
+        }
+        else {
+            this.emit({
+                name: 'DataReceived',
+                type: type,
+                payload: payload,
+            });
+        }
+    }
+    /*
+    onPing(message) {
+    }
+
+    onPong(message) {
     }
 
     async ping() {
@@ -217,6 +282,7 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
 
         return this;
     }
+    */
 
     async queryMessage(message) {
         if (this.socket) {
@@ -251,6 +317,7 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
  * laying them out according to RFC 6455, https://www.rfc-editor.org/rfc/rfc6455.
  * This code implements that protocol by building one or more outgoing frames.
  * 
+ * https://en.wikipedia.org/wiki/WebSocket#Frame-based_message
  * https://datatracker.ietf.org/doc/html/rfc7692#page-10
  * https://datatracker.ietf.org/doc/html/rfc7692#section-7.2.2
  * https://www.ietf.org/rfc/rfc1951.txt
@@ -367,6 +434,7 @@ registerIn('HttpServerWorker', '', class WebSocketFrameBuilder {
  * this protocol will recognize the frame regardless of the chunk size of the
  * incoming data.
  * 
+ * https://en.wikipedia.org/wiki/WebSocket#Frame-based_message
  * https://datatracker.ietf.org/doc/html/rfc7692#page-10
  * https://datatracker.ietf.org/doc/html/rfc7692#section-7.2.2
  * https://www.ietf.org/rfc/rfc1951.txt
@@ -521,7 +589,7 @@ registerIn('HttpServerWorker', '', class WebSocketMessageParser {
                 this.type = '0x0A';
             }
             else {
-                this.type = 'unknown';
+                this.type = 'unsupported';
             }
 
             if (this.fin) {

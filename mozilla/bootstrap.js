@@ -47,6 +47,15 @@ register('', async function bootstrap(setup) {
         }
     });
 
+    register('', async function closeWebsocket(code, reason) {
+        if (websocket) {
+            code ? null : code = 1000;
+            reason ? null : reason = 'none';
+            websocket.close(code, reason);
+            websocket = null;
+        }
+    });
+
     register('', async function createWebsocket() {
         if (settings.enableWebsocket) {
             if (websocket === null) {
