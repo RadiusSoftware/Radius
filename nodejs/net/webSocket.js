@@ -39,26 +39,28 @@ const LibZlib = require('zlib');
  * https://thuc.space/posts/deflate/
  * https://github.com/libyal/assorted/blob/main/documentation/Deflate%20(zlib)%20compressed%20data%20format.asciidoc#
 *****/
-registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
+registerIn('HttpServerWorker', '', class WebSocket extends Resource {
     static supportedExtensions = {
         'permessage-deflate': () => mkPerMessageDeflator,
     };
 
     constructor(socket, extensions, headData) {
-        super();
+        super('websocket');
         this.socket = socket;
-        this.uuid = Crypto.generateUUID();
+        //this.uuid = Crypto.generateUUID();
         this.socket.setTimeout(0);
         this.socket.setNoDelay();
 
         this.analyzeExtensions(extensions);
         mkWebSocketMessageParser(this, headData);
         this.frameBuilder = mkWebSocketFrameBuilder(this);
-        
+
+        /*
+        console.log('\n******************** SECOND');
         Process.sendController({
             name: 'ResourcesTrace',
             category: 'websocket',
-            eventName: 'Register',
+            eventName: 'SendMessage',
             resourceUUID: this.uuid,
         });
 
@@ -69,6 +71,7 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         Process.on('TraceMonitorable', message => {
             console.log(message);
         });
+        */
     }
   
     analyzeExtensions(extensionsHeader) {
@@ -167,7 +170,8 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         if (payload.length > 2) {
             reason = payload.subarray(2).toString();
         }
-
+        
+        /*
         Process.sendController({
             name: 'ResourcesTrace',
             category: 'websocket',
@@ -176,9 +180,11 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
             code: code,
             reason: reason,
         });
+        */
 
         this.socket.destroy();
         this.socket = null;
+        super.onClose(code, reason);
     }
 
     onMessage(type, payload) {

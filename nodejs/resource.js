@@ -67,8 +67,23 @@ singletonIn(Process.nodeClassController, '', class Resources {
             }
         }
         else if (message.eventName == 'Deregister') {
+            if (message.category in this.categories) {
+                let category = mkResourceCategory(message.category);
+
+                for (let trace of category.getTraces()) {
+                    if (trace.getResourceUUID() == '*') {
+                        trace.getMonitor().send({
+                            category: message.category,
+                            eventName: message.eventName,
+                            resourceUUID: message.resourceUUID,
+                        });
+                    }
+                }
+            }
+
         }
         else {
+            // ******************************************************
         }
     }
 });
@@ -303,8 +318,9 @@ registerIn(Process.nodeClassController, '', class ResourceTrace {
 
 /*****
 *****/
-register('', class Resource {
+register('', class Resource extends Emitter {
     constructor(category) {
+        super();
         this.category = category;
         this.uuid = Crypto.generateUUID();
         Process.on(this.uuid, message => this.handleResourceMessage(message));
@@ -326,6 +342,7 @@ register('', class Resource {
     }
 
     async handleResourceMessage(message) {
+        console.log('******** RESOURCE MESSAGE');
     }
 
     onClose(code, reason) {

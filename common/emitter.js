@@ -88,6 +88,8 @@ register('', class Emitter {
                             recycled.push(thunk);
                         }
                     }
+
+                    this.handlers[messageName] = recycled;
                 }
             }
         }
