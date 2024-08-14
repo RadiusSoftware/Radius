@@ -87,6 +87,21 @@ require('../nodejs/radius.js');
         }
 
         async launchAdminMode() {
+            singleton('', class TestResourceMonitor extends ResourceMonitor {
+                constructor() {
+                    super();
+                    this.setTrace('websocket');
+                }
+
+                async onDeregister(message) {
+                    console.log(message);
+                }
+
+                async onRegister(message) {
+                    console.log(message);
+                }
+            });
+
             PermissionVerse.setPermissions({
                 'admin:all': { type: 'boolean' }
             });

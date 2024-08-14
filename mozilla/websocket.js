@@ -45,12 +45,6 @@ register('', class Websocket extends Emitter {
         else if (window.location.protocol == 'http:') {
             this.url = `ws${window.location.origin.substring(4)}${url}`;
         }
-
-        setInterval(() => {
-            if (this.ws) {
-                this.sendServerMessage({ name: '#Ping' });
-            }
-        }, 20000);
     }
 
     callServer(message) {
@@ -67,60 +61,95 @@ register('', class Websocket extends Emitter {
         if (this.ws && this.ws.readyState == 1) {
             this.ws.close(code, reason);
             this.ws = null;
+            this.interval ? clearInterval(this.interval) : null;
+            delete this.interval;
         }
     }
 
     connect() {
-        this.ws = new WebSocket(this.url);
+        if (!this.ws) {
+            this.ws = new WebSocket(this.url);
+            this.interval = setInterval(() => this.ping(), 15000);
 
-        this.ws.onopen = event => {
-            this.emit({
-                name: 'open',
-                event: event,
-                websocket: this,
-            });
+            this.ws.onopen = event => {
+                this.emit({
+                    name: 'open',
+                    event: event,
+                    websocket: this,
+                });
 
-            this.sendPending();
-        };
+                this.sendPending();
+            };
 
-        this.ws.onerror = error => {
-            this.emit({
-                name: 'error',
-                error: error,
-                websocket: this,
-            });
+            this.ws.onerror = error => {
+                this.emit({
+                    name: 'error',
+                    error: error,
+                    websocket: this,
+                });
 
-            this.ws = null;
+                this.ws = null;
+            }
+
+            this.ws.onclose = () => {
+                this.emit({
+                    name: 'close',
+                    websocket: this,
+                });
+
+                this.ws = null;
+            };
+
+            this.ws.onmessage = event => {
+                if (typeof event.data == 'string') {
+                    if (event.data == '#Ping') {
+                        this.pong();
+                    }
+                    else if (event.data != '#Pong') {
+                        try {
+                            let message = fromJson(event.data);
+
+                            if ('#TRAP' in message) {
+                                let trapId = message['#TRAP'];
+                                let trap = this.awaiting[trapId];
+                                delete this.awaiting[trapId];
+                                trap.handleResponse(message['#RESPONSE']);
+                            }
+                            else {
+                                globalThis.emit(message);
+                            }
+                        }
+                        catch (e) {
+                            globalThis.emit({
+                                messageName: 'WebsocketData',
+                                type: 'string',
+                                payload: event.data,
+                            });
+                        }
+                    }
+                }
+                else {
+                    globalThis.emit({
+                        messageName: 'WebsocketData',
+                        type: 'binary',
+                        payload: event.data,
+                    });
+                }
+            };
         }
-
-        this.ws.onclose = () => {
-            this.emit({
-                name: 'close',
-                websocket: this,
-            });
-
-            this.ws = null;
-        };
-
-        this.ws.onmessage = event => {
-            this.onMessage(fromJson(event.data));
-        };
 
         return this;
     }
 
-    onMessage(message) {
-        if (message.name == '#Ping') {
-            this.sendMessage({ name: '#Pong' });
+    ping() {
+        if (this.ws) {
+            this.sendServerData('#Ping');
         }
-        else if ('#TRAP' in message) {
-            let trapId = message['#TRAP'];
-            let trap = this.awaiting[trapId];
-            delete this.awaiting[trapId];
-            trap.handleResponse(message['#RESPONSE']);
-        }
-        else {
-            globalThis.emit(message);
+    }
+
+    pong() {
+        if (this.ws) {
+            this.sendServerData('#Pong');
         }
     }
 

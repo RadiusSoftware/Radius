@@ -23,68 +23,6 @@ const LibZlib = require('zlib');
 
 
 /*****
- * For big server applications, there are multiple processes that may require
- * the ability to observer or control sockets in processes.  This singleton in
- * the controller process is provided for that purpose.  Websockets register
- * and deregister over the course of their lifecycle, and they will provided
- * info to this singleton to help track what's going on.  Moreover, processes
- * may message the singleton to send and call the sockets' clients.  Moreover,
- * services for checking stats and closing sockets are also available.
-*****/
-singletonIn(Process.nodeClassController, '', class WebSockets {
-    constructor() {
-        this.sockets = {};
-        mkHandlerProxy(Process, 'WebsocketManager', this);
-    }
-
-    async onSocketClosed(message) {
-        if (message.uuid in this.sockets) {
-            delete this.sockets[message.uuid];
-        }
-    }
-
-    async onSocketCreated(message) {
-        if (!(message.uuid in this.sockets)) {
-            this.sockets[message.uuid] = {
-                pid: message.pid,
-                uuid: message.uuid,
-                path: message['#ROUTING'].path,
-                monitors: {},
-            };
-        }
-    }
-
-    async onSocketRecv(message) {
-        // TODO **********************************************************************
-        if (message.uuid in this.sockets) {
-            let socket = this.sockets[message.uuid];
-        }
-    }
-
-    async onSocketSend(message) {
-        // TODO **********************************************************************
-        if (message.uuid in this.sockets) {
-            let socket = this.sockets[message.uuid];
-        }
-    }
-
-    async onStartMonitor(message) {
-        // TODO **********************************************************************
-        if (message.uuid in this.sockets) {
-            let socket = this.sockets[message.uuid];
-        }
-    }
-
-    async onStopMonitor(message) {
-        // TODO **********************************************************************
-        if (message.uuid in this.sockets) {
-            let socket = this.sockets[message.uuid];
-        }
-    }
-});
-
-
-/*****
  * The websocket object for the server.  Websockets are single-use and discarded
  * after they have been closed.  The WebSocket class is primarily an initializer
  * and a container for the frame builder and frame parser.  The frame build is
@@ -110,9 +48,6 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         super();
         this.socket = socket;
         this.uuid = Crypto.generateUUID();
-        // TODO **********************************************************************
-        console.log('\nwebsocket.js: set websocket default timeout...\n');
-        // TODO **********************************************************************
         this.socket.setTimeout(0);
         this.socket.setNoDelay();
 
@@ -121,9 +56,18 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         this.frameBuilder = mkWebSocketFrameBuilder(this);
         
         Process.sendController({
-            name: 'WebsocketManagerSocketCreated',
-            pid: Process.getPid(),
-            uuid: this.uuid,
+            name: 'ResourcesTrace',
+            category: 'websocket',
+            eventName: 'Register',
+            resourceUUID: this.uuid,
+        });
+
+        Process.on('ContactMonitorable', message => {
+            console.log(message);
+        });
+
+        Process.on('TraceMonitorable', message => {
+            console.log(message);
         });
     }
   
@@ -225,8 +169,10 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         }
 
         Process.sendController({
-            name: 'WebsocketManagerSocketClosed',
-            uuid: this.uuid,
+            name: 'ResourcesTrace',
+            category: 'websocket',
+            eventName: 'Deregister',
+            resourceUUID: this.uuid,
             code: code,
             reason: reason,
         });
@@ -235,20 +181,21 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
         this.socket = null;
     }
 
-    onError(error) {
-        // TODO **********************************************************************
-        //this.destroy();
-    }
-
     onMessage(type, payload) {
         if (type == 'close') {
             this.onClose(payload);
         }
-        else if (type == 'ping') {
+        else if (type == 'string' && payload.toString() == '#Ping') {
+            this.pong();
         }
-        else if (type == 'pong') {
+        else if (type == 'string' && payload.toString() != '#Pong') {
+            this.emit({
+                name: 'DataReceived',
+                type: type,
+                payload: payload,
+            });
         }
-        else {
+        else if (type == 'binary') {
             this.emit({
                 name: 'DataReceived',
                 type: type,
@@ -256,33 +203,14 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
             });
         }
     }
-    /*
-    onPing(message) {
+
+    ping(message) {
+        this.sendData('#Ping');
     }
 
-    onPong(message) {
+    pong(message) {
+        this.sendData('#Pong');
     }
-
-    async ping() {
-        if (this.socket) {
-            for (let frame of await this.frameBuilder.buildFrames('', 'ping')) {
-                this.socket.write(frame);
-            }
-        }
-
-        return this;
-    }
-
-    async pong() {
-        if (this.socket) {
-            for (let frame of await this.frameBuilder.buildFrames('', 'pong')) {
-                this.socket.write(frame);
-            }
-        }
-
-        return this;
-    }
-    */
 
     async queryMessage(message) {
         if (this.socket) {
@@ -295,6 +223,21 @@ registerIn('HttpServerWorker', '', class WebSocket extends Emitter {
             }
             
             return trap.promise;
+        }
+    }
+
+    async sendData(data) {
+        if (this.socket) {
+            if (data instanceof Buffer) {
+                for (let frame of await this.frameBuilder.buildFrames(data, 'text')) {
+                    this.socket.write(frame);
+                }
+            }
+            else {
+                for (let frame of await this.frameBuilder.buildFrames(mkBuffer(data), 'text')) {
+                    this.socket.write(frame);
+                }
+            }
         }
     }
 

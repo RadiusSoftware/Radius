@@ -51,6 +51,7 @@ require('../common/cookie.js');
 require('../common/expression.js');
 require('../common/dataTable.js');
 require('../common/api.js');
+require('../common/action.js');
 
 require('./crypto.js');
 require('./pool.js');
@@ -69,6 +70,7 @@ require('./server.js');
 require('./element.js');
 require('./bundle.js');
 require('./session.js');
+require('./resource.js');
 
 require('./net/socket.js');
 require('./net/httpX.js');

@@ -623,8 +623,8 @@ singleton('', class Process extends Emitter {
         }
     }
 
-    sendDescendent(message, sendHandl3) {
-        this.routeDown(message, sendHandl3);
+    sendDescendent(message, sendHandle) {
+        this.routeDown(message, sendHandle);
         return this;
     }
 

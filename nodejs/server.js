@@ -137,8 +137,8 @@ register('', class Server extends Emitter {
  * A server is a construct within the Radius environmental framework wherein
  * there is a child of the controller process with that has zero or more child
  * processes called workers.  Yes, the terminology is like the builtin Cluster
- * module in nodeJS.  The difference is that there can be multiple differenet
- * radius servers on the server with different "main"  or "primary" server
+ * module in nodeJS.  The difference is that there can be multiple different
+ * radius servers on the server with different "main" or "primary" server
  * processes.  A server has two different node classes.  Best practices is to
  * have a server-named class and its accompanying workers classes:
  * 
