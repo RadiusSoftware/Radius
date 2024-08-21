@@ -106,7 +106,7 @@ singleton('', class Process extends Emitter {
 
     async callController(message) {
         if (this.getNodeClass() == this.nodeClassController) {
-            this.emit(message);
+            return this.call(message);
         }
         else {
             let trap = mkTrap(1);

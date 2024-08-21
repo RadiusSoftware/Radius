@@ -87,20 +87,41 @@ require('../nodejs/radius.js');
         }
 
         async launchAdminMode() {
+            // ****************************************************************
+            // ****************************************************************
             singleton('', class TestResourceMonitor extends ResourceMonitor {
                 constructor() {
                     super();
-                    this.setTrace('websocket');
                 }
 
                 async onDeregister(message) {
-                    console.log(message);
+                    // console.log(message);
                 }
 
                 async onRegister(message) {
-                    console.log(message);
+                    // console.log(message);
+                    // await this.setTrace('websocket', message.resourceUUID);
+                    await this.setTrace('doghouse');
+                }
+
+                async onReceiveBinary(message) {
+                    // console.log(message);
+                }
+
+                async onReceiveString(message) {
+                    // console.log(message);
+                }
+
+                async onSendMessage(message) {
+                    // console.log(message);
                 }
             });
+
+            await TestResourceMonitor.setTrace('websocket');
+            //setTimeout(async () => await TestResourceMonitor.setTrace('housekey'), 6000);
+            //setTimeout(() => TestResourceMonitor.clearTrace('websocket'), 4000);
+            // ****************************************************************
+            // ****************************************************************
 
             PermissionVerse.setPermissions({
                 'admin:all': { type: 'boolean' }

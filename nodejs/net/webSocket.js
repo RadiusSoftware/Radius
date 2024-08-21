@@ -47,31 +47,12 @@ registerIn('HttpServerWorker', '', class WebSocket extends Resource {
     constructor(socket, extensions, headData) {
         super('websocket');
         this.socket = socket;
-        //this.uuid = Crypto.generateUUID();
         this.socket.setTimeout(0);
         this.socket.setNoDelay();
 
         this.analyzeExtensions(extensions);
         mkWebSocketMessageParser(this, headData);
         this.frameBuilder = mkWebSocketFrameBuilder(this);
-
-        /*
-        console.log('\n******************** SECOND');
-        Process.sendController({
-            name: 'ResourcesTrace',
-            category: 'websocket',
-            eventName: 'SendMessage',
-            resourceUUID: this.uuid,
-        });
-
-        Process.on('ContactMonitorable', message => {
-            console.log(message);
-        });
-
-        Process.on('TraceMonitorable', message => {
-            console.log(message);
-        });
-        */
     }
   
     analyzeExtensions(extensionsHeader) {
@@ -170,21 +151,15 @@ registerIn('HttpServerWorker', '', class WebSocket extends Resource {
         if (payload.length > 2) {
             reason = payload.subarray(2).toString();
         }
-        
-        /*
-        Process.sendController({
-            name: 'ResourcesTrace',
-            category: 'websocket',
-            eventName: 'Deregister',
-            resourceUUID: this.uuid,
-            code: code,
-            reason: reason,
-        });
-        */
 
         this.socket.destroy();
         this.socket = null;
         super.onClose(code, reason);
+    }
+
+    async onCommand(message) {
+        // TODO **********************************************
+        console.log('Resource.onCommand()');
     }
 
     onMessage(type, payload) {
@@ -195,6 +170,8 @@ registerIn('HttpServerWorker', '', class WebSocket extends Resource {
             this.pong();
         }
         else if (type == 'string' && payload.toString() != '#Pong') {
+            this.sendEvent('ReceiveString', { string: payload.toString() });
+
             this.emit({
                 name: 'DataReceived',
                 type: type,
@@ -202,6 +179,8 @@ registerIn('HttpServerWorker', '', class WebSocket extends Resource {
             });
         }
         else if (type == 'binary') {
+            this.sendEvent('ReceiveBinary', { string: payload.toString() });
+
             this.emit({
                 name: 'DataReceived',
                 type: type,
@@ -234,6 +213,8 @@ registerIn('HttpServerWorker', '', class WebSocket extends Resource {
 
     async sendData(data) {
         if (this.socket) {
+            this.sendEvent('SendData', { data: data });
+
             if (data instanceof Buffer) {
                 for (let frame of await this.frameBuilder.buildFrames(data, 'text')) {
                     this.socket.write(frame);
@@ -249,6 +230,8 @@ registerIn('HttpServerWorker', '', class WebSocket extends Resource {
 
     async sendMessage(message) {
         if (this.socket) {
+            this.sendEvent('SendMessage', { message: message });
+
             for (let frame of await this.frameBuilder.buildFrames(mkBuffer(toJson(message)), 'text')) {
                 this.socket.write(frame);
             }

@@ -54,6 +54,8 @@ register('', class Emitter {
                             recycled.push(thunk);
                         }
                     }
+
+                    this.handlers[messageName] = recycled;
                 }
             }
 
@@ -76,13 +78,15 @@ register('', class Emitter {
 
     emit(message) {
         if (!this.silent && message.name != '*') {
+            let callees = [];
+
             for (let messageName of [message.name, '*']) {
                 if (messageName in this.handlers) {
                     let thunks = this.handlers[messageName];
                     let recycled = this.handlers[messageName] = [];
 
                     for (let thunk of thunks) {
-                        thunk.func(message);
+                        callees.push(thunk);
 
                         if (!thunk.once) {
                             recycled.push(thunk);
@@ -91,6 +95,10 @@ register('', class Emitter {
 
                     this.handlers[messageName] = recycled;
                 }
+            }
+
+            for (let thunk of callees) {
+                thunk.func(message);
             }
         }
 

@@ -51,7 +51,6 @@ require('../common/cookie.js');
 require('../common/expression.js');
 require('../common/dataTable.js');
 require('../common/api.js');
-require('../common/action.js');
 
 require('./crypto.js');
 require('./pool.js');
