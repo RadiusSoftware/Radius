@@ -36,7 +36,7 @@ singletonIn(Process.nodeClassController, '', class Resources {
         let traceMessage = { name: '' };
 
         for (let key in message) {
-            if (!(key in { name:0, '#ROUTING':0 })) {
+            if (!(key in { name:0 })) {
                 traceMessage[key] = message[key];
             }
         }
@@ -51,12 +51,11 @@ singletonIn(Process.nodeClassController, '', class Resources {
         }
     }
 
-    async onCommand(message) {
+    async onExecCommand(message) {
         // TODO *************************************************
     }
 
     async onSetTrace(message) {
-        console.log(message);
         let monitored;
         let category = mkResourceCategory(message.category);
         
@@ -64,22 +63,25 @@ singletonIn(Process.nodeClassController, '', class Resources {
             monitored = category;
         }
         else {
-            monitored = mkResourceObject(category, message.resourceUUID);
+            monitored = mkResourceObject(category, message.resourceUUID, message.resourceRouting);
         }
 
         let monitor = mkResourceMonitorThunk(
             message.monitorUUID,
-            message['#ROUTING'] ? message['#ROUTING'] : [],
+            message['#ROUTING'],
         );
 
-        let trace = mkResourceTrace(monitor, monitored);
+        let trace = mkResourceTrace(
+            monitor,
+            monitored,
+        );
+
         return trace.getUUID();
     }
 
     async onTrace(message) {
         if (message.eventName == 'Register') {
             let category = mkResourceCategory(message.category);
-            
             let traceMessage = this.mkTraceMessage(message);
 
             for (let trace of category.getTraces()) {
@@ -89,7 +91,7 @@ singletonIn(Process.nodeClassController, '', class Resources {
             mkResourceObject(
                 category,
                 message.resourceUUID,
-                message['#ROUTING'].path,
+                message['#ROUTING'],
             );
         }
         else if (message.eventName == 'Deregister') {
@@ -104,10 +106,11 @@ singletonIn(Process.nodeClassController, '', class Resources {
             resource.delete();
         }
         else {
-            let category = mkResourceCategory(message.category);
+            let resourceObject = mkResourceObject(message.resourceUUID);
             let traceMessage = this.mkTraceMessage(message);
 
-            for (let trace of category.getTraces()) {
+            for (let trace of resourceObject.getTraces()) {
+                traceMessage.traceUUID = trace.getUUID();
                 trace.getMonitor().send(traceMessage);
             }
         }
@@ -180,10 +183,13 @@ registerIn(Process.nodeClassController, '', class ResourceObject {
         if (args.length == 1) {
             return Resources.resources[args[0]];
         }
+        else if (args[1] in Resources.resources) {
+            return Resources.resources[args[1]];
+        }
         else {
             this.category = args[0];
             this.uuid = args[1];
-            this.route = args[2]
+            this.routing = args[2] ? args[2] : null;
             this.traces = {};
             Resources.resources[this.uuid] = this;
             this.category.resources[this.uuid] = this;
@@ -204,8 +210,8 @@ registerIn(Process.nodeClassController, '', class ResourceObject {
         return this.category;
     }
 
-    getRoute() {
-        return this.route;
+    getRouting() {
+        return this.routing;
     }
 
     getTrace(uuid) {
@@ -239,7 +245,7 @@ registerIn(Process.nodeClassController, '', class ResourceMonitorThunk {
         }
         else {
             this.uuid = monitorUUID;
-            this.route = Array.isArray(routing) ? routing : [];
+            this.routing = routing ? routing : null;
             this.traces = {};
             Resources.monitors[this.uuid] = this;
              return this;
@@ -250,8 +256,8 @@ registerIn(Process.nodeClassController, '', class ResourceMonitorThunk {
         // TODO ***************************************************
     }
 
-    getRoute() {
-        return this.route;
+    getRouting() {
+        return this.routing;
     }
 
     getTrace(uuid) {
@@ -277,8 +283,8 @@ registerIn(Process.nodeClassController, '', class ResourceMonitorThunk {
     send(message) {
         message.name = this.uuid;
 
-        if (this.route.length) {
-            message['#ROUTING'] = this.routing;
+        if (this.routing && this.routing.path.length) {
+            message['#ROUTING'] = this.getRouting();
             Process.sendDown(message);
         }
         else {
@@ -295,19 +301,31 @@ registerIn(Process.nodeClassController, '', class ResourceTrace {
         this.uuid = Crypto.generateUUID();
         this.monitor = monitor;
         this.monitored = monitored;
-        this.monitor.traces[this.uuid] = this;
-        this.monitored.traces[this.uuid] = this;
         Resources.traces[this.uuid] = this;
         this.monitor.traces[this.uuid] = this;
         this.monitored.traces[this.uuid] = this;
+
+        if (this.monitored instanceof ResourceObject) {
+            Process.sendDescendent({
+                name: this.monitored.getUUID(),
+                eventName: 'StartMonitoring',
+                '#ROUTING': this.monitored.getRouting(),
+            });
+        }
     }
 
     delete() {
+        if (this.monitored instanceof ResourceObject) {
+            Process.sendDescendent({
+                name: this.monitored.getUUID(),
+                eventName: 'StopMonitoring',
+                '#ROUTING': this.monitored.getRouting(),
+            });
+        }
+
         delete Resources.traces[this.uuid];
         delete this.monitor.traces[this.uuid];
         delete this.monitored.traces[this.uuid];
-
-
     }
 
     getMonitor() {
@@ -354,14 +372,6 @@ registerIn(Process.nodeClassController, '', class ResourceTrace {
 
 
 /*****
- * A resource is an object that uses application resources and has the ability
- * to be monitored.  This is the base class for resources.  New resources are
- * registered and deregistered with the overall Resources singleton in the
- * controller-node.  Reporting of events, such as sending or receiving a message
- * must be programmed into the resource object.  Also, the onCommand() handler
- * is used for performing an action with the specified resource.  For instance,
- * a remote process can make a command to send a message to a websocket's endpoint
- * with this mechanism.
 *****/
 register('', class Resource extends Emitter {
     constructor(category) {
@@ -369,13 +379,12 @@ register('', class Resource extends Emitter {
         this.category = category;
         this.uuid = Crypto.generateUUID();
         Process.on(this.uuid, message => this.onControl(message));
-        this.monitoring = true;
         this.sendEvent('Register');
-        this.monitoring = false;
+        this.monitoring = 0;
     }
 
     clearMonitoring() {
-        this.monitoring = false;
+        this.monitoring > 0 ? this.monitoring-- : null;
         return this;
     }
 
@@ -388,14 +397,12 @@ register('', class Resource extends Emitter {
     }
 
     isMonitoring() {
-        return this.monitoring;
+        return this.monitoring > 0;
     }
 
     onClose(code, reason) {
-        let monitoring = this.monitoring;
         typeof code == 'undefined' ? code = 0 : null;
         typeof reason == 'undefined' ? reason = '' : null;
-        this.monitoring = true;
 
         this.sendEvent(
             'Deregister',
@@ -406,23 +413,24 @@ register('', class Resource extends Emitter {
         );
     }
 
-    async onCommand(message) {
-    }
-
     async onControl(message) {
-        if (message.eventName == 'StartMonitor') {
-            this.monitoring = true;
+        if (message.eventName == 'StartMonitoring') {
+            this.monitoring++;
         }
-        else if (message.eventName == 'StopMonitor') {
-            this.monitoring = false;
+        else if (message.eventName == 'StopMonitoring') {
+            this.monitoring > 0 ? this.monitoring-- : 0;
         }
         else {
-            this.onCommand(message);
+            this.onExecCommand(message);
         }
+    }
+
+    async onExecCommand(message) {
     }
 
     sendEvent(eventName, properties) {
-        if (this.monitoring) {
+        if (this.monitoring || eventName in { 'Register':0, 'Deregister':0 }) {
+            console.log(`\n ****************************** ${eventName}\n`)
             let message = {
                 name: 'ResourcesTrace',
                 category: this.category,
@@ -459,20 +467,11 @@ register('', class ResourceMonitor extends Emitter {
         Process.on(this.uuid, message => this.handleTrace(message));
     }
 
-    async clearTrace(category, resourceUUID) {
-        resourceUUID ? null : resourceUUID = 'category';
-        let key = `${category}-${resourceUUID}`;
-
-        if (key in this.resources) {
-            let traceUUID = this.resources[key];
-            delete this.resources[key];
-
-            Process.sendController({
-                name: 'ResourcesClearTrace',
-                category: category,
-                traceUUID: traceUUID,
-            });
-        }
+    async clearTrace(traceUUID) {
+        Process.sendController({
+            name: 'ResourcesClearTrace',
+            traceUUID: traceUUID,
+        });
 
         return this;
     }
@@ -491,7 +490,7 @@ register('', class ResourceMonitor extends Emitter {
         this.emit(message);
     }
 
-    async setTrace(category, resourceUUID) {
+    async setTrace(category, resourceUUID, resourceRouting) {
         resourceUUID ? null : resourceUUID = 'category';
         let key = `${category}-${resourceUUID}`;
 
@@ -500,6 +499,7 @@ register('', class ResourceMonitor extends Emitter {
                 name: 'ResourcesSetTrace',
                 category: category,
                 resourceUUID: resourceUUID,
+                resourceRouting: resourceRouting,
                 monitorUUID: this.uuid,
             });
 

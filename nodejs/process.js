@@ -624,6 +624,7 @@ singleton('', class Process extends Emitter {
     }
 
     sendDescendent(message, sendHandle) {
+        message['#ROUTING'] = Data.clone(message['#ROUTING']);
         this.routeDown(message, sendHandle);
         return this;
     }
