@@ -22,6 +22,13 @@
 
 
 /*****
+ * This is the singleton object resident in the controller process who job is
+ * to manage and monitor resource objects that comply with the ResourceObject
+ * specification.  In effect, it's a connector for resources and monitors that
+ * are observing / monitoring the activity of those resources.  The overall
+ * feature set is quite complex.  This singleton provides a simple API and addr
+ * for all processes and monitors to communicate with one another.  This object
+ * controls that communication!
 *****/
 singletonIn(Process.nodeClassController, '', class Resources {
     constructor() {
@@ -30,18 +37,6 @@ singletonIn(Process.nodeClassController, '', class Resources {
         this.resources = {};
         this.categories = {};
         mkHandlerProxy(Process, 'Resources', this);
-    }
-
-    mkTraceMessage(message) {
-        let traceMessage = { name: '' };
-
-        for (let key in message) {
-            if (!(key in { name:0 })) {
-                traceMessage[key] = message[key];
-            }
-        }
-
-        return traceMessage;
     }
 
     async onClearTrace(message) {
@@ -82,7 +77,7 @@ singletonIn(Process.nodeClassController, '', class Resources {
     async onTrace(message) {
         if (message.eventName == 'Register') {
             let category = mkResourceCategory(message.category);
-            let traceMessage = this.mkTraceMessage(message);
+            let traceMessage = Data.clone(message);
 
             for (let trace of category.getTraces()) {
                 trace.getMonitor().send(traceMessage);
@@ -96,7 +91,7 @@ singletonIn(Process.nodeClassController, '', class Resources {
         }
         else if (message.eventName == 'Deregister') {
             let category = mkResourceCategory(message.category);
-            let traceMessage = this.mkTraceMessage(message);
+            let traceMessage = Data.clone(message);
 
             for (let trace of category.getTraces()) {
                 trace.getMonitor().send(traceMessage);
@@ -107,7 +102,7 @@ singletonIn(Process.nodeClassController, '', class Resources {
         }
         else {
             let resourceObject = mkResourceObject(message.resourceUUID);
-            let traceMessage = this.mkTraceMessage(message);
+            let traceMessage = Data.clone(message);
 
             for (let trace of resourceObject.getTraces()) {
                 traceMessage.traceUUID = trace.getUUID();
@@ -135,6 +130,10 @@ registerIn(Process.nodeClassController, '', class ResourceCategory {
     }
 
     delete() {
+        // TODO *************************************************
+        console.log(`##### delete ${Reflect.getPrototypeOf(this).constructor.name}`);
+        console.log(this);
+        console.log();
         // TODO *************************************************
     }
 
@@ -198,12 +197,21 @@ registerIn(Process.nodeClassController, '', class ResourceObject {
     }
 
     delete() {
+        // TODO *************************************************
+        console.log(`##### delete ${Reflect.getPrototypeOf(this).constructor.name}`);
+        // TODO *************************************************
         for (let trace of Object.values(this.traces)) {
             trace.delete();
         }
 
         delete Resources.resources[this.uuid];
         delete this.category.resources[this.uuid];
+
+        if (!Object.keys(this.category.traces).length) {
+            if (!Object.keys(this.category.resources).length) {
+                this.category.delete();
+            }
+        }
     }
 
     getCategory() {
@@ -253,7 +261,10 @@ registerIn(Process.nodeClassController, '', class ResourceMonitorThunk {
     }
 
     delete() {
-        // TODO ***************************************************
+        // TODO *************************************************
+        console.log(`##### delete ${Reflect.getPrototypeOf(this).constructor.name}`);
+        console.log();
+        // TODO *************************************************
     }
 
     getRouting() {
@@ -315,6 +326,9 @@ registerIn(Process.nodeClassController, '', class ResourceTrace {
     }
 
     delete() {
+        // TODO *************************************************
+        console.log(`##### delete ${Reflect.getPrototypeOf(this).constructor.name}`);
+        // TODO *************************************************
         if (this.monitored instanceof ResourceObject) {
             Process.sendDescendent({
                 name: this.monitored.getUUID(),
@@ -326,6 +340,14 @@ registerIn(Process.nodeClassController, '', class ResourceTrace {
         delete Resources.traces[this.uuid];
         delete this.monitor.traces[this.uuid];
         delete this.monitored.traces[this.uuid];
+
+        if (!Object.keys(this.monitor.traces).length) {
+            this.monitor.delete();
+        }
+
+        if (!Object.keys(this.monitored.traces).length) {
+            this.monitored.delete();
+        }
     }
 
     getMonitor() {
@@ -372,6 +394,27 @@ registerIn(Process.nodeClassController, '', class ResourceTrace {
 
 
 /*****
+ * The is the base class for resource objects created on the server.  A resource
+ * object is what's being monitored and controlled by this infrastructure.  Note
+ * that resource objects may created and managed in any of the server processes.
+ * To be a resource, the developer needs to adhere to these four steps to ensure
+ * compliance and proper functionality:
+ * 
+ * (1)  The resource class extends Resource.
+ * 
+ * (2)  The resource class calls super.onClose(code, reason) when the resource
+ *      object is being closed and/or disposed of.
+ * 
+ * (3)  When activity in the resource occurs, the subclassed object needs to
+ *      invoke the sendEvent(name, properties) method to report activity to the
+ *      Resources singleton in the controller processes.  Note that the super
+ *      class, Resource, ignores sendEvent() calls if no one is listening.
+ * 
+ * (4)  To enable your resource class to be controlled via onControl messages,
+ *      override the super class's onExecCommand() method to provide functionality.
+ *      For instance, in the case of a websocket, this means that the coller
+ *      from another process is able to send messages / data to another process's
+ *      websocket client (browser).
 *****/
 register('', class Resource extends Emitter {
     constructor(category) {
@@ -381,7 +424,7 @@ register('', class Resource extends Emitter {
         Process.on(this.uuid, message => this.onControl(message));
         this.sendEvent('Register');
         this.monitoring = 0;
-    }
+    }   
 
     clearMonitoring() {
         this.monitoring > 0 ? this.monitoring-- : null;
@@ -430,7 +473,6 @@ register('', class Resource extends Emitter {
 
     sendEvent(eventName, properties) {
         if (this.monitoring || eventName in { 'Register':0, 'Deregister':0 }) {
-            console.log(`\n ****************************** ${eventName}\n`)
             let message = {
                 name: 'ResourcesTrace',
                 category: this.category,
@@ -458,6 +500,14 @@ register('', class Resource extends Emitter {
 
 
 /*****
+ * ResourceMonitor is the base class for an object that wishes to monitor and
+ * report on application server resources.  A monitor may appear in any application
+ * process and wil communicate with resources via the singleton Resources object
+ * resident in the controller process.  The ResourceMonitor provides the features
+ * necessary to monitor the registration, degregistration, and other activity of
+ * resource objects throughout the system.  To use these features, extend the
+ * ResourceMonitor class and provide additional features to the subclassed monitor
+ * object.
 *****/
 register('', class ResourceMonitor extends Emitter {
     constructor() {

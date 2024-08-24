@@ -189,13 +189,18 @@ singleton('', class Data {
                 item.dst[item.key] = array;
             }
             else if (typeof item.value == 'object') {
-                let object = new Object();
-    
-                for (let key of Object.keys(item.value).reverse()) {
-                    stack.push({ dst: object, value: item.value[key], key: key });
+                if (item.value === null) {
+                    item.dst = null;
                 }
+                else {
+                    let object = new Object();
+        
+                    for (let key of Object.keys(item.value).reverse()) {
+                        stack.push({ dst: object, value: item.value[key], key: key });
+                    }
 
-                item.dst[item.key] = object;
+                    item.dst[item.key] = object;
+                }
             }
             else {
                 item.dst[item.key] = item.value;

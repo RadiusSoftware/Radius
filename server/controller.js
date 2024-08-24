@@ -95,11 +95,12 @@ require('../nodejs/radius.js');
                 }
 
                 async onDeregister(message) {
-                    //console.log(message);
+                    // ********************************************
+                    // ********************************************
+                    console.log(message);
                 }
 
                 async onRegister(message) {
-                    // console.log(message);
                     await this.setTrace(
                         'websocket',
                         message.resourceUUID,
@@ -108,15 +109,20 @@ require('../nodejs/radius.js');
                 }
 
                 async onReceiveBinary(message) {
-                    console.log(message);
+                    // ********************************************
+                    // ********************************************
                 }
 
                 async onReceiveString(message) {
+                    // ********************************************
+                    // ********************************************
                     console.log(message);
                     await this.clearTrace(message.traceUUID);
                 }
 
                 async onSendMessage(message) {
+                    // ********************************************
+                    // ********************************************
                     console.log(message);
                 }
             });

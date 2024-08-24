@@ -157,9 +157,9 @@ registerIn('HttpServerWorker', '', class WebSocket extends Resource {
         super.onClose(code, reason);
     }
 
-    async onCommand(message) {
+    async onExecCommand(message) {
         // TODO **********************************************
-        console.log('Resource.onCommand()');
+        console.log('Resource.onCommand() -- TBD');
     }
 
     onMessage(type, payload) {
@@ -199,6 +199,7 @@ registerIn('HttpServerWorker', '', class WebSocket extends Resource {
 
     async queryMessage(message) {
         if (this.socket) {
+            this.sendEvent('QueryMessage', { message: message });
             let trap = mkTrap();
             trap.setExpected(trap, 1);
             message['#TRAP'] = trap.id;

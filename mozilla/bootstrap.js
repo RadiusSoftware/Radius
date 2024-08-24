@@ -88,7 +88,6 @@ register('', async function bootstrap(setup) {
 
     await Bundles.require('server.style');
     await Bundles.require(settings.webAppBundle);
-
     // **********************************************************
     // **********************************************************
     // setTimeout(() => closeWebsocket(), 2000);
