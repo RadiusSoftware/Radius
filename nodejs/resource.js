@@ -22,8 +22,19 @@
 
 
 /*****
+ * Here are some constants that are useful throughout all of the process nodes.
+ * These regular pings is how we control the lifetime of MonitorThunks
+ * and ResourceThunks in the controller process.
+*****/
+const resourcesPingMonitorInterval = 15000;
+const resourcesPingMonitorLifetime = 30000;
+const resourcesPingResourceInterval = 15000;
+const resourcesPingResourceLifetime = 30000;
+
+
+/*****
  * This is the singleton object resident in the controller process who job is
- * to manage and monitor resource objects that comply with the ResourceObject
+ * to manage and monitor resource objects that comply with the ResourceThunk
  * specification.  In effect, it's a connector for resources and monitors that
  * are observing / monitoring the activity of those resources.  The overall
  * feature set is quite complex.  This singleton provides a simple API and addr
@@ -41,8 +52,7 @@ singletonIn(Process.nodeClassController, '', class Resources {
 
     async onClearTrace(message) {
         if (message.traceUUID in this.traces) {
-            let trace = this.traces[message.traceUUID];
-            trace.delete();
+            this.traces[message.traceUUID].delete();
         }
     }
 
@@ -58,10 +68,10 @@ singletonIn(Process.nodeClassController, '', class Resources {
             monitored = category;
         }
         else {
-            monitored = mkResourceObject(category, message.resourceUUID, message.resourceRouting);
+            monitored = mkResourceThunk(category, message.resourceUUID, message.resourceRouting);
         }
 
-        let monitor = mkResourceMonitorThunk(
+        let monitor = mkMonitorThunk(
             message.monitorUUID,
             message['#ROUTING'],
         );
@@ -83,28 +93,42 @@ singletonIn(Process.nodeClassController, '', class Resources {
                 trace.getMonitor().send(traceMessage);
             }
 
-            mkResourceObject(
+            mkResourceThunk(
                 category,
                 message.resourceUUID,
                 message['#ROUTING'],
             );
         }
         else if (message.eventName == 'Deregister') {
-            let category = mkResourceCategory(message.category);
-            let traceMessage = Data.clone(message);
-
-            for (let trace of category.getTraces()) {
-                trace.getMonitor().send(traceMessage);
+            if (message.category in this.categories) {
+                let category = mkResourceCategory(message.category);
+                let traceMessage = Data.clone(message);
+    
+                for (let trace of category.getTraces()) {
+                    trace.getMonitor().send(traceMessage);
+                }
+    
+                if (message.resourceUUID in this.resources) {
+                    let resource = mkResourceThunk(message.resourceUUID);
+                    resource.delete();
+                }
             }
-
-            let resource = mkResourceObject(message.resourceUUID);
-            resource.delete();
+        }
+        else if (message.eventName == 'PingResource') {
+            if (message.resourceUUID in this.resources) {
+                this.resources[message.resourceUUID].onPing();
+            }
+        }
+        else if (message.eventName == 'PingMonitor') {
+            if (message.monitorUUID in this.monitors) {
+                this.monitors[message.monitorUUID].onPing();
+            }
         }
         else {
-            let resourceObject = mkResourceObject(message.resourceUUID);
+            let resourceThunk = mkResourceThunk(message.resourceUUID);
             let traceMessage = Data.clone(message);
 
-            for (let trace of resourceObject.getTraces()) {
+            for (let trace of resourceThunk.getTraces()) {
                 traceMessage.traceUUID = trace.getUUID();
                 trace.getMonitor().send(traceMessage);
             }
@@ -114,6 +138,8 @@ singletonIn(Process.nodeClassController, '', class Resources {
 
 
 /*****
+ * TODO ********************************************************************
+ * TODO ********************************************************************
 *****/
 registerIn(Process.nodeClassController, '', class ResourceCategory {
     constructor(categoryName) {
@@ -130,11 +156,6 @@ registerIn(Process.nodeClassController, '', class ResourceCategory {
     }
 
     delete() {
-        // TODO *************************************************
-        console.log(`##### delete ${Reflect.getPrototypeOf(this).constructor.name}`);
-        console.log(this);
-        console.log();
-        // TODO *************************************************
     }
 
     getName() {
@@ -176,8 +197,14 @@ registerIn(Process.nodeClassController, '', class ResourceCategory {
 
 
 /*****
+ * The ResourceThunk is the proxy or thunk for controlling and communicationg
+ * with the actual remote (other process) ResourceBase object.  A resource bade
+ * is an object that can be tracked, traced, and remotely controlled. The first
+ * example is the framework based Websocket class.  One of several features
+ * provided by the ResourceThunk is the ability to send a message remotely via
+ * the websocket to a browser.
 *****/
-registerIn(Process.nodeClassController, '', class ResourceObject {
+registerIn(Process.nodeClassController, '', class ResourceThunk {
     constructor(...args) {
         if (args.length == 1) {
             return Resources.resources[args[0]];
@@ -192,25 +219,18 @@ registerIn(Process.nodeClassController, '', class ResourceObject {
             this.traces = {};
             Resources.resources[this.uuid] = this;
             this.category.resources[this.uuid] = this;
+            this.onPing();
             return this;
         }
     }
 
     delete() {
-        // TODO *************************************************
-        console.log(`##### delete ${Reflect.getPrototypeOf(this).constructor.name}`);
-        // TODO *************************************************
-        for (let trace of Object.values(this.traces)) {
-            trace.delete();
-        }
-
         delete Resources.resources[this.uuid];
         delete this.category.resources[this.uuid];
 
-        if (!Object.keys(this.category.traces).length) {
-            if (!Object.keys(this.category.resources).length) {
-                this.category.delete();
-            }
+        for (let trace of Object.values(this.traces)) {
+            delete Resources.traces[trace.uuid];
+            delete trace.monitor.traces[trace.uuid];
         }
     }
 
@@ -241,12 +261,20 @@ registerIn(Process.nodeClassController, '', class ResourceObject {
     hasTraces() {
         return Object.keys(this.traces).length > 0;
     }
+
+    onPing() {
+        this.timeout ? clearTimeout(this.timeout) : null;
+
+        this.timeout = setTimeout(() => {
+            this.delete();
+        }, resourcesPingResourceLifetime);
+    }
 });
 
 
 /*****
 *****/
-registerIn(Process.nodeClassController, '', class ResourceMonitorThunk {
+registerIn(Process.nodeClassController, '', class MonitorThunk {
     constructor(monitorUUID, routing) {
         if (monitorUUID in Resources.monitors) {
             return Resources.monitors[monitorUUID];
@@ -263,8 +291,10 @@ registerIn(Process.nodeClassController, '', class ResourceMonitorThunk {
     delete() {
         // TODO *************************************************
         console.log(`##### delete ${Reflect.getPrototypeOf(this).constructor.name}`);
-        console.log();
         // TODO *************************************************
+        for (let trace of Object.values(this.traces)) {
+            trace.delete();
+        }
     }
 
     getRouting() {
@@ -306,6 +336,10 @@ registerIn(Process.nodeClassController, '', class ResourceMonitorThunk {
 
 
 /*****
+ * A ResourceTrace object is a management object that's only resident in the
+ * controller process.  It's the intersetion of a MonitorThunk and Resousource
+ * Thunk and represents the data and methods required to manage and execute a
+ * resource trace.
 *****/
 registerIn(Process.nodeClassController, '', class ResourceTrace {
     constructor(monitor, monitored) {
@@ -316,7 +350,7 @@ registerIn(Process.nodeClassController, '', class ResourceTrace {
         this.monitor.traces[this.uuid] = this;
         this.monitored.traces[this.uuid] = this;
 
-        if (this.monitored instanceof ResourceObject) {
+        if (this.monitored instanceof ResourceThunk) {
             Process.sendDescendent({
                 name: this.monitored.getUUID(),
                 eventName: 'StartMonitoring',
@@ -326,10 +360,7 @@ registerIn(Process.nodeClassController, '', class ResourceTrace {
     }
 
     delete() {
-        // TODO *************************************************
-        console.log(`##### delete ${Reflect.getPrototypeOf(this).constructor.name}`);
-        // TODO *************************************************
-        if (this.monitored instanceof ResourceObject) {
+        if (this.monitored instanceof ResourceThunk) {
             Process.sendDescendent({
                 name: this.monitored.getUUID(),
                 eventName: 'StopMonitoring',
@@ -340,14 +371,6 @@ registerIn(Process.nodeClassController, '', class ResourceTrace {
         delete Resources.traces[this.uuid];
         delete this.monitor.traces[this.uuid];
         delete this.monitored.traces[this.uuid];
-
-        if (!Object.keys(this.monitor.traces).length) {
-            this.monitor.delete();
-        }
-
-        if (!Object.keys(this.monitored.traces).length) {
-            this.monitored.delete();
-        }
     }
 
     getMonitor() {
@@ -374,7 +397,7 @@ registerIn(Process.nodeClassController, '', class ResourceTrace {
         if (monitored instanceof Category) {
             return 'category';
         }
-        else if (monitored instanceof ResourceObject) {
+        else if (monitored instanceof ResourceThunk) {
             return 'resource';
         }
     }
@@ -388,7 +411,7 @@ registerIn(Process.nodeClassController, '', class ResourceTrace {
     }
 
     isResource() {
-        return monitored instanceof ResourceObject;
+        return monitored instanceof ResourceThunk;
     }
 });
 
@@ -416,7 +439,7 @@ registerIn(Process.nodeClassController, '', class ResourceTrace {
  *      from another process is able to send messages / data to another process's
  *      websocket client (browser).
 *****/
-register('', class Resource extends Emitter {
+register('', class ResourceBase extends Emitter {
     constructor(category) {
         super();
         this.category = category;
@@ -424,6 +447,11 @@ register('', class Resource extends Emitter {
         Process.on(this.uuid, message => this.onControl(message));
         this.sendEvent('Register');
         this.monitoring = 0;
+
+        this.interval = setInterval(
+            () => this.sendEvent('PingResource', { uuid: this.uuid }),
+            resourcesPingResourceInterval,
+        );
     }   
 
     clearMonitoring() {
@@ -444,6 +472,7 @@ register('', class Resource extends Emitter {
     }
 
     onClose(code, reason) {
+        this.interval ? clearInterval(this.interval) : null;
         typeof code == 'undefined' ? code = 0 : null;
         typeof reason == 'undefined' ? reason = '' : null;
 
@@ -509,7 +538,7 @@ register('', class Resource extends Emitter {
  * ResourceMonitor class and provide additional features to the subclassed monitor
  * object.
 *****/
-register('', class ResourceMonitor extends Emitter {
+register('', class MonitorBase extends Emitter {
     constructor() {
         super();
         this.resources = {};
@@ -538,6 +567,10 @@ register('', class ResourceMonitor extends Emitter {
         message.monitorUUID = this.uuid;
         message.name = message.eventName;
         this.emit(message);
+    }
+
+    onClose() {
+        // TODO ****************************************************
     }
 
     async setTrace(category, resourceUUID, resourceRouting) {

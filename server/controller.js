@@ -89,7 +89,7 @@ require('../nodejs/radius.js');
         async launchAdminMode() {
             // ****************************************************************
             // ****************************************************************
-            singleton('', class TestResourceMonitor extends ResourceMonitor {
+            singleton('', class TestResourceMonitor extends MonitorBase {
                 constructor() {
                     super();
                 }
@@ -97,7 +97,7 @@ require('../nodejs/radius.js');
                 async onDeregister(message) {
                     // ********************************************
                     // ********************************************
-                    console.log(message);
+                    // console.log(message);
                 }
 
                 async onRegister(message) {
@@ -111,6 +111,7 @@ require('../nodejs/radius.js');
                 async onReceiveBinary(message) {
                     // ********************************************
                     // ********************************************
+                    console.log(message);
                 }
 
                 async onReceiveString(message) {

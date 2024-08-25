@@ -39,7 +39,7 @@ const LibZlib = require('zlib');
  * https://thuc.space/posts/deflate/
  * https://github.com/libyal/assorted/blob/main/documentation/Deflate%20(zlib)%20compressed%20data%20format.asciidoc#
 *****/
-registerIn('HttpServerWorker', '', class WebSocket extends Resource {
+registerIn('HttpServerWorker', '', class WebSocket extends ResourceBase {
     static supportedExtensions = {
         'permessage-deflate': () => mkPerMessageDeflator,
     };
