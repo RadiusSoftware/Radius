@@ -101,30 +101,33 @@ require('../nodejs/radius.js');
                 }
 
                 async onRegister(message) {
+                    /*
                     await this.setTrace(
                         'websocket',
                         message.resourceUUID,
                         message['#ROUTING'],
                     );
+                    */
                 }
 
                 async onReceiveBinary(message) {
                     // ********************************************
                     // ********************************************
-                    console.log(message);
+                    // console.log(message);
                 }
 
                 async onReceiveString(message) {
                     // ********************************************
                     // ********************************************
-                    console.log(message);
-                    await this.clearTrace(message.traceUUID);
+                    // console.log(message);
+                    //await this.clearTrace(message.traceUUID);
+                    // await this.clearMonitor();
                 }
 
                 async onSendMessage(message) {
                     // ********************************************
                     // ********************************************
-                    console.log(message);
+                    // console.log(message);
                 }
             });
 

@@ -116,11 +116,11 @@ register('', class Websocket extends Emitter {
                                 trap.handleResponse(message['#RESPONSE']);
                             }
                             else {
-                                globalThis.emit(message);
+                                this.emit(message);
                             }
                         }
                         catch (e) {
-                            globalThis.emit({
+                            this.emit({
                                 messageName: 'WebsocketData',
                                 type: 'string',
                                 payload: event.data,
@@ -129,7 +129,7 @@ register('', class Websocket extends Emitter {
                     }
                 }
                 else {
-                    globalThis.emit({
+                    this.emit({
                         messageName: 'WebsocketData',
                         type: 'binary',
                         payload: event.data,

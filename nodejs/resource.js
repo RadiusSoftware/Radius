@@ -50,6 +50,12 @@ singletonIn(Process.nodeClassController, '', class Resources {
         mkHandlerProxy(Process, 'Resources', this);
     }
 
+    async onClearMonitor(message) {
+        if (message.monitorUUID in this.monitors) {
+            this.monitors[message.monitorUUID].delete();
+        }
+    }
+
     async onClearTrace(message) {
         if (message.traceUUID in this.traces) {
             this.traces[message.traceUUID].delete();
@@ -138,8 +144,10 @@ singletonIn(Process.nodeClassController, '', class Resources {
 
 
 /*****
- * TODO ********************************************************************
- * TODO ********************************************************************
+ * The ResourceCategory object is memory resident in the controller process and
+ * is used for grouping or categorizing resources into specified categories.
+ * Once created, the category never goes away and will appear in statistics and
+ * other runtime data pulls.
 *****/
 registerIn(Process.nodeClassController, '', class ResourceCategory {
     constructor(categoryName) {
@@ -284,17 +292,17 @@ registerIn(Process.nodeClassController, '', class MonitorThunk {
             this.routing = routing ? routing : null;
             this.traces = {};
             Resources.monitors[this.uuid] = this;
+            this.onPing();
              return this;
         }
     }
 
     delete() {
-        // TODO *************************************************
-        console.log(`##### delete ${Reflect.getPrototypeOf(this).constructor.name}`);
-        // TODO *************************************************
         for (let trace of Object.values(this.traces)) {
             trace.delete();
         }
+
+        delete Resources.monitors[this.uuid];
     }
 
     getRouting() {
@@ -319,6 +327,14 @@ registerIn(Process.nodeClassController, '', class MonitorThunk {
 
     hasTraces() {
         return Object.keys(this.traces).length > 0;
+    }
+
+    onPing() {
+        this.timeout ? clearTimeout(this.timeout) : null;
+
+        this.timeout = setTimeout(() => {
+            this.delete();
+        }, resourcesPingMonitorLifetime);
     }
 
     send(message) {
@@ -544,6 +560,19 @@ register('', class MonitorBase extends Emitter {
         this.resources = {};
         this.uuid = Crypto.generateUUID();
         Process.on(this.uuid, message => this.handleTrace(message));
+
+        this.interval = setInterval(
+            () => Process.sendController({
+                name: 'ResourcesPingMonitor',
+                monitorUUID: this.uuid,
+            }),
+            resourcesPingMonitorInterval,
+        );
+    }
+
+    async clearMonitor() {
+        this.onClose();
+        return this;
     }
 
     async clearTrace(traceUUID) {
@@ -570,7 +599,12 @@ register('', class MonitorBase extends Emitter {
     }
 
     onClose() {
-        // TODO ****************************************************
+        this.interval ? clearInterval(this.interval) : null;
+
+        Process.sendController({
+            name: 'ResourcesClearMonitor',
+            monitorUUID: this.uuid,
+        });
     }
 
     async setTrace(category, resourceUUID, resourceRouting) {
