@@ -108,6 +108,16 @@ require('../nodejs/radius.js');
                         message['#ROUTING'],
                     );
                     */
+                    setTimeout(() => this.sendCommand(
+                        message.resourceUUID,
+                        'SendMessage',
+                        {
+                            name: 'RemoveSendTestMessage',
+                            data: 'some meaningful data',
+                            number: 383948,
+                        }
+                    ),
+                    2500);
                 }
 
                 async onReceiveBinary(message) {

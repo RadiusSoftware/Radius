@@ -63,7 +63,10 @@ singletonIn(Process.nodeClassController, '', class Resources {
     }
 
     async onExecCommand(message) {
-        // TODO *************************************************
+        if (message.resourceUUID in this.resources) {
+            let resourceThunk = this.resources[message.resourceUUID];
+            resourceThunk.sendCommand(message);
+        }
     }
 
     async onSetTrace(message) {
@@ -205,8 +208,8 @@ registerIn(Process.nodeClassController, '', class ResourceCategory {
 
 
 /*****
- * The ResourceThunk is the proxy or thunk for controlling and communicationg
- * with the actual remote (other process) ResourceBase object.  A resource bade
+ * The ResourceThunk is the proxy or thunk for controlling and communicating
+ * with the actual remote (other process) ResourceBase object.  A resource base
  * is an object that can be tracked, traced, and remotely controlled. The first
  * example is the framework based Websocket class.  One of several features
  * provided by the ResourceThunk is the ability to send a message remotely via
@@ -277,10 +280,23 @@ registerIn(Process.nodeClassController, '', class ResourceThunk {
             this.delete();
         }, resourcesPingResourceLifetime);
     }
+
+    sendCommand(message) {
+        message.name = this.uuid;
+        message['#ROUTING'] = this.routing;
+        Process.sendDescendent(message);
+        return this;
+    }
 });
 
 
 /*****
+ * The MonitorThunk is the proxy or thunk for controlling and communicating
+ * with the actual remote (other process) MonitorBase object.  A monitor base
+ * is an object that can track resource events and analyze them. The first
+ * example is the framework based Websocket class.  One of several features
+ * provided by the ResourceThunk is the ability to send a message remotely via
+ * the websocket to a browser.
 *****/
 registerIn(Process.nodeClassController, '', class MonitorThunk {
     constructor(monitorUUID, routing) {
@@ -604,6 +620,15 @@ register('', class MonitorBase extends Emitter {
         Process.sendController({
             name: 'ResourcesClearMonitor',
             monitorUUID: this.uuid,
+        });
+    }
+
+    async sendCommand(resourceUUID, command, payload) {
+        Process.sendController({
+            name: 'ResourcesExecCommand',
+            resourceUUID: resourceUUID,
+            command: command,
+            payload: payload,
         });
     }
 

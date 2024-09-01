@@ -158,9 +158,9 @@ registerIn('HttpServerWorker', '', class WebSocket extends ResourceBase {
     }
 
     async onExecCommand(message) {
-        // TODO **********************************************
-        console.log('Resource.onCommand() -- TBD');
-        console.log(message);
+        if (message.command == 'SendMessage') {
+            this.sendMessage(message.payload);
+        }
     }
 
     onMessage(type, payload) {
