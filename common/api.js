@@ -92,8 +92,9 @@ register('', class Api {
     static ignore = Symbol('ignore');
     static noauth = Symbol('noauth');
 
-    constructor() {
+    constructor(permissionVerse) {
         this.endpoints = {};
+        this.permissionVerse = permissionVerse;
     }
 
     async call(name, ...args) {
@@ -122,7 +123,7 @@ register('', class Api {
 
                 const permissions = session ? session.permissions : {};
 
-                if (PermissionVerse.authorize(endpoint.permissions, permissions)) {
+                if (this.permissionVerse.authorize(endpoint.permissions, permissions)) {
                     try {
                         if (message.args) {
                             return await endpoint.func(...message.args);

@@ -145,11 +145,6 @@ require('../nodejs/radius.js');
             //setTimeout(() => TestResourceMonitor.clearTrace('websocket'), 4000);
             // ****************************************************************
             // ****************************************************************
-
-            PermissionVerse.setPermissions({
-                'admin:all': { type: 'boolean' }
-            });
-
             startServer('HttpServer', {
                 deflang: 'en-US',
                 workers: 1,

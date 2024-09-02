@@ -28,39 +28,9 @@ register('radius', class AdminApp extends WebApp {
         super(libEntry, {
             enableWebsocket: true,
             webAppBundle: 'server.apps.admin',
+            permissions: {
+                'admin:all': { type: 'boolean' }
+            },
         });
     }
-
-    /*
-    async handleGET(req, rsp) {
-        let token = await req.getSession();
-
-        if (!token) {
-            const session = await Session.createSession({
-                agentType: 'none',
-                authType: 'none',
-                remoteHost: req.getRemoteHost(),
-                //permissions: { 'admin:all': true },
-                timeout: 12*60*60000,
-            });
-
-            rsp.setSession(session.token);
-        }
-        
-        return super.handleGET(req, rsp);
-    }
-    */
-
-    /*
-    async handlePOST(req, rsp) {
-        let session = await req.getSession();
-
-        if (session) {
-            return await super.handlePOST(req, rsp);
-        }
-        else {
-            return 401;
-        }
-    }
-    */
 });

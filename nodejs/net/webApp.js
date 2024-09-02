@@ -37,8 +37,10 @@ register('', class WebApp extends HttpX {
         super(libEntry, settings);
         this.webAppPath = __filename;
         this.webAppHtmlPath = Path.join(__filename.replace('.js', ''), '../webApp.html');
+        this.permissionVerse = PermissionVerse;
+        this.permissionVerse.setPermissions(this.settings.permissions);
 
-        this.api = mkApi();
+        this.api = mkApi(this.permissionVerse);
         const webapp = this;
 
         this.setEndpoints(
@@ -89,6 +91,21 @@ register('', class WebApp extends HttpX {
     }
 
     async handleGET(req, rsp) {
+        /*
+        let token = await req.getSession();
+
+        if (!token) {
+            const session = await Session.createSession({
+                agentType: 'none',
+                authType: 'none',
+                remoteHost: req.getRemoteHost(),
+                //permissions: { 'admin:all': true },
+                timeout: 12*60*60000,
+            });
+
+            rsp.setSession(session.token);
+        }
+        */
         let template = mkTextTemplate(WebApp.html);
 
         const settings = {
