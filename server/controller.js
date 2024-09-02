@@ -87,64 +87,6 @@ require('../nodejs/radius.js');
         }
 
         async launchAdminMode() {
-            // ****************************************************************
-            // ****************************************************************
-            singleton('', class TestResourceMonitor extends MonitorBase {
-                constructor() {
-                    super();
-                }
-
-                async onDeregister(message) {
-                    // ********************************************
-                    // ********************************************
-                    // console.log(message);
-                }
-
-                async onRegister(message) {
-                    /*
-                    await this.setTrace(
-                        'websocket',
-                        message.resourceUUID,
-                        message['#ROUTING'],
-                    );
-                    */
-                    setTimeout(() => this.sendCommand(
-                        message.resourceUUID,
-                        'SendMessage',
-                        {
-                            name: 'RemoveSendTestMessage',
-                            data: 'some meaningful data',
-                            number: 383948,
-                        }
-                    ),
-                    2500);
-                }
-
-                async onReceiveBinary(message) {
-                    // ********************************************
-                    // ********************************************
-                    // console.log(message);
-                }
-
-                async onReceiveString(message) {
-                    // ********************************************
-                    // ********************************************
-                    // console.log(message);
-                    //await this.clearTrace(message.traceUUID);
-                    // await this.clearMonitor();
-                }
-
-                async onSendMessage(message) {
-                    // ********************************************
-                    // ********************************************
-                    // console.log(message);
-                }
-            });
-
-            await TestResourceMonitor.setTrace('websocket');
-            //setTimeout(() => TestResourceMonitor.clearTrace('websocket'), 4000);
-            // ****************************************************************
-            // ****************************************************************
             startServer('HttpServer', {
                 deflang: 'en-US',
                 workers: 1,

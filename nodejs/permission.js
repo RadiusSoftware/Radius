@@ -196,7 +196,7 @@ register('', class PermissionSet {
  * After launch changes are performed via interprocess communications to ensure
  * that all singleton PermessionVerses in all related processes are synchronized.
 *****/
-singleton('', class PermissionVerse {
+register('', class PermissionVerse {
     constructor() {
         this.permissionSet = mkPermissionSet();
 

@@ -37,8 +37,7 @@ register('', class WebApp extends HttpX {
         super(libEntry, settings);
         this.webAppPath = __filename;
         this.webAppHtmlPath = Path.join(__filename.replace('.js', ''), '../webApp.html');
-        this.permissionVerse = PermissionVerse;
-        this.permissionVerse.setPermissions(this.settings.permissions);
+        this.permissionVerse = mkPermissionVerse().setPermissions(this.settings.permissions);
 
         this.api = mkApi(this.permissionVerse);
         const webapp = this;
