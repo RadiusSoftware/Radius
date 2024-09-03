@@ -231,7 +231,7 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
         try {
             req = mkHttpRequest(this, httpReq);
             rsp = mkHttpResponse(this, httpRsp);
-            let response = await this.httpLibrary.handle(req);
+            let response = await this.httpLibrary.handle(req, rsp);
 
             if (typeof response == 'number') {
                 rsp.respondStatus(response);

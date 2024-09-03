@@ -27,10 +27,11 @@ register('radius', class AdminApp extends WebApp {
     constructor(libEntry) {
         super(libEntry, {
             enableWebsocket: true,
-            webAppBundle: 'server.apps.admin',
             permissions: {
                 'admin:all': { type: 'boolean' }
             },
+            timeout: 12*60*60000,
+            webAppBundle: 'server.apps.admin',
         });
     }
 });

@@ -38,6 +38,7 @@ register('', class WebApp extends HttpX {
         this.webAppPath = __filename;
         this.webAppHtmlPath = Path.join(__filename.replace('.js', ''), '../webApp.html');
         this.permissionVerse = mkPermissionVerse().setPermissions(this.settings.permissions);
+        this.acceptCookiesName = `${this.libEntry.fqClassName}.accept`;
 
         this.api = mkApi(this.permissionVerse);
         const webapp = this;
@@ -55,6 +56,30 @@ register('', class WebApp extends HttpX {
                 return Bundles.listBundles();
             },
         );
+    }
+
+    async establishSession(req, rsp) {
+        let session;
+        let sessionToken = req.getCookie(Session.getSessionCookieName());
+
+        if (sessionToken) {
+            session = await Session.getSession(sessionToken);
+        }
+
+        if (!session) {
+            session = await Session.createSession({
+                agentType: 'user',
+                authType: 'password',
+                remoteHost: req.getRemoteHost(),
+                timeout: this.settings.timeout,
+            });
+
+            rsp.setCookie(mkCookie(Session.getSessionCookieName(), session.token));
+        }
+
+        if (!session) {
+            rsp.clearCookie(Session.getSessionCookieName());
+        }
     }
 
     getLanguage(langs) {
@@ -90,22 +115,8 @@ register('', class WebApp extends HttpX {
     }
 
     async handleGET(req, rsp) {
-        /*
-        let token = await req.getSession();
-
-        if (!token) {
-            const session = await Session.createSession({
-                agentType: 'none',
-                authType: 'none',
-                remoteHost: req.getRemoteHost(),
-                //permissions: { 'admin:all': true },
-                timeout: 12*60*60000,
-            });
-
-            rsp.setSession(session.token);
-        }
-        */
         let template = mkTextTemplate(WebApp.html);
+        await this.establishSession(req, rsp);
 
         const settings = {
             uuid: this.getUUID(),

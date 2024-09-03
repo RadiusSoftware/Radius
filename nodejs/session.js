@@ -252,7 +252,7 @@ singletonIn(Process.nodeClassController, '', class SessionManager {
         mkHandlerProxy(Process, 'SessionManager', this);
         this.sessionsByUUID = {};
         this.sessionsByToken = {};
-        this.sessionCookieName = 'rscn';
+        this.sessionCookieName = 'session';
         Process.setEnv('SessionCookieName', this.sessionCookieName);
     }
 

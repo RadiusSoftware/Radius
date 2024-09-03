@@ -343,7 +343,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
         }
     }
 
-    async handle(req) {
+    async handle(req, rsp) {
         try {
             let libEntry = await Process.callParent({
                 name: 'HttpLibraryGetLibEntry',
@@ -376,7 +376,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
                 return this.getFile(libEntry);
             }
             else if (libEntry.type == 'httpx') {
-                return await this.handleHttpX(req, libEntry);
+                return await this.handleHttpX(req, rsp, libEntry);
             }
             else {
                 return 400;
@@ -405,7 +405,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
         }
     }
 
-    async handleHttpX(req, libEntry) {
+    async handleHttpX(req, rsp, libEntry) {
         let httpx = await this.getHttpX(libEntry);
 
         if (httpx) {
@@ -413,7 +413,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
 
             if (typeof httpx[methodName] == 'function') {
                 try {
-                    return await httpx[methodName](req);
+                    return await httpx[methodName](req, rsp);
                 }
                 catch (e) {
                     caught(e);
