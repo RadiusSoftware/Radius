@@ -1,5 +1,5 @@
 /*****
- * Copyright (c) 2023 Radius Software
+ * Copyright (c) 2024 Radius Software
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -26,12 +26,16 @@
 register('radius', class AdminApp extends WebApp {
     constructor(libEntry) {
         super(libEntry, {
+            // *********************************************************************
+            // MOVE TO DBMS ********************************************************
+            timeout: 12*60*60000,
+            webAppBundle: 'server.apps.admin',
+            // MOVE TO DBMS ********************************************************
+            // *********************************************************************
             enableWebsocket: true,
             permissions: {
                 'admin:all': { type: 'boolean' }
             },
-            timeout: 12*60*60000,
-            webAppBundle: 'server.apps.admin',
         });
     }
 });

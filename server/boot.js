@@ -1,5 +1,5 @@
 /*****
- * Copyright (c) 2023 Radius Software
+ * Copyright (c) 2024 Radius Software
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,60 +30,75 @@ require('../nodejs/radius.js');
 
     /*****
     *****/
-    singletonIn(Process.nodeClassController, 'radius', class Controller {
+    singletonIn(Process.nodeClassController, 'radius', class BootStrapper {
         constructor() {
             (async () => {
                 await this.parseCommandLine();
 
-                if (this.commandLine['-debug'] === true) {
+                if (this.settings['-debug'] === true) {
                     Process.setEnv('RadiusDebug', 'TRUE');
                 }
 
-                await this.detectDbms();
-                await this.launcher();
-            })();
-        }
-
-        async checkRadiusDatabase(dbc) {
-            // TODO
-            //this.launcher = this.launchAdminMode;
-            //display('\nCHECK CONSISTENCY OF RADIUS TABLES.\n');
-            //display('\nCHECK TABLE SCHEMAS/UPGRADE.\n');
-        }
-
-        async detectDbms() {
-            this.launcher = this.launchAdminMode;
-
-            if ('-admin' in this.commandLine) return;
-            if (!('-dbtype' in this.commandLine)) return;
-            if (!('-dbhost' in this.commandLine)) return;
-            if (!('-dbuser' in this.commandLine)) return;
-            if (!('-dbpass' in this.commandLine)) return;
-
-            const settings = {
-                type: this.commandLine['-dbtype'],
-                host: this.commandLine['-dbhost'],
-                user: this.commandLine['-dbuser'],
-                pass: this.commandLine['-dbpass'],
-            };
-
-            try {
-                settings.dbname = 'radius';
-                var dbc = await Dbms.connect(settings);
-
-                if (dbc) {
-                    await this.checkRadiusDatabase(dbc);
+                this.inspectConfiguration();
+                
+                if ('-admin' in this.settings) {
+                    this.launchAdminMode();
                 }
-            }
-            catch (e) {
-                await caught(e);
-                this.launcher = this.launchAdminMode;
-            }
+                else {
+                    this.launchLiveMode();
+                }
+            })();
         }
 
         getMode() {
             if (this.mode == this.launchLiveMode) return 'live';
             if (this.mode == this.launchAdminMode) return 'admin';
+        }
+
+        async inspectConfiguration() {
+            if (this.inspectDbms()) {
+                if (!('-admin' in this.settings)) {
+                    return;
+                }
+            }
+            else {
+                // TODO *******************************************
+            }
+
+            this.settings['-admin'] = true;
+        }
+
+        async inspectDbms() {
+            try {
+                let path;
+
+                if ('-dbms' in this.settings) {
+                    path = Path.absolutePath(this.serverDirectoryPath, this.settings['-dbms']);
+                }
+                else {
+                    path = Path.absolutePath(this.serverDirectoryPath, '../../Radius.json');
+                }
+
+                if (await FileSystem.isFile(path)) {
+                    let dbmsSettings = fromJson((await FileSystem.readFile(path)).toString());
+
+                    if (typeof dbmsSettings == 'object' && Dbms.setRadiusDbms(dbmsSettings)) {
+                        let dbc = await dbConnect();
+                        let result = await dbc.query('SELECT NOW()');
+                        console.log(result);
+                        await dbc.close();
+
+                        dbc = await dbConnect();
+                        result = await dbc.query('SELECT NOW()');
+                        console.log(result);
+                        await dbc.close();
+
+                        return false;
+                    }
+                }
+            }
+            catch (e) {}
+            return false;
         }
 
         async launchAdminMode() {
@@ -110,30 +125,22 @@ require('../nodejs/radius.js');
         }
 
         async launchLiveMode() {
-            // TODO
+            // TODO *********************************************************************
             console.log('Launching LIVE mode!');
             console.log('Connect to DBMS -- for all settings!');
-            console.log('DBMS also contains permission verse.');
-
-            /*
-            PermissionVerse.setPermissions({
-            });
-            */
         }
 
         async parseCommandLine() {
             const args = Process.getArgs();
             this.nodePath = args[0];
-            this.serverPath = args[1];
-            this.commandLine = {};
+            this.serverControllerPath = args[1];
+            this.serverDirectoryPath = Path.dirname(this.serverControllerPath);
+            this.settings = {};
 
             const supportedArgs = {
                 '-debug':  { hasValue: false },
                 '-admin':  { hasValue: false },
-                '-dbtype': { hasValue: true },
-                '-dbhost': { hasValue: true },
-                '-dbuser': { hasValue: true },
-                '-dbpass': { hasValue: true },
+                '-dbms': { hasValue: true },
             };
 
             for (let i = 2; i < args.length; i++) {
@@ -144,12 +151,12 @@ require('../nodejs/radius.js');
                     if (supportedArg.hasValue) {
                         if (i+1 < args.length) {
                             if (!args[i+1].startsWith('-')) {
-                                this.commandLine[arg] = args[++i];
+                                this.settings[arg] = args[++i];
                             }
                         }
                     }
                     else {
-                        this.commandLine[arg] = true;
+                        this.settings[arg] = true;
                     }
                 }
             }

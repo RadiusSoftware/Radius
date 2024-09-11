@@ -60,10 +60,10 @@ register('', class WebApp extends HttpX {
 
     async establishSession(req, rsp) {
         let session;
-        let sessionToken = req.getCookie(Session.getSessionCookieName());
+        let sessionCookie = req.getCookie(Session.getSessionCookieName());
 
-        if (sessionToken) {
-            session = await Session.getSession(sessionToken);
+        if (sessionCookie) {
+            session = await Session.getSession(sessionCookie.getValue());
         }
 
         if (!session) {

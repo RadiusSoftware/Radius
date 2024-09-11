@@ -1,5 +1,5 @@
 /*****
- * Copyright (c) 2023 Radius Software
+ * Copyright (c) 2024 Radius Software
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -34,6 +34,7 @@
 registerIn(Process.nodeClassController, '', class Session {
     static agentTypes = mkStringSet('none', 'user', 'app');
     static authTypes = mkStringSet('none', 'password', 'key', 'oauth2');
+    static states = [ 'none', 'eula', 'unverified', 'verified', 'unpassword', 'ok' ];
 
     clearAccount() {
         this.account = null;
