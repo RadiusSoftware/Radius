@@ -101,11 +101,27 @@ singleton('', class Dbms {
         }
     }
 
+    async doesTableExist(settings, databaseName, tableName) {
+        let dbms = this.getDbms(settings);
+
+        if (dbms) {
+            return await dbms.doesTableExist(settings, databaseName, tableName);
+        }
+    }
+
     async getDatabaseSchema(settings, databaseName) {
         let dbms = this.getDbms(settings);
 
         if (dbms) {
             return await dbms.getDatabaseSchema(settings, databaseName);
+        }
+    }
+
+    async getTableSchema(settings, databaseName, tableName) {
+        let dbms = this.getDbms(settings);
+
+        if (dbms) {
+            return await dbms.getDatabaseSchema(settings, databaseName, tableName);
         }
     }
 
@@ -132,28 +148,20 @@ singleton('', class Dbms {
         return dbmsPool;
     }
 
+    getTypeMapper(settings) {
+        let dbms = this.getDbms(settings);
+
+        if (dbms) {
+            return dbms.getTypeMapper();
+        }
+    }
+
     isSupported(dbmsType) {
         return dbmsType in this.dbms;
     }
 
     listSupportedDbmsTypes() {
         return Object.keys(this.dbms);
-    }
-
-    mapDbmsType(settings, dbmsType) {
-        let dbms = this.getDbms(settings);
-
-        if (dbms) {
-            return dbms.mapDbmsType(dbmsType);
-        }
-    }
-
-    mapJsType(settings, jsType) {
-        let dbms = this.getDbms(settings);
-
-        if (dbms) {
-            return dbms.mapJsType(dbmsType);
-        }
     }
 
     setRadiusDbms(settings) {

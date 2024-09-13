@@ -206,7 +206,7 @@ singleton('', class FunctionType extends BaseType {
 /*****
  * Int8
 *****/
-singleton('', class Int8 extends BaseType {
+singleton('', class Int8Type extends BaseType {
     getDefault() {
         return 0;
     }
@@ -235,7 +235,7 @@ singleton('', class Int8 extends BaseType {
 /*****
  * Int16
 *****/
-singleton('', class Int16 extends BaseType {
+singleton('', class Int16Type extends BaseType {
     getDefault() {
         return 0;
     }
@@ -264,7 +264,7 @@ singleton('', class Int16 extends BaseType {
 /*****
  * Int32
 *****/
-singleton('', class Int32 extends BaseType {
+singleton('', class Int32Type extends BaseType {
     getDefault() {
         return 0;
     }
@@ -293,7 +293,7 @@ singleton('', class Int32 extends BaseType {
 /*****
  * Int64
 *****/
-singleton('', class Int64 extends BaseType {
+singleton('', class Int64Type extends BaseType {
     getDefault() {
         return 0n;
     }
@@ -308,6 +308,36 @@ singleton('', class Int64 extends BaseType {
 
     toString(value) {
         return value.toString();
+    }
+});
+
+/*****
+ * JSON
+*****/
+singleton('', class JsonType extends BaseType {
+    getDefault() {
+        return '{}';
+    }
+
+    is(value) {
+        try {
+            let object = fromJson(value);
+            return true;
+        }
+        catch (e) {}
+        return false;
+    }
+
+    toBool(value) {
+        if (this.is(value)) {
+            return toJson(fromJson(value)) != {};
+        }
+        
+        return false;
+    }
+
+    toString(value) {
+        return toJson(value);
     }
 });
 
@@ -419,7 +449,7 @@ singleton('', class StringType extends BaseType {
 /*****
  * UInt8
 *****/
-singleton('', class UInt8 extends BaseType {
+singleton('', class UInt8Type extends BaseType {
     getDefault() {
         return 0;
     }
@@ -448,7 +478,7 @@ singleton('', class UInt8 extends BaseType {
 /*****
  * UInt16
 *****/
-singleton('', class UInt16 extends BaseType {
+singleton('', class UInt16Type extends BaseType {
     getDefault() {
         return 0;
     }
@@ -477,7 +507,7 @@ singleton('', class UInt16 extends BaseType {
 /*****
  * Uint32
 *****/
-singleton('', class UInt32 extends BaseType {
+singleton('', class UInt32Type extends BaseType {
     getDefault() {
         return 0;
     }
@@ -506,7 +536,7 @@ singleton('', class UInt32 extends BaseType {
 /*****
  * Uint64
 *****/
-singleton('', class UInt64 extends BaseType {
+singleton('', class UInt64Type extends BaseType {
     getDefault() {
         return 0n;
     }

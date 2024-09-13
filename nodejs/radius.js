@@ -83,4 +83,5 @@ require('./net/tcpClient.js');
 require('./net/tcpServer.js');
 
 require('./dbms/dbms.js');
+require('./dbms/schema.js');
 require('./dbms/postgres.js');

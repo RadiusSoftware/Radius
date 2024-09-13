@@ -82,7 +82,15 @@ singleton('', class PostgresDbms {
         // TODO ****************************************
     }
 
+    async doesTableExist(settings, databaseName, tableName) {
+        // TODO ****************************************
+    }
+
     async getDatabaseSchema(settings, databaseName) {
+        // TODO ****************************************
+    }
+
+    async getTableSchema(settings, databaseName, tableName) {
         // TODO ****************************************
     }
 
@@ -90,12 +98,8 @@ singleton('', class PostgresDbms {
         return `${settings.dbmsType}-${settings.host}-${settings.database}`;
     }
 
-    mapDbmsType(dbmsType) {
-        // TODO ****************************************
-    }
-
-    mapJsType(jsType) {
-        // TODO ****************************************
+    getTypeMaoper() {
+        return typeMapper;
     }
 });
 
@@ -167,3 +171,62 @@ register('', class PostgresConnection {
         return this;
     }
 });
+
+
+/*****
+ * This is the standard PostgreSQL Javascript-to-DBMS type mapper.  One of the
+ * more powerful featurs of PostgreSQL is that table columns may contain JSON
+ * and arrays of scalar values.  In fact, PostgreSQL is handle a binary array as
+ * a column value.  PostgreSQL has a variety of specialized built-in types, not
+ * all of which (in fact just a small subject) have an entry in the type mapper.
+*****/
+const typeMapper = mkDbTypeMapper([
+    {
+        jsType: BooleanType,
+        dbTypeName: 'bool',
+        encode: value => value === true ? 'true' : 'false',
+        decode: value => value,
+    },
+    {
+        jsType: BufferType,
+        dbTypeName: 'bytea',
+        encode: value => `E'\\x${value.toString('hex')}'`,
+        decode: value => mkBuffer(value),
+    },
+    {
+        jsType: DateType,
+        dbTypeName: 'timestamp',
+        encode: value => `'${value.toISOString()}'`,
+        decode: value => mkTime(value),
+    },
+    {
+        jsType: Int16Type,
+        dbTypeName: 'int2',
+        encode: value => value.toString(),
+        decode: value => value,
+    },
+    {
+        jsType: Int32Type,
+        dbTypeName: 'int4',
+        encode: value => value.toString(),
+        decode: value => value,
+    },
+    {
+        jsType: Int64Type,
+        dbTypeName: 'int8',
+        encode: value => value.toString(),
+        decode: value => BigInt(value),
+    },
+    {
+        jsType: JsonType,
+        dbTypeName: 'json',
+        encode: value => `'${escape(toJson(value))}'`,
+        decode: value => value,
+    },
+    {
+        jsType: StringType,
+        dbTypeName: 'varchar',
+        encode: value => `'${escape(value)}'`,
+        decode: value => value,
+    },
+]);
