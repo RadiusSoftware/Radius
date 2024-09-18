@@ -83,40 +83,20 @@ require('../nodejs/radius.js');
                     let dbmsSettings = fromJson((await FileSystem.readFile(path)).toString());
 
                     if (typeof dbmsSettings == 'object' && Dbms.setRadiusDbms(dbmsSettings)) {
-                        /*
-                        let dbc = await dbConnect();
-                        let result = await dbc.query('SELECT NOW()');
-                        console.log(result);
-                        await dbc.close();
-                        */
-
-                        let schema = mkDbSchema({
-                            name: 'testDatabase',
-                            tables: [
-                                {
-                                    name: 'user',
-                                    columns: [
-                                        { name: 'count', type: Int32Type },
-                                        { name: 'firstName', type: StringType, size: 50 },
-                                        { name: 'lastName', type: StringType, size: 50 },
-                                        { name: 'email', type: StringType, size: 80 },
-                                    ],
-                                    indexes: [
-                                        [ { column: 'firstName', direction: 'asc' } ],
-                                        [ { column: 'firstName', direction: 'asc' }, { column: 'lastName', direction: 'asc' } ],
-                                    ]
-                                }
-                            ]
-                        });
-
-                        for (let index of schema.getTableAt(0).getIndexes()) {
-                            console.log(index.getName());
+                        if (!(await Dbms.doesDatabaseExist(dbmsSettings))) {
+                            await Dbms.createDatabase(dbmsSettings);
                         }
-                        //console.log(schema.tableArr[0].indexArr);
 
-                        return false;
+                        let schema1 = await Dbms.getDatabaseSchema(dbmsSettings);
+                        let schema2 = radius.mkSchema();
+
+                        for (let diff of mkSchemaAnalysis(schema1, schema2)) {
+                            SchemaUpdater.upgrade(dbmsSettings, diff);
+                        }
                     }
                 }
+
+                return false;
             }
             catch (e) {}
             return false;

@@ -43,6 +43,10 @@ singleton('', class ArrayType extends BaseType {
         return Array.isArray(value);
     }
 
+    isScalar() {
+        return false;
+    }
+
     toBool(value) {
         return value.length > 0;
     }
@@ -53,7 +57,7 @@ singleton('', class ArrayType extends BaseType {
 });
 
 /*****
- * Big Int
+ * Bigint
 *****/
 singleton('', class BigIntType extends BaseType {
     getDefault() {
@@ -62,6 +66,10 @@ singleton('', class BigIntType extends BaseType {
 
     is(value) {
         return typeof value == 'bigint';
+    }
+
+    isScalar() {
+        return true;
     }
 
     toBool(value) {
@@ -85,6 +93,10 @@ singleton('', class BooleanType extends BaseType {
         return typeof value == 'boolean';
     }
 
+    isScalar() {
+        return true;
+    }
+
     toBool(value) {
         return value;
     }
@@ -104,6 +116,10 @@ singleton('', class BufferType extends BaseType {
 
     is(value) {
         return value instanceof Buffer;
+    }
+
+    isScalar() {
+        return true;
     }
 
     toBool(value) {
@@ -127,6 +143,10 @@ singleton('', class DateType extends BaseType {
         return value instanceof Date;
     }
 
+    isScalar() {
+        return true;
+    }
+
     toBool(value) {
         return value.valueOf() != 0;
     }
@@ -146,6 +166,10 @@ singleton('', class DoubleType extends BaseType {
 
     is(value) {
         return typeof value == 'number' && value != NaN;
+    }
+
+    isScalar() {
+        return true;
     }
 
     toBool(value) {
@@ -173,12 +197,66 @@ singleton('', class EnumType extends BaseType {
         return false;
     }
 
+    isScalar() {
+        return true;
+    }
+
     toBool(value) {
         return value.length > 0;
     }
 
     toString(value) {
         return value;
+    }
+});
+
+/*****
+ * Float8
+*****/
+singleton('', class Float8Type extends BaseType {
+    getDefault() {
+        return 0;
+    }
+
+    is(value) {
+        return typeof value == 'number' && value != NaN;
+    }
+
+    isScalar() {
+        return true;
+    }
+
+    toBool(value) {
+        return value != 0;
+    }
+
+    toString(value) {
+        return value.toString();
+    }
+});
+
+/*****
+ * Float16
+*****/
+singleton('', class Float16Type extends BaseType {
+    getDefault() {
+        return 0n;
+    }
+
+    is(value) {
+        return typeof value == 'bigint';
+    }
+
+    isScalar() {
+        return true;
+    }
+
+    toBool(value) {
+        return value != 0n;
+    }
+
+    toString(value) {
+        return value.toString();
     }
 });
 
@@ -192,6 +270,10 @@ singleton('', class FunctionType extends BaseType {
 
     is(value) {
         return typeof value == 'function';
+    }
+
+    isScalar() {
+        return true;
     }
 
     toBool(value) {
@@ -223,6 +305,10 @@ singleton('', class Int8Type extends BaseType {
         return false;
     }
 
+    isScalar() {
+        return true;
+    }
+
     toBool(value) {
         return value != 0;
     }
@@ -250,6 +336,10 @@ singleton('', class Int16Type extends BaseType {
         }
 
         return false;
+    }
+
+    isScalar() {
+        return true;
     }
 
     toBool(value) {
@@ -281,6 +371,10 @@ singleton('', class Int32Type extends BaseType {
         return false;
     }
 
+    isScalar() {
+        return true;
+    }
+
     toBool(value) {
         return value != 0;
     }
@@ -300,6 +394,10 @@ singleton('', class Int64Type extends BaseType {
 
     is(value) {
         return typeof value == 'bigint';
+    }
+
+    isScalar() {
+        return true;
     }
 
     toBool(value) {
@@ -328,6 +426,10 @@ singleton('', class JsonType extends BaseType {
         return false;
     }
 
+    isScalar() {
+        return true;
+    }
+
     toBool(value) {
         if (this.is(value)) {
             return toJson(fromJson(value)) != {};
@@ -342,6 +444,31 @@ singleton('', class JsonType extends BaseType {
 });
 
 /*****
+ * Key Type
+*****/
+singleton('', class KeyType extends BaseType {
+    getDefault() {
+        return '';
+    }
+
+    is(value) {
+        return typeof value == 'string';
+    }
+
+    isScalar() {
+        return true;
+    }
+
+    toBool(value) {
+        return value.length > 0;
+    }
+
+    toString(value) {
+        return value;
+    }
+});
+
+/*****
  * Null
 *****/
 singleton('', class NullType extends BaseType {
@@ -351,6 +478,10 @@ singleton('', class NullType extends BaseType {
 
     is(value) {
         return value === null;
+    }
+
+    isScalar() {
+        return true;
     }
 
     toBool(value) {
@@ -374,6 +505,10 @@ singleton('', class NumberType extends BaseType {
         return typeof value == 'number' && value != NaN;
     }
 
+    isScalar() {
+        return true;
+    }
+
     toBool(value) {
         return value != 0;
     }
@@ -393,6 +528,10 @@ singleton('', class ObjectType extends BaseType {
 
     is(value) {
         return typeof value == 'object';
+    }
+
+    isScalar() {
+        return false;
     }
 
     toBool(value) {
@@ -416,6 +555,10 @@ singleton('', class PatternType extends BaseType {
         return value instanceof RegExp;
     }
 
+    isScalar() {
+        return true;
+    }
+
     toBool(value) {
         return true;
     }
@@ -433,11 +576,17 @@ singleton('', class StringType extends BaseType {
         return '';
     }
 
-    is(value, array) {
+    is(value) {
         return typeof value == 'string';
     }
 
+    isScalar() {
+        return true;
+    }
+
     toBool(value) {
+        if (value.toLowerCase() == 'true') return true;
+        if (value.toLowerCase() == 'false') return false;
         return value.length > 0;
     }
 
@@ -464,6 +613,10 @@ singleton('', class UInt8Type extends BaseType {
         }
 
         return false;
+    }
+
+    isScalar() {
+        return true;
     }
 
     toBool(value) {
@@ -495,6 +648,10 @@ singleton('', class UInt16Type extends BaseType {
         return false;
     }
 
+    isScalar() {
+        return true;
+    }
+
     toBool(value) {
         return value != 0;
     }
@@ -524,6 +681,10 @@ singleton('', class UInt32Type extends BaseType {
         return false;
     }
 
+    isScalar() {
+        return true;
+    }
+
     toBool(value) {
         return value != 0;
     }
@@ -549,6 +710,10 @@ singleton('', class UInt64Type extends BaseType {
         return false;
     }
 
+    isScalar() {
+        return true;
+    }
+
     toBool(value) {
         return value != 0n;
     }
@@ -568,6 +733,10 @@ singleton('', class UndefinedType extends BaseType {
 
     is(value) {
         return typeof value == 'undefined';
+    }
+
+    isScalar() {
+        return true;
     }
 
     toBool(value) {

@@ -50,9 +50,20 @@ register('', class DbSchema {
         }
     }
 
-    addTable(table) {
-        this.tableArr.push(table.getName());
-        this.tableMap[table.getName()] = table;
+    clearTable(tableName) {
+        let table = this.tableMap[tableName];
+
+        if (table) {
+            delete this.tableArr[tableName];
+
+            for (let i = 0; i < this.tableArr.length; i++) {
+                if (Object.is(table, this.tableArr[i])) {
+                    this.tableArr.splice(i, 1);
+                    break;
+                }
+            }
+        }
+
         return this;
     }
 
@@ -76,25 +87,14 @@ register('', class DbSchema {
         return tableName in this.tableMap;
     }
 
-    removeTable(tableName) {
-        let table = this.tableMap[tableName];
-
-        if (table) {
-            delete this.tableArr[tableName];
-
-            for (let i = 0; i < this.tableArr.length; i++) {
-                if (Object.is(table, this.tableArr[i])) {
-                    this.tableArr.splice(i, 1);
-                    break;
-                }
-            }
-        }
-
+    setName(name) {
+        this.name = name;
         return this;
     }
 
-    setName(name) {
-        this.name = name;
+    setTable(dbTable) {
+        this.tableArr.push(dbTable.getName());
+        this.tableMap[table.getName()] = dbTable;
         return this;
     }
 
@@ -142,30 +142,99 @@ register('', class DbTable {
 
         if (typeof arg == 'object') {
             this.name = arg.name;
+            this.type = typeof arg.name == 'string' ? arg.name : 'simple';
 
             if (Array.isArray(arg.columns)) {
-                for (let column of arg.columns) {
-                    this.addColumn(mkDbColumn(column.name, column.type, column.size));
+                for (let columnDefinition of arg.columns) {
+                    this.setColumn(mkDbColumn(columnDefinition));
                 }
             }
 
             if (Array.isArray(arg.indexes)) {
-                for (let index of arg.indexes) {
-                    this.addIndex(mkDbIndex(index));
+                for (let indexDefinition of arg.indexes) {
+                    let dbIndex = mkDbIndex(indexDefinition);
+
+                    if (dbIndex.checkColumn(this)) {
+                        this.setIndex(dbIndex);
+                    }
                 }
             }
         }
     }
 
-    addColumn(column) {
-        this.columnArr.push(column);
-        this.columnMap[column.getName()] = column;
+    checkIndex(dbIndex) {
+        return dbIndex.check(this);
+    }
+
+    clearColumn(columnName) {
+        let dbColumn = this.columnMap[columnName];
+
+        if (dbColumn) {
+            for (let i = 0; i < this.columnArr.length; i++) {
+                if (Object.is(dbColumn, this.columnArr[i])) {
+                    this.columnArr.splice(i, 1);
+                    delete this.columnMap[columnName];
+
+                    for (let dbIndex of this.enumerateColumnIndexes(dbColumn)) {
+                        this.clearIndex(dbIndex);
+                    }
+
+                    return this;
+                }
+            }
+        }
+
         return this;
     }
 
-    addIndex(index) {
-        this.indexArr.push(index);
-        this.indexMap[index.getName()] = index;
+    clearColumnAt(index) {
+        let dbColumn = this.columnArr[index];
+        delete this.columnMap[dbColumn.getName()];
+        this.columnArr.splice(i, 1);
+
+        for (let dbIndex of this.enumerateColumnIndexes(dbColumn)) {
+            this.clearIndex(dbIndex);
+        }
+
+        return this;
+    }
+
+    clearIndex(indexName) {
+        let dbIndex = this.indexMap[indexName];
+
+        if (dbIndex) {
+            for (let i = 0; i < this.indexArr.length; i++) {
+                if (Object.is(dbIndex, this.indexArr[i])) {
+                    this.indexArr.splice(i, 1);
+                    delete this.indexMap[indexName];
+                    return this;
+                }
+            }
+        }
+
+        return this;
+    }
+
+    clearIndexAt(indexIndex) {
+        let index = this.indexArr[indexIndex];
+        delete this.indexMap[index.getName()];
+        this.indexArr.splice(i, 1);
+        return this;
+    }
+
+    enumerateColumnIndexes(dbColumn) {
+        let indexes = [];
+
+        for (let dbIndex of this.indexes) {
+            for (let columnItem of dbIndex.columnItems) {
+                if (column.column == dbColumn.name) {
+                    indexes.push(dbIndex);
+                    break;
+                }
+            }
+        }
+
+        return indexes;
     }
 
     getColumn(columnName) {
@@ -200,53 +269,39 @@ register('', class DbTable {
         return this.indexArr;
     }
 
+    getIndexSet() {
+        return mkStringSet(this.indexArr.map(dbIndex => dbIndex.getName(this)));
+    }
+
     getName() {
         return this.name;
     }
 
-    removeColumn(columnName) {
-        let column = this.columnMap[columnName];
+    getType() {
+        return this.type;
+    }
 
-        if (column) {
-            for (let i = 0; i < this.columnArr.length; i++) {
-                if (Object.is(column, this.columnArr[i])) {
-                    this.columnArr.splice(i, 1);
-                    delete this.columnMap[columnName];
-                    return this;
-                }
-            }
-        }
-
+    setColumn(dbColumn) {
+        this.columnArr.push(dbColumn);
+        this.columnMap[dbColumn.getName()] = dbColumn;
         return this;
     }
 
-    removeColumnAt(index) {
-        let column = this.columnArr[index];
-        delete this.columnMap[column.getName()];
-        this.columnArr.splice(i, 1);
+    setColumnAt(dbColumn, index) {
+        this.columnArr.splice(index, 1, dbColumn);
+        this.columnMap[dbColumn.getName()] = dbColumn;
         return this;
     }
 
-    removeIndex(indexName) {
-        let index = this.indexMap[indexName];
-
-        if (index) {
-            for (let i = 0; i < this.indexArr.length; i++) {
-                if (Object.is(index, this.indexArr[i])) {
-                    this.indexArr.splice(i, 1);
-                    delete this.indexMap[indexName];
-                    return this;
-                }
-            }
-        }
-
+    setIndex(dbIndex) {
+        this.indexArr.push(dbIndex);
+        this.indexMap[dbIndex.getName()] = dbIndex;
         return this;
     }
 
-    removeIndexAt(indexIndex) {
-        let index = this.indexArr[indexIndex];
-        delete this.indexMap[index.getName()];
-        this.indexArr.splice(i, 1);
+    setIndexAt(dbIndex, index) {
+        this.indexArr.splice(index, 1, dbIndex);
+        this.indexMap[dbIndex.getName()] = dbIndex;
         return this;
     }
 
@@ -284,10 +339,10 @@ register('', class DbTable {
  * In PostgreSQL, the varchar[size] is ignored because it's not necessary.
 *****/
 register('', class DbColumn {
-    constructor(name, type, size) {
-        this.name = typeof name == 'string' ? name : '';
-        this.type = type instanceof BaseType ? type : NullType;
-        this.size = typeof size == 'number' ? size : 0;
+    constructor(columnDefinition) {
+        this.name = typeof columnDefinition.name == 'string' ? columnDefinition.name : '';
+        this.type = columnDefinition.type instanceof BaseType ? columnDefinition.type : NullType;
+        this.size = typeof columnDefinition.size == 'number' ? columnDefinition.size : 0;
     }
 
     getName() {
@@ -356,28 +411,57 @@ register('', class DbColumn {
  * of the index's entire array of items.
 *****/
 register('', class DbIndex {
-    constructor(columnItems) {
+    constructor(indexDefinition) {
         this.columnItems = [];
         
-        if (Array.isArray(columnItems)) {
-            for (let columnItem of columnItems) {
-                this.addColumnItem(columnItem.column, columnItem.direction);
+        if (Array.isArray(indexDefinition.columnItems)) {
+            for (let columnItem of indexDefinition.columnItems) {
+                this.setColumnItem(columnItem);
             }
         }
     }
 
-    addColumnItem(column, direction) {
-        if (typeof column == 'string') {
-            if (direction.toUpperCase() in { ASC:0, DESC:0 }) {
-                this.columnItems.push({ column: column, direction: direction.toUpperCase() });
+    checkColumn(table) {
+        for (let columnItem of this.columnItems) {
+            if (!(columnItem.column in table.columnMap)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    clearColumnItem(column) {
+        for (let i = 0; i < this.columnItems.length; i++) {
+            if (this.columnItems[i].column === column) {
+                this.columnItems.splice(i, 1);
+                break;
             }
         }
 
         return this;
     }
 
-    getName() {
-        return this.columnItems.map(columnItem => columnItem.column).join('_');
+    clearColumnItemAt(index) {
+        this.columnItems.splice(index, 1);
+        return this;
+    }
+
+    getName(table) {
+        let nameParts = [];
+
+        for (let columnItem of this.columnItems) {
+            nameParts.push(`${columnItem.column}${columnItem.direction[0]}${columnItem.direction.substring(1).toLowerCase()}`);
+        }
+
+        if (table instanceof DbTable) {
+            nameParts.unshift(table.getName());
+        }
+        else if (typeof table == 'string') {
+            nameParts.unshift(table);
+        }
+
+        return nameParts.join('_')
     }
 
     insertColumnItemAfter(column, direction, index) {
@@ -400,19 +484,21 @@ register('', class DbIndex {
         return this;
     }
 
-    removeColumnItem(column) {
-        for (let i = 0; i < this.columnItems.length; i++) {
-            if (this.columnItems[i].column === column) {
-                this.columnItems.splice(i, 1);
-                break;
+    setColumnItem(columnItem) {
+        if (typeof columnItem.direction == 'stirng') {
+            let direction = columnItem.direction.toUpperCase();
+
+            if (direction in { ASC:0, DESC:0 }) {
+                this.columnItems.push({ column: columnItem.column, direction: direction });
+            }
+            else {
+                this.columnItems.push({ column: columnItem.column, direction: 'ASC' });
             }
         }
+        else {
+            this.columnItems.push({ column: columnItem.column, direction: 'ASC' });
+        }
 
-        return this;
-    }
-
-    removeColumnItemAt(index) {
-        this.columnItems.splice(index, 1);
         return this;
     }
 
@@ -477,12 +563,12 @@ register('', class DbTypeMapper {
         return this;
     }
 
-    getTypeFromDb(dbTypeName) {
-        return this.byDbType[dbTypeName];
+    getDbType(jsType) {
+        return this.byJsType[jsType.constructor.name];
     }
 
-    getTypeFromJs(jsType) {
-        return this.byJsType[jsType.constructor.name];
+    getJsType(dbTypeName) {
+        return this.byDbType[dbTypeName];
     }
 
     removeDbType(dbtypeName) {

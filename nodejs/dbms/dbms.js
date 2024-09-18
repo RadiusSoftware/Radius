@@ -34,6 +34,14 @@ singleton('', class Dbms {
         this.radius = null;
     }
 
+    async alterColumnSize(settings, tableName, columnName, size) {
+        let dbms = this.getDbms(settings);
+
+        if (dbms) {
+            return await dbms.alterColumnSize(settings, tableName, columnName, size);
+        }
+    }
+
     async connect(settings) {
         try {
             let dbms = this.getDbms(settings);
@@ -61,11 +69,27 @@ singleton('', class Dbms {
         return false;
     }
 
-    async createDatabase(settings, databaseName) {
+    async createColumn(settings, dbTable, dbColumn) {
         let dbms = this.getDbms(settings);
 
         if (dbms) {
-            return await dbms.createDatabase(settings, databaseName);
+            return await dbms.createColumn(settings, dbTable, dbColumn);
+        }
+    }
+
+    async createDatabase(settings) {
+        let dbms = this.getDbms(settings);
+
+        if (dbms) {
+            return await dbms.createDatabase(settings);
+        }
+    }
+
+    async createIndex(settings, dbTable, dbIndex) {
+        let dbms = this.getDbms(settings);
+
+        if (dbms) {
+            return await dbms.createIndex(settings, dbTable, dbIndex);
         }
     }
 
@@ -73,7 +97,31 @@ singleton('', class Dbms {
         let dbms = this.getDbms(settings);
 
         if (dbms) {
-            return await dbms.craeteTable(settings, tableSchema);
+            return await dbms.createTable(settings, tableSchema);
+        }
+    }
+
+    async doesDatabaseExist(settings) {
+        let dbms = this.getDbms(settings);
+
+        if (dbms) {
+            return await dbms.doesDatabaseExist(settings);
+        }
+    }
+
+    async doesTableExist(settings, tableName) {
+        let dbms = this.getDbms(settings);
+
+        if (dbms) {
+            return await dbms.doesTableExist(settings, databaseName, tableName);
+        }
+    }
+
+    async dropColumn(settings, tableName, columnName) {
+        let dbms = this.getDbms(settings);
+
+        if (dbms) {
+            return await dbms.dropColumn(settings, tableName, columnName);
         }
     }
 
@@ -85,6 +133,14 @@ singleton('', class Dbms {
         }
     }
 
+    async dropIndex(settings, indexName) {
+        let dbms = this.getDbms(settings);
+
+        if (dbms) {
+            return await dbms.dropIndex(settings, indexName);
+        }
+    }
+
     async dropTable(settings, tableName) {
         let dbms = this.getDbms(settings);
 
@@ -93,27 +149,11 @@ singleton('', class Dbms {
         }
     }
 
-    async doesDatabaseExist(settings, databaseName) {
+    async getDatabaseSchema(settings) {
         let dbms = this.getDbms(settings);
 
         if (dbms) {
-            return await dbms.doesDatabaseExist(settings, databaseName);
-        }
-    }
-
-    async doesTableExist(settings, databaseName, tableName) {
-        let dbms = this.getDbms(settings);
-
-        if (dbms) {
-            return await dbms.doesTableExist(settings, databaseName, tableName);
-        }
-    }
-
-    async getDatabaseSchema(settings, databaseName) {
-        let dbms = this.getDbms(settings);
-
-        if (dbms) {
-            return await dbms.getDatabaseSchema(settings, databaseName);
+            return await dbms.getDatabaseSchema(settings);
         }
     }
 

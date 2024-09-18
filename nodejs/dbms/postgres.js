@@ -56,17 +56,81 @@ singleton('', class PostgresDbms {
         Dbms.dbmsMap['postgres'] = this;
     }
 
+    async alterColumnSize(settings, tableName, columnName, size) {
+        // TODO ****************************************
+    }
+
     async connect(settings) {
         const pgconn = mkPostgresConnection(settings);
         await pgconn.connect();
         return pgconn;
     }
 
-    async createDatabase(settings, databaseName) {
+    async createColumn(settings, dbTable, dbColumn) {
+        // TODO ****************************************
+    }
+
+    async createDatabase(settings) {
+        let dbName = TextUtils.toSnakeCase(settings.database);
+        let pgSettings = Data.clone(settings);
+        pgSettings.database = 'postgres';
+        let pg = await mkPostgresConnection(pgSettings).connect();
+        await pg.query(`CREATE DATABASE ${dbName};`);
+        await pg.close();
+    }
+
+    async createIndex(settings, dbTable, dbIndex) {
         // TODO ****************************************
     }
 
     async createTable(settings, table) {
+        let pgTableName = toPgName(table.getName());
+        let sql = [ `CREATE TABLE ${pgTableName} (` ];
+
+        sql.push(table.getColumns().map(column => {
+            let columnName = toPgName(column.getName());
+            let pgType = typeMapper.getDbType(column.type);
+            return `${columnName} ${pgType.dbTypeName}`;
+
+        }).join(','));
+
+        sql.push(')');
+        let pg = await mkPostgresConnection(settings).connect();
+        await pg.query(sql.join(''));
+
+        for (let index of table.getIndexes()) {
+            let columnItems = [];
+
+            for (let columnItem of index) {
+                columnItems.push(`_${TextUtils.toSnakeCase(columnItem.column)} ${columnItem.direction}`);
+            }
+
+            let sql = [
+                `CREATE INDEX _${TextUtils.toSnakeCase(index.getName(table.getName()))}`,
+                ` on _${TextUtils.toSnakeCase(table.getName())} (${columnItems.join(', ')})`,
+            ];
+
+            await pg.query(sql.join(''));
+        }
+
+        await pg.close();
+    }
+
+    async doesDatabaseExist(settings) {
+        let dbName = TextUtils.toSnakeCase(settings.database);
+        let pgSettings = Data.clone(settings);
+        pgSettings.database = 'postgres';
+        let pg = await mkPostgresConnection(pgSettings).connect();
+        let result = await pg.query(`SELECT datname FROM pg_catalog.pg_database WHERE datname='${dbName}'`);
+        await pg.close();
+        return Array.isArray(result) && result.length == 1;
+    }
+
+    async doesTableExist(settings, tableName) {
+        // TODO ****************************************
+    }
+
+    async dropColumn(settings, tableName, columnName) {
         // TODO ****************************************
     }
 
@@ -74,20 +138,19 @@ singleton('', class PostgresDbms {
         // TODO ****************************************
     }
 
+    async dropIndex(settings, indexName) {
+        // TODO ****************************************
+    }
+
     async dropTable(settings, tableName) {
         // TODO ****************************************
     }
 
-    async doesDatabaseExist(settings, databaseName) {
-        // TODO ****************************************
-    }
-
-    async doesTableExist(settings, databaseName, tableName) {
-        // TODO ****************************************
-    }
-
-    async getDatabaseSchema(settings, databaseName) {
-        // TODO ****************************************
+    async getDatabaseSchema(settings) {
+        let pg = await mkPostgresConnection(settings).connect();
+        let schema = await (new PgDatabaseSchema()).load(pg, settings.database);
+        await pg.close();
+        return schema;
     }
 
     async getTableSchema(settings, databaseName, tableName) {
@@ -98,7 +161,7 @@ singleton('', class PostgresDbms {
         return `${settings.dbmsType}-${settings.host}-${settings.database}`;
     }
 
-    getTypeMaoper() {
+    getTypeMapper() {
         return typeMapper;
     }
 });
@@ -122,7 +185,6 @@ register('', class PostgresConnection {
             database: settings.database,
             user: settings.username,
             password: settings.password,
-
         };
     }
 
@@ -200,6 +262,18 @@ const typeMapper = mkDbTypeMapper([
         decode: value => mkTime(value),
     },
     {
+        jsType: Float8Type,
+        dbTypeName: 'float8',
+        encode: value => value.toString(),
+        decode: value => value,
+    },
+    {
+        jsType: Float16Type,
+        dbTypeName: 'float16',
+        encode: value => value.toString(),
+        decode: value => bigint(value),
+    },
+    {
         jsType: Int16Type,
         dbTypeName: 'int2',
         encode: value => value.toString(),
@@ -224,9 +298,105 @@ const typeMapper = mkDbTypeMapper([
         decode: value => value,
     },
     {
+        jsType: KeyType,
+        dbTypeName: 'varchar',
+        encode: value => `'${escape(value)}'`,
+        decode: value => value,
+    },
+    {
         jsType: StringType,
         dbTypeName: 'varchar',
         encode: value => `'${escape(value)}'`,
         decode: value => value,
     },
 ]);
+
+
+/*****
+ * A couple of quick-n-easy utilities needed for converting between the standard
+ * Radius database column names and the naming convention we're using on the PG
+ * database.  For example, userName => _user_name.  The extra preceeding under-
+ * score ensures that our table names won't conflict with reserved words.  Also
+ * keep in mind that the preceeding _ is not used for database names.  Hence,
+ * these methods don't apply to the database naming convention.
+*****/
+function toPgName(stdName) {
+    return `_${TextUtils.toSnakeCase(stdName)}`
+}
+
+function fromPgName(pgName) {
+    return TextUtils.toCamelCase(pgName.substring(1));
+}
+
+
+/*****
+ * Each DBMS client supported by this framework must be able to load a complete
+ * schema definition in the standard form.  The standard form means it matches
+ * the schema that's built with the original schema definition.  The primary need
+ * for this class is to be able to compare the definition of a schema with what's
+ * implemented on the server. The output of such a comparison is used for applying
+ * modifications to the implemented schema on the server.
+*****/
+class PgDatabaseSchema {
+    async load(pg, dbName) {
+        this.pg = pg;
+        let pgDbName = TextUtils.toSnakeCase(dbName);
+        this.dbSchema = mkDbSchema(dbName);
+        let result = await this.pg.query(`SELECT table_name FROM information_schema.TABLES WHERE table_schema='public' AND table_catalog='${pgDbName}' ORDER BY table_name`);
+        
+        for (let table of result) {
+            await this.loadTable(table.table_name);
+        }
+
+        return this.dbSchema;
+    }
+    
+    async loadTable(tableName) {
+        /*
+        let tableDef = {
+            name: toCamelCase(tableName),
+            columns: [],
+            indexes: []
+        };
+        */
+        let result = await this.pg.query(`SELECT table_catalog, table_name, column_name, ordinal_position, udt_name FROM information_schema.COLUMNS WHERE table_catalog='${this.pg.settings.database}' AND table_name='${tableName}' ORDER BY ordinal_position`);
+
+        for (let column of result.data) {
+            let columnName = toCamelCase(column.column_name);
+            
+            if (columnName == 'oid') {
+                var fmwkType = global.dbKey;
+                tableDef.columns.push({ name: columnName, type: fmwkType });
+            }
+            else {
+                var fmwkType = pgReverseMap[column.udt_name].fmwk();
+                
+                if (fmwkType.name() == 'dbText') {
+                    tableDef.columns.push({ name: columnName, type: fmwkType, size: -1 });
+                }
+                else {
+                    tableDef.columns.push({ name: columnName, type: fmwkType });
+                }
+            }
+        }
+
+        result = await this.pg.query(`SELECT X.indexname, I.indnatts, I.indisunique, I.indisprimary, I.indkey, I.indoption FROM pg_indexes AS X JOIN pg_class AS C ON C.relname=X.indexname JOIN pg_index AS I ON I.indexrelid=C.oid WHERE X.tablename='${tableName}'`);
+        
+        for (let row of result.data) {
+            if (!row.indexname.endsWith('_pkey')) {
+                let index = [];
+                let indkey = row.indkey.split(' ').map(el => parseInt(el));
+                let indopt = row.indoption.split(' ').map(el => parseInt(el));
+                
+                for (let i = 0; i < indkey.length; i++) {
+                    let columnIndex = indkey[i] - 1;
+                    index.push(`${tableDef.columns[columnIndex].name}:${indopt[i] ? 'DESC' : 'ASC'}`);
+                }
+
+                tableDef.indexes.push(index.join(','));
+            }
+        }
+        
+        this.tableDefs.push(tableDef);
+    }
+}

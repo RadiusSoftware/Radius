@@ -265,9 +265,9 @@
         caughtHandler = func;
     });
 
-    register('', async function caught(e) {
+    register('', async function caught(e, ...args) {
         try {
-            let value = logHandler(e);
+            let value = caughtHandler(e, ...args);
             value instanceof Promise ? await value : null;
         }
         catch (e) {}
