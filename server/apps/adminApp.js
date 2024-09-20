@@ -34,7 +34,7 @@ register('radius', class AdminApp extends WebApp {
             // *********************************************************************
             enableWebsocket: true,
             permissions: {
-                'admin:all': { type: 'boolean' }
+                'admin:*': { type: 'boolean' }
             },
         });
     }

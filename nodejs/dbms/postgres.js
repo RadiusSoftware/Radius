@@ -57,7 +57,6 @@ singleton('', class PostgresDbms {
     }
 
     async alterColumnSize(settings, tableName, columnName, size) {
-        // TODO ****************************************
     }
 
     async connect(settings) {
@@ -67,11 +66,16 @@ singleton('', class PostgresDbms {
     }
 
     async createColumn(settings, dbTable, dbColumn) {
-        // TODO ****************************************
+        let pgTableName = toPgName(dbTable.getName());
+        let pgColumnName = toPgName(dbColumn.getName());
+        let pgTypeName = typeMapper.getDbType(dbColumn.getType()).dbTypeName;
+        let pg = await mkPostgresConnection(settings).connect();
+        await pg.query(`ALTER TABLE ${pgTableName} ADD COLUMN ${pgColumnName} ${pgTypeName}`);
+        await pg.close();
     }
 
     async createDatabase(settings) {
-        let dbName = TextUtils.toSnakeCase(settings.database);
+        let dbName = settings.database;
         let pgSettings = Data.clone(settings);
         pgSettings.database = 'postgres';
         let pg = await mkPostgresConnection(pgSettings).connect();
@@ -80,14 +84,27 @@ singleton('', class PostgresDbms {
     }
 
     async createIndex(settings, dbTable, dbIndex) {
-        // TODO ****************************************
+        let columnItems = [];
+
+        for (let columnItem of dbIndex) {
+            columnItems.push(`_${TextUtils.toSnakeCase(columnItem.column)} ${columnItem.direction}`);
+        }
+
+        let sql = [
+            `CREATE INDEX _${TextUtils.toSnakeCase(dbIndex.getName())}`,
+            ` on _${TextUtils.toSnakeCase(dbTable.getName())} (${columnItems.join(', ')})`,
+        ];
+
+        let pg = await mkPostgresConnection(settings).connect();
+        await pg.query(sql.join(''));
+        await pg.close();
     }
 
-    async createTable(settings, table) {
-        let pgTableName = toPgName(table.getName());
+    async createTable(settings, dbTable) {
+        let pgTableName = toPgName(dbTable.getName());
         let sql = [ `CREATE TABLE ${pgTableName} (` ];
 
-        sql.push(table.getColumns().map(column => {
+        sql.push(dbTable.getColumns().map(column => {
             let columnName = toPgName(column.getName());
             let pgType = typeMapper.getDbType(column.type);
             return `${columnName} ${pgType.dbTypeName}`;
@@ -98,7 +115,7 @@ singleton('', class PostgresDbms {
         let pg = await mkPostgresConnection(settings).connect();
         await pg.query(sql.join(''));
 
-        for (let index of table.getIndexes()) {
+        for (let index of dbTable.getIndexes()) {
             let columnItems = [];
 
             for (let columnItem of index) {
@@ -106,8 +123,8 @@ singleton('', class PostgresDbms {
             }
 
             let sql = [
-                `CREATE INDEX _${TextUtils.toSnakeCase(index.getName(table.getName()))}`,
-                ` on _${TextUtils.toSnakeCase(table.getName())} (${columnItems.join(', ')})`,
+                `CREATE INDEX _${TextUtils.toSnakeCase(index.getName(dbTable.getName()))}`,
+                ` on _${TextUtils.toSnakeCase(dbTable.getName())} (${columnItems.join(', ')})`,
             ];
 
             await pg.query(sql.join(''));
@@ -117,7 +134,7 @@ singleton('', class PostgresDbms {
     }
 
     async doesDatabaseExist(settings) {
-        let dbName = TextUtils.toSnakeCase(settings.database);
+        let dbName = settings.database;
         let pgSettings = Data.clone(settings);
         pgSettings.database = 'postgres';
         let pg = await mkPostgresConnection(pgSettings).connect();
@@ -127,23 +144,43 @@ singleton('', class PostgresDbms {
     }
 
     async doesTableExist(settings, tableName) {
-        // TODO ****************************************
+        let pgDbName = settings.database;
+        let pgTableName = toPgName(tableName);
+        let pg = await mkPostgresConnection(settings).connect();
+        let result = await pg.query(`SELECT table_name FROM information_schema.TABLES WHERE table_schema='public' AND table_catalog='${pgDbName}' AND table_name='${pgTableName}'`);
+        await pg.close();
+        return result.length > 0;
     }
 
     async dropColumn(settings, tableName, columnName) {
-        // TODO ****************************************
+        let pgTableName = toPgName(tableName);
+        let pgColumnName = toPgName(columnName);
+        let pg = await mkPostgresConnection(settings).connect();
+        await pg.query(`ALTER TABLE ${pgTableName} DROP COLUMN ${pgColumnName}`);
+        await pg.close();
     }
 
-    async dropDatabase(settings, databaseName) {
-        // TODO ****************************************
+    async dropDatabase(settings) {
+        let dbName = settings.database;
+        let pgSettings = Data.clone(settings);
+        pgSettings.database = 'postgres';
+        let pg = await mkPostgresConnection(pgSettings).connect();
+        await pg.query(`DROP DATABASE ${dbName};`);
+        await pg.close();
     }
 
     async dropIndex(settings, indexName) {
-        // TODO ****************************************
+        let pgIndexName = toPgName(indexName);
+        let pg = await mkPostgresConnection(settings).connect();
+        await pg.query(`DROP INDEX ${pgIndexName}`);
+        await pg.close();
     }
 
     async dropTable(settings, tableName) {
-        // TODO ****************************************
+        let pgTableName = toPgName(tableName);
+        let pg = await mkPostgresConnection(settings).connect();
+        await pg.query(`DROP TABLE ${pgTableName}`);
+        await pg.close();
     }
 
     async getDatabaseSchema(settings) {
@@ -151,10 +188,6 @@ singleton('', class PostgresDbms {
         let schema = await (new PgDatabaseSchema()).load(pg, settings.database);
         await pg.close();
         return schema;
-    }
-
-    async getTableSchema(settings, databaseName, tableName) {
-        // TODO ****************************************
     }
 
     getDbmsKey(settings) {
@@ -341,62 +374,51 @@ class PgDatabaseSchema {
     async load(pg, dbName) {
         this.pg = pg;
         let pgDbName = TextUtils.toSnakeCase(dbName);
-        this.dbSchema = mkDbSchema(dbName);
+        let dbSchema = mkDbSchema(dbName);
         let result = await this.pg.query(`SELECT table_name FROM information_schema.TABLES WHERE table_schema='public' AND table_catalog='${pgDbName}' ORDER BY table_name`);
         
         for (let table of result) {
-            await this.loadTable(table.table_name);
+            let dbTable = await this.loadTable(table.table_name);
+            dbSchema.setTable(dbTable);
         }
 
-        return this.dbSchema;
+        return dbSchema;
     }
     
-    async loadTable(tableName) {
-        /*
-        let tableDef = {
-            name: toCamelCase(tableName),
-            columns: [],
-            indexes: []
-        };
-        */
-        let result = await this.pg.query(`SELECT table_catalog, table_name, column_name, ordinal_position, udt_name FROM information_schema.COLUMNS WHERE table_catalog='${this.pg.settings.database}' AND table_name='${tableName}' ORDER BY ordinal_position`);
+    async loadTable(pgTableName) {
+        let columns = [];
+        let indexes = [];
+        let dbTableName = TextUtils.toCamelCase(pgTableName.substring(1));
+        let result = await this.pg.query(`SELECT table_catalog, table_name, column_name, ordinal_position, udt_name FROM information_schema.COLUMNS WHERE table_catalog='${this.pg.settings.database}' AND table_name='${pgTableName}' ORDER BY ordinal_position`);
 
-        for (let column of result.data) {
-            let columnName = toCamelCase(column.column_name);
+        for (let column of result) {
+            try {
+                let columnName = TextUtils.toCamelCase(column.column_name.substring(1));
+                var jsType = typeMapper.getJsType(column.udt_name);
+                columns.push({ name: columnName, type: jsType, size: null });
+            }
+            catch (e) {}
+        }
+
+        result = await this.pg.query(`SELECT X.indexname, I.indnatts, I.indisunique, I.indisprimary, I.indkey, I.indoption FROM pg_indexes AS X JOIN pg_class AS C ON C.relname=X.indexname JOIN pg_index AS I ON I.indexrelid=C.oid WHERE X.tablename='${pgTableName}'`);
+        
+        for (let row of result) {
+            let columnItems = [];
+            let indkey = row.indkey.split(' ').map(el => parseInt(el));
+            let indopt = row.indoption.split(' ').map(el => parseInt(el));
             
-            if (columnName == 'oid') {
-                var fmwkType = global.dbKey;
-                tableDef.columns.push({ name: columnName, type: fmwkType });
+            for (let i = 0; i < indkey.length; i++) {
+                let columnIndex = indkey[i] - 1;
+                columnItems.push({ column: columns[columnIndex].name, direction: indopt[i] ? 'DESC' : 'ASC' });
             }
-            else {
-                var fmwkType = pgReverseMap[column.udt_name].fmwk();
-                
-                if (fmwkType.name() == 'dbText') {
-                    tableDef.columns.push({ name: columnName, type: fmwkType, size: -1 });
-                }
-                else {
-                    tableDef.columns.push({ name: columnName, type: fmwkType });
-                }
-            }
-        }
 
-        result = await this.pg.query(`SELECT X.indexname, I.indnatts, I.indisunique, I.indisprimary, I.indkey, I.indoption FROM pg_indexes AS X JOIN pg_class AS C ON C.relname=X.indexname JOIN pg_index AS I ON I.indexrelid=C.oid WHERE X.tablename='${tableName}'`);
-        
-        for (let row of result.data) {
-            if (!row.indexname.endsWith('_pkey')) {
-                let index = [];
-                let indkey = row.indkey.split(' ').map(el => parseInt(el));
-                let indopt = row.indoption.split(' ').map(el => parseInt(el));
-                
-                for (let i = 0; i < indkey.length; i++) {
-                    let columnIndex = indkey[i] - 1;
-                    index.push(`${tableDef.columns[columnIndex].name}:${indopt[i] ? 'DESC' : 'ASC'}`);
-                }
-
-                tableDef.indexes.push(index.join(','));
-            }
+            indexes.push({ columnItems: columnItems });
         }
         
-        this.tableDefs.push(tableDef);
+        return mkDbTable({
+            name: dbTableName,
+            columns: columns,
+            indexes: indexes,
+        });
     }
 }

@@ -41,7 +41,7 @@ register('', class SchemaAnalysis {
             if (this.dbSchema2.hasTable(dbTable1.getName())) {
                 mkTableAnalysis(
                     dbTable1,
-                    this.dbSchema1.getTable(dbTable1.getName()),
+                    this.dbSchema2.getTable(dbTable1.getName()),
                     this,
                 );
             }
@@ -58,7 +58,7 @@ register('', class SchemaAnalysis {
         }
 
         for (let dbTable2 of this.dbSchema2) {
-            if (!this.dbSchema1.hasTable(dbTable2.getName)) {
+            if (!this.dbSchema1.hasTable(dbTable2.getName())) {
                 this.diffs.push({
                     level: 'schema',
                     schema1: this.dbSchema1,
@@ -108,7 +108,7 @@ register('', class TableAnalysis {
 
     analyzeColumn(dbColumn1, dbColumn2) {
         if (dbColumn1.getTypeName() != dbColumn2.getTypeName()) {
-            if (dbColumn1.getSize() != dbColumn2.getSize()) {
+            if (dbColumn1.hasSize() && dbColumn2.hasSize && dbColumn1.getSize() != dbColumn2.getSize()) {
                 this.setDiff({
                     level: 'table',
                     table1: this.table1,
@@ -120,7 +120,7 @@ register('', class TableAnalysis {
             }
         }
         else if (dbColumn1.getType() == StringType) {
-            if (dbColumn1.getSize() != dbColumn2.getSize()) {
+            if (dbColumn1.hasSize() && dbColumn2.hasSize && dbColumn1.getSize() != dbColumn2.getSize()) {
                 this.setDiff({
                     level: 'table',
                     table1: this.table1,
@@ -136,7 +136,7 @@ register('', class TableAnalysis {
     }
 
     analyzeColumns() {
-        for (let dbColumn of this.table1.columnArr) {
+        for (let dbColumn of this.table1) {
             if (dbColumn.getName() in this.table2.columnMap) {
                 this.analyzeColumn(dbColumn, this.table2.getColumn(dbColumn.getName()));
             }
@@ -153,7 +153,7 @@ register('', class TableAnalysis {
         }
 
         for (let dbColumn of this.table2.columnArr) {
-            if (!(dbColumn.getName() in this.table2.columnMap)) {
+            if (!(dbColumn.getName() in this.table1.columnMap)) {
                 this.setDiff({
                     level: 'table',
                     table1: this.table1,
@@ -179,7 +179,7 @@ register('', class TableAnalysis {
                     table1: this.table1,
                     table2: this.table2,
                     type: 'extra-index',
-                    name: indexName,
+                    indexName: indexName,
                 });
             }
         }
@@ -191,7 +191,7 @@ register('', class TableAnalysis {
                     table1: this.table1,
                     table2: this.table2,
                     type: 'missing-index',
-                    name: indexName,
+                    index: this.table2.getIndex(indexName),
                 });
             }
         }
@@ -213,7 +213,7 @@ register('', class TableAnalysis {
         this.diffs.push(diff);
 
         if (this.schemaAnalysis instanceof SchemaAnalysis) {
-            this.schemaAnalysis.diffs.push[diff];
+            this.schemaAnalysis.diffs.push(diff);
         }
 
         return this;
@@ -240,15 +240,15 @@ singleton('', class SchemaUpdater {
             await Dbms.dropTable(settings, diff.table1.getName());
         }
         else if (diff.type == 'extra-column') {
-            await Dbms.dropColumn(settings, diff.table.getName(), diff.column1.getName());
-        }
-        else if (diff.type == 'extra-index') {
-            await Dbms.dropIndex(settings, diff.indexName);
+            await Dbms.dropColumn(settings, diff.table1.getName(), diff.column1.getName());
         }
         else if (diff.type == 'size-mismatch') {
             if (diff.column1.getSize() > diff.column2.getSize()) {
-                await Dbms.alterColumnSize(diff.table.getName(), differ.column.getName(), diff.column2.getSize());
+                await Dbms.alterColumnSize(diff.table.getName(), diff.column.getName(), diff.column2.getSize());
             }
+        }
+        else if (diff.type == 'extra-index') {
+            await Dbms.dropIndex(settings, diff.indexName);
         }
 
         return this;
@@ -259,16 +259,15 @@ singleton('', class SchemaUpdater {
             await Dbms.createTable(settings, diff.table2);
         }
         else if (diff.type == 'missing-column') {
-            await Dbms.createColumn(settings, diff.table, diff.column2);
-        }
-        else if (diff.type == 'missing-index') {
-            await Dbms.createIndex(settings, diff.table, diff.index2);
-
+            await Dbms.createColumn(settings, diff.table1, diff.column2);
         }
         else if (diff.type == 'size-mismatch') {
             if (diff.column1.getSize() < diff.column2.getSize()) {
-                await Dbms.alterColumnSize(diff.table.getName(), differ.column.getName(), diff.column2.getSize());
+                await Dbms.alterColumnSize(diff.table.getName(), diff.column.getName(), diff.column2.getSize());
             }
+        }
+        else if (diff.type == 'missing-index') {
+            await Dbms.createIndex(settings, diff.table1, diff.index);
         }
 
         return this;

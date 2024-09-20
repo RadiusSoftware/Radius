@@ -125,11 +125,11 @@ singleton('', class Dbms {
         }
     }
 
-    async dropDatabase(settings, databaseName) {
+    async dropDatabase(settings) {
         let dbms = this.getDbms(settings);
 
         if (dbms) {
-            return await dbms.dropDatabase(settings, databaseName);
+            return await dbms.dropDatabase(settings);
         }
     }
 

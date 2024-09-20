@@ -13,7 +13,8 @@
  *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * FITNESS FOR A PARTICULAR PURPOSE AND 
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
@@ -93,8 +94,8 @@ register('', class DbSchema {
     }
 
     setTable(dbTable) {
-        this.tableArr.push(dbTable.getName());
-        this.tableMap[table.getName()] = dbTable;
+        this.tableArr.push(dbTable);
+        this.tableMap[dbTable.getName()] = dbTable;
         return this;
     }
 
@@ -152,7 +153,7 @@ register('', class DbTable {
 
             if (Array.isArray(arg.indexes)) {
                 for (let indexDefinition of arg.indexes) {
-                    let dbIndex = mkDbIndex(indexDefinition);
+                    let dbIndex = mkDbIndex(this, indexDefinition);
 
                     if (dbIndex.checkColumn(this)) {
                         this.setIndex(dbIndex);
@@ -217,7 +218,7 @@ register('', class DbTable {
 
     clearIndexAt(indexIndex) {
         let index = this.indexArr[indexIndex];
-        delete this.indexMap[index.getName()];
+        delete this.indexMap[indexIndex];
         this.indexArr.splice(i, 1);
         return this;
     }
@@ -270,7 +271,7 @@ register('', class DbTable {
     }
 
     getIndexSet() {
-        return mkStringSet(this.indexArr.map(dbIndex => dbIndex.getName(this)));
+        return mkStringSet(this.indexArr.map(dbIndex => dbIndex.getName()));
     }
 
     getName() {
@@ -361,6 +362,10 @@ register('', class DbColumn {
         return this.type.constructor.name;
     }
 
+    hasSize() {
+        return typeof this.size == 'number' && this.size > 0;
+    }
+
     setName(name) {
         if (typeof name == 'string') {
             this.name = name;
@@ -411,7 +416,8 @@ register('', class DbColumn {
  * of the index's entire array of items.
 *****/
 register('', class DbIndex {
-    constructor(indexDefinition) {
+    constructor(dbTable, indexDefinition) {
+        this.dbTable = dbTable;
         this.columnItems = [];
         
         if (Array.isArray(indexDefinition.columnItems)) {
@@ -447,21 +453,14 @@ register('', class DbIndex {
         return this;
     }
 
-    getName(table) {
-        let nameParts = [];
+    getName() {
+        let nameParts = [ this.dbTable.getName() ];
 
         for (let columnItem of this.columnItems) {
-            nameParts.push(`${columnItem.column}${columnItem.direction[0]}${columnItem.direction.substring(1).toLowerCase()}`);
+            nameParts.push(`${columnItem.column}_${columnItem.direction.toLowerCase()}}`);
         }
 
-        if (table instanceof DbTable) {
-            nameParts.unshift(table.getName());
-        }
-        else if (typeof table == 'string') {
-            nameParts.unshift(table);
-        }
-
-        return nameParts.join('_')
+        return TextUtils.toCamelCase(nameParts.join('_'));
     }
 
     insertColumnItemAfter(column, direction, index) {
