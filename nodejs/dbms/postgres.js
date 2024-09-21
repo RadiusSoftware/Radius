@@ -23,17 +23,29 @@ const npmPg = require('pg');
 
 
 /*****
- * Here's a little kludge or adjustment to the underlying PG module.  When the
- * PG, and new Date() as well, are used to convert the timezoneless timestamp
- * from the PG server to a js timesstamp, js automatically shifts the timezeone
- * to UTC, from a value that's already in UTC. Hence, we have a problem.  The
- * solution is to mark each time with +0000 to indicate that it's already in
- * UTC and thus shouldn't be converted.
+ * The NPM pg module doesn't parse all of the returned results as desirect.
+ * Hence, there're some cases where we need to do some extra special parsing.
+ * Here's an explanation of the changes added at the start of development"
+ * 
+ * ()   1114 is a datetime type.  There are issues with the PG module wanted to
+ *      automatically switch the provided time from UTC to local time.  Hence,
+ *      we'll supplant the parser by adding in zero time offset beforee using
+ *      the provided parser to get UTC time.
+ * 
+ * ()   20 is a int8.  Unfortunately, int8 values are turn by NPM PG as strings.
+ *      Not very good!  We'll just get PG to create a BigInt before return the
+ *      final value.
+ * 
+ * User this link to get a list of PostgreSQL types and codes:
+ * https://jdbc.postgresql.org/documentation/publicapi/constant-values.html
 *****/
-const parser1114 = npmPg.types.getTypeParser(1114);
+npmPg.types.setTypeParser(20, function(text) {
+    return BigInt(text);
+});
 
-npmPg.types.setTypeParser(1114, function(dateText) {
-    return parser1114(`${dateText}+0000`);
+const parser1114 = npmPg.types.getTypeParser(1114);
+npmPg.types.setTypeParser(1114, function(text) {
+    return parser1114(`${text}+0000`);
 });
 
 
@@ -50,6 +62,13 @@ function escape(raw) {
 
 
 /*****
+ * The PostgresDbms is the implementation of what's necessry to make Postgres
+ * integrate into the Radius framework.  This code provides (1) a method for
+ * connecting to a PosgreSQL DBMS given connection settings, and (2) a set of
+ * DBMS methods to manage a Postgres DBMS based on the given settings.  These
+ * functions are useful in the context of system management and configuration,
+ * note in the context of OLTP systems.  OLTP system features are provided by
+ * the PostgreSQL connection object.
 *****/
 singleton('', class PostgresDbms {
     constructor() {
@@ -65,7 +84,24 @@ singleton('', class PostgresDbms {
         return pgconn;
     }
 
+    convertColumnNameToDbms(columnName) {
+        return toPgName(columnName);
+    }
+
+    convertDatabaseNameToDbms(databaseName) {
+        return databaseName;
+    }
+
+    convertIndexNameToDbms(indexName) {
+        return toPgName(indexName);
+    }
+
+    convertTableNameToDbms(tableName) {
+        return toPgName(tableName);
+    }
+
     async createColumn(settings, dbTable, dbColumn) {
+        // TODO PRIMARY KEY ********************************************************************
         let pgTableName = toPgName(dbTable.getName());
         let pgColumnName = toPgName(dbColumn.getName());
         let pgTypeName = typeMapper.getDbType(dbColumn.getType()).dbTypeName;
@@ -105,6 +141,7 @@ singleton('', class PostgresDbms {
         let sql = [ `CREATE TABLE ${pgTableName} (` ];
 
         sql.push(dbTable.getColumns().map(column => {
+            // TODO PRIMARY KEY ********************************************************************
             let columnName = toPgName(column.getName());
             let pgType = typeMapper.getDbType(column.type);
             return `${columnName} ${pgType.dbTypeName}`;
@@ -238,6 +275,49 @@ register('', class PostgresConnection {
         return this;
     }
 
+    async delete(dbTable, where) {
+        if (where) {
+            let sql = [
+                `DELETE FROM ${toPgName(dbTable.getName())}`,
+
+                `WHERE ${Object.entries(where).map(entry => {
+                    let dbColumn = dbTable.getColumn(entry[0]);
+                    let dbType = typeMapper.getDbType(dbColumn.getType());
+                    let pgValue = dbType.encode(entry[1]);
+                    return `${toPgName(entry[0])}=${pgValue}`;
+                }).join(' AND ')}`,
+            ];
+
+            await this.query(sql.join(' '));
+        }
+        else {
+            await this.query(`DELETE FROM ${toPgName(dbTable.getName())}`);
+        }
+    }
+    
+    async insert(opts) {
+        let columnNames = [];
+        let columnValues = [];
+
+        for (let key in opts.values) {
+            let dbColumn = opts.dbTable.getColumn(key);
+
+            if (dbColumn) {
+                let dbType = typeMapper.getDbType(dbColumn.getType());
+                columnNames.push(toPgName(dbColumn.getName()));
+                columnValues.push(dbType.encode(opts.values[key]));
+            }
+        }
+
+        let sql = [
+            `INSERT INTO ${toPgName(opts.dbTable.getName())}`,
+            `(${columnNames.join(',')})`,
+            `VALUES (${columnValues.join(',')})`,
+        ];
+
+        await this.query(sql.join(' '));
+    }
+
     async isConnected() {
         let result = await this.query('SELECT NOW()');
         return Array.isArray(result) && result.length == 1;
@@ -261,9 +341,87 @@ register('', class PostgresConnection {
         return this;
     }
 
+    async select(dbTable, where, sort) {
+        let sql = [
+            `SELECT `,
+            dbTable.getColumns().map(column => toPgName(column.getName())).join(','),
+            `FROM ${toPgName(dbTable.getName())}`,
+        ];
+
+        if (Object.keys(where).length > 0) {
+            sql.push(`WHERE ${Object.entries(where).map(entry => {
+                let dbColumn = dbTable.getColumn(entry[0]);
+                let dbType = typeMapper.getDbType(dbColumn.getType());
+                let pgValue = dbType.encode(entry[1]);
+                return `${toPgName(entry[0])}=${pgValue}`
+            }).join(' AND ')}`);
+        }
+
+        if (Object.keys(sort).length > 0) {
+            let sorters = [];
+
+            for (let columnName in sort) {
+                let value = sort[columnName];
+
+                if (typeof value == 'string' && value.toLowerCase() in { asc:0, desc:0 }) {
+                    sorters.push(`${toPgName(columnName)} ${value.toUpperCase()}`);
+                }
+            }
+
+            sql.push(`ORDER BY ${sorters.join(',')}`);
+        }
+        
+        let result = await this.query(sql.join(' '));
+
+        if (Array.isArray(result)) {
+            return result.map(pgRow => {
+                let row = {};
+
+                Object.keys(pgRow).forEach(key => {
+                    row[fromPgName(key)] = pgRow[key];
+                });
+
+                return row;
+            });
+        }
+
+        return null;
+    }
+
     async startTransaction() {
         await this.query('START TRANSACTION');
         return this;
+    }
+    
+    async update(opts) {
+        let set = [];
+        let where = [];
+
+        for (let key in opts.values) {
+            let dbColumn = opts.dbTable.getColumn(key);
+
+            if (dbColumn) {
+                let dbType = typeMapper.getDbType(dbColumn.getType());
+                let columnName = dbColumn.getName();
+                let dbColumnName = toPgName(columnName);
+                let dbValue = dbType.encode(opts.values[key]);
+
+                if (dbColumn.getName() in opts.where) {
+                    where.push(`${dbColumnName}=${dbValue}`);
+                }
+                else {
+                    set.push(`${dbColumnName}=${dbValue}`);
+                }
+            }
+        }
+
+        let sql = [
+            `UPDATE ${toPgName(opts.dbTable.getName())}`,
+            `SET ${set.join(',')}`,
+            `WHERE ${where.join(' AND ')}`,
+        ];
+
+        await this.query(sql.join(' '));
     }
 });
 
@@ -386,6 +544,8 @@ class PgDatabaseSchema {
     }
     
     async loadTable(pgTableName) {
+        let objId = false;
+        let objRev = false;
         let columns = [];
         let indexes = [];
         let dbTableName = TextUtils.toCamelCase(pgTableName.substring(1));
@@ -394,6 +554,8 @@ class PgDatabaseSchema {
         for (let column of result) {
             try {
                 let columnName = TextUtils.toCamelCase(column.column_name.substring(1));
+                columnName == 'objId' ? objId = true : null;
+                columnName == 'objRev' ? objRev = true : null;
                 var jsType = typeMapper.getJsType(column.udt_name);
                 columns.push({ name: columnName, type: jsType, size: null });
             }
@@ -417,6 +579,7 @@ class PgDatabaseSchema {
         
         return mkDbTable({
             name: dbTableName,
+            type: objId && objRev ? 'object' : 'simple',
             columns: columns,
             indexes: indexes,
         });

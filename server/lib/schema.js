@@ -69,11 +69,14 @@ register('radius', function mkSchema() {
                 name: 'parameter',
                 type: 'object',
                 columns: [
-                    { name: 'name', type: StringType, size: 40 },
+                    { name: 'context', type: StringType, size: 50 },
+                    { name: 'name', type: StringType, size: 50 },
                     { name: 'value', type: JsonType },
                 ],
                 indexes: [
+                    { columnItems: [ { column: 'context', direction: 'asc' } ]},
                     { columnItems: [ { column: 'name', direction: 'asc' } ]},
+                    { columnItems: [ { column: 'context', direction: 'asc' }, { column: 'name', direction: 'asc' } ]},
                 ]
             },
             {

@@ -24,11 +24,31 @@ require('../nodejs/radius.js');
 
 (async () => {
     /*****
+     * Recurse the server library to load in server-side code that's required
+     * for supporting the server-side features.  These features are extensions
+     * of the framework classes and are specific to the Radius server.
     *****/
     await FileSystem.recurseModules(Path.join(__dirname, 'lib'));
 
 
     /*****
+     * The singleton bootstrapper object, which is used for starting the Radius
+     * server.  (1) Detect the presence of a valid Radius.json file containing
+     * DBMS settings for connecting to the server's management database.  (2)
+     * inspect the radius database to determine whether it exists, if it exists,
+     * inspect the database schema and automatically perform upgrades if needed.
+     * Downgrades are not automatically performed during the boot process.  When
+     * the Radius server is first run against a DBMS, this means a new empty
+     * schema will be created in that database.  Note that the database must be
+     * present for this to work.  (3a) If either -admin switch was provided or if
+     * there is proper web application configuration settings, the server is
+     * launched in admin mode.  When launching in admin mode, if the necessary
+     * basic parameters are NOT found in the radius database, the user / system
+     * administrator will be required to initialize the server with the requsite
+     * parameters.  (3b) If the DBMS configuration passes all of the required
+     * checks and the -admin switch is not present, the server will be launched
+     * in live mode, which means the remaining bootstrap sequence will be guided
+     * by the launch parameters.
     *****/
     singletonIn(Process.nodeClassController, 'radius', class BootStrapper {
         constructor() {
@@ -41,7 +61,7 @@ require('../nodejs/radius.js');
 
                 this.inspectConfiguration();
                 
-                if ('-admin' in this.settings) {
+                if (this.settings['-admin'] === true) {
                     this.launchAdminMode();
                 }
                 else {
@@ -93,6 +113,43 @@ require('../nodejs/radius.js');
                         for (let diff of mkSchemaAnalysis(schema1, schema2)) {
                             SchemaUpdater.upgrade(dbmsSettings, diff);
                         }
+
+                        for (let dbTable of schema2) {
+                            registerDbObject('radius', dbTable);
+                        }
+                        // ******************************************************************************
+                        // ******************************************************************************
+                        /*
+                        let dbc = await dbConnect();
+
+                        let parameter = radius.mkDboParameter({
+                            context: 'startup',
+                            name: 'BADNAME',
+                            value: { reason: 'all', grasp: 'strong', fast: true }
+                        });
+
+                        await DbObject.insert(parameter, dbc);
+                        */
+
+                        /*
+                        let dbo = await DbObject.selectOne(dbc, radius.DboParameter, { name: 'BADNAME' });
+                        await DbObject.delete(dbo);
+                        */
+
+                        /*
+                        let dbo = await DbObject.get(dbc, radius.DboParameter, '1320d4e7-c33b-4bd0-b58f-57ae9b208e9b');
+                        //dbo.name = 'another-newer-name';
+                        //await DbObject.update(dbo);
+                        //console.log(dbo);
+
+                        let clone = DbObject.clone(dbo);
+                        console.log(dbo);
+                        console.log(clone);
+
+                        await dbc.close();
+                        */
+                        // ******************************************************************************
+                        // ******************************************************************************
                     }
                 }
 
@@ -127,8 +184,10 @@ require('../nodejs/radius.js');
 
         async launchLiveMode() {
             // TODO *********************************************************************
+            /*
             console.log('Launching LIVE mode!');
             console.log('Connect to DBMS -- for all settings!');
+            */
         }
 
         async parseCommandLine() {

@@ -141,23 +141,33 @@ register('', class DbTable {
             }
         }
 
+        this.name = arg.name;
+
+        if (arg.type in { object:0 }) {
+            this.type = arg.type;
+        }
+        else {
+            this.type = 'simple';
+        }
+
         if (typeof arg == 'object') {
-            this.name = arg.name;
-            this.type = typeof arg.name == 'string' ? arg.name : 'simple';
+            this.setColumn(mkDbColumn({ name: 'objId', type: StringType, size: 50 }));
+            this.setColumn(mkDbColumn({ name: 'objRev', type: Int64Type }));
+            this.setIndex(mkDbIndex(this, { columnItems: [ { column: 'objId', direction: 'asc' } ]}));
+        }
 
-            if (Array.isArray(arg.columns)) {
-                for (let columnDefinition of arg.columns) {
-                    this.setColumn(mkDbColumn(columnDefinition));
-                }
+        if (Array.isArray(arg.columns)) {
+            for (let columnDefinition of arg.columns) {
+                this.setColumn(mkDbColumn(columnDefinition));
             }
+        }
 
-            if (Array.isArray(arg.indexes)) {
-                for (let indexDefinition of arg.indexes) {
-                    let dbIndex = mkDbIndex(this, indexDefinition);
+        if (Array.isArray(arg.indexes)) {
+            for (let indexDefinition of arg.indexes) {
+                let dbIndex = mkDbIndex(this, indexDefinition);
 
-                    if (dbIndex.checkColumn(this)) {
-                        this.setIndex(dbIndex);
-                    }
+                if (dbIndex.checkColumn(this)) {
+                    this.setIndex(dbIndex);
                 }
             }
         }
@@ -457,10 +467,15 @@ register('', class DbIndex {
         let nameParts = [ this.dbTable.getName() ];
 
         for (let columnItem of this.columnItems) {
-            nameParts.push(`${columnItem.column}_${columnItem.direction.toLowerCase()}}`);
+            nameParts.push(
+                columnItem.column[0].toUpperCase() +
+                columnItem.column.substring(1) +
+                columnItem.direction[0].toUpperCase() +
+                columnItem.direction.substring(1).toLowerCase()
+            );
         }
 
-        return TextUtils.toCamelCase(nameParts.join('_'));
+        return nameParts.join('');
     }
 
     insertColumnItemAfter(column, direction, index) {

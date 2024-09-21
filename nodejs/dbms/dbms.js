@@ -69,6 +69,38 @@ singleton('', class Dbms {
         return false;
     }
 
+    convertColumnNameToDbms(settings, columnName) {
+        let dbms = this.getDbms(settings);
+
+        if (dbms) {
+            return dbms.convertColumnNameToDbms(columnName);
+        }
+    }
+
+    convertDatabaseNameToDbms(settings, databaseName) {
+        let dbms = this.getDbms(settings);
+
+        if (dbms) {
+            return dbms.convertColumnNameToDbms(databaseName);
+        }
+    }
+
+    convertIndexNameToDbms(settings, indexName) {
+        let dbms = this.getDbms(settings);
+
+        if (dbms) {
+            return dbms.convertColumnNameToDbms(indexName);
+        }
+    }
+
+    convertTableNameToDbms(settings, tableName) {
+        let dbms = this.getDbms(settings);
+
+        if (dbms) {
+            return dbms.convertColumnNameToDbms(tableName);
+        }
+    }
+
     async createColumn(settings, dbTable, dbColumn) {
         let dbms = this.getDbms(settings);
 
@@ -274,12 +306,21 @@ register('', class DbmsConnection {
         return this;
     }
 
+    async delete(dbTable, where) {
+        await this.connection.delete(dbTable, where);
+        return this;
+    }
+
     async free() {
         if (Pool.poolKey in this) {
             await this[Pool.poolKey].pool.free(this);
         }
 
         return null;
+    }
+
+    getDbms() {
+        return this.dbms;
     }
 
     getDbmsType() {
@@ -296,6 +337,11 @@ register('', class DbmsConnection {
 
     getState() {
         return this.state;
+    }
+
+    async insert(opts) {
+        await this.connection.insert(opts);
+        return this;
     }
 
     async isConnected() {
@@ -325,6 +371,10 @@ register('', class DbmsConnection {
         return this;
     }
 
+    async select(dbTable, where, sort) {
+        return await this.connection.select(dbTable, where, sort);
+    }
+
     async startTransaction() {
         if (this.state == 'connected') {
             await this.connection.startTransaction();
@@ -334,6 +384,11 @@ register('', class DbmsConnection {
             throw new Error(`DBMS connection not ready for startTransaction(): "${this.state}"`);
         }
 
+        return this;
+    }
+
+    async update(opts) {
+        await this.connection.update(opts);
         return this;
     }
 });
