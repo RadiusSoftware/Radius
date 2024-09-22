@@ -86,4 +86,5 @@ require('./dbms/dbms.js');
 require('./dbms/schema.js');
 require('./dbms/manager.js');
 require('./dbms/dbObject.js');
+require('./dbms/dbLock.js');
 require('./dbms/postgres.js');

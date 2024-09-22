@@ -51,7 +51,6 @@ register('', class DbObject {
         if (dbTable.getType() == 'object') {
             if (!this.objId) {
                 this.objId = DbObject.generateId();
-                this.objRev = Int64Type.getDefault();
             }
         }
     }
@@ -63,7 +62,6 @@ register('', class DbObject {
         if (dbTable && typeof dbTable.ctor == 'function') {
             clone = new dbTable.ctor(dbo);
             clone.objId = DbObject.generateId();
-            clone.objRev = 0;
         }
 
         return clone;
@@ -81,6 +79,10 @@ register('', class DbObject {
                 DbObject.dbConnections.delete(dbo);
             }
         }
+    }
+
+    static async free(...dbo) {
+        // TODO ****************************************************************
     }
 
     static generateId() {
@@ -126,7 +128,6 @@ register('', class DbObject {
             }
         }
 
-        dbo.objRev = 1n;
         let dbTable = DbObject.getTable(dbo);
         dbc = DbObject.getConnection(dbo);
 
@@ -136,6 +137,14 @@ register('', class DbObject {
         });
 
         return dbo;
+    }
+
+    static async isFree(...dbo) {
+        // TODO ****************************************************************
+    }
+
+    static async lock(...dbo) {
+        // TODO ****************************************************************
     }
 
     static async select(dbc, dboClass, where, order) {
@@ -167,7 +176,6 @@ register('', class DbObject {
     }
 
     static async update(dbo) {
-        dbo.objRev++;
         let dbTable = DbObject.getTable(dbo);
         let dbc = DbObject.getConnection(dbo);
 
@@ -179,16 +187,6 @@ register('', class DbObject {
 
         return dbo;
     }
-});
-
-
-/*****
- * Convenience function for deleting a single DBO or database object.  Note that
- * there's no need for any other arguments than the DBO itself.  This function is
- * superfluous in that a table-specific delete function is also available.
-*****/
-register('', async function deleteDbo(dbo) {
-    return await DbObject.delete(dbo);
 });
 
 

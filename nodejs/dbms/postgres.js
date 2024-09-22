@@ -552,7 +552,6 @@ class PgDatabaseSchema {
     
     async loadTable(pgTableName) {
         let objId = false;
-        let objRev = false;
         let columns = [];
         let indexes = [];
         let primaryKey = [];
@@ -563,7 +562,6 @@ class PgDatabaseSchema {
             try {
                 let columnName = TextUtils.toCamelCase(column.column_name.substring(1));
                 columnName == 'objId' ? objId = true : null;
-                columnName == 'objRev' ? objRev = true : null;
                 var jsType = typeMapper.getJsType(column.udt_name);
                 columns.push({ name: columnName, type: jsType, size: null });
             }
@@ -596,7 +594,7 @@ class PgDatabaseSchema {
         
         return mkDbTable({
             name: dbTableName,
-            type: objId && objRev ? 'object' : 'simple',
+            type: objId ? 'object' : 'simple',
             columns: columns,
             indexes: indexes,
             primaryKey: primaryKey,

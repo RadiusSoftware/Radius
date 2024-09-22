@@ -153,8 +153,7 @@ register('', class DbTable {
 
         if (arg.type == 'object') {
             this.setColumn(mkDbColumn({ name: 'objId', type: StringType, size: 50 }));
-            this.setColumn(mkDbColumn({ name: 'objRev', type: Int64Type }));
-            this.primaryKey = [ 'objId' ];
+            this.setPrimaryKey('objId');
         }
 
         if (Array.isArray(arg.columns)) {
