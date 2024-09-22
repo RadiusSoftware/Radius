@@ -111,43 +111,32 @@ require('../nodejs/radius.js');
                         let schema2 = radius.mkSchema();
 
                         for (let diff of mkSchemaAnalysis(schema1, schema2)) {
-                            SchemaUpdater.upgrade(dbmsSettings, diff);
+                            await SchemaUpdater.upgrade(dbmsSettings, diff);
                         }
 
                         for (let dbTable of schema2) {
-                            registerDbObject('radius', dbTable);
+                            if (dbTable.getType() == 'object') {
+                                registerDbObject('radius', dbTable);
+                            }
                         }
                         // ******************************************************************************
                         // ******************************************************************************
-                        /*
                         let dbc = await dbConnect();
 
-                        let parameter = radius.mkDboParameter({
-                            context: 'startup',
-                            name: 'BADNAME',
-                            value: { reason: 'all', grasp: 'strong', fast: true }
-                        });
-
-                        await DbObject.insert(parameter, dbc);
-                        */
-
                         /*
-                        let dbo = await DbObject.selectOne(dbc, radius.DboParameter, { name: 'BADNAME' });
-                        await DbObject.delete(dbo);
+                        for (let i = 0; i < 5; i++) {
+                            await DbObject.insert(radius.mkDboParameter({
+                                context: 'startup',
+                                name: 'BADNAME',
+                                value: { reason: 'all', grasp: 'strong', fast: true }
+                            }), dbc);
+                        }
+
+                        let parameter = await radius.selectOneDboParameter(dbc);
+                        await radius.deleteDboParameter(dbc);
                         */
-
-                        /*
-                        let dbo = await DbObject.get(dbc, radius.DboParameter, '1320d4e7-c33b-4bd0-b58f-57ae9b208e9b');
-                        //dbo.name = 'another-newer-name';
-                        //await DbObject.update(dbo);
-                        //console.log(dbo);
-
-                        let clone = DbObject.clone(dbo);
-                        console.log(dbo);
-                        console.log(clone);
 
                         await dbc.close();
-                        */
                         // ******************************************************************************
                         // ******************************************************************************
                     }

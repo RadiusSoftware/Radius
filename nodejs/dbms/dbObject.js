@@ -50,7 +50,7 @@ register('', class DbObject {
 
         if (dbTable.getType() == 'object') {
             if (!this.objId) {
-                this.objId = Crypto.generateUUID();
+                this.objId = DbObject.generateId();
                 this.objRev = Int64Type.getDefault();
             }
         }
@@ -62,7 +62,7 @@ register('', class DbObject {
 
         if (dbTable && typeof dbTable.ctor == 'function') {
             clone = new dbTable.ctor(dbo);
-            clone.objId = Crypto.generateUUID();
+            clone.objId = DbObject.generateId();
             clone.objRev = 0;
         }
 
@@ -81,6 +81,10 @@ register('', class DbObject {
                 DbObject.dbConnections.delete(dbo);
             }
         }
+    }
+
+    static generateId() {
+        return Crypto.generateUUID();
     }
 
     static async get(dbc, dboClass, objId) {
@@ -131,7 +135,7 @@ register('', class DbObject {
             values: dbo,
         });
 
-        return this;
+        return dbo;
     }
 
     static async select(dbc, dboClass, where, order) {
@@ -139,7 +143,7 @@ register('', class DbObject {
 
         if (records.length) {
             return records.map(record => {
-                let dbo = new dboClass(records[0]);
+                let dbo = new dboClass(record);
                 DbObject.dbConnections.set(dbo, dbc);
                 DbObject.dbTables.set(dbo, dboClass.dbTable);
                 return dbo;
@@ -173,8 +177,18 @@ register('', class DbObject {
             values: dbo,
         });
 
-        return this;
+        return dbo;
     }
+});
+
+
+/*****
+ * Convenience function for deleting a single DBO or database object.  Note that
+ * there's no need for any other arguments than the DBO itself.  This function is
+ * superfluous in that a table-specific delete function is also available.
+*****/
+register('', async function deleteDbo(dbo) {
+    return await DbObject.delete(dbo);
 });
 
 
@@ -187,6 +201,7 @@ register('', class DbObject {
 *****/
 register('', function registerDbObject(ns, dbTable) {
     let className = dbTable.getName()[0].toUpperCase() + dbTable.getName().substring(1);
+    let adjustedNS = ns ? `${ns}.` : '';
 
     eval(`register('${ns}', class Dbo${className} extends DbObject {
         static dbTable = dbTable;
@@ -194,7 +209,32 @@ register('', function registerDbObject(ns, dbTable) {
         constructor(properties) {
             super(dbTable, properties);
         }
-    })`);
+    });
+
+    register('${ns}', async function deleteDbo${className}(dbc, where) {
+        if (where instanceof DbObject) {
+            await DbObject.delete(where);
+        }
+        else if (typeof where == 'string') {
+            await dbc.delete(dbTable, { objId: where })
+        }
+        else {
+            await dbc.delete(dbTable, where);
+        }
+    });
+
+    register('${ns}', async function getDbo${className}(dbc, objId) {
+        return await DbObject.get(dbc, ${adjustedNS}Dbo${className}, objId);
+    });
+
+    register('${ns}', async function selectDbo${className}(dbc, where, sort) {
+        return await DbObject.select(dbc, ${adjustedNS}Dbo${className}, where, sort);
+    });
+
+    register('${ns}', async function selectOneDbo${className}(dbc, where, sort) {
+        return await DbObject.selectOne(dbc, ${adjustedNS}Dbo${className}, where, sort);
+    });
+    `);
 
     let ctor;
     eval(`ctor = ${ns}.Dbo${className}`);

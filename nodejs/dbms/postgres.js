@@ -101,7 +101,6 @@ singleton('', class PostgresDbms {
     }
 
     async createColumn(settings, dbTable, dbColumn) {
-        // TODO PRIMARY KEY ********************************************************************
         let pgTableName = toPgName(dbTable.getName());
         let pgColumnName = toPgName(dbColumn.getName());
         let pgTypeName = typeMapper.getDbType(dbColumn.getType()).dbTypeName;
@@ -141,14 +140,13 @@ singleton('', class PostgresDbms {
         let sql = [ `CREATE TABLE ${pgTableName} (` ];
 
         sql.push(dbTable.getColumns().map(column => {
-            // TODO PRIMARY KEY ********************************************************************
             let columnName = toPgName(column.getName());
             let pgType = typeMapper.getDbType(column.type);
             return `${columnName} ${pgType.dbTypeName}`;
 
         }).join(','));
-
         sql.push(')');
+
         let pg = await mkPostgresConnection(settings).connect();
         await pg.query(sql.join(''));
 
@@ -161,10 +159,19 @@ singleton('', class PostgresDbms {
 
             let sql = [
                 `CREATE INDEX _${TextUtils.toSnakeCase(index.getName(dbTable.getName()))}`,
-                ` on _${TextUtils.toSnakeCase(dbTable.getName())} (${columnItems.join(', ')})`,
+                `on _${TextUtils.toSnakeCase(dbTable.getName())} (${columnItems.join(', ')})`,
             ];
 
-            await pg.query(sql.join(''));
+            await pg.query(sql.join(' '));
+        }
+
+        if (dbTable.hasPrimaryKey()) {
+            let sql = [
+                `ALTER TABLE ${pgTableName} ADD PRIMARY KEY`,
+                `(${dbTable.getPrimaryKey().map(column => toPgName(column.getName())).join(',')})`
+            ];
+
+            await pg.query(sql.join(' '));
         }
 
         await pg.close();
@@ -348,7 +355,7 @@ register('', class PostgresConnection {
             `FROM ${toPgName(dbTable.getName())}`,
         ];
 
-        if (Object.keys(where).length > 0) {
+        if (typeof where == 'object' && Object.keys(where).length > 0) {
             sql.push(`WHERE ${Object.entries(where).map(entry => {
                 let dbColumn = dbTable.getColumn(entry[0]);
                 let dbType = typeMapper.getDbType(dbColumn.getType());
@@ -357,7 +364,7 @@ register('', class PostgresConnection {
             }).join(' AND ')}`);
         }
 
-        if (Object.keys(sort).length > 0) {
+        if (typeof sort == 'object' && Object.keys(sort).length > 0) {
             let sorters = [];
 
             for (let columnName in sort) {
@@ -548,6 +555,7 @@ class PgDatabaseSchema {
         let objRev = false;
         let columns = [];
         let indexes = [];
+        let primaryKey = [];
         let dbTableName = TextUtils.toCamelCase(pgTableName.substring(1));
         let result = await this.pg.query(`SELECT table_catalog, table_name, column_name, ordinal_position, udt_name FROM information_schema.COLUMNS WHERE table_catalog='${this.pg.settings.database}' AND table_name='${pgTableName}' ORDER BY ordinal_position`);
 
@@ -565,16 +573,25 @@ class PgDatabaseSchema {
         result = await this.pg.query(`SELECT X.indexname, I.indnatts, I.indisunique, I.indisprimary, I.indkey, I.indoption FROM pg_indexes AS X JOIN pg_class AS C ON C.relname=X.indexname JOIN pg_index AS I ON I.indexrelid=C.oid WHERE X.tablename='${pgTableName}'`);
         
         for (let row of result) {
-            let columnItems = [];
             let indkey = row.indkey.split(' ').map(el => parseInt(el));
             let indopt = row.indoption.split(' ').map(el => parseInt(el));
-            
-            for (let i = 0; i < indkey.length; i++) {
-                let columnIndex = indkey[i] - 1;
-                columnItems.push({ column: columns[columnIndex].name, direction: indopt[i] ? 'DESC' : 'ASC' });
-            }
 
-            indexes.push({ columnItems: columnItems });
+            if (row.indexname.endsWith('_pkey')) {
+                for (let i = 0; i < indkey.length; i++) {
+                    let columnIndex = indkey[i] - 1;
+                    primaryKey.push(columns[columnIndex].name);
+                }
+            }
+            else {
+                let columnItems = [];
+                
+                for (let i = 0; i < indkey.length; i++) {
+                    let columnIndex = indkey[i] - 1;
+                    columnItems.push({ column: columns[columnIndex].name, direction: indopt[i] ? 'DESC' : 'ASC' });
+                }
+
+                indexes.push({ columnItems: columnItems });
+            }
         }
         
         return mkDbTable({
@@ -582,6 +599,7 @@ class PgDatabaseSchema {
             type: objId && objRev ? 'object' : 'simple',
             columns: columns,
             indexes: indexes,
+            primaryKey: primaryKey,
         });
     }
 }

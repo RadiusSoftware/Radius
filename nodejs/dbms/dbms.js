@@ -392,3 +392,94 @@ register('', class DbmsConnection {
         return this;
     }
 });
+
+
+/*****
+ * The DbTypeMapper must be provided by each DBMS implementation.  It's a
+ * register of how the database types map to one of our global BaseTypes, which
+ * is referred to as the js or javascript type.  Each type provides type name
+ * mapping as well as an encode() and decoder() function saving and selecting
+ * data.
+*****/
+register('', class DbTypeMapper {
+    constructor(types) {
+        this.byDbType = {};
+        this.byJsType = {};
+
+        if (Array.isArray(types)) {
+            for (let typeObject of types) {
+                this.addType(typeObject);
+            }
+        }
+    }
+
+    addType(typeObject) {
+        if (typeObject.jsType instanceof BaseType) {
+            if (typeof typeObject.dbTypeName == 'string') {
+                if (typeof typeObject.encode == 'function') {
+                    if (typeof typeObject.decode == 'function') {
+                        let entry = {
+                            jsType: typeObject.jsType,
+                            jsTypeName: typeObject.jsType.constructor.name,
+                            dbTypeName: typeObject.dbTypeName,
+                            encode: typeObject.encode,
+                            decode: typeObject.decode,
+                        };
+
+                        this.byDbType[entry.dbTypeName] = entry;
+                        this.byJsType[entry.jsTypeName] = entry;
+                    }
+                }
+            }
+        }
+
+        return this;
+    }
+
+    getDbType(jsType) {
+        return this.byJsType[jsType.constructor.name];
+    }
+
+    getJsType(dbTypeName) {
+        return this.byDbType[dbTypeName];
+    }
+
+    removeDbType(dbtypeName) {
+        if (type instanceof BaseType) {
+            let typeName = BaseType.constructor.name;
+
+            if (typeName in this.byDbType) {
+                let typeObject = this.byDbType[typeName];
+                delete this.byDbType[typeName];
+                delete this.byJsType[typeObject.jsType];
+            }
+        }
+
+        return this;
+    }
+
+    removeJsType(jsType) {
+        if (jsType instanceof BaseType) {
+            let typeName = jsType.constructor.name;
+
+            if (typeName in this.byDbType) {
+                let typeObject = this.byDbType[typeName];
+                delete this.byDbType[typeName];
+                delete this.byJsType[typeObject.jsTypeName];
+            }
+        }
+        else if (typeof jsType == 'string') {
+            if (jsType in this.byDbType) {
+                let typeObject = this.byDbType[jsType];
+                delete this.byDbType[jsType];
+                delete this.byJsType[typeObject.jsTypeName];
+            }
+        }
+
+        return this;
+    }
+
+    [Symbol.iterator]() {
+        return Object.values(this.types);
+    }
+});

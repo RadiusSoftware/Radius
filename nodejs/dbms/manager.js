@@ -102,6 +102,19 @@ register('', class TableAnalysis {
         this.table2 = dbTable2;
         this.schemaAnalysis = schemaAnalysis;
         this.diffs = [];
+
+        if (dbTable1.getType() != dbTable2.getType()) {
+            this.setDiff({
+                level: 'table',
+                table1: this.table1,
+                table2: this.table2,
+                type: 'table-type-mismatch',
+                type1: this.table1.getType(),
+                type2: this.table2.getType(),
+            });
+        }
+
+        this.analyzePrimaryKeys();
         this.analyzeColumns();
         this.analyzeIndexes();
     }
@@ -194,6 +207,19 @@ register('', class TableAnalysis {
                     index: this.table2.getIndex(indexName),
                 });
             }
+        }
+    }
+
+    analyzePrimaryKeys() {
+        if (!Data.areEqual(this.table1.getPrimaryKey(), this.table2.getPrimaryKey())) {
+            this.setDiff({
+                level: 'table',
+                table1: this.table1,
+                table2: this.table2,
+                type: 'primary-key-mismatch',
+                primaryKey1: this.table1.getPrimaryKey().join(','),
+                primaryKey2: this.table2.getPrimaryKey().join(','),
+            });
         }
     }
 
