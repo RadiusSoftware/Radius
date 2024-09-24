@@ -29,19 +29,26 @@ singletonIn(Process.nodeClassController, '', class SettingsManager {
         mkHandlerProxy(Process, 'SettingsManager', this);
     }
 
-    onClear(message) {
+    async onClear(message) {
     }
 
-    onDefine(message) {
+    async onDefine(message) {
+        console.log(message);
     }
 
-    onList(message) {
+    async onDeregister(message) {
     }
 
-    onSet(message) {
+    async onList(message) {
     }
 
-    onUndefine(message) {
+    async onRegister(message) {
+    }
+
+    async onSet(message) {
+    }
+
+    async onUndefine(message) {
     }
 });
 
@@ -49,98 +56,117 @@ singletonIn(Process.nodeClassController, '', class SettingsManager {
 /*****
 *****/
 register('', class Settings {
-    constructor(schema, values) {
-        this.schema = schema;
-        this.values = values;
-    }
-
-    clear(key) {
-        if (key in this.values) {
-            this.values[key] = this.schema.get(key).getDefault();
-        }
-
-        return this;
-    }
-
-    get(key) {
-        return this.values[key];
-    }
-
-    getDefault(key) {
-        return this.schema.get(key).getDefault();
-    }
-
-    getType(key) {
-        return this.schema.get(key);
-    }
-
-    has(key) {
-        return this.schema.has(key);
-    }
-
-    set(key, value) {
-        if (key in this.values) {
-            let type = this.schema.get(key);
-        }
-
-        return this;
-    }
-
-    [Symbol.iterator]() {
-        Object.values(this.values)[Symbol.iterator]();
-    }
-});
-
-
-/*****
-*****/
-register('', class SettingsSchema {
     constructor(area, name, schema) {
-        this.area = area;
-        this.name = name;
-        this.items = {};
+        this.setKey(area, name);
+        this.nodeTree = mkNodeTree();
 
-        if (typeof schema == 'object') {
-            for (let key in schema) {
-                this.set(key, schema[key]);
+        if (Array.isArray(items)) {
+            for (let item of items) {
+                this.setItem('', item);
             }
         }
     }
-
-    clear(key) {
+    clearItem(path) {
+        //  TODO *******************************************
         delete this.items[key];
         return this;
-    }
-
-    get(key) {
-        return this.items[key].type;
     }
 
     getArea() {
         return this.area;
     }
 
-    getDefault(key) {
-        return this.items[key].getDefault();
+    getDefault(path) {
+        //  TODO *******************************************
+    }
+
+    getItem(path) {
+        //  TODO *******************************************
     }
 
     getName() {
         return this.name;
     }
 
-    has(key) {
-        return key in this.items;
+    getValue(path) {
+        //  TODO *******************************************
     }
 
-    set(key, type) {
-        if (typeof key == 'string' && type instanceof BaseType) {
-            this.items[key] = { key: key, type: type };
-        }
+    hasItem(path) {
+        //  TODO *******************************************
+    }
 
+    async refresh() {
+        //  TODO *******************************************
+        return this;
+    }
+
+    async setArea(area) {
+        this.area = area;
+        return this;
+    }
+
+    setItem(path, item) {
+        //  TODO *******************************************
+        return this;
+    }
+
+    async setName(name) {
+        this.name = name;
         return this;
     }
 
     [Symbol.iterator]() {
-        return Object.values(this.items)[Symbol.iterator]();
+        //  TODO *******************************************
+    }
+
+    async update() {
+        //  TODO *******************************************
+        return this;
+    }
+});
+
+
+/*****
+*****/
+register('', class SettingsObject {
+    constructor(schema) {
+        this.parent = null;
+    }
+
+    getPath() {
+    }
+
+    remove() {
+    }
+});
+
+
+/*****
+*****/
+register('', class SettingsArray {
+    constructor(schema) {
+        this.parent = null;
+    }
+
+    getPath() {
+    }
+
+    remove() {
+    }
+});
+
+
+/*****
+*****/
+register('', class SettingsScalar {
+    constructor(schema) {
+        this.parent = null;
+    }
+
+    getPath() {
+    }
+
+    remove() {
     }
 });

@@ -98,7 +98,54 @@ const LibUrl = require('url');
 *****/
 singletonIn('HttpServer', '', class HttpServer extends Server {
     constructor() {
-        super();
+        super('', '');
+        /*
+        super({
+            deflang: {
+                type: StringType,
+                default: 'en-US',
+            },
+
+            interfaces: {
+                type: [{
+                    addr: StringType,
+                    port: NumberType,
+                    publicKey: StringType,
+                    privateKey: StringType,
+                    certificate: StringType,
+                    caCertificate: StringType,
+                }],
+                default: [{
+                    addr: '0.0.0.0',
+                    port: 80,
+                    publicKey: '',
+                    privateKey: '',
+                    certificate: '',
+                    certificateAuthority: '',
+                }],
+            },
+
+            libEntries: {
+                type: [{
+                    type: StringType,
+                    path: StringType,
+                    module: StringType,
+                    fqClassName: StringType,
+                    bundlePaths: [{
+                        type: StringType,
+                    }]
+                }],
+                default: [{
+                    type: 'httpx',
+                    path: '/',
+                    module: Path.join(__dirname, 'apps/adminApp.js'),
+                    fqClassName: 'radius.AdminApp',
+                    bundlePaths: [],
+                }]
+            }
+        });
+        */
+
         this.httpLibrary = mkHttpLibrary();
     }
 
@@ -107,8 +154,8 @@ singletonIn('HttpServer', '', class HttpServer extends Server {
     }
 
     async init() {
-        await this.httpLibrary.init(this.settings.libEntries);
         await super.init();
+        await this.httpLibrary.init(this.settings.libEntries);
         return this;
     }
 

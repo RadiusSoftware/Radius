@@ -226,6 +226,7 @@ registerIn('HttpServer', '', class HttpLibrary {
             'common/cookie.js',
             'common/expression.js',
             'common/api.js',
+            'common/nodeTree.js',
             
             'mozilla/element.js',
             'mozilla/widget.js',

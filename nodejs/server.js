@@ -40,11 +40,26 @@
 register('', class Server extends Emitter {
     constructor() {
         super();
-        this.className = this.getClassName();
-        this.settings = Process.getEnv(this.className, 'json');
         this.workers = {};
+        //this.settings = mkSettings();
+        this.className = this.getClassName();
         this.appName = Reflect.getPrototypeOf(this).constructor.name;
         mkHandlerProxy(Process, this.appName, this);
+
+        /*
+        this.settingsSchema = {
+            workers: {
+                type: NumberType,
+                default: 1,
+            }
+        };
+
+        if (typeof settingsSchema == 'object') {
+            for (let key in settingsSchema) {
+                this.settingsSchema[key] = settingsSchema[key];
+            }
+        }
+        */
     }
 
     async callWorker(worker, message) {
@@ -69,6 +84,10 @@ register('', class Server extends Emitter {
 
     getSettings() {
         return Data.clone(settings);
+    }
+
+    getSettingsSchema() {
+
     }
 
     hasSetting(name) {
@@ -152,9 +171,9 @@ register('', class Server extends Emitter {
 register('', class ServerWorker extends Emitter {
     constructor() {
         super();
+        this.settings = {};
         this.state = 'paused';
         this.className = Reflect.getPrototypeOf(this).constructor.name;
-        this.settings = Process.getEnv(this.className, 'json');
         this.appName = Reflect.getPrototypeOf(this).constructor.name.replace('Worker', '');
         mkHandlerProxy(Process, this.appName, this);
     }
@@ -246,28 +265,27 @@ register('', class ServerWorker extends Emitter {
  * Servers only work if the process's node class matches the server class's
  * class name.  For workers, that name is {server-class}Worker.
 *****/
-register('', async function startServer(fqClassName, settings) {
+register('', async function startServer(fqClassName) {
     Process.sendController({
         name: '#StartServer',
         fqClassName: fqClassName,
-        settings: settings,
     });
 });
 
 execIn(Process.nodeClassController, () => {
     Process.on('#StartServer', async message => {
-        await Process.fork(message.fqClassName, message.fqClassName, message.settings);
+        await Process.fork(message.fqClassName, message.fqClassName);
     });
 });
 
 Process.on('#Spawned', async message => {
     let nodeClass = Process.getNodeClass();
-    let settings = Process.getEnv(nodeClass, 'json');
+    //let settings = Process.getEnv(nodeClass, 'json');
 
-    if (typeof settings == 'object') {
+    //if (typeof settings == 'object') {
         let server;
         eval(`server = ${nodeClass}`);
         await server.init();
         await server.start();
-    }
+    //}
 });

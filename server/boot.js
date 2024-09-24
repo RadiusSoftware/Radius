@@ -61,13 +61,7 @@ require('../nodejs/radius.js');
                 }
 
                 this.inspectConfiguration();
-                
-                if (this.settings['-admin'] === true) {
-                    this.launchAdminMode();
-                }
-                else {
-                    this.launchLiveMode();
-                }
+                this.launch();
             })();
         }
 
@@ -132,6 +126,10 @@ require('../nodejs/radius.js');
         }
 
         // **********
+        async launch() {
+            //startServer('HttpServer');
+        }
+        /*
         async launchAdminMode() {
             startServer('HttpServer', {
                 deflang: 'en-US',
@@ -154,10 +152,9 @@ require('../nodejs/radius.js');
                 ],
             });
         }
-
-        // **********
         async launchLiveMode() {
         }
+        */
 
         // **********
         async parseCommandLine() {
