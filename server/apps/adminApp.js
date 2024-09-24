@@ -26,12 +26,8 @@
 register('radius', class AdminApp extends WebApp {
     constructor(libEntry) {
         super(libEntry, {
-            // *********************************************************************
-            // MOVE TO DBMS ********************************************************
             timeout: 12*60*60000,
             webAppBundle: 'server.apps.admin',
-            // MOVE TO DBMS ********************************************************
-            // *********************************************************************
             enableWebsocket: true,
             permissions: {
                 'admin:*': { type: 'boolean' }

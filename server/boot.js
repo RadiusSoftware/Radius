@@ -51,6 +51,7 @@ require('../nodejs/radius.js');
      * by the launch parameters.
     *****/
     singletonIn(Process.nodeClassController, 'radius', class BootStrapper {
+        // **********
         constructor() {
             (async () => {
                 await this.parseCommandLine();
@@ -70,11 +71,13 @@ require('../nodejs/radius.js');
             })();
         }
 
+        // **********
         getMode() {
             if (this.mode == this.launchLiveMode) return 'live';
             if (this.mode == this.launchAdminMode) return 'admin';
         }
 
+        // **********
         async inspectConfiguration() {
             if (this.inspectDbms()) {
                 if (!('-admin' in this.settings)) {
@@ -82,12 +85,12 @@ require('../nodejs/radius.js');
                 }
             }
             else {
-                // TODO *******************************************
             }
 
             this.settings['-admin'] = true;
         }
 
+        // **********
         async inspectDbms() {
             try {
                 let path;
@@ -119,26 +122,6 @@ require('../nodejs/radius.js');
                                 registerDbObject('radius', dbTable);
                             }
                         }
-                        // ******************************************************************************
-                        // ******************************************************************************
-                        let dbc = await dbConnect();
-
-                        /*
-                        for (let i = 0; i < 5; i++) {
-                            await DbObject.insert(radius.mkDboParameter({
-                                context: 'startup',
-                                name: 'BADNAME',
-                                value: { reason: 'all', grasp: 'strong', fast: true }
-                            }), dbc);
-                        }
-
-                        let parameter = await radius.selectOneDboParameter(dbc);
-                        await radius.deleteDboParameter(dbc);
-                        */
-
-                        await dbc.close();
-                        // ******************************************************************************
-                        // ******************************************************************************
                     }
                 }
 
@@ -148,6 +131,7 @@ require('../nodejs/radius.js');
             return false;
         }
 
+        // **********
         async launchAdminMode() {
             startServer('HttpServer', {
                 deflang: 'en-US',
@@ -171,14 +155,11 @@ require('../nodejs/radius.js');
             });
         }
 
+        // **********
         async launchLiveMode() {
-            // TODO *********************************************************************
-            /*
-            console.log('Launching LIVE mode!');
-            console.log('Connect to DBMS -- for all settings!');
-            */
         }
 
+        // **********
         async parseCommandLine() {
             const args = Process.getArgs();
             this.nodePath = args[0];

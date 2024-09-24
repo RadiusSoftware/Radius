@@ -228,6 +228,10 @@ singleton('', class Dbms {
         }
     }
 
+    hasRadiusDbms() {
+        return this.radius != null;
+    }
+
     isSupported(dbmsType) {
         return dbmsType in this.dbms;
     }

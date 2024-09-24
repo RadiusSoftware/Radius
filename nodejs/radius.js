@@ -69,6 +69,7 @@ require('./server.js');
 require('./element.js');
 require('./bundle.js');
 require('./session.js');
+require('./settings.js');
 require('./resource.js');
 
 require('./net/socket.js');

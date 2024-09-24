@@ -66,17 +66,17 @@ register('radius', function mkSchema() {
                 ]
             },
             {
-                name: 'parameter',
+                name: 'settings',
                 type: 'object',
                 columns: [
-                    { name: 'context', type: StringType, size: 50 },
+                    { name: 'area', type: StringType, size: 50 },
                     { name: 'name', type: StringType, size: 50 },
-                    { name: 'value', type: JsonType },
+                    { name: 'values', type: JsonType },
                 ],
                 indexes: [
-                    { columnItems: [ { column: 'context', direction: 'asc' } ]},
+                    { columnItems: [ { column: 'area', direction: 'asc' } ]},
                     { columnItems: [ { column: 'name', direction: 'asc' } ]},
-                    { columnItems: [ { column: 'context', direction: 'asc' }, { column: 'name', direction: 'asc' } ]},
+                    { columnItems: [ { column: 'area', direction: 'asc' }, { column: 'name', direction: 'asc' } ]},
                 ]
             },
             {
