@@ -23,150 +23,172 @@
 
 /*****
 *****/
-singletonIn(Process.nodeClassController, '', class SettingsManager {
+singletonIn(Process.nodeClassController, '', class Registry {
     constructor() {
-        this.areas = {};
-        mkHandlerProxy(Process, 'SettingsManager', this);
+        this.tree = mkNodeTree();
+        this.providers = [];
+        mkHandlerProxy(Process, 'Registry', this);
     }
 
-    async onClear(message) {
+    async onClearSetting(message) {
+        //  TODO *******************************************
     }
 
-    async onDefine(message) {
-        console.log(message);
+    async onClearValue(message) {
+        //  TODO *******************************************
     }
 
-    async onDeregister(message) {
+    async onDeregisterProvider(message) {
+        //  TODO *******************************************
     }
 
-    async onList(message) {
-    }
-
-    async onRegister(message) {
-    }
-
-    async onSet(message) {
-    }
-
-    async onUndefine(message) {
-    }
-});
-
-
-/*****
-*****/
-register('', class Settings {
-    constructor(area, name, schema) {
-        this.setKey(area, name);
-        this.nodeTree = mkNodeTree();
-
-        if (Array.isArray(items)) {
-            for (let item of items) {
-                this.setItem('', item);
+    async onGetValue(message) {
+        try {
+            if (this.tree.hasNode(message.path)) {
+                return this.tree.getValue(message.path).value;
             }
         }
-    }
-    clearItem(path) {
-        //  TODO *******************************************
-        delete this.items[key];
-        return this;
-    }
-
-    getArea() {
-        return this.area;
+        catch (e) {
+            await caught(e, 'Settings.onGetValue');
+        }
+        return false;
     }
 
-    getDefault(path) {
-        //  TODO *******************************************
+    async onHasValue(message) {
+        try {
+            if (this.tree.hasNode(message.path)) {
+                return this.tree.getValue(message.path).value != null;
+            }
+        }
+        catch (e) {
+            await caught(e, 'Settings.onHasValue');
+        }
+        return false;
     }
 
-    getItem(path) {
-        //  TODO *******************************************
-    }
-
-    getName() {
-        return this.name;
-    }
-
-    getValue(path) {
+    async onListProviders(message) {
         //  TODO *******************************************
     }
 
-    hasItem(path) {
+    async onListSettings(message) {
         //  TODO *******************************************
     }
 
-    async refresh() {
-        //  TODO *******************************************
-        return this;
-    }
-
-    async setArea(area) {
-        this.area = area;
-        return this;
-    }
-
-    setItem(path, item) {
-        //  TODO *******************************************
-        return this;
-    }
-
-    async setName(name) {
-        this.name = name;
-        return this;
-    }
-
-    [Symbol.iterator]() {
+    async onRegisterProvider(message) {
         //  TODO *******************************************
     }
 
-    async update() {
+    async onSetSetting(message) {
+        try {
+            let node = this.tree.ensureNode(message.path);
+
+            if (Array.isArray(message.value)) {
+                node.setValue({
+                    type: ArrayType,
+                    def: message.value,
+                    value: message.value,
+                });
+            }
+            else if (typeof message.value == 'object') {
+                node.setValue({
+                    type: ObjectType,
+                    def: message.value,
+                    value: message.value,
+                });
+            }
+            else {
+                node.setValue({
+                    type: getJsType(message.value),
+                    def: message.value,
+                    value: message.value,
+                });
+            }
+
+            return true;
+        }
+        catch (e) {}
+        return false;
+    }
+
+    async onSetValue(message) {
         //  TODO *******************************************
-        return this;
     }
 });
 
 
 /*****
 *****/
-register('', class SettingsObject {
-    constructor(schema) {
-        this.parent = null;
+singleton('', class Settings {
+    constructor() {
     }
 
-    getPath() {
+    async clearSetting(path) {
+        //  TODO *******************************************
+        return this;
     }
 
-    remove() {
-    }
-});
-
-
-/*****
-*****/
-register('', class SettingsArray {
-    constructor(schema) {
-        this.parent = null;
+    async clearValue(path) {
+        //  TODO *******************************************
+        return this;
     }
 
-    getPath() {
+    async DeregisterProvider(provider) {
+        //  TODO *******************************************
     }
 
-    remove() {
-    }
-});
-
-
-/*****
-*****/
-register('', class SettingsScalar {
-    constructor(schema) {
-        this.parent = null;
+    async getDefault(path) {
+        //  TODO *******************************************
     }
 
-    getPath() {
+    async getSetting(path) {
+        //  TODO *******************************************
     }
 
-    remove() {
+    async getValue(path) {
+        return await Process.callController({
+            name: 'RegistryGetValue',
+            path: path,
+        });
+    }
+
+    async hasSetting(path) {
+        //  TODO *******************************************
+    }
+
+    async hasValue(path) {
+        return await Process.callController({
+            name: 'RegistryHasValue',
+            path: path,
+        });
+    }
+
+    async listProviders() {
+        //  TODO *******************************************
+    }
+
+    async registerProvider(provider) {
+        //  TODO *******************************************
+    }
+
+    async setSetting(path, value) {
+        await Process.callController({
+            name: 'RegistrySetSetting',
+            path: path,
+            value: value,
+        });
+
+        return this;
+    }
+
+    async setValue(path, value) {
+        //  TODO *******************************************
+    }
+
+    async toJson(path) {
+        //  TODO *******************************************
+    }
+
+    async toObject(path) {
+        //  TODO *******************************************
     }
 });

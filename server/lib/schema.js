@@ -70,13 +70,10 @@ register('radius', function mkSchema() {
                 type: 'object',
                 columns: [
                     { name: 'area', type: StringType, size: 50 },
-                    { name: 'name', type: StringType, size: 50 },
                     { name: 'values', type: JsonType },
                 ],
                 indexes: [
                     { columnItems: [ { column: 'area', direction: 'asc' } ]},
-                    { columnItems: [ { column: 'name', direction: 'asc' } ]},
-                    { columnItems: [ { column: 'area', direction: 'asc' }, { column: 'name', direction: 'asc' } ]},
                 ]
             },
             {

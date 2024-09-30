@@ -30,7 +30,6 @@
 *****/
 register('', class NodeTree {
     constructor() {
-        super();
         this.root = mkTreeNode(this);
     }
 
@@ -73,7 +72,7 @@ register('', class NodeTree {
             }
             else {
                 let childNode = mkTreeNode(node.tree);
-                childNode.parent = this;
+                childNode.parent = node;
                 childNode.parentKey = key;
                 node.children[key] = childNode;
                 node = childNode;
@@ -108,33 +107,12 @@ register('', class NodeTree {
     }
 
     hasNode(path) {
-        let node = this.root;
-
-        for (let key of TextUtils.split(path, '/')) {
-            if (key in node) {
-                node = node[key];
-            }
-            else {
-                return false
-            }
-        }
-
-        return true;
+        return this.getNode(path) !== null;
     }
 
     hasValue(path) {
-        let node = this.root;
-
-        for (let key of TextUtils.split(path, '/')) {
-            if (key in node) {
-                node = node[key];
-            }
-            else {
-                return false
-            }
-        }
-
-        return node.value !== null;
+        let node = this.getNode(path);
+        return node && node.getValue() != null;
     }
 
     setValue(path, value) {
@@ -215,6 +193,10 @@ register('', class TreeNode {
         return values;
     }
 
+    getChild(key) {
+        return this.children[key];
+    }
+
     getChildren() {
         return Object.values(this.children);
     }
@@ -231,10 +213,6 @@ register('', class TreeNode {
         return this.parent;
     }
 
-    hasParent() {
-        return this.parent != null;
-    }
-
     getPath() {
         let path = [];
         let node = this;
@@ -249,6 +227,14 @@ register('', class TreeNode {
 
     getTree() {
         return this.tree;
+    }
+
+    hasChild(key) {
+        return key in this.children;
+    }
+
+    hasParent() {
+        return this.parent != null;
     }
 
     hasValue() {

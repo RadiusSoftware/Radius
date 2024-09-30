@@ -26,68 +26,6 @@ const LibUrl = require('url');
 
 
 /*****
- * Here's an example for the HTTP server settings:
-{
-    deflang: 'en-US',
-    workers: 1,
-    interfaces: [
-        {
-            addr: '127.0.0.1',
-            port: 80,
-            tls: false,
-        },
-        {
-            addr: '102.168.26.23',
-            port: 80,
-            tls: false,
-        },
-    ],
-    upgradHandler: (...args) => mkWebSocket(...args),
-    libSettings: {
-        blockSizeMb: 50,
-        cacheMaxSizeMb: 100,
-        cacheDurationMs: 10*60*1000,
-        HttpStatusTemplates: false,
-    },
-    libEntries: [
-        {
-            type: 'file',
-            path: '/colby/dog',
-            fspath: '/Users/christoph/Documents/RadiusTest',
-            once: false,
-            timeout: 10*1000,
-        },
-        {
-            type: 'file',
-            path: '/special',
-            fspath: '/Users/christoph/Documents/kodeJS.json',
-            once: false,
-        },
-        {
-            type: 'data',
-            path: '/data',
-            data: mkBuffer('Hello Data'),
-        },
-        {
-            type: 'data',
-            path: '/object',
-            data: {
-                hello: 'Object',
-                today: 'yesterday',
-            },
-        },
-        {
-            type: 'httpx',
-            path: '/httpExtension',
-            module: '/absolute/path/to/module.js',
-            fqnClass: 'a.b.c.MyWebExtension',
-        },
-    ],
-}
-*****/
-
-
-/*****
  * The HTTP server primary process object's features and tasks are performed
  * primarily by nodejs's builtin HTTP module features.  In fact, nodejs does
  * not require any developer code in order the configure the HTTP server.  All
@@ -97,56 +35,28 @@ const LibUrl = require('url');
  * related to managing and executing watches.
 *****/
 singletonIn('HttpServer', '', class HttpServer extends Server {
+    static settings = {
+        deflang: 'en-US',
+        interfaces: [
+            {
+                addr: '0.0.0.0',
+                port: 80,
+                tls: false,
+            },
+        ],
+        libEntries: [
+            {
+                type: 'httpx',
+                path: '/',
+                module: Path.join(__dirname, '../../server', 'apps/adminApp.js'),
+                fqClassName: 'radius.AdminApp',
+                bundlePaths: [],
+            },
+        ],
+    };
+
     constructor() {
-        super('', '');
-        /*
-        super({
-            deflang: {
-                type: StringType,
-                default: 'en-US',
-            },
-
-            interfaces: {
-                type: [{
-                    addr: StringType,
-                    port: NumberType,
-                    publicKey: StringType,
-                    privateKey: StringType,
-                    certificate: StringType,
-                    caCertificate: StringType,
-                }],
-                default: [{
-                    addr: '0.0.0.0',
-                    port: 80,
-                    publicKey: '',
-                    privateKey: '',
-                    certificate: '',
-                    certificateAuthority: '',
-                }],
-            },
-
-            libEntries: {
-                type: [{
-                    type: StringType,
-                    path: StringType,
-                    module: StringType,
-                    fqClassName: StringType,
-                    bundlePaths: [{
-                        type: StringType,
-                    }]
-                }],
-                default: [{
-                    type: 'httpx',
-                    path: '/',
-                    module: Path.join(__dirname, 'apps/adminApp.js'),
-                    fqClassName: 'radius.AdminApp',
-                    bundlePaths: [],
-                }]
-            }
-        });
-        */
-
-        this.httpLibrary = mkHttpLibrary();
+        super();
     }
 
     getLibEntries() {
@@ -155,7 +65,7 @@ singletonIn('HttpServer', '', class HttpServer extends Server {
 
     async init() {
         await super.init();
-        await this.httpLibrary.init(this.settings.libEntries);
+        this.httpLibrary = await mkHttpLibrary().init(this.settings.libEntries);
         return this;
     }
 
@@ -188,27 +98,6 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
     constructor() {
         super();
         this.watches = {};
-
-        for (let netInterface of this.getInterfaces()) {
-            if (netInterface.tls instanceof Tls) {
-                this.scheme = 'https';
-
-                this.server = LibHttps.createServer({
-                    key: netInterface.getPrivateKey(),
-                    cert: netInterface.getCert(),
-                    ca: netInterface.getCaCert(),
-                }, (httpReq, httpRsp) => this.handleRequest(httpReq, httpRsp));
-
-                this.server.listen(netInterface.port, netInterface.addr);
-                this.server.on('upgrade', (...args) => this.onUpgrade(...args));
-            }
-            else {
-                this.scheme = 'http';
-                this.server = LibHttp.createServer({}, (...args) => this.handleRequest(...args));
-                this.server.listen(netInterface.port, netInterface.addr);
-                this.server.on('upgrade', (...args) => this.onUpgrade(...args));
-            }
-        }
     }
 
     clearWatch(path, handler) {
@@ -306,6 +195,7 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
     }
 
     async init() {
+        await super.init();
         this.httpStatusResponses = {};
         
         if (typeof this.settings.HttpStatusTemplates == 'string') {
@@ -332,6 +222,27 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
         if (!this.httpStatusResponses.default) {
             let text = await FileSystem.readFileAsString(Path.join(__dirname, 'statusResponse.html'));
             this.httpStatusResponses.default = mkTextTemplate(text);
+        }
+
+        for (let netInterface of this.getInterfaces()) {
+            if (netInterface.tls instanceof Tls) {
+                this.scheme = 'https';
+
+                this.server = LibHttps.createServer({
+                    key: netInterface.getPrivateKey(),
+                    cert: netInterface.getCert(),
+                    ca: netInterface.getCaCert(),
+                }, (httpReq, httpRsp) => this.handleRequest(httpReq, httpRsp));
+
+                this.server.listen(netInterface.port, netInterface.addr);
+                this.server.on('upgrade', (...args) => this.onUpgrade(...args));
+            }
+            else {
+                this.scheme = 'http';
+                this.server = LibHttp.createServer({}, (...args) => this.handleRequest(...args));
+                this.server.listen(netInterface.port, netInterface.addr);
+                this.server.on('upgrade', (...args) => this.onUpgrade(...args));
+            }
         }
 
         this.httpLibrary = await mkHttpLibrary().init(this);

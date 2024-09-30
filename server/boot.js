@@ -74,11 +74,8 @@ require('../nodejs/radius.js');
         // **********
         async inspectConfiguration() {
             if (this.inspectDbms()) {
-                if (!('-admin' in this.settings)) {
-                    return;
-                }
-            }
-            else {
+
+                return;
             }
 
             this.settings['-admin'] = true;
@@ -127,34 +124,8 @@ require('../nodejs/radius.js');
 
         // **********
         async launch() {
-            //startServer('HttpServer');
+            startServer('HttpServer');
         }
-        /*
-        async launchAdminMode() {
-            startServer('HttpServer', {
-                deflang: 'en-US',
-                workers: 1,
-                interfaces: [
-                    {
-                        addr: '0.0.0.0',
-                        port: 80,
-                        tls: false,
-                    },
-                ],
-                libEntries: [
-                    {
-                        type: 'httpx',
-                        path: '/',
-                        module: Path.join(__dirname, 'apps/adminApp.js'),
-                        fqClassName: 'radius.AdminApp',
-                        bundlePaths: [],
-                    },
-                ],
-            });
-        }
-        async launchLiveMode() {
-        }
-        */
 
         // **********
         async parseCommandLine() {

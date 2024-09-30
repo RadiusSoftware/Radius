@@ -38,28 +38,17 @@
  * class, in which it will execute;
 *****/
 register('', class Server extends Emitter {
+    static settings = {
+        workers: 1,
+    };
+
     constructor() {
         super();
         this.workers = {};
-        //this.settings = mkSettings();
-        this.className = this.getClassName();
+        this.settings = {};
+        this.className = Reflect.getPrototypeOf(this).constructor.name;
         this.appName = Reflect.getPrototypeOf(this).constructor.name;
         mkHandlerProxy(Process, this.appName, this);
-
-        /*
-        this.settingsSchema = {
-            workers: {
-                type: NumberType,
-                default: 1,
-            }
-        };
-
-        if (typeof settingsSchema == 'object') {
-            for (let key in settingsSchema) {
-                this.settingsSchema[key] = settingsSchema[key];
-            }
-        }
-        */
     }
 
     async callWorker(worker, message) {
@@ -75,26 +64,24 @@ register('', class Server extends Emitter {
     }
 
     getClassName() {
-        return Reflect.getPrototypeOf(this).constructor.name;
+        return this.className;
     }
 
     getSetting(name) {
-        return this.settings[name];
+        if (name in this.settings) {
+            return this.settings[name];
+        }
+        else {
+            return this.settings;
+        }
     }
 
-    getSettings() {
-        return Data.clone(settings);
-    }
-
-    getSettingsSchema() {
-
-    }
-
-    hasSetting(name) {
-        return name in this.settings;
+    getSettingsPath() {
+        return `/${this.className}`;
     }
 
     async init() {
+        this.settings = await Settings.getValue(`/${this.className}`);
         return this;
     }
 
@@ -195,14 +182,20 @@ register('', class ServerWorker extends Emitter {
     }
 
     getSetting(name) {
-        return this.settings[name];
+        if (name in this.settings) {
+            return this.settings[name];
+        }
+        else {
+            return this.settings;
+        }
     }
 
-    getSettings() {
-        return Data.clone(settings);
+    getSettingsPath() {
+        return `/${this.className.replace('Worker', '')}`;
     }
 
     async init() {
+        this.settings = await Settings.getValue(this.getSettingsPath());
         return this;
     }
 
@@ -279,13 +272,18 @@ execIn(Process.nodeClassController, () => {
 });
 
 Process.on('#Spawned', async message => {
-    let nodeClass = Process.getNodeClass();
-    //let settings = Process.getEnv(nodeClass, 'json');
+    let server;
+    eval(`server = ${Process.getNodeClass()}`);
 
-    //if (typeof settings == 'object') {
-        let server;
-        eval(`server = ${nodeClass}`);
-        await server.init();
-        await server.start();
-    //}
+    for (let clss of Data.enumerateClassHierarchy(server).reverse()) {
+        if (typeof clss.settings == 'object') {
+            for (let key in clss.settings) {
+                server.settings[key] = Data.clone(clss.settings[key]);
+            }
+        }
+    }
+    
+    await Settings.setSetting(`/${server.constructor.name}`, server.settings);
+    await server.init();
+    await server.start();
 });
