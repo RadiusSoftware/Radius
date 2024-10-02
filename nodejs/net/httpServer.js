@@ -35,7 +35,7 @@ const LibUrl = require('url');
  * related to managing and executing watches.
 *****/
 singletonIn('HttpServer', '', class HttpServer extends Server {
-    static settings = {
+    static registrySettings = {
         deflang: 'en-US',
         interfaces: [
             {

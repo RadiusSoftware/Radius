@@ -354,5 +354,3 @@ register('', class HandlerProxy {
         });
     }
 });
-
-

@@ -22,24 +22,63 @@
 
 
 /*****
+ * There are the Registry and the Settings singletons.  The Registry resides
+ * in the #Controller process node and is the repository of the settings and
+ * values.  The Registry is always used via the single Settings object, which
+ * provides an API for managing Registry data.  Note that a setting contains
+ * both a default value and the current value, whereas the value refers only
+ * to the current value.  A setting may be set just once!  Once set, additional
+ * onSetSettings messages will be ignored.  If you really need to change the
+ * definition of a setting, clear it and then set it, which will then cause
+ * the new value to take effect.
 *****/
 singletonIn(Process.nodeClassController, '', class Registry {
     constructor() {
         this.tree = mkNodeTree();
-        this.providers = [];
         mkHandlerProxy(Process, 'Registry', this);
     }
 
     async onClearSetting(message) {
-        //  TODO *******************************************
+        try {
+            if (this.tree.hasNode(message.path)) {
+                this.tree.clearNode(message.path);
+                return true;
+            }
+        }
+        catch (e) { await caught(e) }
+        return false;
     }
 
     async onClearValue(message) {
-        //  TODO *******************************************
+        try {
+            if (this.tree.hasNode(message.path)) {
+                let node = this.tree.ensureNode(message.path);
+                node.getValue().value = node.getValue().def;
+                return true;
+            }
+        }
+        catch (e) { await caught(e) }
+        return false;
     }
 
-    async onDeregisterProvider(message) {
-        //  TODO *******************************************
+    async onGetDefault(message) {
+        try {
+            if (this.tree.hasNode(message.path)) {
+                return this.tree.getValue(message.path).def;
+            }
+        }
+        catch (e) { await caught(e) }
+        return false;
+    }
+
+    async onGetSetting(message) {
+        try {
+            if (this.tree.hasNode(message.path)) {
+                return this.tree.getValue(message.path);
+            }
+        }
+        catch (e) { await caught(e) }
+        return false;
     }
 
     async onGetValue(message) {
@@ -48,9 +87,17 @@ singletonIn(Process.nodeClassController, '', class Registry {
                 return this.tree.getValue(message.path).value;
             }
         }
-        catch (e) {
-            await caught(e, 'Settings.onGetValue');
+        catch (e) { await caught(e) }
+        return false;
+    }
+
+    async onHasSetting(message) {
+        try {
+            if (this.tree.hasNode(message.path)) {
+                return this.tree.getValue(message.path).value != null;
+            }
         }
+        catch (e) { await caught(e) }
         return false;
     }
 
@@ -60,88 +107,120 @@ singletonIn(Process.nodeClassController, '', class Registry {
                 return this.tree.getValue(message.path).value != null;
             }
         }
-        catch (e) {
-            await caught(e, 'Settings.onHasValue');
-        }
+        catch (e) { await caught(e) }
         return false;
     }
 
-    async onListProviders(message) {
-        //  TODO *******************************************
-    }
+    async onListValues(message) {
+        try {
+            let values = [];
+            let root = message.path ? this.tree.getNode(message.path) : this.tree.getRoot();
+            let stack = [ root ];
 
-    async onListSettings(message) {
-        //  TODO *******************************************
-    }
+            while (stack.length) {
+                let node = stack.pop();
+                let value = node.getValue();
 
-    async onRegisterProvider(message) {
-        //  TODO *******************************************
+                if (value) {
+                    values.push({ path: node.getPath(), value: value.value });
+                }
+                
+                for (let childNode of node) {
+                    stack.push(childNode);
+                }
+            }
+
+            return values;
+        }
+        catch (e) { await caught(e) }
+        return false;
     }
 
     async onSetSetting(message) {
         try {
-            let node = this.tree.ensureNode(message.path);
+            if (!this.tree.hasNode(message.path)) {
+                let node = this.tree.ensureNode(message.path);
 
-            if (Array.isArray(message.value)) {
-                node.setValue({
-                    type: ArrayType,
-                    def: message.value,
-                    value: message.value,
-                });
-            }
-            else if (typeof message.value == 'object') {
-                node.setValue({
-                    type: ObjectType,
-                    def: message.value,
-                    value: message.value,
-                });
-            }
-            else {
-                node.setValue({
-                    type: getJsType(message.value),
-                    def: message.value,
-                    value: message.value,
-                });
+                if (Array.isArray(message.value)) {
+                    node.setValue({
+                        type: ArrayType,
+                        def: message.value,
+                        value: message.value,
+                    });
+                }
+                else if (typeof message.value == 'object') {
+                    node.setValue({
+                        type: ObjectType,
+                        def: message.value,
+                        value: message.value,
+                    });
+                }
+                else {
+                    node.setValue({
+                        type: getJsType(message.value),
+                        def: message.value,
+                        value: message.value,
+                    });
+                }
             }
 
             return true;
         }
-        catch (e) {}
+        catch (e) { await caught(e) }
         return false;
     }
 
     async onSetValue(message) {
-        //  TODO *******************************************
+        try {
+            if (this.tree.hasNode(message.path)) {
+                this.tree.ensureNode(message.path).getValue().value = message.value;
+                return true;
+            }
+        }
+        catch (e) { await caught(e) }
+        return false;
     }
 });
 
 
 /*****
+ * There are the Registry and the Settings singletons.  The Registry resides
+ * in the #Controller process node and is the repository of the settings and
+ * values.  The Registry is always used via the single Settings object, which
+ * provides an API for managing Registry data.  The Settings singleton resides
+ * in every process, including the #CONTROLLER.  Settings is essentially a
+ * shell singleton, whose purpose is to simplify the communications with the
+ * #CONTROLLER-base Registry.
 *****/
 singleton('', class Settings {
-    constructor() {
-    }
-
     async clearSetting(path) {
-        //  TODO *******************************************
-        return this;
+        return await Process.callController({
+            name: 'RegistryClearSetting',
+            path: path,
+        });
     }
 
     async clearValue(path) {
-        //  TODO *******************************************
+        await Process.callController({
+            name: 'RegistryClearValue',
+            path: path,
+        });
+
         return this;
     }
 
-    async DeregisterProvider(provider) {
-        //  TODO *******************************************
-    }
-
     async getDefault(path) {
-        //  TODO *******************************************
+        return await Process.callController({
+            name: 'RegistryGetDefault',
+            path: path,
+        });
     }
 
     async getSetting(path) {
-        //  TODO *******************************************
+        return await Process.callController({
+            name: 'RegistryGetSetting',
+            path: path,
+        });
     }
 
     async getValue(path) {
@@ -152,7 +231,10 @@ singleton('', class Settings {
     }
 
     async hasSetting(path) {
-        //  TODO *******************************************
+        return await Process.callController({
+            name: 'RegistryHasSetting',
+            path: path,
+        });
     }
 
     async hasValue(path) {
@@ -162,12 +244,11 @@ singleton('', class Settings {
         });
     }
 
-    async listProviders() {
-        //  TODO *******************************************
-    }
-
-    async registerProvider(provider) {
-        //  TODO *******************************************
+    async listValues(path) {
+        return await Process.callController({
+            name: 'RegistryListValues',
+            path: typeof path == 'string' ? path : '',
+        });
     }
 
     async setSetting(path, value) {
@@ -181,14 +262,12 @@ singleton('', class Settings {
     }
 
     async setValue(path, value) {
-        //  TODO *******************************************
-    }
+        await Process.callController({
+            name: 'RegistrySetValue',
+            path: path,
+            value: value,
+        });
 
-    async toJson(path) {
-        //  TODO *******************************************
-    }
-
-    async toObject(path) {
-        //  TODO *******************************************
+        return this;
     }
 });

@@ -38,7 +38,7 @@
  * class, in which it will execute;
 *****/
 register('', class Server extends Emitter {
-    static settings = {
+    static registrySettings = {
         workers: 1,
     };
 
@@ -258,7 +258,7 @@ register('', class ServerWorker extends Emitter {
  * Servers only work if the process's node class matches the server class's
  * class name.  For workers, that name is {server-class}Worker.
 *****/
-register('', async function startServer(fqClassName) {
+register('', function startServer(fqClassName) {
     Process.sendController({
         name: '#StartServer',
         fqClassName: fqClassName,
@@ -274,16 +274,6 @@ execIn(Process.nodeClassController, () => {
 Process.on('#Spawned', async message => {
     let server;
     eval(`server = ${Process.getNodeClass()}`);
-
-    for (let clss of Data.enumerateClassHierarchy(server).reverse()) {
-        if (typeof clss.settings == 'object') {
-            for (let key in clss.settings) {
-                server.settings[key] = Data.clone(clss.settings[key]);
-            }
-        }
-    }
-    
-    await Settings.setSetting(`/${server.constructor.name}`, server.settings);
     await server.init();
     await server.start();
 });

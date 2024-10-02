@@ -63,6 +63,7 @@ require('./fileSystem.js');
 require('./tempFile.js');
 require('./process.js');
 require('./childProcess.js');
+require('./settings.js');
 require('./permission.js');
 require('./compression.js');
 require('./jose.js');
@@ -70,7 +71,6 @@ require('./server.js');
 require('./element.js');
 require('./bundle.js');
 require('./session.js');
-require('./settings.js');
 require('./resource.js');
 
 require('./net/socket.js');
