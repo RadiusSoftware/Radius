@@ -659,9 +659,10 @@ singleton('', class Process extends Emitter {
 *****/
 const registerSetting = (ns, target) => {
     if (globalThis.Settings) {
-        if (Process.getNodeClass() == Process.nodeClassController) {
+        const path = ns ? `/${ns}.${target.name}` : `/${target.name}`;
+
+        if (Settings.hasSetting(path)) {
             const settings = {};
-            const path = ns ? `/${ns}.${target.name}` : `/${target.name}`;
 
             for (let clss of Data.enumerateClassHierarchy(target).reverse()) {
                 if (typeof clss.registrySettings == 'object') {

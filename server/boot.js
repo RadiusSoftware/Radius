@@ -96,7 +96,7 @@ require('../nodejs/radius.js');
                 if (await FileSystem.isFile(path)) {
                     let dbmsSettings = fromJson((await FileSystem.readFile(path)).toString());
 
-                    if (typeof dbmsSettings == 'object' && Dbms.setRadiusDbms(dbmsSettings)) {
+                    if (typeof dbmsSettings == 'object' && Dbms.setDefaultDbms(dbmsSettings)) {
                         if (!(await Dbms.doesDatabaseExist(dbmsSettings))) {
                             await Dbms.createDatabase(dbmsSettings);
                         }

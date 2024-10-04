@@ -34,7 +34,7 @@
 registerIn(Process.nodeClassController, '', class Session {
     static agentTypes = mkStringSet('none', 'user', 'app');
     static authTypes = mkStringSet('none', 'password', 'key', 'oauth2');
-    static states = [ 'none', 'eula', 'unverified', 'verified', 'unpassword', 'ok' ];
+    static states = [ 'unauthenticated', 'unverified', 'verified', 'eula', 'password', 'ok' ];
 
     clearAccount() {
         this.account = null;

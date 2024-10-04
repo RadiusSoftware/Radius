@@ -33,29 +33,15 @@
 register('', class WebApp extends HttpX {
     static html = '';
 
-    constructor(libEntry, settings) {
-        super(libEntry, settings);
+    static registrySettings = {
+        timeout: 12*60*60000,
+        enableWebsocket: false,
+    };
+
+    constructor(libEntry) {
+        super(libEntry);
         this.webAppPath = __filename;
         this.webAppHtmlPath = Path.join(__filename.replace('.js', ''), '../webApp.html');
-        this.permissionVerse = mkPermissionVerse().setPermissions(this.settings.permissions);
-        this.acceptCookiesName = `${this.libEntry.fqClassName}.accept`;
-
-        this.api = mkApi(this.permissionVerse);
-        const webapp = this;
-
-        this.setEndpoints(
-            {}, function GetApi() {
-                return webapp.api.getEndpointNames();
-            },
-
-            {}, function GetBundle(name, lang) {
-                return Bundles.getBundle(name, lang);
-            },
-
-            {}, function ListBundles() {
-                return Bundles.listBundles();
-            },
-        );
     }
 
     async establishSession(req, rsp) {
@@ -186,7 +172,26 @@ register('', class WebApp extends HttpX {
     }
 
     async init() {
-        super.init();
+        await super.init();
+        this.permissionVerse = mkPermissionVerse().setPermissions(this.settings.permissions);
+        this.acceptCookiesName = `${this.libEntry.fqClassName}.accept`;
+
+        this.api = mkApi(this.permissionVerse);
+        const webapp = this;
+
+        this.setEndpoints(
+            {}, function GetApi() {
+                return webapp.api.getEndpointNames();
+            },
+
+            {}, function GetBundle(name, lang) {
+                return Bundles.getBundle(name, lang);
+            },
+
+            {}, function ListBundles() {
+                return Bundles.listBundles();
+            },
+        );
 
         if (!WebApp.html) {
             WebApp.html = await FileSystem.readFileAsString(this.webAppHtmlPath);

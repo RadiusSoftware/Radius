@@ -45,16 +45,9 @@
  * handlers must be overriden by the subclass in order to make this functional.
 *****/
 register('', class HttpX extends Emitter {
-    constructor(libEntry, settings) {
+    constructor(libEntry) {
         super();
         this.libEntry = libEntry;
-
-        if (typeof settings == 'object') {
-            this.settings = settings;
-        }
-        else {
-            this.settings = {};
-        }
     }
 
     clearSetting(key) {
@@ -131,6 +124,8 @@ register('', class HttpX extends Emitter {
     }
 
     async init() {
+        let path = fqnClassName(this);
+        this.settings = await Settings.getValue(path);
         this.uuid = this.libEntry.uuid;
         this.prototype = Reflect.getPrototypeOf(this);
         this.className = this.prototype.constructor.name;
@@ -143,11 +138,6 @@ register('', class HttpX extends Emitter {
         this.requiredPermissions = this.libEntry.requiredPermissions;
         this.settings.sessionCookie = Session.getSessionCookieName();
         await FileSystem.recurseModules(this.httpXDir);
-        return this;
-    }
-
-    setSetting(key, value) {
-        this.settings[key] = value;
         return this;
     }
 });

@@ -86,9 +86,11 @@ registerIn('HttpServer', '', class HttpLibrary {
                 let libEntry = this.paths[message.path];
 
                 if (libEntry.once) {
+                    // TODO ***********************************************************
                 }
                 
                 if (libEntry.timeout) {
+                    // TODO ***********************************************************
                 }
 
                 return libEntry;

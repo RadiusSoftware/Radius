@@ -39,6 +39,16 @@
 
     
     /*****
+     * A set of universally available symbols that have specific meanings and uses
+     * across all framework, Radius, and custom developed code.
+    *****/
+    globalThis.SymEmpty = Symbol('Empty');
+    globalThis.SymFail  = Symbol('Fail');
+    globalThis.SymNull  = Symbol('Null');
+    globalThis.SymOk    = Symbol('OK');
+
+    
+    /*****
      * This class provides support for managing namespaces and fully qualified
      * names, fqn.  We're using the framework registration due to dependencies.
      * This class and the subsequent mkFqn() function are used by the core
@@ -206,6 +216,36 @@
             throw new Error(`singleton(), name already exists in container: ${fqn.getNamespace()}`);
         }
     };
+
+
+    /*****
+     * Simple utility that searches for namespace information associated with
+     * the passed argument's contructor and uses that information to decided
+     * which formula to use for building the fully qualified type name.  Then
+     * return the properly built type name.  The second utility genearates a
+     * fully qualified maker name.
+    *****/
+    register('', function fqnClassName(arg) {
+        let func;
+
+        if (typeof arg == 'function') {
+            func = arg;
+        }
+        else if (typeof arg == 'object') {
+            func = Reflect.getPrototypeOf(arg).constructor;
+        }
+
+        if (func) {
+            if ('#Namespace' in func && func['#Namespace']) {
+                return `${func['#Namespace']}.${func.name}`;
+            }
+            else {
+                return `${func.name}`;
+            }
+        }
+
+        return '';
+    });
 
 
     /*****

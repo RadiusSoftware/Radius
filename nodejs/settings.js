@@ -22,6 +22,26 @@
 
 
 /*****
+ * This is an illustrative stub showing the required API for impelemnting a data
+ * provider for the single-instance Registry object.  This stub actually does
+ * nothing, but demonstrates the interface.  It is also the default, builtin data
+ * provider within the framework.  The false returns that nothing is actually
+ * available in this provider.
+*****/
+singletonIn(Process.nodeClassController, '', class RegistryStorageManagerStub {
+    async deleteSetting(path) {
+    }
+
+    async retrieveValue(path) {
+        return SymEmpty;
+    }
+
+    async storeValue(path, value) {
+    }
+});
+
+
+/*****
  * There are the Registry and the Settings singletons.  The Registry resides
  * in the #Controller process node and is the repository of the settings and
  * values.  The Registry is always used via the single Settings object, which
@@ -35,9 +55,10 @@
 singletonIn(Process.nodeClassController, '', class Registry {
     constructor() {
         this.tree = mkNodeTree();
+        this.storage = RegistryStorageManagerStub;
         mkHandlerProxy(Process, 'Registry', this);
     }
-
+ 
     async onClearSetting(message) {
         try {
             if (this.tree.hasNode(message.path)) {
@@ -49,11 +70,21 @@ singletonIn(Process.nodeClassController, '', class Registry {
         return false;
     }
 
+    async onClearStorageManager(message) {
+        try {
+            this.storage = RegistryStorageManagerStub();
+            return true;
+        }
+        catch (e) { await caught(e) }
+        return false;
+    }
+
     async onClearValue(message) {
         try {
             if (this.tree.hasNode(message.path)) {
                 let node = this.tree.ensureNode(message.path);
                 node.getValue().value = node.getValue().def;
+                //  TODO -- storage manager action *************************************
                 return true;
             }
         }
@@ -140,30 +171,38 @@ singletonIn(Process.nodeClassController, '', class Registry {
         try {
             if (!this.tree.hasNode(message.path)) {
                 let node = this.tree.ensureNode(message.path);
+                let defaultValue = Data.clone(message.value);
+                let storedValue = await this.storage.retrieveValue(message.path);
+                let value;
 
-                if (Array.isArray(message.value)) {
-                    node.setValue({
-                        type: ArrayType,
-                        def: message.value,
-                        value: message.value,
-                    });
-                }
-                else if (typeof message.value == 'object') {
-                    node.setValue({
-                        type: ObjectType,
-                        def: message.value,
-                        value: message.value,
-                    });
+                if (storedValue !== SymEmpty) {
+                    value = this.reconcile(defaultValue, storedValue);
                 }
                 else {
-                    node.setValue({
-                        type: getJsType(message.value),
-                        def: message.value,
-                        value: message.value,
-                    });
+                    value = Data.clone(defaultValue);
                 }
+
+                node.setValue({
+                    type: getJsType(defaultValue),
+                    def: defaultValue,
+                    value: value,
+                });
             }
 
+            return true;
+        }
+        catch (e) { await caught(e) }
+        return false;
+    }
+
+    async onSetStorageManager(message) {
+        try {
+            let maker;
+            let storageManager;
+
+            eval(`maker = fqnClassMakerName(${message.storageManagerClassName});`);
+            eval(`storageManager = ${maker}()`);
+            this.storage = storageManager;
             return true;
         }
         catch (e) { await caught(e) }
@@ -173,12 +212,36 @@ singletonIn(Process.nodeClassController, '', class Registry {
     async onSetValue(message) {
         try {
             if (this.tree.hasNode(message.path)) {
-                this.tree.ensureNode(message.path).getValue().value = message.value;
+                let node = this.tree.getNode(message.path);
+                //  TODO -- storage manager action *************************************
+                //this.tree.ensureNode(message.path).getValue().value = message.value;
                 return true;
             }
         }
         catch (e) { await caught(e) }
         return false;
+    }
+
+    reconcile(defaultValue, storedValue) {
+        let defaultType = getJsType(defaultValue);
+        let storedType = getJsType(storedValue);
+
+        if (defaultType !== ArrayType && defaultType !== ObjectType) {
+            if (defaultType === storedType) {
+                return storedValue;
+            }
+            else {
+                return defaultValue;
+            }
+        }
+
+        let value = defaultType.getDefault();
+        let stack = [];
+
+        while (stack) {
+        }
+
+        return value;
     }
 });
 
@@ -198,6 +261,14 @@ singleton('', class Settings {
             name: 'RegistryClearSetting',
             path: path,
         });
+    }
+
+    async setStorageManager() {
+        await Process.callController({
+            name: 'RegistryClearStorageManager',
+        });
+
+        return this;
     }
 
     async clearValue(path) {
@@ -256,6 +327,15 @@ singleton('', class Settings {
             name: 'RegistrySetSetting',
             path: path,
             value: value,
+        });
+
+        return this;
+    }
+
+    async setStorageManager(storageManagerClassName) {
+        await Process.callController({
+            name: 'RegistrySetStorageManager',
+            storageManagerClassName: storageManagerClassName,
         });
 
         return this;

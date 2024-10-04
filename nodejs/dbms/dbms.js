@@ -31,7 +31,7 @@ singleton('', class Dbms {
     constructor() {
         this.dbmsMap = {};
         this.dbmsPools = {};
-        this.radius = null;
+        this.default = null;
     }
 
     async alterColumnSize(settings, tableName, columnName, size) {
@@ -228,8 +228,8 @@ singleton('', class Dbms {
         }
     }
 
-    hasRadiusDbms() {
-        return this.radius != null;
+    hasDefaultDbms() {
+        return this.default != null;
     }
 
     isSupported(dbmsType) {
@@ -240,8 +240,8 @@ singleton('', class Dbms {
         return Object.keys(this.dbms);
     }
 
-    setRadiusDbms(settings) {
-        this.radius = settings;
+    setDefaultDbms(settings) {
+        this.default = settings;
         return this;
     }
 });
@@ -257,8 +257,8 @@ register('', async function dbConnect(settings) {
     if (settings) {
         return await Dbms.connect(settings);
     }
-    else if (Dbms.radius) {
-        return await Dbms.connect(Dbms.radius);
+    else if (Dbms.default) {
+        return await Dbms.connect(Dbms.default);
     }
 
     return false;
