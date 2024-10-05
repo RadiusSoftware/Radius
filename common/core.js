@@ -39,16 +39,6 @@
 
     
     /*****
-     * A set of universally available symbols that have specific meanings and uses
-     * across all framework, Radius, and custom developed code.
-    *****/
-    globalThis.SymEmpty = Symbol('Empty');
-    globalThis.SymFail  = Symbol('Fail');
-    globalThis.SymNull  = Symbol('Null');
-    globalThis.SymOk    = Symbol('OK');
-
-    
-    /*****
      * This class provides support for managing namespaces and fully qualified
      * names, fqn.  We're using the framework registration due to dependencies.
      * This class and the subsequent mkFqn() function are used by the core

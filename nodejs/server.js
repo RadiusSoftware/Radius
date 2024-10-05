@@ -81,7 +81,8 @@ register('', class Server extends Emitter {
     }
 
     async init() {
-        this.settings = await Settings.getValue(`/${this.className}`);
+        await Settings.setClassSettings(this);
+        this.settings = await Settings.getValue(this.getSettingsPath());
         return this;
     }
 

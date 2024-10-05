@@ -42,6 +42,61 @@ singletonIn(Process.nodeClassController, '', class RegistryStorageManagerStub {
 
 
 /*****
+*****/
+register('', class Setting {
+    constructor(path, defaultValue) {
+        this.path = path;
+        this.defaultValue = Data.clone(defaultValue);
+        this.value = Data.clone(defaultValue);
+
+        this.struct = {
+            type: getJsType(defaultValue),
+        };
+
+        if (Array.isArray(defaultValue)) {
+        }
+        else if (typeof defaultValue == 'object') {
+            this.analyzeObjectStructure(defaultValue);
+
+            if (typeof struct == 'object') {
+                this.struct.getRoot().setValue({
+                    type: ObjectType,
+                    def: Data.clone(defaultValue),
+                });
+            }
+        }
+
+        console.log(this);
+        console.log();
+    }
+
+    getPath() {
+        return this.path;
+    }
+
+    setValue(value) {
+    }
+
+    shape(struct, value) {
+    }
+
+    structifyArray(array) {
+        if (array.length) {
+        }
+
+        return false;
+    }
+
+    structifyObject(object) {
+        if (object !== null && Object.keys(object).length) {
+        }
+
+        false;
+    }
+});
+
+
+/*****
  * There are the Registry and the Settings singletons.  The Registry resides
  * in the #Controller process node and is the repository of the settings and
  * values.  The Registry is always used via the single Settings object, which
@@ -59,7 +114,7 @@ singletonIn(Process.nodeClassController, '', class Registry {
         mkHandlerProxy(Process, 'Registry', this);
     }
  
-    async onClearSetting(message) {
+    async onClearSettings(message) {
         try {
             if (this.tree.hasNode(message.path)) {
                 this.tree.clearNode(message.path);
@@ -102,7 +157,7 @@ singletonIn(Process.nodeClassController, '', class Registry {
         return false;
     }
 
-    async onGetSetting(message) {
+    async onGetSettings(message) {
         try {
             if (this.tree.hasNode(message.path)) {
                 return this.tree.getValue(message.path);
@@ -167,10 +222,21 @@ singletonIn(Process.nodeClassController, '', class Registry {
         return false;
     }
 
-    async onSetSetting(message) {
+    async onSetSettings(message) {
         try {
             if (!this.tree.hasNode(message.path)) {
                 let node = this.tree.ensureNode(message.path);
+
+                node.setValue({
+                    type: getJsType(message.value),
+                    def: message.value,
+                    value: message.value,
+                });
+
+                /*
+                node.setValue(mkSetting(message.path, message.value));
+
+                /*
                 let defaultValue = Data.clone(message.value);
                 let storedValue = await this.storage.retrieveValue(message.path);
                 let value;
@@ -181,12 +247,7 @@ singletonIn(Process.nodeClassController, '', class Registry {
                 else {
                     value = Data.clone(defaultValue);
                 }
-
-                node.setValue({
-                    type: getJsType(defaultValue),
-                    def: defaultValue,
-                    value: value,
-                });
+                */
             }
 
             return true;
@@ -221,28 +282,6 @@ singletonIn(Process.nodeClassController, '', class Registry {
         catch (e) { await caught(e) }
         return false;
     }
-
-    reconcile(defaultValue, storedValue) {
-        let defaultType = getJsType(defaultValue);
-        let storedType = getJsType(storedValue);
-
-        if (defaultType !== ArrayType && defaultType !== ObjectType) {
-            if (defaultType === storedType) {
-                return storedValue;
-            }
-            else {
-                return defaultValue;
-            }
-        }
-
-        let value = defaultType.getDefault();
-        let stack = [];
-
-        while (stack) {
-        }
-
-        return value;
-    }
 });
 
 
@@ -258,7 +297,7 @@ singletonIn(Process.nodeClassController, '', class Registry {
 singleton('', class Settings {
     async clearSetting(path) {
         return await Process.callController({
-            name: 'RegistryClearSetting',
+            name: 'RegistryClearSettings',
             path: path,
         });
     }
@@ -287,9 +326,9 @@ singleton('', class Settings {
         });
     }
 
-    async getSetting(path) {
+    async getSettings(path) {
         return await Process.callController({
-            name: 'RegistryGetSetting',
+            name: 'RegistryGetSettings',
             path: path,
         });
     }
@@ -322,9 +361,33 @@ singleton('', class Settings {
         });
     }
 
-    async setSetting(path, value) {
+    async setClassSettings(obj) {
+        let settings = {};
+        let path = fqnClassName(obj);
+        let clss = Reflect.getPrototypeOf(obj).constructor;
+
+        for (let classOf of Data.enumerateClassHierarchy(clss).reverse()) {
+            if (typeof classOf.registrySettings == 'object') {
+                for (let key in classOf.registrySettings) {
+                    settings[key] = Data.clone(classOf.registrySettings[key]);
+                }
+            }
+        }
+
+        if (Object.keys(settings).length) {
+            await Process.callController({
+                name: 'RegistrySetSettings',
+                path: path,
+                value: settings,
+            });
+        }
+
+        return path;
+    }
+
+    async setSettings(path, value) {
         await Process.callController({
-            name: 'RegistrySetSetting',
+            name: 'RegistrySetSettings',
             path: path,
             value: value,
         });

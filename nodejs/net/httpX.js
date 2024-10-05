@@ -124,7 +124,7 @@ register('', class HttpX extends Emitter {
     }
 
     async init() {
-        let path = fqnClassName(this);
+        let path = await Settings.setClassSettings(this);
         this.settings = await Settings.getValue(path);
         this.uuid = this.libEntry.uuid;
         this.prototype = Reflect.getPrototypeOf(this);

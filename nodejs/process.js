@@ -650,57 +650,12 @@ singleton('', class Process extends Emitter {
 
 
 /*****
- * Specialized function that is called when any of the register and singleton
- * functions are called.  Its purpose is to enumerate the class hierarchy and
- * search for a static property called "registrySettings".  registrySettings
- * will be used for registering settings associated with that class to ensure
- * that settings definitions are recorded when a class is first loaded in the
- * #CONTROLLER node.
-*****/
-const registerSetting = (ns, target) => {
-    if (globalThis.Settings) {
-        const path = ns ? `/${ns}.${target.name}` : `/${target.name}`;
-
-        if (Settings.hasSetting(path)) {
-            const settings = {};
-
-            for (let clss of Data.enumerateClassHierarchy(target).reverse()) {
-                if (typeof clss.registrySettings == 'object') {
-                    for (let key in clss.registrySettings) {
-                        settings[key] = Data.clone(clss.registrySettings[key]);
-                    }
-                }
-            }
-
-            if (Object.keys(settings).length) {
-                Settings.setSetting(path, settings);
-            }
-        }
-    }
-};
-
-
-/*****
  * Radius processes are grouped and typed using a "ClassName".  The ClassName
  * can be used for controlling source code execution using the functions shown
  * below.  In this manner, a process's ClassName can be used to avoid loading
  * all code except for the code that's relevant to that process's features and
  * functionality.
 *****/
-const coreRegister = globalThis.register;
-const coreSingleton = globalThis.singleton;
-
-globalThis.register = function(ns, arg) {
-    if (coreRegister(ns, arg)) {
-        registerSetting(ns, arg);
-    }
-};
-
-globalThis.singleton = function(ns, arg, ...args) {
-    coreSingleton(ns, arg, ...args);
-    registerSetting(ns, arg);
-};
-
 register('', async function execIn(nodeClass, func) {
     if (Array.isArray(nodeClass)) {
         if (nodeClass.filter(nodeClass => nodeClass == Process.getNodeClass()).length) {
@@ -725,8 +680,6 @@ register('', function registerIn(nodeClass, ns, arg) {
             register(ns, arg);
         }
     }
-
-    registerSetting(ns, arg);
 });
 
 register('', async function singletonIn(nodeClass, ns, arg, ...args) {
@@ -740,8 +693,6 @@ register('', async function singletonIn(nodeClass, ns, arg, ...args) {
             singleton(ns, arg, ...args);
         }
     }
-
-    registerSetting(ns, arg);
 });
 
 register('', async function execNotIn(nodeClass, func) {
@@ -755,8 +706,6 @@ register('', async function execNotIn(nodeClass, func) {
             await func();
         }
     }
-
-    registerSetting(ns, arg);
 });
 
 register('', function registerNotIn(nodeClass, ns, arg) {
@@ -770,8 +719,6 @@ register('', function registerNotIn(nodeClass, ns, arg) {
             register(ns, arg);
         }
     }
-
-    registerSetting(ns, arg);
 });
 
 register('', async function singletonNotIn(nodeClass, ns, arg, ...args) {
@@ -785,6 +732,4 @@ register('', async function singletonNotIn(nodeClass, ns, arg, ...args) {
             singleton(ns, arg, ...args);
         }
     }
-
-    registerSetting(ns, arg);
 });

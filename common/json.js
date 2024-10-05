@@ -20,6 +20,19 @@
  * THE SOFTWARE.
 *****/
 
+    
+/*****
+ * A set of universally available symbols that have specific meanings and uses
+ * across all framework, Radius, and custom developed code.  Sometimes null or
+ * false is just not enough!
+*****/
+const universalSymbols = {
+    Empty: globalThis.SymEmpty = Symbol('Empty'),
+    Fail:  globalThis.SymFail = Symbol('Fail'),
+    Null:  globalThis.SymNull = Symbol('Null'),
+    OK:    globalThis.SymOk = Symbol('OK'),
+};
+
 
 /*****
  * JSON conversion for dates is somewhat problematic.  Dates are converted to
@@ -99,7 +112,13 @@ register('', function toJson(value, humanReadable) {
         else if (Number.isNaN(value)) {
             return { '#NAN': 0 };
         }
-        else if (typeof value == 'symbol') {                
+        else if (typeof value == 'symbol') {
+            if(value.description in universalSymbols) {
+                if (value === universalSymbols[value.description]) {
+                    return { '#SYMBOl' : value.description };
+                }
+            }
+
             return undefined;
         }
         else if (value instanceof Time) {
@@ -149,6 +168,9 @@ register('', function fromJson(json) {
             }
             else if ('#NAN' in value) {
                 return NaN;
+            }
+            else if ('#SYMBOL' in value) {
+                return universalSymbols[value['#SYMBOL']];
             }
             else if ('#TIME' in value) {
                 return mkTime(value['#TIME']);
