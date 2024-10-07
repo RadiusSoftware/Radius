@@ -126,7 +126,7 @@ singletonIn(Process.nodeClassController, '', class Registry {
     async onGetValue(message) {
         try {
             if (this.tree.hasNode(message.path)) {
-                return this.tree.getValue(message.path).getValue();
+                return this.tree.getValue(message.path).value;
             }
         }
         catch (e) { await caught(e) }
@@ -134,19 +134,14 @@ singletonIn(Process.nodeClassController, '', class Registry {
     }
 
     async onHasSetting(message) {
-        /*
         try {
-            if (this.tree.hasNode(message.path)) {
-                return this.tree.getValue(message.path).value != null;
-            }
+            return this.tree.hasNode(message.path);
         }
         catch (e) { await caught(e) }
         return false;
-        */
     }
 
     async onHasValue(message) {
-        /*
         try {
             if (this.tree.hasNode(message.path)) {
                 return this.tree.getValue(message.path).value != null;
@@ -154,7 +149,6 @@ singletonIn(Process.nodeClassController, '', class Registry {
         }
         catch (e) { await caught(e) }
         return false;
-        */
     }
 
     async onListValues(message) {
@@ -197,26 +191,14 @@ singletonIn(Process.nodeClassController, '', class Registry {
         try {
             if (!this.tree.hasNode(message.path)) {
                 let node = this.tree.ensureNode(message.path);
-                let dataStructure = mkDataStructure(message.value);
-                
-                // ***********************************************************************************
-                // ***********************************************************************************
-                //console.log(dataStructure.toString());
-                let json = dataStructure.toJson();
-                let ds2 = mkDataStructure(json);
-                console.log(ds2.toJson(true));
-
-                console.log();
-                // ***********************************************************************************
-                // ***********************************************************************************
-
-                let storedValue = await this.storageManager.retrieveValue(settings.getPath());
+                let dataStruct = mkDataStructure(message.value);
+                node.setValue({ dataStruct: dataStruct, value: message.value });
+                let storedValue = await this.storage.retrieveValue(node.getPath());
 
                 if (storedValue !== SymEmpty) {
-                    settings.setValue(storedValue);
+                    let shaped = dataStructure.shapeValue(storedValue);
+                    node.getValue().value = shaped;
                 }
-
-                node.setValue(settings);
             }
 
             return true;
@@ -240,6 +222,8 @@ singletonIn(Process.nodeClassController, '', class Registry {
     }
 
     async onSetValue(message) {
+        console.log(message);
+        console.log();
         /*
         try {
             if (this.tree.hasNode(message.path)) {

@@ -397,6 +397,38 @@ register('', class DataStructure {
         return enumerated;
     }
 
+    equalsStruct(dataStruct) {
+        if (dataStruct instanceof DataStructure) {
+            let stack = [{ struct1: this.struct, struct2: dataStruct.struct }];
+
+            while (stack.length) {
+                let { struct1, struct2 } = stack.pop();
+                if (struct1.depth != struct2.depth) return false;
+                if (struct1.type != struct2.type) return false;
+                if (struct1.arrayOf != struct2.arrayOf) return false;
+
+                if (struct1.type == ObjectType) {
+                    if (Object.keys(struct1.struct).length != Object.keys(struct2.struct).length) return false;
+
+                    for (let key in struct1.struct) {
+                        if (!(key in struct2.struct)) {
+                            return false;
+                        }
+
+                        stack.push({
+                            struct1: struct1.struct[key],
+                            struct2: struct2.struct[key],
+                        });
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
     fromJson() {
         if (this.jso.depth !== 0) throw 'error';
         if (typeof this.jso.arrayOf != 'boolean') throw 'error';
@@ -423,9 +455,9 @@ register('', class DataStructure {
                         eval('type = globalThis[entry.jso[key].type]');
     
                         entry.struct.struct[name] = {
-                            depth: entry.jso.depth,
+                            depth: entry.jso[key].depth,
                             type: type,
-                            arrayOf: entry.jso.arrayOf,
+                            arrayOf: entry.jso[key].arrayOf,
                         };
     
                         if (type == ObjectType) {
