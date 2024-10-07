@@ -323,3 +323,221 @@ singleton('', class Data {
         return flat;
     }
 });
+
+
+/*****
+ * A data-structure is contructed with a value and the end result is a tree-like
+ * structure representing the topology and types of the data encountered, it's
+ * the data structure of the passed value.  Given that a DataStruture is readily
+ * converted to/from JSON, it's simply to pass data structures in interprocess
+ * communications as needed.  When the DataStructure constructor is called with
+ * JSON, the original DataStructure will be reconstituted to its former glory.
+*****/
+register('', class DataStructure {
+    constructor(value) {
+        try {
+            this.jso = fromJson(value);
+            this.fromJson();
+        }
+        catch (e) {
+            let arrayOf = false;
+            let type = getJsType(value);
+
+            if (Array.isArray(value)) {
+                arrayOf = true;
+                value = value[0];
+                type = getJsType(value);
+            }
+
+            if (type == ObjectType) {
+                this.struct = {
+                    depth: 0,
+                    type: ObjectType,
+                    arrayOf: arrayOf,
+                    struct: {},
+                    value: value,
+                };
+
+                this.structify(this.struct);
+            }
+            else {
+                this.struct = {
+                    depth: 0,
+                    type: type,
+                    arrayOf: arrayOf,
+                };
+            }
+        }
+        finally {
+            delete this.jso;
+        }
+    }
+
+    enumerate() {
+        let enumerated = [];
+        let stack = [{ key: '', struct: this.struct }];
+
+        while(stack.length) {
+            let item = stack.pop();
+
+            enumerated.push({
+                key: item.key,
+                depth: item.struct.depth,
+                type: item.struct.type,
+                arrayOf: item.struct.arrayOf,
+            });
+
+            if (item.struct.struct) {
+                for (let key of Object.keys(item.struct.struct).reverse()) {
+                    stack.push({ key: key, struct: item.struct.struct[key] });
+                }
+            }
+        }
+
+        return enumerated;
+    }
+
+    fromJson() {
+        if (this.jso.depth !== 0) throw 'error';
+        if (typeof this.jso.arrayOf != 'boolean') throw 'error';
+
+        let type;
+        eval('type = globalThis[this.jso.type]');
+
+        let rootStruct = {
+            depth: this.jso.depth,
+            type: type,
+            arrayOf: this.jso.arrayOf,
+        }
+
+        if (rootStruct.type == ObjectType) {
+            rootStruct.struct = {};
+            let stack = [{ struct: rootStruct, jso: this.jso }];
+
+            while (stack.length) {
+                let entry = stack.pop();
+
+                for (let key in entry.jso) {
+                    if (key.startsWith('~~')) {
+                        let name = key.substring(2);
+                        eval('type = globalThis[entry.jso[key].type]');
+    
+                        entry.struct.struct[name] = {
+                            depth: entry.jso.depth,
+                            type: type,
+                            arrayOf: entry.jso.arrayOf,
+                        };
+    
+                        if (type == ObjectType) {
+                            entry.struct.struct[name].struct = {};
+                            stack.push({ struct: entry.struct.struct[name], jso: entry.jso[key] });
+                        }
+                    }
+                }
+            }
+        }
+
+        this.struct = rootStruct;
+    }
+
+    shapeValue(value) {
+        // TODO **********************************************
+    }
+
+    structify(struct) {
+        let stack = [ struct ];
+
+        while (stack.length) {
+            let struct = stack.pop();
+            let value = struct.value;
+            delete struct.value;
+
+            if (struct.type == ObjectType) {
+                for (let key in value) {
+                    let arrayOf = false;
+                    let property = value[key];
+                    let type = getJsType(property);
+
+                    if (Array.isArray(property)) {
+                        arrayOf = true;
+                        property = property[0];
+                        type = getJsType(property);
+                    }
+
+                    if (type == ObjectType) {
+                        struct.struct[key] = {
+                            depth: struct.depth+ 1,
+                            type: type,
+                            arrayOf: arrayOf,
+                            struct: {},
+                            value: property,
+                        };
+
+                        stack.push(struct.struct[key]);
+                    }
+                    else {
+                        struct.struct[key] = {
+                            depth: struct.depth+ 1,
+                            type: type,
+                            arrayOf: arrayOf,
+                        };
+                    }
+                }
+            }
+        }
+
+        return struct;
+    }
+
+    [Symbol.iterator]() {
+        return this.enumerate()[Symbol.interator]();
+    }
+
+    toJso() {
+        let stack = [];
+
+        let jso = {
+            depth: this.struct.depth,
+            type: this.struct.type.getName(),
+            arrayOf: this.struct.arrayOf,
+        };
+
+        if (this.struct.type == ObjectType) {
+            stack.push({ struct: this.struct, jso: jso });
+        }
+
+        while (stack.length) {
+            let entry = stack.pop();
+
+            for (let key of Object.keys(entry.struct.struct)) {
+                let jso = {
+                    depth: entry.struct.struct[key].depth,
+                    type: entry.struct.struct[key].type.getName(),
+                    arrayOf: entry.struct.struct[key].arrayOf,
+                };
+
+                entry.jso[`~~${key}`] = jso;
+
+                if (entry.struct.struct[key].type == ObjectType) {
+                    stack.push({ struct: entry.struct.struct[key], jso: jso })
+                }
+            }
+        }
+
+        return jso;
+    }
+
+    toJson(readable) {
+        return toJson(this.toJso(), readable !== undefined);
+    }
+
+    toString() {
+        return this.enumerate().map(struct => {
+            return `${TextUtils.pad(struct.depth*4)}${struct.key}   ${struct.arrayOf ? `[ ${struct.type.getName()} ]` : struct.type.getName()}`;
+        }).join('\n');
+    }
+
+    validateValue(value) {
+        // TODO **********************************************
+    }
+});

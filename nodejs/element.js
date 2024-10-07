@@ -568,7 +568,7 @@ register('', class DocElement extends DocNode {
 
         while (stack.length) {
             let entry = stack.pop();
-            const indent = hr ? TextUtils.fillWithChar(entry.indent*this.indentSize, ' ') : '';
+            const indent = hr ? TextUtils.pad(entry.indent*this.indentSize, ' ') : '';
 
             if (entry.node instanceof NpmHtml.HTMLElement) {
                 if (entry.node.rawTagName in voidTags) {

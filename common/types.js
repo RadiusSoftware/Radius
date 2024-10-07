@@ -29,6 +29,9 @@
  * objects derived from ProtoType.
 *****/
 register('', class BaseType {
+    getName() {
+        return Reflect.getPrototypeOf(this).constructor.name;
+    }
 });
 
 /*****

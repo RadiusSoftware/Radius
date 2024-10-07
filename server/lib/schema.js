@@ -31,7 +31,7 @@ register('radius', function mkSchema() {
         name: 'Radius',
         tables: [
             {
-                name: 'email',
+                name: 'emailAddr',
                 type: 'object',
                 columns: [
                     { name: 'user', type: StringType, size: 100 },
@@ -51,7 +51,18 @@ register('radius', function mkSchema() {
                 ]
             },
             {
-                name: 'org',
+                name: 'setting',
+                type: 'object',
+                columns: [
+                    { name: 'path', type: StringType, size: 50 },
+                    { name: 'value', type: JsonType },
+                ],
+                indexes: [
+                    { columnItems: [ { column: 'path', direction: 'asc' } ]},
+                ]
+            },
+            {
+                name: 'team',
                 type: 'object',
                 columns: [
                     { name: 'name', type: StringType, size: 80 },
@@ -66,25 +77,14 @@ register('radius', function mkSchema() {
                 ]
             },
             {
-                name: 'setting',
-                type: 'object',
-                columns: [
-                    { name: 'path', type: StringType, size: 50 },
-                    { name: 'value', type: JsonType },
-                ],
-                indexes: [
-                    { columnItems: [ { column: 'path', direction: 'asc' } ]},
-                ]
-            },
-            {
                 name: 'user',
                 type: 'object',
                 columns: [
-                    { name: 'email', type: StringType, size: 100 },
-                    { name: 'emailId', type: KeyType },
+                    { name: 'emailAddr', type: StringType, size: 100 },
+                    { name: 'emailAddrId', type: KeyType },
                     { name: 'firstName', type: StringType, size: 50 },
                     { name: 'lastName', type: StringType, size: 50 },
-                    { name: 'orgId', type: KeyType },
+                    { name: 'teamId', type: KeyType },
                     { name: 'active', type: BooleanType },
                     { name: 'mfaType', type: StringType, size: 20 },
                     { name: 'mfaSettings', type: JsonType },
@@ -95,9 +95,9 @@ register('radius', function mkSchema() {
                     { name: 'settings', type: JsonType },
                 ],
                 indexes: [
-                    { columnItems: [ { column: 'email', direction: 'asc' } ]},
-                    { columnItems: [ { column: 'emailId', direction: 'asc' } ]},
-                    { columnItems: [ { column: 'orgId', direction: 'asc' } ]},
+                    { columnItems: [ { column: 'emailAddr', direction: 'asc' } ]},
+                    { columnItems: [ { column: 'emailAddrId', direction: 'asc' } ]},
+                    { columnItems: [ { column: 'teamId', direction: 'asc' } ]},
                     { columnItems: [ { column: 'firstName', direction: 'asc' } ]},
                     { columnItems: [ { column: 'firstName', direction: 'asc' }, { column: 'lastName', direction: 'asc' }]},
                 ]

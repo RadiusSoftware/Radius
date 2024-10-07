@@ -70,50 +70,6 @@ singleton('', class TextUtils {
     }
 
     /*****
-     * This utility attempts to provide an accurate fixed-width numberic value based
-     * on the provided width parameter.  If the number is wider thant width, a value
-     * of all asterisks will be returned.  Other wise, the number is returned and
-     * will be zero-padded as necessary to hit the width specified in the call.
-    *****/
-    fillNumber(n, width) {
-        if (typeof n == 'number' || typeof n == 'bigint') {
-            let text = n.toString();
-            let len = text.length;
-    
-            if (len == width) {
-                return text;
-            }
-            else if (len > width) {
-                return this.fillWithChar(width, '*');
-            }
-            else {
-                return [
-                    this.fillWithChar(width - len, '0'),
-                    text,
-                ].join('');
-            }
-        }
-    
-        return '';
-    }
-    
-    /*****
-     * Takes a single character and builds a string that's as long as the specified
-     * count parameter.  It's not padding, it's just a repeating sequence of the
-     * same char that's returned as a string.
-    *****/
-    fillWithChar(count, char) {
-        char = char === undefined ? '' : char;
-        let chars = [];
-    
-        for (let i = 0; i < count; i++) {
-            chars.push(char);
-        }
-    
-        return chars.join('');
-    }
-
-    /*****
      * Provides a neat utility to check whether a value is a proper hex-encoded
      * string.  Hex encoded strings are useful to use in some cases because they
      * have no special symbols or other cap to interfer with web and URL values.
@@ -135,6 +91,50 @@ singleton('', class TextUtils {
         }
 
         return false;
+    }
+    
+    /*****
+     * Takes a single character and builds a string that's as long as the specified
+     * count parameter.  It's not padding, it's just a repeating sequence of the
+     * same char that's returned as a string.
+    *****/
+    pad(count, char) {
+        typeof char == 'string' ? null : char = ' ';
+        let chars = [];
+    
+        for (let i = 0; i < count; i++) {
+            chars.push(char);
+        }
+    
+        return chars.join('');
+    }
+
+    /*****
+     * This utility attempts to provide an accurate fixed-width numberic value based
+     * on the provided width parameter.  If the number is wider thant width, a value
+     * of all asterisks will be returned.  Other wise, the number is returned and
+     * will be zero-padded as necessary to hit the width specified in the call.
+    *****/
+    padNumber(n, width) {
+        if (typeof n == 'number' || typeof n == 'bigint') {
+            let text = n.toString();
+            let len = text.length;
+    
+            if (len == width) {
+                return text;
+            }
+            else if (len > width) {
+                return this.pad(width, '*');
+            }
+            else {
+                return [
+                    this.pad(width - len, '0'),
+                    text,
+                ].join('');
+            }
+        }
+    
+        return '';
     }
 
     /*****
