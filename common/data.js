@@ -326,14 +326,14 @@ singleton('', class Data {
 
 
 /*****
- * A data-structure is contructed with a value and the end result is a tree-like
+ * A data-shapes is contructed with a value and the end result is a tree-like
  * structure representing the topology and types of the data encountered, it's
  * the data structure of the passed value.  Given that a DataStruture is readily
  * converted to/from JSON, it's simply to pass data structures in interprocess
- * communications as needed.  When the DataStructure constructor is called with
- * JSON, the original DataStructure will be reconstituted to its former glory.
+ * communications as needed.  When the DataShape constructor is called with
+ * JSON, the original DataShape will be reconstituted to its former glory.
 *****/
-register('', class DataStructure {
+register('', class DataShape {
     constructor(value) {
         try {
             this.jso = fromJson(value);
@@ -398,7 +398,7 @@ register('', class DataStructure {
     }
 
     equalsStruct(dataStruct) {
-        if (dataStruct instanceof DataStructure) {
+        if (dataStruct instanceof DataShape) {
             let stack = [{ struct1: this.struct, struct2: dataStruct.struct }];
 
             while (stack.length) {
@@ -472,8 +472,105 @@ register('', class DataStructure {
         this.struct = rootStruct;
     }
 
-    shapeValue(value) {
-        // TODO **********************************************
+    static shapeArray(struct, defaultArray, array) {
+        let shapedArray;
+
+        if (Array.isArray(array)) {
+            if (struct.type == UndefinedType) {
+                shapedArray = Data.clone(array);
+            }
+            else {
+                shapedArray = [];
+
+                for (let i = 0; i < array.length; i++) {
+                    if (struct.type == ObjectType) {
+                        shapedArray.push(DataShape.shapeObject(struct, defaultArray[i], array[i]));
+                    }
+                    else {
+                        shapedArray.push(DataShape.shapeScalar(struct, defaultArray[i], array[i]));
+                    }
+                }
+            }
+        }
+        else {
+            shapedArray = Data.clone(defaultArray);
+        }
+
+        return shapedArray;
+    }
+
+    static shapeObject(struct, defaultValue, value) {
+        let shapedObject = {};
+
+        for (let key in struct.struct) {
+            if (key in value) {
+                if (getJsType(value[key]) == struct.struct[key].type) {
+                    if (struct.struct[key].type == ObjectType) {
+                        shapedObject[key] = DataShape.shapeObject(
+                            struct.struct[key],
+                            defaultValue[key],
+                            value[key],
+                        );
+                    }
+                    else {
+                        shapedObject[key] = DataShape.shapeScalar(
+                            struct.struct[key],
+                            defaultValue[key],
+                            value[key],
+                        );
+                    }
+                }
+                else if (Array.isArray(value[key])) {
+                    shapedObject[key] = DataShape.shapeArray(
+                        struct.struct[key],
+                        defaultValue[key],
+                        value[key],
+                    );
+                }
+                else {
+                    shapedObject[key] = Data.clone(defaultValue);
+                }
+            }
+            else {
+                shapedObject[key] = Data.clone(defaultValue);
+            }
+        }
+
+        return shapedObject;
+    }
+
+    static shapeScalar(struct, defaultValue, value) {
+        if (getJsType(value) == struct.type) {
+            return Data.clone(value);
+        }
+        else if (Array.isArray(value[key])) {
+            return DataShape.shapeArray(
+                struct,
+                defaultValue,
+                value,
+            );
+        }
+        else {
+            return Data.clone(defaultValue);
+        }
+    }
+
+    shapeValue(defaultValue, value) {
+        let shaped;
+
+        if (this.validateValue(defaultValue)) {
+            if (this.struct.arrayOf) {
+                shaped = DataShape.shapeArray(this.struct, defaultValue, value);
+            }
+            else if (this.struct.type == ObjectType) {
+                shaped = DataShape.shapeObject(this.struct, defaultValue, value);
+            }
+            else {
+                shaped = DataShape.shapeScalar(this.struct, defaultValue, value);
+            }
+        }
+
+        return shaped;
     }
 
     structify(struct) {
@@ -570,6 +667,7 @@ register('', class DataStructure {
     }
 
     validateValue(value) {
-        // TODO **********************************************
+        let dataStruct = mkDataShape(value);
+        return this.equalsStruct(dataStruct);
     }
 });

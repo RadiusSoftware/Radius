@@ -26,9 +26,6 @@
 singletonIn(Process.nodeClassController, 'radius', class RegistryStorageManager {
     async deleteSetting(path) {
     }
-
-    async refreshValues(path) {
-    }
     
     async retrieveValue(path) {
     }

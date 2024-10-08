@@ -55,7 +55,7 @@ singletonIn('HttpServer', '', class HttpServer extends Server {
                 path: '/',
                 module: Path.join(__dirname, '../../server', 'apps/adminApp.js'),
                 fqClassName: 'radius.AdminApp',
-                bundlePaths: [ '' ],
+                bundlePaths: [],
             },
         ],
     };

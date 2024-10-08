@@ -32,9 +32,6 @@ singletonIn(Process.nodeClassController, '', class RegistryStorageManagerStub {
     async deleteSetting(path) {
     }
 
-    async refreshValues(path) {
-    }
-
     async retrieveValue(path) {
         return SymEmpty;
     }
@@ -61,18 +58,37 @@ singletonIn(Process.nodeClassController, '', class Registry {
         this.storage = RegistryStorageManagerStub;
         mkHandlerProxy(Process, 'Registry', this);
     }
+
+    listValues(path) {
+        let values = [];
+        let root = path ? this.tree.getNode(path) : this.tree.getRoot();
+        let stack = [ root ];
+
+        while (stack.length) {
+            let node = stack.pop();
+            let value = node.getValue();
+
+            if (value) {
+                values.push({ path: node.getPath(), value: value.value });
+            }
+            
+            for (let childNode of node) {
+                stack.push(childNode);
+            }
+        }
+
+        return values;
+    }
  
     async onClearSettings(message) {
-        /*
         try {
             if (this.tree.hasNode(message.path)) {
-                this.tree.clearNode(message.path);
+                this.tree.getNode(message.path).clear();
                 return true;
             }
         }
         catch (e) { await caught(e) }
         return false;
-        */
     }
 
     async onClearStorageManager(message) {
@@ -85,48 +101,43 @@ singletonIn(Process.nodeClassController, '', class Registry {
     }
 
     async onClearValue(message) {
-        /*
         try {
             if (this.tree.hasNode(message.path)) {
-                let node = this.tree.ensureNode(message.path);
-                node.getValue().value = node.getValue().def;
-                //  TODO -- storage manager action *************************************
+                let node = this.tree.getNode(message.path);
+                node.getValue().value = node.getValue().defaultValue;
                 return true;
             }
         }
         catch (e) { await caught(e) }
         return false;
-        */
     }
 
-    async onGetDefault(message) {
-        /*
+    async onGetDefaultValue(message) {
         try {
             if (this.tree.hasNode(message.path)) {
-                return this.tree.getValue(message.path).def;
+                return Data.clone(this.tree.getValue(message.path).defaultValue);
             }
         }
         catch (e) { await caught(e) }
         return false;
-        */
     }
 
     async onGetSettings(message) {
-        /*
         try {
             if (this.tree.hasNode(message.path)) {
-                return this.tree.getValue(message.path);
+                return this.tree.getValue(message.path).dataShape.toJson();
             }
+            
+            return false;
         }
         catch (e) { await caught(e) }
         return false;
-        */
     }
 
     async onGetValue(message) {
         try {
             if (this.tree.hasNode(message.path)) {
-                return this.tree.getValue(message.path).value;
+                return Data.clone(this.tree.getValue(message.path).value);
             }
         }
         catch (e) { await caught(e) }
@@ -152,51 +163,46 @@ singletonIn(Process.nodeClassController, '', class Registry {
     }
 
     async onListValues(message) {
-        /*
         try {
-            let values = [];
-            let root = message.path ? this.tree.getNode(message.path) : this.tree.getRoot();
-            let stack = [ root ];
-
-            while (stack.length) {
-                let node = stack.pop();
-                let value = node.getValue();
-
-                if (value) {
-                    values.push({ path: node.getPath(), value: value.value });
-                }
-                
-                for (let childNode of node) {
-                    stack.push(childNode);
-                }
-            }
-
-            return values;
+            return this.listValues(message.path);
         }
         catch (e) { await caught(e) }
         return false;
-        */
     }
  
     async onRefreshValues(message) {
-        /*
         try {
+            for (let entry of this.listValues(message.path)) {
+                let storedValue = await this.storage.retrieveValue(entry.path);
+
+                if (storedValue !== SymEmpty) {
+                    let shaped = dataShape.shapeValue(storedValue);
+                    this.tree.getNode(entry.path).getValue().value = shaped;
+                }
+            }
+
+            return true;
         }
         catch (e) { await caught(e) }
         return false;
-        */
     }
 
     async onSetSettings(message) {
         try {
             if (!this.tree.hasNode(message.path)) {
                 let node = this.tree.ensureNode(message.path);
-                let dataStruct = mkDataStructure(message.value);
-                node.setValue({ dataStruct: dataStruct, value: message.value });
+                let dataShape = mkDataShape(message.value);
+
+                node.setValue({
+                    dataShape: dataShape,
+                    defaultValue: message.value,
+                    value: Data.clone(message.value),
+                });
+
                 let storedValue = await this.storage.retrieveValue(node.getPath());
 
                 if (storedValue !== SymEmpty) {
-                    let shaped = dataStructure.shapeValue(storedValue);
+                    let shaped = dataShape.shapeValue(storedValue);
                     node.getValue().value = shaped;
                 }
             }
@@ -222,20 +228,17 @@ singletonIn(Process.nodeClassController, '', class Registry {
     }
 
     async onSetValue(message) {
-        console.log(message);
-        console.log();
-        /*
         try {
             if (this.tree.hasNode(message.path)) {
                 let node = this.tree.getNode(message.path);
-                //  TODO -- storage manager action *************************************
-                //this.tree.ensureNode(message.path).getValue().value = message.value;
+                let { dataShape, defaultValue } = node.getValue();
+                let shapedValue = dataShape.shapeValue(defaultValue, message.value);
+                node.getValue().value = shapedValue;
                 return true;
             }
         }
         catch (e) { await caught(e) }
         return false;
-        */
     }
 });
 
@@ -250,7 +253,7 @@ singletonIn(Process.nodeClassController, '', class Registry {
  * #CONTROLLER-base Registry.
 *****/
 singleton('', class Settings {
-    async clearSetting(path) {
+    async clearSettings(path) {
         return await Process.callController({
             name: 'RegistryClearSettings',
             path: path,
@@ -274,18 +277,24 @@ singleton('', class Settings {
         return this;
     }
 
-    async getDefault(path) {
+    async getDefaultValue(path) {
         return await Process.callController({
-            name: 'RegistryGetDefault',
+            name: 'RegistryGetDefaultValue',
             path: path,
         });
     }
 
     async getSettings(path) {
-        return await Process.callController({
+        let response = await Process.callController({
             name: 'RegistryGetSettings',
             path: path,
         });
+
+        if (response) {
+            return mkDataShape(response);
+        }
+
+        return response;
     }
 
     async getValue(path) {
