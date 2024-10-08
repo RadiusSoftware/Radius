@@ -22,14 +22,78 @@
 
 
 /*****
+ * This is the registry storage manager for the Radius server framework, which
+ * is outside the score of the core framework.  The Radius server uses the radius
+ * DBMS to store settings values in the _settings table.  This supports the
+ * Radius server's approach of securely storing all settings within the Radius
+ * server framework DBMS
 *****/
 singletonIn(Process.nodeClassController, 'radius', class RegistryStorageManager {
-    async deleteSetting(path) {
+    async deleteSettings(path) {
+        let dbc;
+
+        try {
+            let dbc = await dbConnect();
+            let settings = await radius.selectOneDboSettings(dbc, { path: path });
+            await dbc.close();
+
+            if (settings) {
+                await DbObject.delete(settings);
+                return SymOk;
+            }
+            else {
+                return SymEmpty;
+            }
+
+        }
+        catch (e) {
+            if (dbc) {
+                await dbc.close();
+            }
+
+            return SymError;
+        }
     }
     
     async retrieveValue(path) {
+        let dbc;
+
+        try {
+            dbc = await dbConnect();
+            let settings = await radius.selectOneDboSettings(dbc, { path: path });
+            await dbc.close();
+            return settings === null ? SymEmpty : settings.value;
+        }
+        catch (e) {
+            if (dbc) {
+                await dbc.close();
+            }
+
+            return SymError;
+        }
     }
 
     async storeValue(path, value) {
+        let dbc;
+
+        try {
+            dbc = await dbConnect();
+
+            let settings = radius.mkDboSettings({
+                path: path,
+                value: value,
+            });
+
+            await DbObject.insert(settings, dbc);
+            await dbc.close();
+            return SymOk;
+        }
+        catch (e) {
+            if (dbc) {
+                await dbc.close();
+            }
+
+            return SymError;
+        }
     }
 });

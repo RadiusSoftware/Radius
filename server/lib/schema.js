@@ -51,7 +51,7 @@ register('radius', function mkSchema() {
                 ]
             },
             {
-                name: 'setting',
+                name: 'settings',
                 type: 'object',
                 columns: [
                     { name: 'path', type: StringType, size: 50 },

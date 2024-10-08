@@ -14,7 +14,7 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIfABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
@@ -84,6 +84,7 @@ singletonIn(Process.nodeClassController, '', class Registry {
         try {
             if (this.tree.hasNode(message.path)) {
                 this.tree.getNode(message.path).clear();
+                await this.storage.deleteSettings(message.path);
                 return true;
             }
         }
@@ -201,8 +202,11 @@ singletonIn(Process.nodeClassController, '', class Registry {
 
                 let storedValue = await this.storage.retrieveValue(node.getPath());
 
-                if (storedValue !== SymEmpty) {
-                    let shaped = dataShape.shapeValue(storedValue);
+                if (storedValue === SymEmpty) {
+                    await this.storage.storeValue(message.path, node.getValue().value);
+                }
+                else {
+                    let shaped = dataShape.shapeValue(message.value, storedValue);
                     node.getValue().value = shaped;
                 }
             }
@@ -215,12 +219,7 @@ singletonIn(Process.nodeClassController, '', class Registry {
 
     async onSetStorageManager(message) {
         try {
-            let maker;
-            let storageManager;
-
-            eval(`maker = fqnClassMakerName(${message.storageManagerClassName});`);
-            eval(`storageManager = ${maker}()`);
-            this.storage = storageManager;
+            eval(`this.storage = globalThis.${message.storageManagerClassName};`);
             return true;
         }
         catch (e) { await caught(e) }
@@ -260,7 +259,7 @@ singleton('', class Settings {
         });
     }
 
-    async setStorageManager() {
+    async clearStorageManager() {
         await Process.callController({
             name: 'RegistryClearStorageManager',
         });
@@ -334,7 +333,7 @@ singleton('', class Settings {
 
     async setClassSettings(obj) {
         let settings = {};
-        let path = fqnClassName(obj);
+        let path = `/${fqnClassName(obj)}`;
         let clss = Reflect.getPrototypeOf(obj).constructor;
 
         for (let classOf of Data.enumerateClassHierarchy(clss).reverse()) {

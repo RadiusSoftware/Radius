@@ -125,23 +125,11 @@ require('../nodejs/radius.js');
 
         // **********
         async launch() {
+            await Settings.setStorageManager('radius.RegistryStorageManager');
             startServer('HttpServer');
-
-            await pause(500);
-            //await Settings.clearSettings('/HttpServer');
-            let http = await Settings.getSettings('/HttpServer');
-            console.log(http);
-
             /*
-            http.workers = 9;
-            http.interfaces[0].port = 88;
-            await Settings.setValue('/HttpServer', http);
-            http = await Settings.getValue('/HttpServer');
-            console.log(http);
-
-            await Settings.clearValue('/HttpServer');
-            http = await Settings.getValue('/HttpServer');
-            console.log(http);
+            await pause(1000);
+            await Settings.clearSettings('/HttpServer');
             */
         }
 

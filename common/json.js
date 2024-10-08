@@ -28,8 +28,8 @@
 *****/
 const universalSymbols = {
     Empty: globalThis.SymEmpty = Symbol('Empty'),
+    Error: globalThis.SymEmpty = Symbol('Error'),
     Fail:  globalThis.SymFail = Symbol('Fail'),
-    Null:  globalThis.SymNull = Symbol('Null'),
     OK:    globalThis.SymOk = Symbol('OK'),
 };
 
