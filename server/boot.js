@@ -31,12 +31,10 @@ execIn('HttpServer', () => {
     Reflect.getPrototypeOf(HttpServer).constructor.registrySettings.libEntries.push({
         type: 'httpx',
         path: '/',
-        module: Path.join(__dirname, 'apps/adminApp.js'),
+        module: Path.join(__dirname, 'apps/adminApp'),
         fqClassName: 'radius.AdminApp',
         bundlePaths: [ Path.join(__dirname, 'bundles') ],
     });
-
-    console.log(Reflect.getPrototypeOf(HttpServer).constructor.registrySettings);
 });
 
 

@@ -331,11 +331,21 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
                 return this.httpXByUuid[libEntry.uuid];
             }
 
-            require(libEntry.module);
+            if (libEntry.fqClassName.indexOf('.') > 0) {
+                let parts = libEntry.fqClassName.split('.');
+                var appName = `${parts[parts.length - 1]}.js`;
+            }
+            else {
+                var appName = `${libEntry.fqClassName}.js`;
+            }
+
+            let httpXPath = Path.join(libEntry.module, appName);
+            require(httpXPath);
             libEntry.makerName = fqnMakerName(libEntry.fqClassName);
 
             let httpX;
             eval(`httpX = ${libEntry.makerName}(libEntry)`);
+            httpX.httpXPath = httpXPath;
             await httpX.init();
             this.httpXByUuid[libEntry.uuid] = httpX;
             this.httpXByPath[httpX.path] = httpX;

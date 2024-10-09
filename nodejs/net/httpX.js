@@ -139,13 +139,12 @@ register('', class HttpX extends Emitter {
         this.className = this.prototype.constructor.name;
         this.fqClassName = this.libEntry.fqClassName;
         this.fqMakerName = this.libEntry.makerName;
-        this.httpXPath = this.libEntry.module;
-        this.httpXDir = this.libEntry.module.replace('.js', '');
+        this.httpXDir = this.libEntry.module;
         this.path = this.libEntry.path;
         this.once = this.libEntry.once;
         this.requiredPermissions = this.libEntry.requiredPermissions;
         this.settings.sessionCookie = Session.getSessionCookieName();
-        await FileSystem.recurseModules(this.httpXDir);
+        await FileSystem.recurseModules(this.getHttpXLibDir());
         return this;
     }
 });
