@@ -199,7 +199,6 @@ register('', class PermissionSet {
 register('', class PermissionVerse {
     constructor() {
         this.permissionSet = mkPermissionSet();
-        console.log(Process.getEnv());
 
         if (Process.hasEnv('#Permissions')) {
             if (Process.getNodeClass() != Process.nodeClassController) {    

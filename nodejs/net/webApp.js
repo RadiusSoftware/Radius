@@ -46,7 +46,7 @@ register('', class WebApp extends HttpX {
 
     async establishSession(req, rsp) {
         let session;
-        let sessionCookie = req.getCookie(Session.getSessionCookieName());
+        let sessionCookie = req.getCookie(this.getSessionCookieName());
 
         if (sessionCookie) {
             session = await Session.getSession(sessionCookie.getValue());
@@ -60,11 +60,11 @@ register('', class WebApp extends HttpX {
                 timeout: this.settings.timeout,
             });
 
-            rsp.setCookie(mkCookie(Session.getSessionCookieName(), session.token));
+            rsp.setCookie(mkCookie(this.getSessionCookieName(), session.token));
         }
 
         if (!session) {
-            rsp.clearCookie(Session.getSessionCookieName());
+            rsp.clearCookie(this.getSessionCookieName());
         }
     }
 

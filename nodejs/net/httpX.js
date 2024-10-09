@@ -95,6 +95,10 @@ register('', class HttpX extends Emitter {
         return this.prototype;
     }
 
+    getSessionCookieName() {
+        return this.settings.sessionCookie;
+    }
+
     getSetting(key) {
         if (key in this.settings) {
             return this.settings[key];
@@ -143,7 +147,7 @@ register('', class HttpX extends Emitter {
         this.path = this.libEntry.path;
         this.once = this.libEntry.once;
         this.requiredPermissions = this.libEntry.requiredPermissions;
-        this.settings.sessionCookie = Session.getSessionCookieName();
+        this.settings.sessionCookie = await Session.getSessionCookieName();
         await FileSystem.recurseModules(this.getHttpXLibDir());
         return this;
     }

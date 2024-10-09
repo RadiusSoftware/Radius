@@ -147,6 +147,10 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
     getLibSettings() {
         return this.settings.libSettings;
     }
+
+    getSessionCookieName() {
+        return this.sessionCookieName;
+    }
     
     getStatusResponseTemplate(statusCode) {
         if (statusCode in this.httpStatusResponses) {
@@ -194,6 +198,7 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
     async init() {
         await super.init();
         this.httpStatusResponses = {};
+        this.sessionCookieName = await Session.getSessionCookieName();
         
         if (typeof this.settings.HttpStatusTemplates == 'string') {
             let path = this.settingsHttpStatusTemplates;
@@ -600,7 +605,7 @@ registerIn('HttpServerWorker', '', class HttpRequest {
     }
 
     async getSession() {
-        let sessionCookie = this.getCookie(Session.getSessionCookieName());
+        let sessionCookie = this.getCookie(this.getSessionCookieName());
 
         if (sessionCookie) {
             let session = await Process.callController({
@@ -615,7 +620,7 @@ registerIn('HttpServerWorker', '', class HttpRequest {
     }
 
     getSessionToken() {
-        let sessionCookie = this.getCookie(Session.getSessionCookieName());
+        let sessionCookie = this.getCookie(this.getSessionCookieName());
 
         if (sessionCookie) {
             return sessionCookie;
@@ -860,7 +865,7 @@ registerIn('HttpServerWorker', '', class HttpResponse {
     }
 
     setSession(token) {
-        let sessionCookie = mkCookie(Session.getSessionCookieName(), token);
+        let sessionCookie = mkCookie(this.getSessionCookieName(), token);
         this.setCookie(sessionCookie);
         return this;
     }

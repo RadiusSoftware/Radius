@@ -254,7 +254,6 @@ singletonIn(Process.nodeClassController, '', class SessionManager {
         this.sessionsByUUID = {};
         this.sessionsByToken = {};
         this.sessionCookieName = 'session';
-        Process.setEnv('SessionCookieName', this.sessionCookieName);
     }
 
     async onCloseSession(message) {
@@ -283,6 +282,10 @@ singletonIn(Process.nodeClassController, '', class SessionManager {
         }
         
         return false;
+    }
+
+    async onGetSessionCookieName(message) {
+        return this.sessionCookieName;
     }
 
     async onSetData(message) {
@@ -341,8 +344,8 @@ singletonNotIn(Process.nodeClassController, '', class Session {
         });
     }
 
-    getSessionCookieName() {
-        return Process.getEnv('SessionCookieName');
+    async getSessionCookieName() {
+        return await Process.callController({ name: 'SessionManagerGetSessionCookieName' });
     }
 
     async setData(uuid, key, data) {
