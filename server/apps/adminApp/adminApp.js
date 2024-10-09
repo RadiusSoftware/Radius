@@ -36,7 +36,7 @@ register('radius', class AdminApp extends WebApp {
         webAppBundle: 'server.apps.admin',
         enableWebsocket: true,
         permissions: {
-            'admin:*': { type: 'boolean' }
+            admin: { type: 'boolean' }
         },
     };
 

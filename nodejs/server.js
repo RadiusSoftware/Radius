@@ -120,7 +120,7 @@ register('', class Server extends Emitter {
 
     async startWorker() {
         let workerClassName = `${this.className}Worker`;
-        let worker = await Process.fork(workerClassName, workerClassName, this.settings);
+        let worker = await Process.fork(workerClassName, workerClassName);
         this.workers[worker.getPid()] = worker;
         await this.callWorker(worker, { name: 'Init' });
         return worker;

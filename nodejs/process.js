@@ -66,7 +66,7 @@ singleton('', class Process extends Emitter {
 
         this.routing = {};
         this.children = {};
-        let radius = this.getEnv('#RADIUS', 'json');
+        let radius = this.getEnv('NodeData', 'json');
 
         if (typeof radius == 'object') {
             this.radius = radius;
@@ -154,7 +154,7 @@ singleton('', class Process extends Emitter {
 
         try {
             let env = Data.copy(LibProcess.env, {
-                '#RADIUS': toJson({
+                'NodeData': toJson({
                     nodeGuid: nodeGuid,
                     nodeClass: nodeClass,
                     nodeTitle: nodeTitle,
