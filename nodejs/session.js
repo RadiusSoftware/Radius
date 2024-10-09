@@ -253,7 +253,6 @@ singletonIn(Process.nodeClassController, '', class SessionManager {
         mkHandlerProxy(Process, 'SessionManager', this);
         this.sessionsByUUID = {};
         this.sessionsByToken = {};
-        this.sessionCookieName = 'session';
     }
 
     async onCloseSession(message) {
@@ -282,10 +281,6 @@ singletonIn(Process.nodeClassController, '', class SessionManager {
         }
         
         return false;
-    }
-
-    async onGetSessionCookieName(message) {
-        return this.sessionCookieName;
     }
 
     async onSetData(message) {
@@ -342,10 +337,6 @@ singletonNotIn(Process.nodeClassController, '', class Session {
             name: 'SessionManagerGetSession',
             token: token,
         });
-    }
-
-    async getSessionCookieName() {
-        return await Process.callController({ name: 'SessionManagerGetSessionCookieName' });
     }
 
     async setData(uuid, key, data) {

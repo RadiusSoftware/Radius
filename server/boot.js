@@ -23,6 +23,21 @@ require('../nodejs/radius.js');
 
 
 /*****
+ * TODO
+ * ()   Clean up sessions
+ * ()   HttpLibrary: ckeckMethod()
+ * ()   HttpLibrary: ckeckAuthorization()
+ * ()   HttpLibrary: getLibEntry()
+ * ()   DboObject locking
+ * ()   Http/HttpX requests: JOSE, bearer token, API, shape checking,
+ *      object locking, authorization, other integrity algorithms
+ * ()   User signin, multifactor
+ * ()   Allow cookies dialog
+ * ()   Multilingual applications
+*****/
+
+
+/*****
  * Let's ensure that the radius.AdminApp settings are properly configured.
  * This is the lib-entry for the HttpServer, which will be able to load in
  * the required nodeJS modules and webb-browser bundles for the application.

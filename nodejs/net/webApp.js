@@ -84,6 +84,10 @@ register('', class WebApp extends HttpX {
         return Object.keys(supported)[0];
     }
 
+    getSessionCookieName() {
+        return HttpServerWorker.settings.sessionCookie;
+    }
+
     checkSetting(key, value) {
         return value;
     }
@@ -173,6 +177,7 @@ register('', class WebApp extends HttpX {
 
     async init() {
         await super.init();
+        this.settings.sessionCookie = this.getSessionCookieName();
         this.permissionVerse = mkPermissionVerse().setPermissions(this.settings.permissions);
         this.acceptCookiesName = `${this.libEntry.fqClassName}.accept`;
 

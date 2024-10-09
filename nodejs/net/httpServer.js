@@ -37,6 +37,7 @@ const LibUrl = require('url');
 singletonIn('HttpServer', '', class HttpServer extends Server {
     static registrySettings = {
         deflang: 'en-US',
+        sessionCookie: 'session',
         interfaces: [
             {
                 addr: '0.0.0.0',
@@ -58,6 +59,10 @@ singletonIn('HttpServer', '', class HttpServer extends Server {
 
     getLibEntries() {
         return this.settings.libEntries;
+    }
+
+    getSessionCookieName() {
+        return this.settings.sessionCookie;
     }
 
     async init() {
@@ -149,7 +154,7 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
     }
 
     getSessionCookieName() {
-        return this.sessionCookieName;
+        return this.settings.sessionCookie;
     }
     
     getStatusResponseTemplate(statusCode) {
@@ -198,7 +203,6 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
     async init() {
         await super.init();
         this.httpStatusResponses = {};
-        this.sessionCookieName = await Session.getSessionCookieName();
         
         if (typeof this.settings.HttpStatusTemplates == 'string') {
             let path = this.settingsHttpStatusTemplates;
