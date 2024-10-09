@@ -22,8 +22,25 @@
 require('../nodejs/radius.js');
 
 
-(async () => {
+/*****
+ * Let's ensure that the radius.AdminApp settings are properly configured.
+ * This is the lib-entry for the HttpServer, which will be able to load in
+ * the required nodeJS modules and webb-browser bundles for the application.
+*****/
+execIn('HttpServer', () => {
+    Reflect.getPrototypeOf(HttpServer).constructor.registrySettings.libEntries.push({
+        type: 'httpx',
+        path: '/',
+        module: Path.join(__dirname, 'apps/adminApp.js'),
+        fqClassName: 'radius.AdminApp',
+        bundlePaths: [ Path.join(__dirname, 'bundles') ],
+    });
 
+    console.log(Reflect.getPrototypeOf(HttpServer).constructor.registrySettings);
+});
+
+
+(async () => {
     /*****
      * Recurse the server library to load in server-side code that's required
      * for supporting the server-side features.  These features are extensions
@@ -52,7 +69,7 @@ require('../nodejs/radius.js');
      * by the launch parameters.
     *****/
     singletonIn(Process.nodeClassController, 'radius', class BootStrapper {
-        // **********
+        // ****************************************************************
         constructor() {
             (async () => {
                 await this.parseCommandLine();
@@ -66,13 +83,13 @@ require('../nodejs/radius.js');
             })();
         }
 
-        // **********
+        // ****************************************************************
         getMode() {
             if (this.mode == this.launchLiveMode) return 'live';
             if (this.mode == this.launchAdminMode) return 'admin';
         }
 
-        // **********
+        // ****************************************************************
         async inspectConfiguration() {
             if (this.inspectDbms()) {
 
@@ -82,7 +99,7 @@ require('../nodejs/radius.js');
             this.settings['-admin'] = true;
         }
 
-        // **********
+        // ****************************************************************
         async inspectDbms() {
             try {
                 let path;
@@ -123,17 +140,13 @@ require('../nodejs/radius.js');
             return false;
         }
 
-        // **********
+        // ****************************************************************
         async launch() {
             await Settings.setStorageManager('radius.RegistryStorageManager');
             startServer('HttpServer');
-            /*
-            await pause(1000);
-            await Settings.clearSettings('/HttpServer');
-            */
         }
 
-        // **********
+        // ****************************************************************
         async parseCommandLine() {
             const args = Process.getArgs();
             this.nodePath = args[0];

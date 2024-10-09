@@ -49,15 +49,7 @@ singletonIn('HttpServer', '', class HttpServer extends Server {
                 },
             },
         ],
-        libEntries: [
-            {
-                type: 'httpx',
-                path: '/',
-                module: Path.join(__dirname, '../../server', 'apps/adminApp.js'),
-                fqClassName: 'radius.AdminApp',
-                bundlePaths: [],
-            },
-        ],
+        libEntries: [],
     };
 
     constructor() {

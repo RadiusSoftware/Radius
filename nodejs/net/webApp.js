@@ -199,13 +199,12 @@ register('', class WebApp extends HttpX {
 
         const bundlePaths = [
             Path.join(__filename.replace('.js', ''), '../../../mozilla/widgets'),
-            Path.join(__filename.replace('.js', ''), '../../../server/bundles'),
-            this.getHttpXDir(),
+            this.getHttpXBundlesDir(),
         ];
 
         if (Array.isArray(this.libEntry.bundlePaths)) {
             this.libEntry.bundlePaths.forEach(bundlePath => {
-                bundlePaths.push(Path.join(this.getHttpXDir(), bundlePath));
+                bundlePaths.push(bundlePath);
             });
         }
 

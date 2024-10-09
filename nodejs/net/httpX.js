@@ -71,6 +71,14 @@ register('', class HttpX extends Emitter {
         return this.httpXDir;
     }
 
+    getHttpXBundlesDir() {
+        return Path.join(this.httpXDir, 'bundles');
+    }
+
+    getHttpXLibDir() {
+        return Path.join(this.httpXDir, 'lib');
+    }
+
     getHttpXPath() {
         return this.httpXPath;
     }
