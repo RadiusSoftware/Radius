@@ -92,9 +92,8 @@ register('', class Api {
     static ignore = Symbol('ignore');
     static noauth = Symbol('noauth');
 
-    constructor(permissionVerse) {
+    constructor() {
         this.endpoints = {};
-        this.permissionVerse = permissionVerse;
     }
 
     async call(name, ...args) {
@@ -116,14 +115,9 @@ register('', class Api {
 
         if (endpoint) {
             if ('#TOKEN' in message) {
-                let session = await Process.callController({
-                    name: 'SessionManagerGetSession',
-                    token: message['#TOKEN'],
-                });
+                let session = await Session.getSessionFromToken(message['#TOKEN']);
 
-                const permissions = session ? session.permissions : {};
-
-                if (this.permissionVerse.authorize(endpoint.permissions, permissions)) {
+                if (PermissionVerse.authorize(endpoint.permissions, session.permissions)) {
                     try {
                         if (message.args) {
                             return await endpoint.func(...message.args);

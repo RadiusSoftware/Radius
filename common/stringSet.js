@@ -181,6 +181,10 @@ register('', class StringSet {
         return Object.keys(this.values)[Symbol.iterator]();
     }
 
+    toArray() {
+        return StringSet.arrayify(this);
+    }
+
     toString() {
         return `StringSet: [ ${Object.keys(this.values).sort().join(', ')} ]`;
     }

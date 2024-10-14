@@ -31,6 +31,9 @@ require('../nodejs/radius.js');
  * ()   DboObject locking
  * ()   Http/HttpX requests: JOSE, bearer token, API, shape checking,
  *      object locking, authorization, other integrity algorithms
+ * ()   DocElement Editing features: messages, methods such as getModified()
+ *      getValid(), getValue(), resetValue().
+ * ()   Schema tables: credentials, permissions,
  * ()   User signin, multifactor
  * ()   Allow cookies dialog
  * ()   Multilingual applications

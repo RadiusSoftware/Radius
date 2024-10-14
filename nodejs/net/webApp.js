@@ -44,23 +44,26 @@ register('', class WebApp extends HttpX {
         this.webAppHtmlPath = Path.join(__filename.replace('.js', ''), '../webApp.html');
     }
 
-    async establishSession(req, rsp) {
+    async establishUserSession(req, rsp) {
         let session;
         let sessionCookie = req.getCookie(this.getSessionCookieName());
 
         if (sessionCookie) {
-            session = await Session.getSession(sessionCookie.getValue());
+            session = await Session.getSessionFromToken(sessionCookie.getValue());
         }
 
         if (!session) {
             session = await Session.createSession({
                 agentType: 'user',
                 authType: 'password',
+                userAgent: req.getHeader('user-agent'),
+                authType: 'password',
                 remoteHost: req.getRemoteHost(),
                 timeout: this.settings.timeout,
             });
 
             rsp.setCookie(mkCookie(this.getSessionCookieName(), session.token));
+            console.log(session);
         }
 
         if (!session) {
@@ -106,9 +109,9 @@ register('', class WebApp extends HttpX {
 
     async handleGET(req, rsp) {
         let template = mkTextTemplate(WebApp.html);
-        await this.establishSession(req, rsp);
+        await this.establishUserSession(req, rsp);
 
-        const settings = {
+        const clientSettings = {
             uuid: this.getUUID(),
             path: this.getUrlPath(),
             enableWebsocket: this.getSetting('enableWebsocket'),
@@ -121,7 +124,7 @@ register('', class WebApp extends HttpX {
             status: 200,
             contentType: mkMime('text/html'),
             content: template.toString({
-                settings: mkBuffer(toJson(settings)).toString('hex'),
+                settings: mkBuffer(toJson(clientSettings)).toString('hex'),
             }),
         };
     }
@@ -178,7 +181,6 @@ register('', class WebApp extends HttpX {
     async init() {
         await super.init();
         this.settings.sessionCookie = this.getSessionCookieName();
-        this.permissionVerse = mkPermissionVerse().setPermissions(this.settings.permissions);
         this.acceptCookiesName = `${this.libEntry.fqClassName}.accept`;
 
         this.api = mkApi(this.permissionVerse);

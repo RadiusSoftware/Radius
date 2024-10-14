@@ -37,6 +37,7 @@ const LibUrl = require('url');
 singletonIn('HttpServer', '', class HttpServer extends Server {
     static registrySettings = {
         deflang: 'en-US',
+        allowCookies: 'allow',
         sessionCookie: 'session',
         interfaces: [
             {

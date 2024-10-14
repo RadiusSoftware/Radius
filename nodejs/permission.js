@@ -188,48 +188,94 @@ register('', class PermissionSet {
 
 
 /*****
- * For a single host, a PermissionVerse is the all inclusive permisstion set
- * pertaining to all applications and servers running on that host.  Each process
- * has a copy of the permission verse encapsulated as a singleton to ensure
- * a local, global copy.  The PermissionVerse is typically initialized with the
- * setPermissions() function before any of the child processes have been forked.
- * After launch changes are performed via interprocess communications to ensure
- * that all singleton PermessionVerses in all related processes are synchronized.
+ * On a host, there is one permission-verse singleton residing in the controller
+ * process.  It's just an adaptation of ther PermissionSet to be the centralized
+ * guardian of authorization on the host.  There is a non-controller-process
+ * version of the PermissionVerse, which provides a functional API for handling
+ * permission requests.  All data are stored and all requests are always passed
+ * through the central singleton, PermissionVerse.
 *****/
-register('', class PermissionVerse {
+singletonIn(Process.nodeClassController, '', class PermissionVerse extends PermissionSet {
     constructor() {
-        this.permissionSet = mkPermissionSet();
-
-        if (Process.hasEnv('#Permissions')) {
-            if (Process.getNodeClass() != Process.nodeClassController) {    
-                this.setPermissions(Process.getEnv('#Permissions', 'json'));
-            }
-        }
+        super();
+        mkHandlerProxy(Process, 'Permissions', this);
     }
-    
-    authorize(requirePermissions, grantedPermissions) {
-        return this.permissionSet.authorize(requirePermissions, grantedPermissions);
+
+    async onAuthorize(message) {
+        return this.authorize(
+            message.authoriedPermissions,
+            message.grantedPermissions
+        );
     }
- 
-    setPermissions(permissions) {
-        if (ObjectType.is(permissions)) {
-            for (let permissionKey in permissions) {
-                let permission = permissions[permissionKey];
 
-                this.permissionSet.setPermission(
-                    permissionKey,
-                    permission.type,
-                    permission.values,
-                );
-            }
+    async onClearPermission(message) {
+        this.clearPermission(message.permissionKey);
+    }
 
-            Process.setEnv('#Permissions', toJson(permissions));
-        }
+    async onHasPermission(message) {
+        return this.hasPermission(message.permissionKey);
+    }
+
+    async onGetPermission(message) {
+        return this.getPermission(message.permissionKey);
+    }
+
+    async onSetPermission(message) {
+        this.setPermission(
+            message.key,
+            message.type,
+            message.values,
+        );
+    }
+});
+
+
+/*****
+ * On a host, there is one permission-verse singleton residing in the controller
+ * process.  It's just an adaptation of ther PermissionSet to be the centralized
+ * guardian of authorization on the host.  There is a non-controller-process
+ * version of the PermissionVerse, which provides a functional API for handling
+ * permission requests.  All data are stored and all requests are always passed
+ * through the central singleton, PermissionVerse.
+*****/
+singletonNotIn(Process.nodeClassController, '', class PermissionVerse {
+    async authorize(requiredPermissions, grantedPermissions) {
+        return await Process.call({
+            name: 'PermissionsAuthorize',
+            requiredPermissions: requiredPermissions,
+            grantedPermissionsL: grantedPermissions,
+        });
+    }
+
+    async clearPermission(permissionKey) {
+        await Process.call({
+            name: 'PermissionsClearPermission',
+            permissionKey: permissionKey,
+        });
 
         return this;
     }
 
-    validatePermissions(grants) {
-        return this.permissionSet.validatePermissions(grants);
+    async hasPermission(permissionKey) {
+        return await Process.call({
+            name: 'PermissionsHasPermission',
+            permissionKey: permissionKey,
+        });
+    }
+
+    async getPermission(permissionKey) {
+        return await Process.call({
+            name: 'PermissionsGetPermission',
+            permissionKey: permissionKey,
+        });
+    }
+
+    async setPermission(key, type, values) {
+        await Process.call({
+            name: 'PermissionsSetPermission',
+            permissionKey: permissionKey,
+        });
+
+        return this;
     }
 });
