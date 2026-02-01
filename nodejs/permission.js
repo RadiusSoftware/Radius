@@ -189,43 +189,118 @@ register('', class PermissionSet {
 
 /*****
  * On a host, there is one permission-verse singleton residing in the controller
- * process.  It's just an adaptation of ther PermissionSet to be the centralized
- * guardian of authorization on the host.  There is a non-controller-process
- * version of the PermissionVerse, which provides a functional API for handling
- * permission requests.  All data are stored and all requests are always passed
- * through the central singleton, PermissionVerse.
+ * process.  It's a collection of PermissionsSets accessable via realm.  A
+ * realm generally refers to "use" or "application", the former related to
+ * library features, while the latter refers web applications incorporate into
+ * the HTTP library.  Hence, in practical use, permission sets are realm sensitive.
 *****/
-singletonIn(Process.nodeClassController, '', class PermissionVerse extends PermissionSet {
+singletonIn(Process.nodeClassController, '', class PermissionVerse {
     constructor() {
-        super();
-        mkHandlerProxy(Process, 'Permissions', this);
+        this.permissionSets = {};
+        mkHandlerProxy(Process, 'PermissionVerse', this);
+    }
+
+    ensureRealm(message) {
+        if (!(message.realm in this.permissionSets)) {
+            if (typeof message.realm == 'string') {
+                this.permissionSets[message.realm] = mkPermissionSet();
+            }
+            else {
+                return null;
+            }
+        }
+
+        return this.permissionSets[message.realm];
+    }
+
+    getRealm(message) {
+        if (message.realm in this.permissionSets) {
+            return this.permissionSets[message.realm];
+        }
+
+        return null;
+    }
+
+    hasRealm(message) {
+        return message.realm in this.permissionSets;
     }
 
     async onAuthorize(message) {
-        return this.authorize(
-            message.authoriedPermissions,
-            message.grantedPermissions
-        );
+        let realm = this.getRealm(message);
+
+        if (realm) {
+            return realm.authorize(
+                message.authoriedPermissions,
+                message.grantedPermissions
+            );
+        }
+
+        return false;
     }
 
     async onClearPermission(message) {
-        this.clearPermission(message.permissionKey);
+        let realm = this.getRealm(message);
+
+        if (realm) {
+            realm.clearPermission(message.permissionKey);
+        }
+
+        return true;
+    }
+
+    async onEnsureRealm(message) {
+        this.ensureRealm(message);
+        return true;
     }
 
     async onHasPermission(message) {
-        return this.hasPermission(message.permissionKey);
+        let realm = this.getRealm(message);
+
+        if (realm) {
+            return realm.hasPermission(message.permissionKey);
+        }
+
+        return false;
     }
 
     async onGetPermission(message) {
-        return this.getPermission(message.permissionKey);
+        let realm = this.getRealm(message);
+
+        if (realm) {
+            return realm.getPermission(message.permissionKey);
+        }
+
+        return false;
+    }
+
+    async onListPermissions(message) {
+        let realm = this.getRealm(message);
+
+        if (realm) {
+            return Object.values(realm.permissions).map(permission => {
+                return {
+                    key: permission.key,
+                    type: permission.type.getName(),
+                    values: permission.values ? permission.values : undefined,
+                };
+            });
+        }
+
+        return {};
     }
 
     async onSetPermission(message) {
-        this.setPermission(
-            message.key,
-            message.type,
-            message.values,
-        );
+        let realm = this.getRealm(message);
+
+        if (realm) {
+            realm.setPermission(
+                message.permissionKey,
+                message.permissionType,
+                message.permissionValues,
+            );
+        }
+
+        return true;
     }
 });
 
@@ -238,42 +313,63 @@ singletonIn(Process.nodeClassController, '', class PermissionVerse extends Permi
  * permission requests.  All data are stored and all requests are always passed
  * through the central singleton, PermissionVerse.
 *****/
-singletonNotIn(Process.nodeClassController, '', class PermissionVerse {
-    async authorize(requiredPermissions, grantedPermissions) {
-        return await Process.call({
-            name: 'PermissionsAuthorize',
+singleton('', class Permissions {
+    async authorize(realm, requiredPermissions, grantedPermissions) {
+        return await Process.callController({
+            name: 'PermissionVerseAuthorize',
+            realm: realm,
             requiredPermissions: requiredPermissions,
             grantedPermissionsL: grantedPermissions,
         });
     }
 
-    async clearPermission(permissionKey) {
-        await Process.call({
-            name: 'PermissionsClearPermission',
+    async clearPermission(realm, permissionKey) {
+        await Process.callController({
+            name: 'PermissionVerseClearPermission',
+            realm: realm,
             permissionKey: permissionKey,
         });
 
         return this;
     }
 
-    async hasPermission(permissionKey) {
-        return await Process.call({
-            name: 'PermissionsHasPermission',
+    async ensureRealm(realm) {
+        return await Process.callController({
+            name: 'PermissionVerseEnsureRealm',
+            realm: realm,
+        });
+    }
+
+    async hasPermission(realm, permissionKey) {
+        return await Process.callController({
+            name: 'PermissionVerseHasPermission',
+            realm: realm,
             permissionKey: permissionKey,
         });
     }
 
-    async getPermission(permissionKey) {
-        return await Process.call({
+    async getPermission(realm, permissionKey) {
+        return await Process.callController({
             name: 'PermissionsGetPermission',
+            realm: realm,
             permissionKey: permissionKey,
         });
     }
 
-    async setPermission(key, type, values) {
-        await Process.call({
-            name: 'PermissionsSetPermission',
-            permissionKey: permissionKey,
+    async listPermissions(realm) {
+        return await Process.callController({
+            name: 'PermissionVerseListPermissions',
+            realm: realm,
+        });
+    }
+
+    async setPermission(realm, key, type, values) {
+        await Process.callController({
+            name: 'PermissionVerseSetPermission',
+            realm: realm,
+            permissionKey: key,
+            permissionType: type,
+            permissionValues: values,
         });
 
         return this;

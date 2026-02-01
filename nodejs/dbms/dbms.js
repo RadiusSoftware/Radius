@@ -266,6 +266,32 @@ register('', async function dbConnect(settings) {
 
 
 /*****
+ * A convenience function that's globally available in all processes. When called,
+ * it opens a DBMS connection based on the settings or lack thereof, and then
+ * execute the provided sql.  Note that sql must written to be DBMS specific. If
+ * appropriate, a generic SQL object may be provided instead of hard coded SQL
+ * statements.
+*****/
+register('', async function queryQuick(sql, settings) {
+    let dbc = null;
+    let result = null;
+
+    try {
+        dbc = await dbConnect(settings);
+        result = await dbc.query(sql);
+    }
+    catch (e) {}
+    finally {
+        if (dbc) {
+            await dbc.close();
+        }
+    }
+
+    return null;
+});
+
+
+/*****
  * A DBMS connection is a wrapper object for a DBMS-specific connection.  This
  * generic DBMS connection provides higher-level features such as state tracking
  * and management.  All of the basic features such as queries, transactions,
@@ -359,8 +385,6 @@ register('', class DbmsConnection {
         else {
             throw new Error(`DBMS connection not ready to query(): "${this.state}"`);
         }
-
-        return this;
     }
 
     async rollback() {

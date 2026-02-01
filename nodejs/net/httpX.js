@@ -104,6 +104,10 @@ register('', class HttpX extends Emitter {
         }
     }
 
+    getSettingsPath() {
+        return this.settingsPath;
+    }
+
     getUrlPath() {
         return this.path;
     }
@@ -132,8 +136,10 @@ register('', class HttpX extends Emitter {
     }
 
     async init() {
-        let path = await Settings.setClassSettings(this);
-        this.settings = await Settings.getValue(path);
+        this.settingsPath = await Settings.setClassSettings(this);
+        await Permissions.ensureRealm(this.settingsPath);
+
+        this.settings = await Settings.getValue(this.settingsPath);
         this.uuid = this.libEntry.uuid;
         this.prototype = Reflect.getPrototypeOf(this);
         this.className = this.prototype.constructor.name;
@@ -142,7 +148,14 @@ register('', class HttpX extends Emitter {
         this.httpXDir = this.libEntry.module;
         this.path = this.libEntry.path;
         this.once = this.libEntry.once;
-        this.requiredPermissions = this.libEntry.requiredPermissions;
+
+        if (this.settings.permissions) {
+            for (let key in this.settings.permissions) {
+                let permission = this.settings.permissions[key];
+                await Permissions.setPermission(this.settingsPath, key, permission.type, permission.value);
+            }
+        }
+
         await FileSystem.recurseModules(this.getHttpXLibDir());
         return this;
     }

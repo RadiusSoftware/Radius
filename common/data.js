@@ -532,7 +532,7 @@ register('', class DataShape {
                 }
             }
             else {
-                shapedObject[key] = Data.clone(defaultValue);
+                shapedObject[key] = Data.clone(defaultValue[key]);
             }
         }
 

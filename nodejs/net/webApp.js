@@ -44,33 +44,6 @@ register('', class WebApp extends HttpX {
         this.webAppHtmlPath = Path.join(__filename.replace('.js', ''), '../webApp.html');
     }
 
-    async establishUserSession(req, rsp) {
-        let session;
-        let sessionCookie = req.getCookie(this.getSessionCookieName());
-
-        if (sessionCookie) {
-            session = await Session.getSessionFromToken(sessionCookie.getValue());
-        }
-
-        if (!session) {
-            session = await Session.createSession({
-                agentType: 'user',
-                authType: 'password',
-                userAgent: req.getHeader('user-agent'),
-                authType: 'password',
-                remoteHost: req.getRemoteHost(),
-                timeout: this.settings.timeout,
-            });
-
-            rsp.setCookie(mkCookie(this.getSessionCookieName(), session.token));
-            console.log(session);
-        }
-
-        if (!session) {
-            rsp.clearCookie(this.getSessionCookieName());
-        }
-    }
-
     getLanguage(langs) {
         let supported = {};
 
@@ -109,7 +82,6 @@ register('', class WebApp extends HttpX {
 
     async handleGET(req, rsp) {
         let template = mkTextTemplate(WebApp.html);
-        await this.establishUserSession(req, rsp);
 
         const clientSettings = {
             uuid: this.getUUID(),
@@ -182,8 +154,7 @@ register('', class WebApp extends HttpX {
         await super.init();
         this.settings.sessionCookie = this.getSessionCookieName();
         this.acceptCookiesName = `${this.libEntry.fqClassName}.accept`;
-
-        this.api = mkApi(this.permissionVerse);
+        this.api = mkApi(this.getSettingsPath());
         const webapp = this;
 
         this.setEndpoints(

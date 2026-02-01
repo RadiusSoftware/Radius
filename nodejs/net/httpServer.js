@@ -142,6 +142,30 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
         };
     }
 
+    async ensureUserSession(req, rsp) {
+        let session;
+        let sessionCookie = req.getCookie(this.getSessionCookieName());
+
+        if (sessionCookie) {
+            session = await Session.getSessionFromToken(sessionCookie.getValue());
+        }
+
+        if (!session) {
+            session = await Session.createSession({
+                agentType: 'user',
+                authType: 'password',
+                userAgent: req.getHeader('user-agent'),
+                authType: 'password',
+                remoteHost: req.getRemoteHost(),
+                timeout: this.settings.timeout,
+            });
+
+            rsp.setCookie(mkCookie(this.getSessionCookieName(), session.token));
+        }
+
+        req.session = session;
+    }
+
     getLibEntries() {
         return this.settings.libEntries;
     }
@@ -175,6 +199,10 @@ singletonIn('HttpServerWorker', '', class HttpServerWorker extends ServerWorker 
             req = mkHttpRequest(this, httpReq);
             rsp = mkHttpResponse(this, httpRsp);
             let response = await this.httpLibrary.handle(req, rsp);
+
+            if (!req.getSession()) {
+                req.session = await this.ensureUserSession(req, rsp);
+            }
 
             if (typeof response == 'number') {
                 rsp.respondStatus(response);
@@ -369,6 +397,7 @@ registerIn('HttpServerWorker', '', class HttpRequest {
         this.httpReq = httpReq;
         this.object = {};
         this.params = {};
+        this.session = null;
         this.parsedUrl = LibUrl.parse(this.httpReq.url);
         let iterator = new LibUrl.URLSearchParams(this.getQuery()).entries();
 
@@ -609,29 +638,8 @@ registerIn('HttpServerWorker', '', class HttpRequest {
         return this.parsedUrl.search !== null ? this.parsedUrl.search : '';
     }
 
-    async getSession() {
-        let sessionCookie = this.getCookie(this.getSessionCookieName());
-
-        if (sessionCookie) {
-            let session = await Process.callController({
-                name: 'SessionManagerGetSession',
-                token: sessionCookie.getValue(),
-            });
-
-            return session;
-        }
-
-        return null;
-    }
-
-    getSessionToken() {
-        let sessionCookie = this.getCookie(this.getSessionCookieName());
-
-        if (sessionCookie) {
-            return sessionCookie;
-        }
-
-        return null;
+    getSession() {
+        return this.session;
     }
 
     getUrl() {

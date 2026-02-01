@@ -305,8 +305,11 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
     }
 
     async checkAuthorization(req, libEntry) {
+        let app;
+        eval(`app = globalThis.${libEntry.fqClassName}`);
+        console.log();
         // TODO
-        return true;
+        return false;
     }
 
     checkMethod(req, libEntry) {
@@ -375,7 +378,7 @@ registerIn('HttpServerWorker', '', class HttpLibrary {
                 return 405;
             }
 
-            if (!this.checkAuthorization(req, libEntry)) {
+            if (!(await this.checkAuthorization(req, libEntry))) {
                 return 401;
             }
 

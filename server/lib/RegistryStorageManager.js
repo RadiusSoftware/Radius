@@ -78,13 +78,20 @@ singletonIn(Process.nodeClassController, 'radius', class RegistryStorageManager 
 
         try {
             dbc = await dbConnect();
+            let stored = await this.retrieveValue(path);
 
             let settings = radius.mkDboSettings({
                 path: path,
                 value: value,
             });
 
-            await DbObject.insert(settings, dbc);
+            if (stored === SymEmpty) {
+                await DbObject.insert(settings, dbc);
+            }
+            else {
+                await DbObject.update(settings, dbc);
+            }
+
             await dbc.close();
             return SymOk;
         }

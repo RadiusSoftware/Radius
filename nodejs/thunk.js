@@ -22,25 +22,16 @@
 
 
 /*****
- * This is a standard builtin application, which is used for managing a host
- * that's running one or more Radius servers and radius web extensions.  The
- * AdmiinApp extends WebApp, is not part of the framework itself, and is needed
- * to configure the server and get it ready to run in live mode.  The admin
- * app will be used for managing configuration settings, probing the network
- * environment, monitoring networking activity, monitoring web extension activty
- * and performance, and for monitoring user activity and clustered hosting
- * activity.
 *****/
-register('radius', class AdminApp extends WebApp {
-    static registrySettings = {
-        webAppBundle: 'server.apps.admin',
-        enableWebsocket: true,
-        permissions: {
-            OpenApp: { type: 'boolean' },
-        },
-    };
+singletonIn(Process.nodeClassController, '', class Thunker {
+    constructor() {
+    }
+});
 
-    constructor(libEntry) {
-        super(libEntry);
+
+/*****
+*****/
+register('', class Thunk {
+    constructor() {
     }
 });

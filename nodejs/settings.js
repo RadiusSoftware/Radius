@@ -29,7 +29,7 @@
  * available in this provider.
 *****/
 singletonIn(Process.nodeClassController, '', class RegistryStorageManagerStub {
-    async deleteSetting(path) {
+    async deleteSettings(path) {
     }
 
     async retrieveValue(path) {
@@ -208,6 +208,7 @@ singletonIn(Process.nodeClassController, '', class Registry {
                 else {
                     let shaped = dataShape.shapeValue(message.value, storedValue);
                     node.getValue().value = shaped;
+                    await this.storage.storeValue(message.path, node.getValue().value);
                 }
             }
 

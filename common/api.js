@@ -92,7 +92,8 @@ register('', class Api {
     static ignore = Symbol('ignore');
     static noauth = Symbol('noauth');
 
-    constructor() {
+    constructor(realm) {
+        this.realm = realm;
         this.endpoints = {};
     }
 
@@ -110,6 +111,10 @@ register('', class Api {
         return Object.keys(this.endpoints);
     }
 
+    getRealm() {
+        return this.realm;
+    }
+
     async handle(message) {
         let endpoint = this.endpoints[message.name];
 
@@ -117,7 +122,7 @@ register('', class Api {
             if ('#TOKEN' in message) {
                 let session = await Session.getSessionFromToken(message['#TOKEN']);
 
-                if (PermissionVerse.authorize(endpoint.permissions, session.permissions)) {
+                if (await Permissions.authorize(this.realm, endpoint.permissions, session.permissions)) {
                     try {
                         if (message.args) {
                             return await endpoint.func(...message.args);

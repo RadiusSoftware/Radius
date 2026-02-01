@@ -72,6 +72,7 @@ require('./element.js');
 require('./bundle.js');
 require('./session.js');
 require('./resource.js');
+require('./thunk.js');
 
 require('./net/socket.js');
 require('./net/httpX.js');

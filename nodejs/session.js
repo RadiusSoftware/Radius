@@ -70,7 +70,7 @@ registerIn(Process.nodeClassController, '', class Session {
 
         this.teams = {};
         this.data = {};
-        this.permissions = {};
+        this.permissionSets = {};
         this.state = 'unknown';
         this.authType = 'none';
         this.remoteHost = null;
@@ -106,7 +106,9 @@ registerIn(Process.nodeClassController, '', class Session {
         this.setRemoteHost(opts.remoteHost);
         SessionManager.sessionsByUUID[this.uuid] = this;
         SessionManager.sessionsByToken[this.token] = this;
-        console.log(this);
+        // TODO ***********************************************************************
+        // console.log(this);
+        // TODO ***********************************************************************
         return this;
     }
 
@@ -118,7 +120,7 @@ registerIn(Process.nodeClassController, '', class Session {
         // TODO ***********************************************************************
     }
 
-    promoteUnknown() {
+    promoteUnknown(account) {
         // TODO ***********************************************************************
     }
 
@@ -139,7 +141,6 @@ registerIn(Process.nodeClassController, '', class Session {
             firstName: this.account.firstName,
             lastName: this.account.lastName,
             teams: Data.clone(this.teams),
-            permissions: Data.clone(this.permissions),
             state: this.state,
             token: this.token,
             idleSince: this.idleSince,
@@ -179,7 +180,7 @@ registerIn(Process.nodeClassController, '', class Session {
 
         this.teams = {};
         this.data = {};
-        this.permissions = {};
+        this.permissionSets = {};
         this.state = 'unknown';
         this.authType = 'none';
         this.remoteHost = null;
