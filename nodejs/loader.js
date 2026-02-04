@@ -59,10 +59,137 @@ if (LibCluster.isPrimary) {
             this.javascriptPath = LibPath.join(__dirname, '..', 'javascript');
             this.nodejsPath = LibPath.join(__dirname, '..', 'nodejs');
             this.mozillaPath = LibPath.join(__dirname, '..', 'mozilla');
-            this.radiusPath = LibPath.join(__dirname, 'radius');
+            this.serverPath = LibPath.join(__dirname, 'server');
             this.sourceFiles = {};
             this.nodejsFramework = [];
             this.load();
+        }
+
+        async buildConfiguration() {
+            /*
+            let settings = mkSettingsHandle();
+
+            if (!await settings.loadSettings()) {
+                await settings.defineSetting(
+                    'httpServer',
+                    'server',
+                    mkDataShape({
+                        type: ObjectType,
+                        children: {
+                            workers: { type: Int32Type, required: true },
+                            ipv4: { type: StringType, required: false },
+                            ipv6: { type: StringType, required: false },
+                            publicKey: { type: StringType, required: false },
+                            privateKey: { type: StringType, required: false },
+                            tls: {
+                                type: ObjectType,
+                                children: {
+                                    myCertificate: { type: StringType, required: true },
+                                    caCertificate: { type: StringType, required: true },
+                                }
+                            }
+                        }
+                    }),
+                    {
+                        workers: 1,
+                        ipv4: '0.0.0.0',
+                        ipv6: '::',
+                    }
+                );
+
+                await settings.defineSetting(
+                    'permissionTypes',
+                    'general',
+                    mkDataShape({ type: [ StringType ] }),
+                    [
+                        'radius:cookies',
+                        'radius:session',
+                        'radius:signedin',
+                        'radius:admin',
+                        'radius:system',
+                        'radius:websocket',
+                    ]
+                );
+
+                await settings.defineSetting('acceptCookiesName', 'general', StringType, 'kibble');
+                await settings.defineSetting('radiusPath', 'general', StringType, '/radius');
+                await settings.defineSetting('sessionTimeoutMillis', 'general', Int32Type, 120*60*60*1000);
+                await settings.defineSetting('sessionShutdowntMillis', 'general', Int32Type, 240*60*60*1000);
+                await settings.defineSetting('sessionCookiePrefix', 'general', StringType, 'sx-');
+                await settings.defineSetting('loginMaxFailures', 'general', Int32Type, 4);
+                await settings.defineSetting('loginMaxMfaMinutes', 'general', Int32Type, 5);
+                await settings.defineSetting('passwordMaxDays', 'general', Int32Type, -1);
+                await settings.defineSetting('passwordHistoryMaxDays', 'general', Int32Type, 365);
+                await settings.defineSetting('system#settings-initialized', 'general', BooleanType, true);
+                await settings.defineSetting('forgetDeviceDays', 'general', Int32Type, 90);
+                await settings.defineSetting('packages', 'general', ArrayType, []);
+                await settings.defineSetting('webServicesPath', 'general', StringType, '/ws');
+                // TODO ********************************************************************************
+                // TODO ********************************************************************************
+                //await settings.defineSetting('radiusCluster', 'cluster', StringType, '#NOTSET#');
+                await settings.defineSetting('clusterName', 'cluster', StringType, '#NOUSER#');
+                await settings.defineSetting('clusterKey', 'cluster', StringType, '');
+                await settings.defineSetting('clusterSubnet', 'cluster', StringType, '');
+                // TODO ********************************************************************************
+                // TODO ********************************************************************************
+
+                await this.createClusterWebServices();
+            }
+
+            for (let arg of Object.values(this.args)) {
+                if (arg.settingName) {
+                    await settings.defineTemporarySetting(
+                        arg.settingName,
+                        'general',
+                        arg.settingType == 'boolean' ? BooleanType : StringType,
+                        arg.value
+                    );
+                }
+            }
+
+            await settings.defineTemporarySetting('nodeId', 'general', StringType, Crypto.generateUUID());
+            await settings.defineTemporarySetting('bootTime', 'general', DateType, mkTime());
+            await settings.defineTemporarySetting('sessionCookieName', 'general', StringType, Crypto.generateUUID());
+
+            await settings.defineTemporarySetting(
+                'nodejsFramework',
+                'general',
+                StringType,
+                this.nodejsFramework.join('\n'),
+            );
+            */
+        }
+
+        async createClusterWebServices() {
+            /*
+            let wsHandle = mkWebServiceHandle();
+            let teamId = (await mkTeamHandle().openNoTeam()).id;
+            console.log(teamId);
+
+            await wsHandle.create({
+                clss: ServiceWebService,
+                name: 'Web Service Cluster Connection',
+                enabled: false,
+                locked: true,
+                path: '/clusterwebservice',
+                authType: 'apikey',
+                teamId: teamId,
+                permissions: [],
+                addrs: [],
+            });
+
+            await wsHandle.create({
+                clss: ThunkWebService,
+                name: 'DBMS Thunk Cluster Connection',
+                enabled: false,
+                locked: true,
+                path: '/clusterthunk',
+                authType: 'apikey',
+                teamId: teamId,
+                permissions: [],
+                addrs: [],
+            });
+            */
         }
 
         async enumerateContext(context) {
@@ -89,6 +216,57 @@ if (LibCluster.isPrimary) {
             }
         }
 
+        async initializeRadiusDbms() {
+            /*
+            let path = this.args['-dbms'].value;
+
+            try {
+                let stats = await LibFileSystem.promises.stat(path);
+
+                if (stats.isFile()) {
+                    let content = await LibFileSystem.promises.readFile(path);
+                    let radiusDbms =  JSON.parse(content.toString());
+
+                    if (this.args['-factory-reset-everything-on-this-host'].value) {
+                        if (this.args['-debug'].value) {
+                            if (await Dbms.doesDatabaseExist(radiusDbms)) {
+                                await Dbms.dropDatabase(radiusDbms);
+                            }
+                        }
+                    }
+
+                    if (!(await Dbms.doesDatabaseExist(radiusDbms))) {
+                        await Dbms.createDatabase(radiusDbms);
+                    }
+
+                    let schema1 = await Dbms.getDatabaseSchema(radiusDbms);
+                    let schema2 = mkFrameworkSchema();
+
+                    for (let diff of mkSchemaAnalysis(schema1, schema2)) {
+                        await SchemaUpdater.upgrade(radiusDbms, diff);
+                    }
+
+                    for (let dbTable of schema2) {
+                        if (dbTable.getType() == 'object') {
+                            defineDbo('', dbTable);
+                        }
+                    }
+
+                    await Dbms.setSettings(radiusDbms);
+                    return true;
+                }
+            }
+            catch (e) {}
+            return false;
+            */
+        }
+
+        async launchServers() {
+            // **********************************************************************************
+            // **********************************************************************************
+            console.log('\n*** LAUNCH REMAINING CONFIGURED SERVERS\n');
+        }
+
         async load() {
             this.parseCommandLine();
             let mozillaFramework = [];
@@ -106,50 +284,30 @@ if (LibCluster.isPrimary) {
                 }
 
                 if (!context.startsWith('mozilla') && sourceFile.path.endsWith('.js')) {
+                    if (sourceFile.path.indexOf('/nodejs/') > 0) break;
                     require(sourceFile.path);
                     this.nodejsFramework.push(`require('${sourceFile.path}');`);
                 }
             }
-            /*
-            let breed = mkRdsEnum('collie', 'aussie', 'shepard');
-            let citrus = mkRdsEnum('lemon', 'orange', 'lime', 'grapefruit');
-            let touch = mkRdsEnum('soft', 'firm');
 
-            let shape = mkRdsShape({
-                name: StringType,
-                created: DateType,
-                breed: breed,
-                _sub: {
-                    fruit: citrus,
-                    count: UInt8Type,
-                    texture: {
-                        touch: touch,
-                        smoothness: NumberType,
-                        blemished: BooleanType,
-                    }
-                }
-            });
+                let shape = mkRdsShape({
+                    addr: StringType,
+                    _name: /^[a-zA-Z]+ [a-zA-Z]+$/gm,
+                    users: [
+                        StringType,
+                        BooleanType,
+                        BigIntType,
+                    ],
+                });
 
-            let json = toJson(shape);
-            shape = fromJson(json);
+                console.log(shape.verifyStrictly({
+                    addr: '17.17.17.17',
+                    users: [ 'ONE', 'TWO', false, 47n ],
+                    name: 'Christoph Wittmann',
+                }));
 
-            console.log(shape.verifyStrictly({
-                name: 'Fido',
-                created: mkTime(),
-                breed: 'aussie',
-                sub: {
-                    fruit: 'grapefruit',
-                    count: 255,
-                    texture: {
-                        touch: 'soft',
-                        smoothness: 78,
-                        blemished: false,
-                    }
-                }
-            }));
-            */
+                return;
 
-            /*
             if (await this.initializeRadiusDbms()) {
                 await this.buildConfiguration();
 
@@ -192,7 +350,6 @@ if (LibCluster.isPrimary) {
             else {
                 console.log(`\nFailed to initialize Radius DBMS: "${this.args['-dbms']}"`);
             }
-            */
         }
 
         parseCommandLine() {
@@ -256,5 +413,33 @@ if (LibCluster.isPrimary) {
 *****/
 else {
     globalThis.Loader = new (class Loader {
+        constructor() {
+            let bootUUID = LibProcess.env.bootUUID;
+            delete LibProcess.env.bootUUID;
+            LibProcess.send(JSON.stringify({ name: bootUUID }));
+
+            LibProcess.on('message', async data => {
+                if (globalThis.Process) {
+                    if (this.bootstrap) {
+                        let func = this.bootstrap;
+                        this.bootstrap = null;
+                        await func(data);
+                    }
+
+                }
+                else {
+                    eval(data);
+                }
+            });
+        }
+
+        async bootstrap(data) {
+            let launcher;
+            let message = fromJson(data);
+            let launcherCode = mkBuffer(message.launcher, 'base64').toString();            
+            await eval(`launcher=${launcherCode}`);
+            await Namespace.init();
+            await launcher();
+        }
     })();
 }

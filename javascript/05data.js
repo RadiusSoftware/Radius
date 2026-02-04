@@ -494,14 +494,15 @@ singleton(class Data {
 define(class RdsShape {
     constructor(arg) {
         if (arg != undefined) {
-            this.arrayFlag = ArrayType.verify(arg);
-            arg = this.arrayFlag ? arg[0] : arg;
-
             if (arg === EnumType) {
                 throwError('Provide an RdsEnum instance, not EnumType');
             }
             else if (arg === ObjectType) {
                 throwError('Provide an Object, not ObjectType');
+            }
+            else if (ArrayType.verify(arg)) {
+                this.type = ArrayType;
+                this.items = arg.map(item => mkRdsShape(item));
             }
             else if (EnumType.verify(arg)) {
                 this.type = EnumType;
@@ -518,6 +519,10 @@ define(class RdsShape {
                     this.keys[key] = mkRdsShape(arg[key]);
                 }
             }
+            else if (arg instanceof RegExp) {
+                this.type = StringType;
+                this.expr = arg;
+            }
             else {
                 this.type = getJsType(arg);
             }
@@ -527,9 +532,10 @@ define(class RdsShape {
     static fromJson(obj) {
         let shape = mkRdsShape();
         shape.type = obj.type;
-        shape.arrayFlag = obj.arrayFlag;
-        obj.keys ? shape.keys = obj.keys : null;
         obj.enum ? shape.enum = obj.enum : null;
+        obj.expr ? shape.expr = obj.expr : null;
+        obj.keys ? shape.keys = obj.keys : null;
+        obj.items ? shape.item = obj.items : null;
         return shape;
     }
 
@@ -537,8 +543,20 @@ define(class RdsShape {
         return this.enum;
     }
 
+    getItems() {
+        if (this.type === ArrayType) {
+            return this.items;
+        }
+
+        return [];
+    }
+
     getKeys() {
         return Object.keys(this.keys);
+    }
+
+    getType() {
+        return this.type;
     }
 
     getValue(key) {
@@ -549,49 +567,91 @@ define(class RdsShape {
         return undefined;
     }
 
-    getType() {
-        return this.type;
-    }
-
     isArray() {
-        return this.arrayFlag;
+        return this.type === ArrayType;
     }
 
     isScalar() {
-        return this.type !== ObjectType && !this.arrayFlag
+        return !this.isArray();
     }
 
     verify(value) {
-        if (this.type === ObjectType) {
-            if (typeof value != 'object') {
-                return false;
-            }
-
-            for (let rawKey in this.keys) {
-                let optional = rawKey.startsWith('_');
-                let key = optional ? rawKey.substring(1) : rawKey;
-
-                if (optional && !(key in value)) {
-                    continue;
-                }
-                
-                if (!this.keys[rawKey].verify(value[key])) {
-                    return false;
-                }
-            }
+        if (this.type === ArrayType) {
+            return this.verifyArray(value);
         }
         else if (this.type == EnumType) {
-            if (!(this.enum instanceof RdsEnum)) {
+            if (!StringType.verify(value)) {
                 return false;
             }
 
-            if (!this.enum.has(value)) {
+            return this.enum.has(value);
+        }
+        else if (this.type == ObjectType) {
+            return this.verifyObject((value));
+        }
+        else if (this.type === StringType) {
+            if (StringType.verify(value)) {
+                if (this.expr) {
+                    return value.match(this.expr) != null;
+                }
+                else {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        else {
+            return this.type.verify(value);
+        }
+    }
+
+    verifyArray(value) {
+        if (!ArrayType.verify(value)) {
+            return false;
+        }
+
+        for (let arrayElement of value) {
+            let ok = false;
+
+            for (let shape of this.items) {
+                if (shape.verify(arrayElement)) {
+                    ok = true;
+                    break;
+                }
+            }
+
+            if (!ok) {
                 return false;
             }
         }
-        else {
-            if (!this.type.verify(value)) {
+
+        return true;
+    }
+
+    verifyObject(value) {
+        if (typeof value != 'object') {
+            return false;
+        }
+
+        for (let rawKey in this.keys) {
+            let optional = rawKey.startsWith('_');
+            let key = optional ? rawKey.substring(1) : rawKey;
+
+            if (optional && !(key in value)) {
+                continue;
+            }
+            
+            if (!this.keys[rawKey].verify(value[key])) {
                 return false;
+            }
+        }
+
+        if (this.strict) {
+            for (let key in value) {
+                if (!(key in this.keys) && !(`_${key}` in this.keys)) {
+                    return false;
+                }
             }
         }
 
@@ -599,45 +659,12 @@ define(class RdsShape {
     }
 
     verifyStrictly(value) {
-        if (this.type === ObjectType) {
-            if (typeof value != 'object') {
-                return false;
-            }
-
-            for (let rawKey in this.keys) {
-                let optional = rawKey.startsWith('_');
-                let key = optional ? rawKey.substring(1) : rawKey;
-
-                if (optional && !(key in value)) {
-                    continue;
-                }
-                
-                if (!this.keys[rawKey].verifyStrictly(value[key])) {
-                    return false;
-                }
-            }
-
-            for (let key in value) {
-                if (!(key in this.keys) && !(`_${key}` in this.keys)) {
-                    return false;
-                }
-            }
+        try {
+            this.strict = true;
+            return this.verify(value);
         }
-        else if (this.type == EnumType) {
-            if (!(this.enum instanceof RdsEnum)) {
-                return false;
-            }
-
-            if (!this.enum.has(value)) {
-                return false;
-            }
+        finally {
+            delete this.strict;
         }
-        else {
-            if (!this.type.verify(value)) {
-                return false;
-            }
-        }
-
-        return true;
     }
 });
