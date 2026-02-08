@@ -38,24 +38,14 @@ createService(class SettingsService extends Service {
     }
 
     async defineSetting(name, category, shape, temporary, value) {
-        let dataShape;
+        let settingShape = mkRdsShape(shape);
 
-        if (shape instanceof DataShape) {
-            dataShape = shape;
-        }
-        else if (shape instanceof BaseType) {
-            dataShape = mkDataShape({ type: shape });
-        }
-        else {
-            dataShape = mkDataShape({ type: StringType })
-        }
-
-        if (dataShape.validate(value)) {
+        if (settingShape.verify(value)) {
             if (temporary) {
                 let setting = this.settings[name] = mkDboSetting({
                     name: name,
                     category: category,
-                    shape: dataShape,
+                    shape: settingShape,
                     value: value,
                 });
 
@@ -66,7 +56,7 @@ createService(class SettingsService extends Service {
                 return this.settings[name] = await mkDbmsThunk().createObj(DboSetting, {
                     name: name,
                     category: category,
-                    shape: dataShape,
+                    shape: settingShape,
                     value: value,
                 });
             }
@@ -80,7 +70,7 @@ createService(class SettingsService extends Service {
             return await this.defineSetting(
                 message.settingName,
                 message.category,
-                message.shape,
+                message.shape, 
                 true,
                 message.value,
             );
@@ -202,7 +192,7 @@ createService(class SettingsService extends Service {
         if (message.settingName in this.settings) {
             let setting = this.settings[message.settingName];
 
-            if (setting.shape.validate(message.value)) {
+            if (setting.shape.verify(message.value)) {
                 setting.value = message.value;
 
                 if (!(setting.id in this.temporary)) {

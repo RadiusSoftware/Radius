@@ -163,7 +163,7 @@ define(class Cookie {
                     this[setter](value);
                 }
                 else {
-                    let pascalCase = TextUtils.toPascalCase(key.replaceAll('-', '_'));
+                    let pascalCase = RdsText.toPascalCase(key.replaceAll('-', '_'));
                     setter = `set${pascalCase}`;
 
                     if (typeof this[setter] == 'function') {
@@ -177,12 +177,12 @@ define(class Cookie {
     parseValue(raw) {
         try {
             if (raw.startsWith('jsx')) {
-                if (TextUtils.isHexEncoded(raw.substring(3))) {
+                if (RdsText.isHexEncoded(raw.substring(3))) {
                     return fromJson(mkBuffer(raw.substring(3), 'hex').toString());
                 }
             }
             else {
-                if (TextUtils.isHexEncoded(raw)) {
+                if (RdsText.isHexEncoded(raw)) {
                     return mkBuffer(raw, 'hex').toString();
                 }
             }

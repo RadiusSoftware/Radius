@@ -142,9 +142,13 @@ define(class RdsEnum {
         return this;
     }
 
-    toPairs() {
+    [Symbol.iterator]() {
+        return Object.values(this.values)[Symbol.iterator()];
+    }
+
+    toArray() {
         return Object.entries(this.values).map(entry => {
-            return { value: entry[0], text: entry[1] };
+            return { key: entry[0], text: entry[1] };
         });
     }
 

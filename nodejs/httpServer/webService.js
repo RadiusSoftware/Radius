@@ -38,7 +38,7 @@ if (Process.isPrimary()) {
             this.webServicesByPath = {};
 
             Namespace.emitter.on('ClassDefined', message => {
-                if (Data.classExtends(message.clss, WebService)) {
+                if (Data.extends(message.clss, WebService)) {
                     if (message.clss != WebService) {
                         let entry = {
                             name: message.clss.name,
@@ -53,7 +53,7 @@ if (Process.isPrimary()) {
 
             this.dataShape = mkRdsShape({
                 namespace: StringType,
-                className: StriingType,
+                className: StringType,
                 fqn: StringType,
                 authType: StringType,
                 name: StringType,
@@ -68,7 +68,7 @@ if (Process.isPrimary()) {
                 _clientSecret: StringType,
             });
 
-            this.authTypes = mkStringSet('idsecret', 'apikey', 'none');
+            this.authTypes = mkRdsEnum('idsecret', 'apikey', 'none');
         }
 
         async disable(id) {

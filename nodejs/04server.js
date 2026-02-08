@@ -161,7 +161,7 @@ define(class Server extends Emitter {
     async start(settingName) {
         let settings = await mkSettingsHandle().getSetting(settingName);
 
-        if (ObjectType.is(settings)) {
+        if (ObjectType.verify(settings)) {
             this.settings = settings;
 
             if (typeof this.settings.workers == 'number') {

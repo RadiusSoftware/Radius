@@ -24,12 +24,12 @@ const LibZlib = require('zlib');
 
 /*****
  * The websocket object for the server.  Websockets are single-use and discarded
- * after they have been closed.  The WebSocket class is primarily an initializer
+ * after they have been closed.  The Websocket class is primarily an initializer
  * and a container for the frame builder and frame parser.  The frame build is
  * there to generate the frames for outgoing messages, while the frame parse
  * waits for incoming data from the socket and then parses frames as data arrives.
  * When the frame parse finishes a frame, the onFrame() method is called to enable
- * the WebSocket instances to assemble frames, and then to emit a notification
+ * the Websocket instances to assemble frames, and then to emit a notification
  * when a complete message has been received.
  * 
  * https://en.wikipedia.org/wiki/WebSocket#Frame-based_message
@@ -39,7 +39,7 @@ const LibZlib = require('zlib');
  * https://thuc.space/posts/deflate/
  * https://github.com/libyal/assorted/blob/main/documentation/Deflate%20(zlib)%20compressed%20data%20format.asciidoc#
 *****/
-define(class WebSocket extends Emitter {
+define(class Websocket extends Emitter {
     static supportedExtensions = {
         'permessage-deflate': () => mkPerMessageDeflator,
     };
@@ -51,8 +51,8 @@ define(class WebSocket extends Emitter {
         this.socket.setNoDelay();
 
         this.analyzeExtensions(extensions);
-        mkWebSocketMessageParser(this, headData);
-        this.frameBuilder = mkWebSocketFrameBuilder(this);
+        mkWebsocketMessageParser(this, headData);
+        this.frameBuilder = mkWebsocketFrameBuilder(this);
     }
   
     analyzeExtensions(extensionsHeader) {
@@ -77,7 +77,7 @@ define(class WebSocket extends Emitter {
             }
 
             let settings;
-            let supportedExtension = WebSocket.supportedExtensions[name];
+            let supportedExtension = Websocket.supportedExtensions[name];
 
             if (supportedExtension) {
                 if (!(name in this.extensions)) {
@@ -116,7 +116,7 @@ define(class WebSocket extends Emitter {
         return this;
     }
 
-    getSecWebSocketExtensions() {
+    getSecWebsocketExtensions() {
         return Object.values(this.extensions).map(extension => {
             let specification = [ extension.settings.name ];
 
@@ -249,7 +249,7 @@ define(class WebSocket extends Emitter {
  * https://github.com/libyal/assorted/blob/main/documentation/Deflate%20(zlib)%20compressed%20data%20format.asciidoc#
  * 
 *****/
-define(class WebSocketFrameBuilder {
+define(class WebsocketFrameBuilder {
     static maxPayLoadLength = 50000;
 
     constructor(webSocket) {
@@ -307,7 +307,7 @@ define(class WebSocketFrameBuilder {
 
     async buildFrames(payload, opcodeName) {
         let frames = [];
-        let opcode = WebSocketFrameBuilder.convertOpcodeName(opcodeName);
+        let opcode = WebsocketFrameBuilder.convertOpcodeName(opcodeName);
 
         if (typeof payload == 'string') {
             payload = mkBuffer(payload);
@@ -318,14 +318,14 @@ define(class WebSocketFrameBuilder {
         }
 
         while (payload.length) {
-            if (payload.length <= WebSocketFrameBuilder.maxPayLoadLength) {
+            if (payload.length <= WebsocketFrameBuilder.maxPayLoadLength) {
                 frames.push(this.buildFrame(payload, opcode, true));
                 break;
             }
             else {
-                let subarray = payload.subarray(0, WebSocketFrameBuilder.maxPayLoadLength);
+                let subarray = payload.subarray(0, WebsocketFrameBuilder.maxPayLoadLength);
                 frames.push(this.buildFrame(subarray, opcode, false));
-                payload = payload.subarray(WebSocketFrameBuilder.maxPayLoadLength);
+                payload = payload.subarray(WebsocketFrameBuilder.maxPayLoadLength);
             }
 
             opcode = 0;
@@ -351,7 +351,7 @@ define(class WebSocketFrameBuilder {
 /*****
  * The frame parse awaits incoming data. over the system socket and parses that
  * incoming data to form websocket protocol frames, which are then passed off to
- * the WebSocket instance.  The sneaky part of this algorithm is that we don't
+ * the Websocket instance.  The sneaky part of this algorithm is that we don't
  * want to assume that frames arrive intact.  Frames may appear in bits and pieces
  * with extra bits and pieces at either the front or back end.  When there're
  * extra bytes, we assume those bytes belong to the next incoming frame.  Hence,
@@ -366,7 +366,7 @@ define(class WebSocketFrameBuilder {
  * https://github.com/libyal/assorted/blob/main/documentation/Deflate%20(zlib)%20compressed%20data%20format.asciidoc#
  * 
 *****/
-define(class WebSocketMessageParser {
+define(class WebsocketMessageParser {
     constructor(webSocket, headData) {
         this.webSocket = webSocket;
         this.socket = webSocket.socket;

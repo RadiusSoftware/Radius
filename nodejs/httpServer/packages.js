@@ -412,8 +412,8 @@ define(class Package {
     async processImages(imagesElement) {
         let prefix = this.name ? `${this.name}.` : '';
 
-        for (let image of TextUtils.split(imagesElement.getInnerHtml(), '\n')) {
-            let [ name, code ] = TextUtils.split(image.trim(), '#');
+        for (let image of RdsText.split(imagesElement.getInnerHtml(), '\n')) {
+            let [ name, code ] = RdsText.split(image.trim(), '#');
             let imageId = `${prefix}${name}`;
             this.mozilla.images[imageId] = code;
         }
@@ -565,7 +565,7 @@ define(class Package {
             };
 
             widget.attributes.design = `${widget.tagName}-self`;
-            let tagNameParts = TextUtils.split(widget.tagName.trim().toLowerCase(), '-');
+            let tagNameParts = RdsText.split(widget.tagName.trim().toLowerCase(), '-');
 
             if (tagNameParts.length != 2) {
                 this.mozilla.errors.push(
@@ -684,7 +684,7 @@ define(class Package {
         let state = 0;
         let scrubbed = [];
 
-        for (let text of TextUtils.split(styleText, '\n')) {
+        for (let text of RdsText.split(styleText, '\n')) {
             let line = text.trim();
 
             if (line.endsWith('{')) {

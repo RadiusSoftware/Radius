@@ -66,48 +66,45 @@ if (LibCluster.isPrimary) {
         }
 
         async buildConfiguration() {
-            /*
             let settings = mkSettingsHandle();
 
             if (!await settings.loadSettings()) {
                 await settings.defineSetting(
                     'httpServer',
                     'server',
-                    mkDataShape({
-                        type: ObjectType,
-                        children: {
-                            workers: { type: Int32Type, required: true },
-                            ipv4: { type: StringType, required: false },
-                            ipv6: { type: StringType, required: false },
-                            publicKey: { type: StringType, required: false },
-                            privateKey: { type: StringType, required: false },
-                            tls: {
-                                type: ObjectType,
-                                children: {
-                                    myCertificate: { type: StringType, required: true },
-                                    caCertificate: { type: StringType, required: true },
-                                }
-                            }
-                        }
+                    mkRdsShape({
+                        publicKey: StringType,
+                        privateKey: StringType,
+                        listeners: [{
+                            workers: Int32Type,
+                            ipv4: StringType,
+                            ipv6: StringType,
+                            _cert: StringType,
+                            _auth: StringType,
+                        }]
                     }),
                     {
-                        workers: 1,
-                        ipv4: '0.0.0.0',
-                        ipv6: '::',
+                        publicKey: '',
+                        privateKey: '',
+                        listeners: [{
+                            workers: 1,
+                            ipv4: '0.0.0.0',
+                            ipv6: '::'
+                        }]
                     }
                 );
-
+                
                 await settings.defineSetting(
                     'permissionTypes',
                     'general',
-                    mkDataShape({ type: [ StringType ] }),
+                    EnumType,
                     [
-                        'radius:cookies',
-                        'radius:session',
-                        'radius:signedin',
-                        'radius:admin',
-                        'radius:system',
-                        'radius:websocket',
+                        'radius#cookies',
+                        'radius#session',
+                        'radius#signedin',
+                        'radius#admin',
+                        'radius#system',
+                        'radius#websocket',
                     ]
                 );
 
@@ -120,7 +117,6 @@ if (LibCluster.isPrimary) {
                 await settings.defineSetting('loginMaxMfaMinutes', 'general', Int32Type, 5);
                 await settings.defineSetting('passwordMaxDays', 'general', Int32Type, -1);
                 await settings.defineSetting('passwordHistoryMaxDays', 'general', Int32Type, 365);
-                await settings.defineSetting('system#settings-initialized', 'general', BooleanType, true);
                 await settings.defineSetting('forgetDeviceDays', 'general', Int32Type, 90);
                 await settings.defineSetting('packages', 'general', ArrayType, []);
                 await settings.defineSetting('webServicesPath', 'general', StringType, '/ws');
@@ -134,6 +130,7 @@ if (LibCluster.isPrimary) {
                 // TODO ********************************************************************************
 
                 await this.createClusterWebServices();
+                await settings.defineSetting('system#settings-initialized', 'general', BooleanType, true);
             }
 
             for (let arg of Object.values(this.args)) {
@@ -157,7 +154,6 @@ if (LibCluster.isPrimary) {
                 StringType,
                 this.nodejsFramework.join('\n'),
             );
-            */
         }
 
         async createClusterWebServices() {
@@ -217,7 +213,6 @@ if (LibCluster.isPrimary) {
         }
 
         async initializeRadiusDbms() {
-            /*
             let path = this.args['-dbms'].value;
 
             try {
@@ -258,7 +253,6 @@ if (LibCluster.isPrimary) {
             }
             catch (e) {}
             return false;
-            */
         }
 
         async launchServers() {
@@ -284,29 +278,34 @@ if (LibCluster.isPrimary) {
                 }
 
                 if (!context.startsWith('mozilla') && sourceFile.path.endsWith('.js')) {
-                    if (sourceFile.path.indexOf('/nodejs/') > 0) break;
                     require(sourceFile.path);
                     this.nodejsFramework.push(`require('${sourceFile.path}');`);
                 }
             }
 
-                let shape = mkRdsShape({
-                    addr: StringType,
-                    _name: /^[a-zA-Z]+ [a-zA-Z]+$/gm,
-                    users: [
-                        StringType,
-                        BooleanType,
-                        BigIntType,
-                    ],
-                });
+            let json = toJson(mkRdsShape({
+                name: StringType,
+                code: [ /[0-9]{4,4}_[a-z]+/, /abcd-alpha/ ],
+                count: UInt8Type,
+                choice: mkRdsEnum('one:ONE', 'two:TWO', 'three:THREE'),
+                func: FunctionType,
+                value: MultiplyExpr,
+                buff: BufferType,
+            }));
 
-                console.log(shape.verifyStrictly({
-                    addr: '17.17.17.17',
-                    users: [ 'ONE', 'TWO', false, 47n ],
-                    name: 'Christoph Wittmann',
-                }));
+            let shape = fromJson(json);
 
-                return;
+            console.log(shape.verify({
+                name: 'Mr Bean',
+                code: [ '1234_eiuerhugrejkhgeriuhgreiuh', 'abcd-alpha', '1234_eiuerhugrejkhgeriuhgreiuh' ],
+                count: 3,
+                choice: 'one',
+                func: () => 'hello world',
+                value: mkMultiplyExpr(4, 4),
+                buff: mkBuffer('hello world'),
+            }));
+
+            return;
 
             if (await this.initializeRadiusDbms()) {
                 await this.buildConfiguration();

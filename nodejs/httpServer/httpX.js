@@ -137,7 +137,7 @@ define(class HttpX extends Emitter {
         return HttpX.NotAllowed;
     }
 
-    async handleWebSocket(data) {
+    async handleWebsocket(data) {
     }
 
     async init() {

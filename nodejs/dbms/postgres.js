@@ -122,12 +122,12 @@ singleton(class PostgresDbms {
         let columnItems = [];
 
         for (let columnItem of dbIndex) {
-            columnItems.push(`_${TextUtils.toSnakeCase(columnItem.column)} ${columnItem.direction}`);
+            columnItems.push(`_${RdsText.toSnakeCase(columnItem.column)} ${columnItem.direction}`);
         }
 
         let sql = [
-            `CREATE INDEX _${TextUtils.toSnakeCase(dbIndex.getName())}`,
-            ` on _${TextUtils.toSnakeCase(dbTable.getName())} (${columnItems.join(', ')})`,
+            `CREATE INDEX _${RdsText.toSnakeCase(dbIndex.getName())}`,
+            ` on _${RdsText.toSnakeCase(dbTable.getName())} (${columnItems.join(', ')})`,
         ];
 
         let pg = await mkPostgresConnection(settings).connect();
@@ -154,12 +154,12 @@ singleton(class PostgresDbms {
             let columnItems = [];
 
             for (let columnItem of index) {
-                columnItems.push(`_${TextUtils.toSnakeCase(columnItem.column)} ${columnItem.direction}`);
+                columnItems.push(`_${RdsText.toSnakeCase(columnItem.column)} ${columnItem.direction}`);
             }
 
             let sql = [
-                `CREATE INDEX _${TextUtils.toSnakeCase(index.getName(dbTable.getName()))}`,
-                `on _${TextUtils.toSnakeCase(dbTable.getName())} (${columnItems.join(', ')})`,
+                `CREATE INDEX _${RdsText.toSnakeCase(index.getName(dbTable.getName()))}`,
+                `on _${RdsText.toSnakeCase(dbTable.getName())} (${columnItems.join(', ')})`,
             ];
 
             await pg.query(sql.join(' '));
@@ -355,7 +355,7 @@ define(class PostgresConnection {
             `FROM ${toPgName(dbTable.getName())}`,
         ];
 
-        if (ObjectType.is(where) && Object.keys(where).length > 0) {
+        if (ObjectType.verify(where) && Object.keys(where).length > 0) {
             sql.push(`WHERE ${Object.entries(where).map(entry => {
                 let dbColumn = dbTable.getColumn(entry[0]);
                 let dbType = typeMapper.getDbType(dbColumn.getType());
@@ -364,7 +364,7 @@ define(class PostgresConnection {
             }).join(' AND ')}`);
         }
 
-        if (ObjectType.is(sort) && Object.keys(sort).length > 0) {
+        if (ObjectType.verify(sort) && Object.keys(sort).length > 0) {
             let sorters = [];
 
             for (let columnName in sort) {
@@ -510,11 +510,11 @@ const typeMapper = mkDbTypeMapper([
  * these methods don't apply to the database naming convention.
 *****/
 function toPgName(stdName) {
-    return `_${TextUtils.toSnakeCase(stdName)}`
+    return `_${RdsText.toSnakeCase(stdName)}`
 }
 
 function fromPgName(pgName) {
-    return TextUtils.toCamelCase(pgName.substring(1));
+    return RdsText.toCamelCase(pgName.substring(1));
 }
 
 
@@ -529,7 +529,7 @@ function fromPgName(pgName) {
 class PgDatabaseSchema {
     async load(pg, dbName) {
         this.pg = pg;
-        let pgDbName = TextUtils.toSnakeCase(dbName);
+        let pgDbName = RdsText.toSnakeCase(dbName);
         let dbSchema = mkDbSchema(dbName);
         let result = await this.pg.query(`SELECT table_name FROM information_schema.TABLES WHERE table_schema='public' AND table_catalog='${pgDbName}' ORDER BY table_name`);
         
@@ -546,12 +546,12 @@ class PgDatabaseSchema {
         let columns = [];
         let indexes = [];
         let primaryKey = [];
-        let dbTableName = TextUtils.toCamelCase(pgTableName.substring(1));
+        let dbTableName = RdsText.toCamelCase(pgTableName.substring(1));
         let result = await this.pg.query(`SELECT table_catalog, table_name, column_name, ordinal_position, udt_name FROM information_schema.COLUMNS WHERE table_catalog='${this.pg.settings.database}' AND table_name='${pgTableName}' ORDER BY ordinal_position`);
 
         for (let column of result) {
             try {
-                let columnName = TextUtils.toCamelCase(column.column_name.substring(1));
+                let columnName = RdsText.toCamelCase(column.column_name.substring(1));
                 columnName == 'id' ? id = true : null;
                 var jsType = typeMapper.getJsType(column.udt_name);
                 columns.push({ name: columnName, type: jsType, size: null });

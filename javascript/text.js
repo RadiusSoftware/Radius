@@ -32,7 +32,7 @@ singleton(class RdsText {
         if (typeof arg == 'string') {
             return this.disinfectString(arg);
         }
-        else if (ObjectType.is(arg)) {
+        else if (ObjectType.verify(arg)) {
             let stack = [ arg ];
 
             while (stack.length) {
@@ -44,7 +44,7 @@ singleton(class RdsText {
                     if (typeof value == 'string') {
                         obj[key] = this.disinfectString(value);
                     }
-                    else if (ObjectType.is(value)) {
+                    else if (ObjectType.verify(value)) {
                         stack.push(value);
                     }
                 }

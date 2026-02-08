@@ -90,7 +90,7 @@ define(class DbmsThunk extends Thunk {
 
             result = await func(dbc);
         }
-        catch (e) {}
+        catch (e) {console.log(e)}
         finally {
             if (!this.transaction) {
                 if (dbc) {

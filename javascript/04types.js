@@ -140,6 +140,57 @@ singleton(class BufferType extends BaseType {
     }
 });
 
+singleton(class ClassType extends BaseType {
+    constructor() {
+        super();
+        define(class NOCLASS {});
+    }
+
+    fromString(str) {
+        return globalThis.NOCLASS;
+    }
+
+    getDefault() {
+        return globalThis.NOCLASS;
+    }
+
+    instanceOf(clss, value) {
+        if (FunctionType.verify(clss)) {
+            if ('#fqn' in clss) {
+                let nsclass = Namespace.getClass(clss['#fqn']);
+
+                if (nsclass) {
+                    return value instanceof nsclass;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    isScalar() {
+        return true;
+    }
+
+    toBool(value) {
+        return true;
+    }
+
+    toString(value) {
+        return value.toString();
+    }
+
+    verify(value) {
+        if (FunctionType.verify(value)) {
+            if ('#fqn' in value) {
+                return Namespace.getClass(value['#fqn']) ? true : false;
+            }
+        }
+
+        return false;
+    }
+});
+
 singleton(class DateType extends BaseType {
     fromString(str) {
         return mkTime(str);
@@ -393,17 +444,20 @@ singleton(class ObjectType extends BaseType {
 
     verify(value) {
         if (typeof value != 'object') return false;
+        if (value === null) return false;
         if (Array.isArray(value)) return false;
         if (value instanceof Boolean) return false;
+        if (value instanceof Buffer) return false;
         if (value instanceof Date) return false;
         if (value instanceof Number) return false;
         if (value instanceof RegExp) return false;
         if (value instanceof String) return false;
+        if (value instanceof Time) return false;
         return true;
     }
 });
 
-singleton(class PatternType extends BaseType {
+singleton(class RegexType extends BaseType {
     fromString(str, flags) {
         return new RegExp(str, flags);
     }
@@ -823,49 +877,32 @@ singleton(class UInt64Type extends classOf(BigIntType) {
  * single value and constrained are not used with the expressions framework.
 *****/
 define(function getJsType(value) {
-    switch (typeof value) {
-        case 'bigint':
-            return BigIntType;
+    if (value === null) return NullType;
+    if (value === undefined) return UndefinedType;
 
-        case 'boolean':
-            return BooleanType;
+    let typename = typeof value;
+    if (typename == 'bigint') return BigIntType;
+    if (typename == 'boolean') return BooleanType;
+    if (typename == 'number') return NumberType;
+    if (typename == 'string') return StringType;
 
-        case 'function':
-            return FunctionType;
-
-        case 'number':
-            return NumberType;
-
-        case 'object':
-            if (typeof value === null) {
-                return NullType;
-            }
-            else if (Array.isArray(value)) {
-                return ArrayType;
-            }
-            else if (value instanceof RdsEnum) {
-                return EnumType;
-            }
-            else if (value instanceof Date) {
-                return DateType;
-            }
-            else if (value instanceof RegExp) {
-                return PatternType;
-            }
-            else if (value instanceof Number) {
-                return NumberType;
-            }
-            else if (value instanceof Boolean) {
-                return BooleanType;
-            }
-            else {
-                return ObjectType;
-            }
-
-        case 'string':
-            return StringType;
-
-        case 'undefined':
-            return UndefinedType;
+    if (typename == 'function') {
+        if (Namespace.classes.has(value)) return ClassType;
+        return FunctionType;
     }
+
+    if (typename == 'object') {
+        if (Array.isArray(value)) return ArrayType;
+        if (value instanceof Boolean) return BooleanType;
+        if (value instanceof Buffer) return BufferType;
+        if (value instanceof Date) return DateType;
+        if (value instanceof RdsEnum) return EnumType;
+        if (value instanceof Number) return NumberType;
+        if (value instanceof RegExp) return RegexType;
+        if (value instanceof String)  return StringType;
+        if (value instanceof Time)  return TimeType;
+        return ObjectType;
+    }
+
+    return undefined;
 });

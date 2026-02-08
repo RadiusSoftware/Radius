@@ -43,18 +43,18 @@ define(class Thunk {
         this.thunkClassName = this.ctor.name;
         this.thunkName = this.ctor.name.substring(0, this.ctor.name.length - 'Thunk'.length);
         let prototype = Reflect.getPrototypeOf(this);
-        this.objekt = mkObjekt();
+        this.object = new Object();
 
         for (let propertyName of Reflect.ownKeys(prototype)) {
             if (propertyName != 'constructor') {
                 if (typeof this[propertyName] == 'function') {
                     let thunk = this;
-                    this.objekt[propertyName] = async (...args) => thunk.call(propertyName, ...args);
+                    this.object[propertyName] = async (...args) => thunk.call(propertyName, ...args);
                 }
             }
         }
 
-        return this.objekt;
+        return this.object;
     }
 
     async call(methodName, ...args) {

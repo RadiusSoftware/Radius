@@ -31,7 +31,7 @@
  * must be in phonum format when utilizing these services.
 *****/
 createService(class PhoneService extends Service {
-    static statuses = mkStringSet(
+    static statuses = mkRdsEnum(
         'none',
         'bad',
         'call-only',

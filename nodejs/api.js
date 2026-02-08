@@ -150,7 +150,7 @@ define(class Api {
     }
 
     static define(name, args, permissions) {
-        !ObjectType.is(args) ? args = {} : args;
+        !ObjectType.verify(args) ? args = {} : args;
         Array.isArray(permissions) ? permissions : permissions = [];
         return `ApiEndPoint##${name}##${toJson(args)}##${toJson(permissions)}`;
     }
@@ -209,16 +209,7 @@ define(class Api {
         let endpointArgs = {};
 
         for (let key in args) {
-            let shapeInfo = args[key];
-
-            if (shapeInfo instanceof BaseType) {
-                endpointArgs[key] = mkDataShape({
-                    type: shapeInfo,
-                });
-            }
-            else {
-                endpointArgs[key] = mkDataShape(shapeInfo);
-            }
+            endpointArgs[key] = mkRdsShape(args[key]);
         }
 
         this.endpoints[name] = mkApiEndpoint(

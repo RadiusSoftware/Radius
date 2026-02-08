@@ -182,8 +182,8 @@ define(class TableAnalysis {
     }
 
     analyzeIndexes() {
-        let indexSet1 = this.table1.getIndexSet();
-        let indexSet2 = this.table2.getIndexSet();
+        let indexSet1 = this.table1.getIndexEnum();
+        let indexSet2 = this.table2.getIndexEnum();
 
         for (let indexName of indexSet1) {
             if (!(indexSet2.has(indexName))) {

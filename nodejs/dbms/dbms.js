@@ -33,7 +33,7 @@ singleton(class Dbms {
         this.dbmsPools = {};
         this.settingsHandle = mkSettingsHandle();
 
-        this.settingsShape = mkRdsShape({
+        this.settingShape = mkRdsShape({
             dbmsType: StringType,
             timeout: NumberType,
             host: StringType,
@@ -126,7 +126,7 @@ singleton(class Dbms {
     }
 
     createConnectionKey(settings) {
-        if (ObjectType.is(settings)) {
+        if (ObjectType.verify(settings)) {
             let normalized = {
                 dbmsType: settings.dbmsType,
                 timeout: settings.timeout,
@@ -335,7 +335,7 @@ singleton(class Dbms {
 define(async function dbConnect(dbmsSettings) {
     let dbconn;
 
-    if (ObjectType.is(dbmsSettings)) {
+    if (ObjectType.verify(dbmsSettings)) {
         dbconn = await Dbms.connect(dbmsSettings);
     }
     else if (typeof dbmsSettings == 'string') {

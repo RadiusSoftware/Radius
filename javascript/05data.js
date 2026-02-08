@@ -38,8 +38,8 @@ singleton(class Data {
         while (stack.length) {
             let { a, b } = stack.pop();
             
-            if (ObjectType.is(a)) {
-                if (ObjectType.is(b)) {
+            if (ObjectType.verify(a)) {
+                if (ObjectType.verify(b)) {
                     if (circular.has(a)) {
                         if (circular.get(a) !== b) {
                             return false;
@@ -284,7 +284,7 @@ singleton(class Data {
     enumeratePrototypes(obj) {
         let prototypes = [];
 
-        if (ObjectType.is(obj)) {
+        if (ObjectType.verify(obj)) {
             let prototype = Reflect.getPrototypeOf(obj).constructor.prototype;
 
             while (prototype) {
@@ -378,7 +378,7 @@ singleton(class Data {
     delete(obj, dotted) {
         if (StringType.is(dotted)) {
             let object = obj;
-            let segments = TextUtils.split(dotted, '.');
+            let segments = RdsText.split(dotted, '.');
 
             for (let i = 0; i < segments.length; i++) {
                 let segment = segments[i];
@@ -387,7 +387,7 @@ singleton(class Data {
                     delete object[segment];
                 }
                 else {
-                    if (!ObjectType.is(object[segment])) {
+                    if (!ObjectType.verify(object[segment])) {
                         break;
                     }
 
@@ -408,8 +408,8 @@ singleton(class Data {
         if (StringType.is(dotted)) {
             let value = obj;
 
-            for (let key of TextUtils.split(dotted, '.')) {
-                if (!ObjectType.is(value)) {
+            for (let key of RdsText.split(dotted, '.')) {
+                if (!ObjectType.verify(value)) {
                     return undefined;
                 }
 
@@ -435,8 +435,8 @@ singleton(class Data {
         if (StringType.is(dotted)) {
             let value = obj;
 
-            for (let key of TextUtils.split(dotted, '.')) {
-                if (!ObjectType.is(value)) {
+            for (let key of RdsText.split(dotted, '.')) {
+                if (!ObjectType.verify(value)) {
                     return false;
                 }
 
@@ -461,7 +461,7 @@ singleton(class Data {
     set(obj, dotted, value) {
         if (StringType.is(dotted)) {
             let object = obj;
-            let segments = TextUtils.split(dotted, '.');
+            let segments = RdsText.split(dotted, '.');
 
             for (let i = 0; i < segments.length; i++) {
                 let segment = segments[i];
@@ -470,7 +470,7 @@ singleton(class Data {
                     object[segment] = value;
                 }
                 else {
-                    if (!ObjectType.is(object[segment])) {
+                    if (!ObjectType.verify(object[segment])) {
                         object[segment] = new Object();
                     }
 
@@ -492,17 +492,24 @@ singleton(class Data {
  * an object describing the shape's subshape.
 *****/
 define(class RdsShape {
-    constructor(arg) {
+    constructor(arg, ...values) {
         if (arg != undefined) {
-            if (arg === EnumType) {
-                throwError('Provide an RdsEnum instance, not EnumType');
+            if (arg instanceof RdsShape) {
+                return arg;
             }
             else if (arg === ObjectType) {
-                throwError('Provide an Object, not ObjectType');
+                thrrowError('ObjectType is not a ctor parameter');
+            }
+            else if (arg === EnumType) {
+                thrrowError('EnumType is not a ctor parameter');
             }
             else if (ArrayType.verify(arg)) {
                 this.type = ArrayType;
-                this.items = arg.map(item => mkRdsShape(item));
+                this.vals = arg.map(el => mkRdsShape(el));
+            }
+            else if (ClassType.verify(arg)) {
+                this.type = ClassType;
+                this.clss = arg;
             }
             else if (EnumType.verify(arg)) {
                 this.type = EnumType;
@@ -519,7 +526,7 @@ define(class RdsShape {
                     this.keys[key] = mkRdsShape(arg[key]);
                 }
             }
-            else if (arg instanceof RegExp) {
+            else if (RegexType.verify(arg)) {
                 this.type = StringType;
                 this.expr = arg;
             }
@@ -532,23 +539,12 @@ define(class RdsShape {
     static fromJson(obj) {
         let shape = mkRdsShape();
         shape.type = obj.type;
+        obj.clss ? shape.clss = obj.clss : null;
         obj.enum ? shape.enum = obj.enum : null;
         obj.expr ? shape.expr = obj.expr : null;
         obj.keys ? shape.keys = obj.keys : null;
-        obj.items ? shape.item = obj.items : null;
+        obj.vals ? shape.vals = obj.vals : null;
         return shape;
-    }
-
-    getEnum() {
-        return this.enum;
-    }
-
-    getItems() {
-        if (this.type === ArrayType) {
-            return this.items;
-        }
-
-        return [];
     }
 
     getKeys() {
@@ -579,15 +575,14 @@ define(class RdsShape {
         if (this.type === ArrayType) {
             return this.verifyArray(value);
         }
-        else if (this.type == EnumType) {
-            if (!StringType.verify(value)) {
-                return false;
-            }
-
-            return this.enum.has(value);
-        }
         else if (this.type == ObjectType) {
             return this.verifyObject((value));
+        }
+        else if (this.type == EnumType) {
+            return this.enum.has(value);
+        }
+        else if (this.type == ClassType) {
+            return ClassType.instanceOf(this.clss, value);
         }
         else if (this.type === StringType) {
             if (StringType.verify(value)) {
@@ -614,7 +609,7 @@ define(class RdsShape {
         for (let arrayElement of value) {
             let ok = false;
 
-            for (let shape of this.items) {
+            for (let shape of this.vals) {
                 if (shape.verify(arrayElement)) {
                     ok = true;
                     break;
@@ -630,7 +625,7 @@ define(class RdsShape {
     }
 
     verifyObject(value) {
-        if (typeof value != 'object') {
+        if (!ObjectType.verify(value)) {
             return false;
         }
 

@@ -292,8 +292,8 @@ define(class DbTable {
         return this.indexArr;
     }
 
-    getIndexSet() {
-        return mkStringSet(this.indexArr.map(dbIndex => dbIndex.getName()));
+    getIndexEnum() {
+        return mkRdsEnum(...this.indexArr.map(dbIndex => dbIndex.getName()));
     }
 
     getName() {

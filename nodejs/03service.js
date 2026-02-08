@@ -36,7 +36,7 @@ define(class Service {
     static {
         Process.on('*', async message => {
             if (message.name.indexOf('#..-..#') > -1) {
-                let [ serviceName, messageName] = TextUtils.split(message.name, '#..-..#');
+                let [ serviceName, messageName] = RdsText.split(message.name, '#..-..#');
 
                 if (serviceName in Service.services) {
                     let service = Service.services[serviceName];

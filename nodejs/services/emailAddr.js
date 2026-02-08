@@ -31,7 +31,7 @@
  * are deliverable or undeliverable.
 *****/
 createService(class EmailAddrService extends Service {
-    static allowedStatuses = mkStringSet(
+    static allowedStatuses = mkRdsEnum(
         'none',
         'deliverable',
         'undeliverable',
@@ -39,11 +39,11 @@ createService(class EmailAddrService extends Service {
     );
 
     static supportedDetails = {
-        optedOut: mkDataShape({ type: BooleanType }),
-        lastErrorMessage: mkDataShape({ type: StringType }),
-        lastErrorDate: mkDataShape({ type: DateType }),
-        lastDeliveryDate: mkDataShape({ type: DateType }),
-        suspendedUntil: mkDataShape({ type: DateType }),
+        optedOut: mkRdsShape(BooleanType),
+        lastErrorMessage: mkRdsShape(StringType),
+        lastErrorDate: mkRdsShape(DateType),
+        lastDeliveryDate: mkRdsShape(DateType),
+        suspendedUntil: mkRdsShape(DateType),
     };
 
     async onClearOwner(message) {

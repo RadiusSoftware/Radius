@@ -72,7 +72,7 @@ define(class Dbo {
 
     static async deleteProperty(dbc, id, dotted) {
         let dboObj = await Dbo.get(dbc, id);
-        let segments = TextUtils.split(dotted, '.');
+        let segments = RdsText.split(dotted, '.');
         
         if (segments.length > 1) {
             if (dboObj) {
@@ -90,7 +90,7 @@ define(class Dbo {
     }
 
     static async get(dbc, id) {
-        let [ prefix, uuid ] = TextUtils.split(id, ':');
+        let [ prefix, uuid ] = RdsText.split(id, ':');
 
         if (prefix && uuid) {
             if (prefix in Dbo.dbTypes) {
@@ -132,7 +132,7 @@ define(class Dbo {
     }
 
     static async hasObject(dbc, id) {
-        let [ prefix, uuid ] = TextUtils.split(id, ':');
+        let [ prefix, uuid ] = RdsText.split(id, ':');
 
         if (prefix && uuid) {
             if (prefix in Dbo.dbTypes) {

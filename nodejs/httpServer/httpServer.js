@@ -260,7 +260,7 @@ define(class HttpWorker extends Worker {
         this.acceptCookiesPath = await settings.getSetting('acceptCookiesPath');
         this.authorizePath = await settings.getSetting('authorizePath');
 
-        if (ObjectType.is(this.settings.tls)) {
+        if (ObjectType.verify(this.settings.tls)) {
             this.scheme = 'https';
             await mkHttpLibraryHandle().setSecureMode();
 
@@ -302,7 +302,7 @@ define(class HttpWorker extends Worker {
                     if (await session.hasPermission('radius:websocket')) {
                         let secureKey = req.getHeader('sec-websocket-key');
                         let hash = await Crypto.hash('sha1', `${secureKey}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`);
-                        let webSocket = mkWebSocket(socket, req.getHeader('sec-websocket-extensions'), headData);
+                        let webSocket = mkWebsocket(socket, req.getHeader('sec-websocket-extensions'), headData);
                         
                         let headers = [
                             'HTTP/1.1 101 Switching Protocols',
@@ -312,14 +312,14 @@ define(class HttpWorker extends Worker {
                         ];
                         
                         if (webSocket.hasExtensions()) {
-                            headers.push(`Sec-WebSocket-Extensions: ${webSocket.getSecWebSocketExtensions()}`);
+                            headers.push(`Sec-WebSocket-Extensions: ${webSocket.getSecWebsocketExtensions()}`);
                         }
 
                         headers.push('\r\n');
                         socket.write(headers.join('\r\n'));
                         
                         webSocket.on('DataReceived', data => {
-                            httpx.handleWebSocket(data);
+                            httpx.handleWebsocket(data);
                         });
                     }
                 }
@@ -365,6 +365,8 @@ define(class HttpWorker extends Worker {
                 if (arg.name in variables) {
                     let value = variables[arg.name];
 
+                    // ************************************************************************************
+                    // ************************************************************************************
                     if (arg.type instanceof DataShape) {
                         if (arg.type.validate(value)) {
                             argumentsList.push(value);
@@ -577,7 +579,7 @@ define(class HttpRequest {
 
     getCookie(name) {
         if (this.hasHeader('cookie')) {
-            for (let cookieString of TextUtils.split(this.getHeader('cookie'), '; ')) {
+            for (let cookieString of RdsText.split(this.getHeader('cookie'), '; ')) {
                 let [ cookieName, cookieValue ] = cookieString.split('=');
 
                 if (cookieName.trim() == name) {
@@ -591,7 +593,7 @@ define(class HttpRequest {
 
     getCookieArray() {
         if (this.hasHeader('cookie')) {
-            return TextUtils.split(this.getHeader('cookie'), '; ').map(cookieString => {
+            return RdsText.split(this.getHeader('cookie'), '; ').map(cookieString => {
                 return mkCookie(cookieString);
             });
         }
@@ -603,7 +605,7 @@ define(class HttpRequest {
         let cookies = {};
 
         if (this.hasHeader('cookie')) {
-            TextUtils.split(this.getHeader('cookie'), '; ').forEach(cookieString => {
+            RdsText.split(this.getHeader('cookie'), '; ').forEach(cookieString => {
                 let cookie = mkCookie(cookieString);
                 cookies[cookie.getName()] = cookie;
             });
