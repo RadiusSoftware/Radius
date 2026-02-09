@@ -291,6 +291,13 @@ if (LibCluster.isPrimary) {
                 func: FunctionType,
                 value: MultiplyExpr,
                 buff: BufferType,
+                obj: {
+                    four: {
+                        one: Int32Type,
+                        two: Int32Type,
+                        three: ObjectType,
+                    }
+                },
             }));
 
             let shape = fromJson(json);
@@ -303,6 +310,16 @@ if (LibCluster.isPrimary) {
                 func: () => 'hello world',
                 value: mkMultiplyExpr(4, 4),
                 buff: mkBuffer('hello world'),
+                obj: {
+                    one: 1,
+                    two: 2,
+                    four: {
+                        one: 1,
+                        two: 2,
+                        three: {
+                        }
+                    }
+                }
             }));
 
             return;
