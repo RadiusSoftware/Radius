@@ -376,7 +376,7 @@ singleton(class Data {
      * deletes that object property.
     *****/
     delete(obj, dotted) {
-        if (StringType.is(dotted)) {
+        if (StringType.verify(dotted)) {
             let object = obj;
             let segments = RdsText.split(dotted, '.');
 
@@ -405,7 +405,7 @@ singleton(class Data {
      * the object structure.
     *****/
     get(obj, dotted) {
-        if (StringType.is(dotted)) {
+        if (StringType.verify(dotted)) {
             let value = obj;
 
             for (let key of RdsText.split(dotted, '.')) {
@@ -432,7 +432,7 @@ singleton(class Data {
      * returns true if the implied value exits and false otherwise.
     *****/
     has(obj, dotted) {
-        if (StringType.is(dotted)) {
+        if (StringType.verify(dotted)) {
             let value = obj;
 
             for (let key of RdsText.split(dotted, '.')) {
@@ -459,7 +459,7 @@ singleton(class Data {
      * sets the provided value and extends data points if necessary.
     *****/
     set(obj, dotted, value) {
-        if (StringType.is(dotted)) {
+        if (StringType.verify(dotted)) {
             let object = obj;
             let segments = RdsText.split(dotted, '.');
 

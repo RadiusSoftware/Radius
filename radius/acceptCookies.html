@@ -1,0 +1,87 @@
+<!DOCTYPE httpx>
+<bundle>
+    <httpx>
+        <opt key="title" type="StringType" value="##acceptordecline##"></opt>
+        <opt key="tagName" type="StringType" value="cookieacceptor-app"></opt>
+        <opt key="bodyClass" type="StringType" value="center noscroll"></opt>
+        <opt key="setting" name="acceptCookiesPath" type="StringType" value="${context.url}"></opt>
+    </httpx>
+    <widget tagname="cookieacceptor-app">
+        <script>
+            class CookieAcceptorApp extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+
+                async onAcceptCookies(message) {
+                    Location.replace(await Api.acceptCookies());
+                }
+
+                async onDeclineCookies(message) {
+                    await Api.declineCookies();
+                    Location.assign('https://www.google.com/search?q=more+information+about+website+cookies&rlz=1C5CHFA_enUS1074US1077&oq=more+information+about+website+cookies&gs_lcrp=EgZjaHJvbWUyBggAEEUYOTIHCAEQIRigATIHCAIQIRigATIHCAMQIRigATIHCAQQIRifBTIHCAUQIRifBTIHCAYQIRifBTIHCAcQIRifBTIHCAgQIRifBTIHCAkQIRifBdIBCDYzMjJqMGo3qAIAsAIA&sourceid=chrome&ie=UTF-8');
+                }
+            }
+        </script>
+        <html rds-controller>
+            <grid-widget rds-rows="10%,auto,10%" rds-cols="10%,auto,10%">
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <grid-widget rds-rows="auto,120px">
+                    <div design="text">
+                        <h1 class="h1">We value your privacy</h1>
+                        <div class="paragraph">
+                            This website uses cookies to enahnace your user experience and is required to continue
+                            using this website.  This website collects personal data to identify authorized users and
+                            to prevent unauthorized agents from accessing user data.
+                        </div>
+                        <div class="paragraph">
+                            You can continue using advanced features on this website by clicking "Accept Cookies".
+                            Click the "Decline Cookies" button to block cookies from this website and forwarded to
+                            view additional information about cookies.
+                        </div>
+                        <h2 class="h2">Our Cookie Policy</h2>
+                        <ul>
+                            <li>We never share your personal data with other parties.</li>
+                            <li>Cookies will be used to track user authorization.</li>
+                            <li>Cookies will be used to confirm acceptance of cookies from this website.</li>
+                        </ul>
+                    </div>
+                    <div design="button-panel">
+                        <input-widget type="button" class="button-wide" value="##accept##" evt-click="acceptCookies"></input-widget>
+                        <input-widget type="button" class="button-wide" value="##decline##" evt-click="declineCookies"></input-widget>
+                    </div>
+                </grid-widget>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+            </grid-widget>
+        </html>
+        <style>
+            [design=button-panel] {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+            }
+            [design=text] {
+                width: 500px;
+                margin-left: auto;
+                margin-right: auto;
+                padding: 14px;
+                border-style: solid;
+                border-width: 1px;
+                border-color: var(--border-color);
+                border-radius: var(--border-radius-1);
+            }
+        </style>
+    </widget>
+    <strings lang="en">
+        accept = Accept Cookies\
+        decline = Decline Cookies\
+        acceptordecline = Accept or Decline Cookies\
+    </strings>
+</bundle>

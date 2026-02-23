@@ -745,7 +745,7 @@ createService(class PackageService extends Service {
 
     async onGetLanguage(message) {
         if (message.packageName in this.packagesByName) {
-            let supported = mkStringSet();
+            let supported = mkRdsEnum();
             let pkg = this.packagesByName[message.packageName];
             Object.keys(pkg.mozilla.strings).forEach(lang => supported.set(lang));
 
@@ -756,7 +756,7 @@ createService(class PackageService extends Service {
             }
 
             if (supported.getLength()) {
-                return supported.toArray()[0];
+                return supported.getValues()[0];
             }
         }
 

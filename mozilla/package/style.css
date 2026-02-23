@@ -1,0 +1,233 @@
+:root {
+    --font-family: Avenir, Helvetica, Arial, sans-serif;
+    --border-radius-1: 6px;
+    --border-radius-2: 12px;
+    --radio-radius: 32px;
+}
+@media (prefers-color-scheme: light) {
+    :root {
+        --background-color: white;
+        --border-color: gray;
+        --button-background-color: steelblue;
+        --button-color: white;
+        --button-hover-background-color: rgb(9, 68, 117);
+        --checked-color: steelblue;
+        --color: gray;
+        --disabled-border-color: rgb(134, 139, 134);
+        --disabled-button-color: lightgray;
+        --disabled-text-color: rgb(120, 124, 120);
+        --error-color: rgb(181, 95, 112);
+        --faint-border-color: gainsboro;
+        --hover-color: darkorange;
+        --hover-background-color: rgb(245, 248, 252);
+        --hover-border-color: steelblue;
+        --icon-hover-fill-color: darkorange;
+        --icon-hover-stroke-color: darkorange;
+        --icon-std-fill-color: darkgray;
+        --icon-std-stroke-color: darkgray;
+        --label-background-color: gainsboro;
+        --label-color: steelblue;
+        --knob-fill-color: rgb(82, 81, 81);
+        --knob-stroke-color: steelblue;
+        --modal-background-color: whitesmoke;
+        --modal-border: 1px solid darkgray;
+        --modal-border-radius: 15px;
+        --textarea-background-color: whitesmoke;
+        --toggle-selected-background-color: rgb(8, 137, 25);
+        --toggle-unselected-background-color: gainsboro;
+        --value-boolean-color: coral;
+        --value-date-color: gold;
+        --value-number-color: darkorange;
+        --value-other-color: blue;
+        --value-regex-color: crimson;
+        --value-string-color: green;
+    }
+}
+@media (prefers-color-scheme: dark) {
+    :root {
+        --background-color: rgb(10, 10, 10);
+        --border-color: rgb(98, 94, 94);
+        --button-background-color: rgb(9, 68, 117);
+        --button-color: white;
+        --button-hover-background-color: steelblue;
+        --checked-color: lightsteelblue;
+        --color: gainsboro;
+        --disabled-border-color: rgb(53, 56, 53);
+        --disabled-button-color: lightsteelblue;
+        --disabled-text-color: rgb(153, 159, 153);
+        --error-color: rgb(93, 11, 28);
+        --faint-border-color: rgb(40, 40, 40);
+        --hover-color: darkorange;
+        --hover-background-color: rgb(9, 68, 117);
+        --hover-border-color: steelblue;
+        --icon-hover-fill-color: darkorange;
+        --icon-hover-stroke-color: darkorange;
+        --icon-std-fill-color: rgb(9, 68, 117);
+        --icon-std-stroke-color: rgb(9, 68, 117);
+        --knob-fill-color: rgb(82, 81, 81);
+        --knob-stroke-color: steelblue;
+        --label-background-color: rgb(9, 68, 117);
+        --label-color: rgb(90, 150, 229);
+        --modal-background-color: rgb(29, 29, 32);
+        --modal-border: 1px solid gray;
+        --modal-border-radius: 15px;
+        --textarea-background-color: rgb(20, 20, 20);
+        --toggle-selected-background-color: rgb(8, 137, 25);
+        --toggle-unselected-background-color: gray;
+        --value-boolean-color: steelblue;
+        --value-date-color: gold;
+        --value-number-color: darkorange;
+        --value-other-color: gainsboro;
+        --value-regex-color: crimson;
+        --value-string-color: lime;
+    }
+}
+html {
+    width: 100vw;
+    height: 100vh;
+    padding: 0px;
+    box-sizing: border-box;
+}
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0px;
+    padding: 0px;
+    font-family: var(--font-family);
+    font-size: 16px;
+    color: var(--color);
+    background-color: var(--background-color);
+}
+.block {
+    display: block;
+}
+.button-narrow {
+    width: 100px;
+    margin-left: 12px;
+    margin-right: 12px;
+}
+.button-medium {
+    width: 140px;
+    margin-left: 12px;
+    margin-right: 12px;
+}
+.button-wide {
+    width: 160px;
+    margin-left: 12px;
+    margin-right: 12px;
+}
+.center {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+.fill {
+    width: 100%;
+    height: 100%;
+}
+.fillhorz {
+    width: 100%;
+}
+.fillvert {
+    height: 100%;
+}
+.h1 {
+    font-size: 20px;
+    font-weight: bold;
+    color: var(--label-color);
+    margin-top: 12px;
+    margin-bottom: 12px;
+}
+.h2 {
+    font-size: 20px;
+    font-weight: bold;
+    margin-top: 12px;
+    margin-bottom: 8px;
+}
+.h3 {
+    font-size: 17px;
+    font-weight: bold;
+    margin-top: 8px;
+    margin-bottom: 6px;
+}
+.h4 {
+    font-size: 17px;
+    font-weight: bold;
+    margin-top: 8px;
+    margin-bottom: 4px;
+}
+.h5 {
+    font-size: 16px;
+    font-weight: bold;
+    margin-top: 8px;
+    margin-bottom: 4px;
+}
+h5 {
+    font-size: 15px;
+    font-weight: bold;
+    margin-top: 8px;
+    margin-bottom: 3px;
+}
+.hidden {
+    visibility: hidden;
+}
+.icon {
+    margin: 3px;
+    padding: 3px;
+    stroke-width: 10px;
+    stroke: var(--icon-std-stroke-color);
+    fill: var(--icon-std-fill-color);
+    overflow: visible;
+    cursor: pointer;
+}
+.icon:hover {
+    stroke: var(--icon-hover-stroke-color);
+    fill: var(--icon-hover-fill-color);
+}
+.icon:disabled {
+    cursor: default;
+}
+.icon-small {
+    width: 22px;
+    height: 22px;
+}
+.icon-std {
+    width: 32px;
+    height: 32px;
+}
+.icon-big {
+    width: 48px;
+    height: 48px;
+}
+.label {
+    display: flex;
+    align-items: center;
+    font-weight: bold;
+    user-select: none;
+    color: var(--label-color);
+}
+.link {
+    color: var(--label-color);
+    margin-bottom: 12px;
+    cursor: pointer;
+}
+.link:hover {
+    color: var(--hover-color);
+}
+.noscroll {
+    overflow: hidden;
+}
+.paragraph {
+    margin-top: 12px;
+    margin-bottom: 8px;
+}
+.scroll {
+    overflow: scroll;
+}
+.space-around {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+}

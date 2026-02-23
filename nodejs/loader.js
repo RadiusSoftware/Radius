@@ -73,119 +73,80 @@ if (LibCluster.isPrimary) {
                     'httpServer',
                     'server',
                     mkRdsShape({
-                        publicKey: StringType,
-                        privateKey: StringType,
-                        listeners: [{
-                            workers: Int32Type,
-                            ipv4: StringType,
-                            ipv6: StringType,
-                            _cert: StringType,
-                            _auth: StringType,
-                        }]
+                        enabled: BooleanType,
+                        workers: UInt16Type,
+                        _ipv4: StringType,
+                        _ipv6: StringType,
+                        _host: StringType,
+                        _cert: StringType,
+                        _auth: StringType,
                     }),
                     {
-                        publicKey: '',
-                        privateKey: '',
-                        listeners: [{
-                            workers: 1,
-                            ipv4: '0.0.0.0',
-                            ipv6: '::'
-                        }]
+                        enabled: true,
+                        workers: 1,
+                        ipv4: '0.0.0.0',
+                        ipv6: '::',
                     }
                 );
                 
                 await settings.defineSetting(
                     'permissionTypes',
-                    'general',
-                    EnumType,
+                    'security',
+                    [ StringType ],
                     [
-                        'radius#cookies',
-                        'radius#session',
-                        'radius#signedin',
-                        'radius#admin',
-                        'radius#system',
-                        'radius#websocket',
+                        'radius:cookies',
+                        'radius:session',
+                        'radius:signedin',
+                        'radius:admin',
+                        'radius:system',
+                        'radius:websocket',
                     ]
                 );
 
-                await settings.defineSetting('acceptCookiesName', 'general', StringType, 'kibble');
                 await settings.defineSetting('radiusPath', 'general', StringType, '/radius');
-                await settings.defineSetting('sessionTimeoutMillis', 'general', Int32Type, 120*60*60*1000);
-                await settings.defineSetting('sessionShutdowntMillis', 'general', Int32Type, 240*60*60*1000);
-                await settings.defineSetting('sessionCookiePrefix', 'general', StringType, 'sx-');
-                await settings.defineSetting('loginMaxFailures', 'general', Int32Type, 4);
-                await settings.defineSetting('loginMaxMfaMinutes', 'general', Int32Type, 5);
-                await settings.defineSetting('passwordMaxDays', 'general', Int32Type, -1);
-                await settings.defineSetting('passwordHistoryMaxDays', 'general', Int32Type, 365);
-                await settings.defineSetting('forgetDeviceDays', 'general', Int32Type, 90);
-                await settings.defineSetting('packages', 'general', ArrayType, []);
-                await settings.defineSetting('webServicesPath', 'general', StringType, '/ws');
-                // TODO ********************************************************************************
-                // TODO ********************************************************************************
-                //await settings.defineSetting('radiusCluster', 'cluster', StringType, '#NOTSET#');
-                await settings.defineSetting('clusterName', 'cluster', StringType, '#NOUSER#');
-                await settings.defineSetting('clusterKey', 'cluster', StringType, '');
-                await settings.defineSetting('clusterSubnet', 'cluster', StringType, '');
-                // TODO ********************************************************************************
-                // TODO ********************************************************************************
+                await settings.defineSetting('acceptCookiesName', 'privacy', StringType, 'kibble');
+                await settings.defineSetting('acceptCookiesDays', 'privacy', Int32Type, 180);
+                await settings.defineSetting('sessionTimeoutMillis', 'security', Int32Type, 120*60*60*1000);
+                await settings.defineSetting('sessionShutdowntMillis', 'security', Int32Type, 240*60*60*1000);
+                await settings.defineSetting('sessionCookiePrefix', 'security', StringType, 'sx-');
+                await settings.defineSetting('loginMaxFailures', 'security', Int32Type, 4);
+                await settings.defineSetting('loginMaxMfaMinutes', 'security', Int32Type, 5);
+                await settings.defineSetting('passwordMaxDays', 'security', Int32Type, -1);
+                await settings.defineSetting('passwordHistoryMaxDays', 'security', Int32Type, 365);
+                await settings.defineSetting('forgetDeviceDays', 'security', Int32Type, 90);
+                await settings.defineSetting('packages', 'package', ArrayType, []);
+                await settings.defineSetting('webServicesPath', 'server', StringType, '/ws');
+                await settings.defineSetting('cluster', 'cluster', BooleanType, false);
+                await settings.defineSetting('system#settings-initialized', 'system', BooleanType, true);
 
-                await this.createClusterWebServices();
-                await settings.defineSetting('system#settings-initialized', 'general', BooleanType, true);
+                const { publicKey, privateKey } = await Crypto.generateKeyPair('rsa');
+                let publicPem = publicKey.export({ type: 'pkcs1', format: 'pem' });
+                let privatePem = privateKey.export({ type: 'pkcs1', format: 'pem' });
+                await settings.defineSetting('publicKey', 'security', StringType, publicPem);
+                await settings.defineSetting('privateKey', 'security', StringType, privatePem);
             }
 
             for (let arg of Object.values(this.args)) {
                 if (arg.settingName) {
                     await settings.defineTemporarySetting(
                         arg.settingName,
-                        'general',
+                        'parameters',
                         arg.settingType == 'boolean' ? BooleanType : StringType,
                         arg.value
                     );
                 }
             }
 
-            await settings.defineTemporarySetting('nodeId', 'general', StringType, Crypto.generateUUID());
-            await settings.defineTemporarySetting('bootTime', 'general', DateType, mkTime());
-            await settings.defineTemporarySetting('sessionCookieName', 'general', StringType, Crypto.generateUUID());
+            await settings.defineTemporarySetting('nodeId', 'system', StringType, Crypto.generateUUID());
+            await settings.defineTemporarySetting('bootTime', 'system', DateType, mkTime());
+            await settings.defineTemporarySetting('sessionCookieName', 'system', StringType, Crypto.generateUUID());
 
             await settings.defineTemporarySetting(
                 'nodejsFramework',
-                'general',
+                'system',
                 StringType,
                 this.nodejsFramework.join('\n'),
             );
-        }
-
-        async createClusterWebServices() {
-            /*
-            let wsHandle = mkWebServiceHandle();
-            let teamId = (await mkTeamHandle().openNoTeam()).id;
-            console.log(teamId);
-
-            await wsHandle.create({
-                clss: ServiceWebService,
-                name: 'Web Service Cluster Connection',
-                enabled: false,
-                locked: true,
-                path: '/clusterwebservice',
-                authType: 'apikey',
-                teamId: teamId,
-                permissions: [],
-                addrs: [],
-            });
-
-            await wsHandle.create({
-                clss: ThunkWebService,
-                name: 'DBMS Thunk Cluster Connection',
-                enabled: false,
-                locked: true,
-                path: '/clusterthunk',
-                authType: 'apikey',
-                teamId: teamId,
-                permissions: [],
-                addrs: [],
-            });
-            */
         }
 
         async enumerateContext(context) {
@@ -258,6 +219,8 @@ if (LibCluster.isPrimary) {
         async launchServers() {
             // **********************************************************************************
             // **********************************************************************************
+            // **********************************************************************************
+            // **********************************************************************************
             console.log('\n*** LAUNCH REMAINING CONFIGURED SERVERS\n');
         }
 
@@ -282,47 +245,6 @@ if (LibCluster.isPrimary) {
                     this.nodejsFramework.push(`require('${sourceFile.path}');`);
                 }
             }
-
-            let json = toJson(mkRdsShape({
-                name: StringType,
-                code: [ /[0-9]{4,4}_[a-z]+/, /abcd-alpha/ ],
-                count: UInt8Type,
-                choice: mkRdsEnum('one:ONE', 'two:TWO', 'three:THREE'),
-                func: FunctionType,
-                value: MultiplyExpr,
-                buff: BufferType,
-                obj: {
-                    four: {
-                        one: Int32Type,
-                        two: Int32Type,
-                        three: ObjectType,
-                    }
-                },
-            }));
-
-            let shape = fromJson(json);
-
-            console.log(shape.verify({
-                name: 'Mr Bean',
-                code: [ '1234_eiuerhugrejkhgeriuhgreiuh', 'abcd-alpha', '1234_eiuerhugrejkhgeriuhgreiuh' ],
-                count: 3,
-                choice: 'one',
-                func: () => 'hello world',
-                value: mkMultiplyExpr(4, 4),
-                buff: mkBuffer('hello world'),
-                obj: {
-                    one: 1,
-                    two: 2,
-                    four: {
-                        one: 1,
-                        two: 2,
-                        three: {
-                        }
-                    }
-                }
-            }));
-
-            return;
 
             if (await this.initializeRadiusDbms()) {
                 await this.buildConfiguration();

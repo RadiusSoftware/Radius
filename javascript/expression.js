@@ -75,7 +75,7 @@ define(class AddExpr extends Expression {
         let lhs = await this.lhs.eval();
         let rhs = await this.rhs.eval();
 
-        if (BigIntType.is(lhs) || BigIntType.is(rhs)) {
+        if (BigIntType.verify(lhs) || BigIntType.verify(rhs)) {
             return BigInt(lhs) + BigInt(rhs);
         }
         else {
@@ -130,7 +130,7 @@ define(class DivideExpr extends Expression {
         let lhs = await this.lhs.eval();
         let rhs = await this.rhs.eval();
 
-        if (BigIntType.is(lhs) || BigIntType.is(rhs)) {
+        if (BigIntType.verify(lhs) || BigIntType.verify(rhs)) {
             return BigInt(lhs) / BigInt(rhs);
         }
         else {
@@ -256,7 +256,7 @@ define(class MultiplyExpr extends Expression {
         let lhs = await this.lhs.eval();
         let rhs = await this.rhs.eval();
 
-        if (BigIntType.is(lhs) || BigIntType.is(rhs)) {
+        if (BigIntType.verify(lhs) || BigIntType.verify(rhs)) {
             return BigInt(lhs) * BigInt(rhs);
         }
         else {
@@ -338,7 +338,7 @@ define(class SubtractExpr extends Expression {
         let lhs = await this.lhs.eval();
         let rhs = await this.rhs.eval();
 
-        if (BigIntType.is(lhs) || BigIntType.is(rhs)) {
+        if (BigIntType.verify(lhs) || BigIntType.verify(rhs)) {
             return BigInt(lhs) - BigInt(rhs);
         }
         else {

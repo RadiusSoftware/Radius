@@ -1,0 +1,25 @@
+{
+    ".": {
+        "radius:session": "+",
+        "radius:signedin": "+"
+    },
+    "acceptcookies": {
+        "radius:cookies": "-",
+        "radius:session": "-",
+        "radius:signedin": "-"
+    },
+    "admin": {
+        "radius:admin": "+"
+    },
+    "auth": {
+        "radius:signedin": "-"
+    },
+    "sysadminXYZ": {
+        "radius:system": "+"
+    },
+    "sysadmin": {
+        "radius:cookies": "-",
+        "radius:session": "-",
+        "radius:signedin": "-"
+    }
+}

@@ -25,13 +25,18 @@
  * Provides a fundamental class for defining and supporting the features required
  * for enumerations.  An enumeration is a mapping of strings, key -> value.  By
  * default, enumeration values are identical to the string.  If an enumeration
- * value contains a colon, the text to the right of the hash is a value for the
- * enumeration key: e.g., dog:Hund is such a pair.
+ * value contains a colon, the text to the right of the break is a value for the
+ * enumeration key: e.g., dog::Hund is such a pair.
 *****/
 define(class RdsEnum {
     constructor(...values) {
         this.values = {};
         this.set(...values);
+    }
+
+    clear() {
+        this.values = {};
+        return this;
     }
 
     delete(...keys) {
@@ -70,6 +75,10 @@ define(class RdsEnum {
 
     getKeys() {
         return Object.keys(this.values);
+    }
+
+    getLength() {
+        return Object.keys(this.values).length;
     }
 
     getValues() {
@@ -124,7 +133,7 @@ define(class RdsEnum {
         for (let value of values) {
             if (StringType.verify(value)) {
                 value = value.trim();
-                let index = value.indexOf(':');
+                let index = value.indexOf('::');
 
                 if (index == -1) {
                     this.values[value] = value;
@@ -133,7 +142,7 @@ define(class RdsEnum {
                     this.values[value.substring(1)] = value.substring(1);
                 }
                 else {
-                    let [ key, text ] = RdsText.split(value, ':');
+                    let [ key, text ] = RdsText.split(value, '::');
                     this.values[key] = text;
                 }
             }
@@ -143,7 +152,7 @@ define(class RdsEnum {
     }
 
     [Symbol.iterator]() {
-        return Object.values(this.values)[Symbol.iterator()];
+        return Object.values(this.values)[Symbol.iterator]();
     }
 
     toArray() {
@@ -154,7 +163,7 @@ define(class RdsEnum {
 
     toString() {
         return Object.entries(this.values).map(entry => {
-            return `${entry[0]}:${entry[1]}`;
+            return `${entry[0]}::${entry[1]}`;
         });
     }
 });

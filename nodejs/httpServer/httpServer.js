@@ -260,14 +260,16 @@ define(class HttpWorker extends Worker {
         this.acceptCookiesPath = await settings.getSetting('acceptCookiesPath');
         this.authorizePath = await settings.getSetting('authorizePath');
 
-        if (ObjectType.verify(this.settings.tls)) {
+        if (this.settings.cert && this.settings.auth) {
             this.scheme = 'https';
             await mkHttpLibraryHandle().setSecureMode();
+            let publicKey = await mkSettingsHandle.getSetting('publicKey');
+            let privateKey = await mkSettingsHandle.getSetting('privateKey');
 
             this.server = LibHttps.createServer({
-                key: this.settings.tls.privateKey,
-                cert: this.settings.tls.myCertificate,
-                ca: this.settings.tls.caCertificate,
+                key: privateKey,
+                cert: this.settings.cert,
+                ca: this.settings.auth,
             }, (httpReq, httpRsp) => this.handleRequest(httpReq, httpRsp));
 
             this.settings.ipv4 ? this.server.listen(443, this.settings.ipv4) : null;

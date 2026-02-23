@@ -1,0 +1,522 @@
+<!DOCTYPE httpx>
+<bundle>
+    <httpx>
+        <opt key="title" type="StringType" value="##sysadmin##"></opt>
+        <opt key="tagName" type="StringType" value="sysadmin-app"></opt>
+        <opt key="bodyClass" type="StringType" value="center noscroll"></opt>
+    </httpx>
+    <widget tagname="sysadmin-app">
+        <script>
+            class SysadminApp extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+
+                subTreeInitialized() {
+                    this.navigator = this.getTagged('navigator');
+                    //this.navigator.setMode('status');
+                    this.navigator.setMode('webservices');
+                }
+            }
+        </script>
+        <html rds-tagging>
+            <navigator-widget tag-navigator>
+                <systemstatus-widget tag-status rds-controller rds-navigator-mode="status" rds-navigator-text="##status##"></systemstatus-widget>
+                <settings-widget tag-settings rds-controller rds-navigator-mode="settings" rds-navigator-text="##settings##"></settings-widget>
+                <servers-widget tag-servers rds-controller rds-navigator-mode="servers" rds-navigator-text="##servers##"></servers-widget>
+                <packages-widget tag-packages rds-controller rds-navigator-mode="packages" rds-navigator-text="##packages##"></packages-widget>
+                <webservices-widget tag-webservices rds-controller rds-navigator-mode="webservices" rds-navigator-text="##webservices##"></webservices-widget>
+                <cluster-widget tag-status rds-controller rds-navigator-mode="cluster" rds-navigator-text="##cluster##"></cluster-widget>
+                <dbms-widget tag-dbms rds-controller rds-navigator-mode="dbms" rds-navigator-text="##dbms##"></dbms-widget>
+                <emailing-widget tag-emailing rds-controller rds-navigator-mode="emailing" rds-navigator-text="##emailing##"></emailing-widget>
+                <messaging-widget tag-messaging rds-controller rds-navigator-mode="messaging" rds-navigator-text="##messaging##"></messaging-widget>
+                <teams-widget tag-teams rds-controller rds-navigator-mode="teams" rds-navigator-text="##teams##"></teams-widget>
+                <users-widget tag-users rds-controller rds-navigator-mode="users" rds-navigator-text="##users##"></users-widget>
+            </navigator-widget>
+        </html>
+        <style>
+            [design=self] {
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+    </widget>
+    <!-- *************************************************************************** -->
+    <!-- *************************************************************************** -->
+    <widget tagname="cluster-widget">
+        <script>
+            class ClusterWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+            }
+        </script>
+        <html>
+            CLUSTER MANAGER
+        </html>
+        <style>
+            [design=self] {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+    </widget>
+    <!-- *************************************************************************** -->
+    <!-- *************************************************************************** -->
+    <widget tagname="dbms-widget">
+        <script>
+            class DbmsWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+            }
+        </script>
+        <html>
+            DATABASE MANAGER
+        </html>
+        <style>
+            [design=self] {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+    </widget>
+    <!-- *************************************************************************** -->
+    <!-- *************************************************************************** -->
+    <widget tagname="emailing-widget">
+        <script>
+            class EmailingWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+            }
+        </script>
+        <html>
+            EMAIL MANAGER
+        </html>
+        <style>
+            [design=self] {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+    </widget>
+    <!-- *************************************************************************** -->
+    <!-- *************************************************************************** -->
+    <widget tagname="messaging-widget">
+        <script>
+            class MessagingWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+            }
+        </script>
+        <html>
+            MESSAGING MANAGER
+        </html>
+        <style>
+            [design=self] {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+    </widget>
+    <!-- *************************************************************************** -->
+    <!-- *************************************************************************** -->
+    <widget tagname="packages-widget">
+        <script>
+            class PackagesWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+            }
+        </script>
+        <html>
+            PACKAGE MANAGER
+        </html>
+        <style>
+            [design=self] {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+    </widget>
+    <!-- *************************************************************************** -->
+    <!-- *************************************************************************** -->
+    <widget tagname="servers-widget">
+        <script>
+            class ServersWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+
+                init() {
+                    super.init();
+
+                    // **************************
+
+                    /*
+                    this.append(
+                        createElementFromOuterHtml(
+                            `<input-widget type="checkbox" rds-bind="key" rds-disabled="disabled"></input-widget>`
+                        )
+                    );
+                    */
+
+                    this.setControllerValue('key', 'TWO');
+                    this.setControllerValue('disabled', false);
+
+                    this.append(
+                        createElementFromOuterHtml(
+                            `<input-widget type="fieldset" style="display:inline-block;" rds-bind="key" rds-disabled="disabled">
+                                <legend>Please make a selection</legend>
+                                <opt value="ONE">Eins</opt>
+                                <opt value="TWO">Zwei</opt>
+                                <opt value="THREE">Drei</opt>
+                            </input-widget>`
+                        )
+                    );
+                    
+                    // TODO *********************************************************************
+                    // TODO *********************************************************************
+                }
+            }
+        </script>
+        <style>
+            [design=self] {
+                /*
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                */
+                display: block;
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+    </widget>
+    <!-- *************************************************************************** -->
+    <!-- *************************************************************************** -->
+    <widget tagname="settings-widget">
+        <script>
+            class SettingsWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+            }
+        </script>
+        <html>
+            SETTINGS
+        </html>
+        <style>
+            [design=self] {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+    </widget>
+    <widget tagname="systemstatus-widget">
+        <script>
+            class SystemStatusWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+
+                init() {
+                    super.init();
+                    this.refresh();
+                }
+
+                async refresh() {
+                    this.clear();
+                    this.setControllerValue('', await Api.getSystemStatus());
+
+                    this.append(
+                        createElementFromOuterHtml(
+                            `<div design="systemstatus-widget-title">##configTitle##</div>`
+                        )
+                    );
+
+                    // ******************************************************************************
+                    // ******************************************************************************
+                    /*
+                    this.append(
+                        createElementFromOuterHtml(
+                            `<dataeditor-widget rds-bind="config" rds-readonly>
+                                <fields>
+                                    <field pattern="nodeId" readonly>##configNodeId##</field>
+                                    <field pattern="debugMode">##configDebugMode##</field>
+                                    <field pattern="bootTime">##configBootTime##</field>
+                                    <field pattern="radiusPath">##configRadiusPath##</field>
+                                    <field pattern="httpServer">##configHttpServer##</field>
+                                    <field pattern="workers">##configWorkers##</field>
+                                    <field pattern="ipv4">##configIpv4##</field>
+                                    <field pattern="ipv6">##configIpv6##</field>
+                                </fields>
+                            </dataeditor-widget>`
+                        )
+                    );
+                    */
+                    this.append(
+                        createElement('dataeditor-widget', {
+                            'rds-bind': 'config',
+                        })
+                    );
+                    // ******************************************************************************
+                    // ******************************************************************************
+
+                    this.append(
+                        createElementFromOuterHtml(
+                            `<div design="systemstatus-widget-title">##dbmsTitle##</div>`
+                        )
+                    );
+
+                    this.append(
+                        createElementFromOuterHtml(
+                            `<dataeditor-widget rds-bind="dbms" rds-readonly>
+                            </dataeditor-widget>`
+                        )
+                    );
+
+                    this.append(
+                        createElementFromOuterHtml(
+                            `<div design="systemstatus-widget-title">##netwkTitle##</div>`
+                        )
+                    );
+
+                    this.append(
+                        createElementFromOuterHtml(
+                            `<dataeditor-widget rds-bind="net" rds-readonly>
+                            </dataeditor-widget>`
+                        )
+                    );
+                }
+            }
+        </script>
+        <style>
+            [design=self] {
+                display: block;
+                width: 100%;
+                height: 100%;
+                overflow: scroll;
+            }
+            [design=container] {
+                margin-bottom: 50px;
+            }
+            [design=title] {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                height: 48px;
+                margin-top: 48px;
+                margin-bottom: 0px;
+                border: solid 1px var(--border-color);
+                font-size: 18px;
+                font-weight: bold;
+            }
+        </style>
+    </widget>
+    <!-- *************************************************************************** -->
+    <!-- *************************************************************************** -->
+    <widget tagname="teams-widget">
+        <script>
+            class TeamsWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+            }
+        </script>
+        <html>
+            TEAM MANAGER
+        </html>
+        <style>
+            [design=self] {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+    </widget>
+    <!-- *************************************************************************** -->
+    <!-- *************************************************************************** -->
+    <widget tagname="users-widget">
+        <script>
+            class UsersWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+            }
+        </script>
+        <html>
+            USER MANAGER
+        </html>
+        <style>
+            [design=self] {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+    </widget>
+    <!-- *************************************************************************** -->
+    <!-- *************************************************************************** -->
+    <widget tagname="webservices-widget">
+        <script>
+            class WebServices extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+
+                init() {
+                    super.init();
+                    this.refresh();
+                }
+
+                async refresh() {
+                    let webServices = await Api.listWebServices();
+                    this.clear();
+
+                    this.append(
+                        createElementFromOuterHtml(
+                            `<div design="webservices-widget-title">##webServiceTitle##</div>`
+                        )
+                    );
+
+                    let key = 'webservices';
+                    this.setControllerValue(key, webServices);
+
+                    
+                    let teams = [
+                        { text: 'Team 1', value: '893248u9r38u943r8' },
+                        { text: 'Team 2', value: 'jifweiu34893hfew' },
+                        { text: 'Team 3', value: '3r8934hiuefuhif' },
+                    ];
+
+                    let permissions = [
+                        { text: 'Permission1', value: 'p1' },
+                        { text: 'Permission2', value: 'p2' },
+                        { text: 'Permission3', value: 'p3' },
+                    ];
+
+                    let authTypes = [
+                        { text: 'API Key', value: 'apiKey' },
+                        { text: 'Client Secret', value: 'clientSecret' },
+                    ];
+
+                    this.append(
+                        createElement('dataeditor-widget', {
+                            'rds-bind': key,
+                            'rds-fields': [
+                                { tail: '\\.name', label: '##webserviceName##' },
+                                { tail: '\\.id', label: '##webserviceID##', readonly: true },
+                                { tail: '\\.enabled', label: '##webserviceEnabled##' },
+                                { tail: '\\.fqn', label: '##webserviceFQN##' },
+                                { tail: '\\.authType', label: '##webserviceAuthType##', choices: authTypes },
+                                { tail: '\\.path', label: '##webservicePath##' },
+                                { tail: '\\.teamId', label: '##webserviceTeam##', choices: teams },
+                                { tail: '\\.permissions', label: '##webservicePermissions##', choices: permissions },
+                                { tail: '\\.addrs', label: '##webserviceAddrs##' },
+                            ],
+                        })
+                    );
+                }
+            }
+        </script>
+        <style>
+            [design=self] {
+                display: block;
+                width: 100%;
+                height: 100%;
+                overflow: scroll;
+            }
+            [design=container] {
+                margin-bottom: 50px;
+            }
+            [design=title] {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                height: 48px;
+                margin-top: 48px;
+                margin-bottom: 0px;
+                border: solid 1px var(--border-color);
+                font-size: 18px;
+                font-weight: bold;
+            }
+        </style>
+    </widget>
+    <strings lang="en">
+        cluster = Cluster\
+        dbms = Databases\
+        emailing = Emailing\
+        messaging = Messaging\
+        packages = Packages\
+        servers = Servers\
+        settings = Settings\
+        status = System Status\
+        sysadmin = System Administrator\
+        teams = Teams\
+        users = Users\
+        webservices = Web Services\
+
+        configTitle = Server Configuration\
+        configDebugMode = Debug Mode\
+        configBootTime = System Boot Time\
+        configNodeID = Host ID\
+        configIpv4 = IPv4\
+        configIpv6 = IPv6\
+        configRadiusPath = Radius Path\
+        configHttpServer = HTTP Server Settings\
+        configWorkers = Workers\
+        
+        dbmsTitle = Database Settings\
+        dbmsName = Name\
+        dbmsConn = Connection\
+
+        netwkTitle = Network Interfaces\
+
+        webServiceTitle = Web Services\
+        webserviceName = Name\
+        webserviceID = ID\
+        webserviceFQN = Class Name\
+        webservicePath = Installed Path\
+        webserviceAuthType = Auth Mode\
+        webserviceAddrs = Allowed Addrs\
+        webserviceTeam = Team\
+        webservicePermissions = Permissions\
+        webserviceEnabled = Enabled\
+    </strings>
+</bundle>

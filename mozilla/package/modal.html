@@ -1,0 +1,716 @@
+<!DOCTYPE bundle>
+<bundle package="radius.org">
+    <widget tagname="modal-widget">
+        <script>
+            class ModalWidget extends Widget {
+                static _ = (() => Win.modal = null);
+
+                constructor(arg) {
+                    super(arg);
+                    this.anchor = null;
+                    this.location = 'middle-center';
+                    this.size = 'auto';
+                    this.blur = '1px';
+                    this.border = true;
+                    this.buttons = {};
+                    this.content = '';
+                    this.resizeBand = 12;
+                    this.boundingGap = 20;
+                    this.getRdsController = () => {};
+                    
+                    Doc.on('keydown', message => {
+                        if (message.event.getRawEvent().key == 'Escape') {
+                            this.onCancel();
+                        }
+                    });
+
+                    Win.on('resize', message => this.render());
+
+                    this.on('mouseenter', message => {
+                        this.monitorResize(message.event.x, message.event.y);
+                    });
+
+                    this.on('mouseleave', message => {
+                        this.monitorResize(message.event.x, message.event.y);
+                    });
+
+                    this.on('mousemove', message => {
+                        this.monitorResize(message.event.x, message.event.y);
+                    });
+                }
+
+                computeBoundingRectangle() {
+                    let left, top, width, height;
+                    
+                    if (this.anchor) {
+                        let rect = this.anchor.getBoundingClientRect();
+                        left = rect.left < 0 ? 0 : rect.left;
+                        top = rect.top < 0 ? 0 : rect.top;
+                        let right = rect.right > Win.getInnerWidth() ? Win.getInnerWidth() : rect.right;
+                        let bottom = rect.bottom > Win.getInnerHeight() ? Win.getInnerHeight() : rect.bottom;
+                        width = right - left;
+                        height = bottom - top;
+                    }
+                    else {
+                        left = 0;
+                        top = 0;
+                        width = Win.getInnerWidth();
+                        height = Win.getInnerHeight();
+                    }
+
+                    return {
+                        left: left,
+                        top: top,
+                        width: width,
+                        height: height,
+                    };
+                }
+
+                computeLeftTop() {
+                    let { left, top, width, height } = this.computeBoundingRectangle();
+
+                    if (this.location == 'top-left') {
+                        this.computedTop = top;
+                        this.computedLeft = left;
+                    }
+                    else if (this.location == 'top-center') {
+                        this.computedTop = top;
+                        this.computedLeft = left + (width - this.computedWidth)/2;
+                    }
+                    else if (this.location == 'top-right') {
+                        this.computedTop = top;
+                        this.computedLeft = left + width - this.computedWidth;
+                    }
+                    else if (this.location == 'middle-left') {
+                        this.computedTop = top + (height - this.computedHeight)/2;
+                        this.computedLeft = left;
+                    }
+                    else if (this.location == 'middle-center') {
+                        this.computedTop = top + (height - this.computedHeight)/2;
+                        this.computedLeft = left + (width - this.computedWidth)/2;
+                    }
+                    else if (this.location == 'middle-right') {
+                        this.computedTop = top + (height - this.computedHeight)/2;
+                        this.computedLeft = left + width - this.computedWidth;
+                    }
+                    else if (this.location == 'bottom-left') {
+                        this.computedTop = top + height - this.computedHeight;
+                        this.computedLeft = left;
+                    }
+                    else if (this.location == 'bottom-center') {
+                        this.computedTop = top + height - this.computedHeight;
+                        this.computedLeft = left + (width - this.computedWidth)/2;
+                    }
+                    else if (this.location == 'bottom-right') {
+                        this.computedTop = top + height - this.computedHeight;
+                        this.computedLeft = left + width - this.computedWidth;
+                    }
+                    else {
+                        this.computedTop = top + (height - this.computedHeight)/2;
+                        this.computedLeft = left + (width - this.computedWidth)/2;
+                    }
+                }
+
+                computeSize() {
+                    if (this.size) {
+                        this.computedWidth = this.size.width;
+                        this.computedHeight = this.size.height;
+                    }
+                    else if (this.getChildCount() > 0) {
+                        this.size = {
+                            width: Win.getInnerWidth() - 2*this.boundingGap,
+                            height: Win.getInnerHeight() - 2*this.boundingGap,
+                        };
+
+                        this.computedWidth = this.size.width;
+                        this.computedHeight = this.size.height;
+                    }
+
+                    if (this.computedWidth > Win.getInnerWidth()) {
+                        this.computedWidth = Win.getInnerWidth();
+                    }
+                    
+                    if (this.computedHeight > Win.getInnerHeight()) {
+                        this.computedHeight = Win.getInnerHeight();
+                    }
+                }
+
+                async generateLayout() {
+                    if (Object.keys(this.buttons).length == 0) {
+                        let container = mkHtmlElement('div');
+                        await this.appendElement(container);
+                        container.setAttribute('design', 'modal-widget-container');
+                        await container.appendElement(this.getContent());
+                    }
+                    else {
+                        let grid = createElement('grid-widget');
+                        grid.setAttribute('design', 'modal-widget-grid');
+                        grid.setRows(['auto', '80px']);
+                        await this.appendElement(grid);
+                        grid.generatePlaceholders();
+
+                        let container = grid.getAt(0, 0).setAttribute('design', 'modal-widget-container');
+                        let buttonPanel = grid.getAt(1, 0).setAttribute('design', 'modal-widget-buttons');
+                        await container.appendElement(this.getContent());
+
+                        for (let buttonName in this.buttons) {
+                            let button = this.buttons[buttonName];
+                            buttonPanel.append(button);
+                        }
+                    }
+
+                    if (this.border) {
+                        this.setStyle({
+                            padding: '5px',
+                            backgroundColor: 'var(--modal-background-color)',
+                            border: 'var(--modal-border)',
+                            borderRadius: 'var(--modal-border-radius)',
+                        });
+                    }
+                    else {
+                        this.setStyle({
+                            padding: '0px',
+                            border: 'none',
+                        });
+                    }
+                }
+
+                getContent() {
+                    if (!this.content) {
+                        for (let element of this.getInnerElements()) {
+                            if (element.getTagName() == 'content') {
+                                return element.getInnerHtml();
+                            }
+                        }
+
+                        return '';
+                    }
+                    else {
+                        return this.content;
+                    }
+                }
+
+                static hide() {
+                    if (Win.modal) {
+                        return Win.modal.hide();
+                    }
+
+                    return null;
+                }
+
+                hide(buttonName) {
+                    if (Object.is(Win.modal, this)) {
+                        Win.modal = null;
+                        this.shield.remove();
+
+                        for (let bodyChild of this.bodyChildren) {
+                            let filter = this.filters.shift();
+                            bodyChild.setStyle('filter', filter);
+                        }
+
+                        this.focused ? this.focused.focus() : null;
+                        this.closed(buttonName ? buttonName : '');
+                    }
+
+                    return this;
+                }
+
+                init() {
+                    super.init();
+
+                    if (this.getRdsButtons) {
+                        this.setButtons(TextUtils.split(this.getRdsButtons(), ','));
+                    }
+
+                    if (this.getRdsContent) {
+                        this.setContent(this.getRdsContent());
+                    }
+
+                    if (isPhone()) {
+                        this.setBorder(false);
+                        this.setSize(Win.getInnerWidth(), Win.getInnerHeight());
+                    }
+                    else {
+                        if (this.getRdsAnchor) {
+                            this.setAnchor(this.getRdsAnchor());
+                        }
+
+                        if (this.getRdsBlur) {
+                            this.setBlur(this.getRdsBlur());
+                        }
+
+                        if (this.getRdsBorder) {
+                            this.setBorder(Boolean(this.getRdsBorder()));
+                        }
+
+                        if (this.getRdsLocation) {
+                            this.setLocation(this.getRdsLocation());
+                        }
+
+                        if (!this.size) {
+                            if (this.getRdsSize) {
+                                this.setSize(this.getRdsSize());
+                            }
+                            else {
+                                this.size = {
+                                    width: Win.getInnerWidth() - 40,
+                                    height: Win.getInnerHeight() - 40,
+                                };
+                            }
+                        }
+                    }
+
+                    this.generateLayout();
+
+                    if (this.size == 'auto') {
+                        if (this.content) {
+                            this.content.on('SubtreeInitialized', message => {
+                                if (Object.keys(this.buttons).length) {
+                                    let width = this.content.getOffsetWidth() + 60;
+                                    let height = this.content.getOffsetHeight() + 100;
+                                    this.setSize(width, height);
+                                }
+                                else {
+                                    this.setSize(
+                                        this.content.getOffsetWidth(),
+                                        this.content.getOffsetHeight(),
+                                    );
+                                }
+
+                                this.render();
+                            });
+                        }
+                        else {
+                            this.setSize('fill');
+                            this.render();
+                        }
+                    }
+                    else {
+                        this.render();
+                    }
+                }
+
+                monitorResize(x, y) {
+                    let sector = '';
+
+                    let x0 = this.computedLeft;
+                    let y0 = this.computedTop;
+                    let x1 = x0 + this.computedWidth;
+                    let y1 = y0 + this.computedHeight;
+
+                    if (Math.abs(x - x0) < this.resizeBand) {
+                        sector = 'left';
+                    }
+                    else if (Math.abs(x - x1) < this.resizeBand) {
+                        sector = 'right';
+                    }
+
+                    if (Math.abs(y - y0) < this.resizeBand) {
+                        if (sector) {
+                            sector = `${sector}-top`;
+                        }
+                        else {
+                            sector = 'top';
+                            this.dragType = 'v';
+                        }
+                    }
+                    else if (Math.abs(y - y1) < this.resizeBand) {
+                        if (sector) {
+                            sector = `${sector}-bottom`;
+                            this.dragType = 'hv';
+                        }
+                        else {
+                            sector = 'bottom';
+                            this.dragType = 'v';
+                        }
+                    }
+
+                    switch (sector) {
+                        case 'left':
+                            this.dragX = false;
+                            this.dragY = null;
+                            this.resizeCursor = 'w-resize';
+                            break;
+
+                        case 'left-top':
+                            this.dragX = false;
+                            this.dragY = true;
+                            this.resizeCursor = 'nw-resize';
+                            break;
+
+                        case 'top':
+                            this.dragX = null;
+                            this.dragY = false;
+                            this.resizeCursor = 'n-resize';
+                            break;
+
+                        case 'right-top':
+                            this.dragX = true;
+                            this.dragY = false;
+                            this.resizeCursor = 'ne-resize';
+                            break;
+
+                        case 'right':
+                            this.dragX = true;
+                            this.dragY = null;
+                            this.resizeCursor = 'e-resize';
+                            break;
+
+                        case 'right-bottom':
+                            this.dragX = true;
+                            this.dragY = true;
+                            this.resizeCursor = 'se-resize';
+                            break;
+
+                        case 'bottom':
+                            this.dragX = null;
+                            this.dragY = true;
+                            this.resizeCursor = 's-resize';
+                            break;
+
+                        case 'left-bottom':
+                            this.dragX = false;
+                            this.dragY = true;
+                            this.resizeCursor = 'sw-resize';
+                            break;
+
+                        default:
+                            this.resizeCursor = '';
+                            break;
+                    }
+
+                    this.setStyle('cursor', this.resizeCursor);
+                    this.shield.setStyle('cursor', this.resizeCursor);
+
+                    if (this.resizeCursor) {
+                        this.setAttribute('draggable', true);
+                    }
+                    else {
+                        this.clearAttribute('draggable');
+                    }
+                }
+
+                onDragEnd(evt) {
+                    this.dragType = '';
+                    this.setStyle('cursor', '');
+                    this.clearAttribute('draggable');
+                }
+
+                onDragOverModal(evt) {
+                    this.onDragOverShield(evt);
+                }
+
+                onDragOverShield(evt) {
+                    let dx = evt.screenX - this.dragStartX;
+                    let dy = evt.screenY - this.dragStartY;
+
+                    if (this.dragX === true) {
+                        this.size.width = this.dragStartWidth + 2*dx;
+                    }
+                    else if (this.dragX === false) {
+                        this.size.width = this.dragStartWidth - 2*dx;
+                    }
+
+                    if (this.dragY === true) {
+                        this.size.height = this.dragStartHeight + 2*dy;
+                    }
+                    else if (this.dragY === false) {
+                        this.size.height = this.dragStartHeight - 2*dy;
+                    }
+
+                    this.render();
+                }
+
+                onDragStart(evt) {
+                    this.dragStartX = evt.screenX;
+                    this.dragStartY = evt.screenY;
+                    this.dragStartWidth = this.computedWidth;
+                    this.dragStartHeight = this.computedHeight;
+                    let img = Packages.getImage(`modalDrag-${Win.getColorScheme()}`);
+                    evt.dataTransfer.setDragImage(img.getNode(), 20, 20);
+                }
+                   
+                onCancel() {
+                    this.hide('cancel');
+                }
+                   
+                onNo() {
+                    this.hide('no');
+                }
+                   
+                onOk() {
+                    this.hide('ok');
+                }
+                   
+                onSave() {
+                    this.hide('save');
+                }
+                   
+                onYes() {
+                    this.hide('yes');
+                }
+
+                render() {
+                    this.computeSize();
+                    this.computeLeftTop();
+                    
+                    this.setStyle({
+                        left: `${this.computedLeft}px`,
+                        top: `${this.computedTop}px`,
+                        width: `${this.computedWidth}px`,
+                        height: `${this.computedHeight}px`,
+                    });
+                }
+
+                setAnchor(anchorWidget) {
+                    if (typeof anchorWidget == 'string') {
+                        this.anchor = Doc.queryOne(anchorWidget);
+                    }
+                    else if (anchorWidget instanceof HtmlElement) {
+                        this.anchor = anchorWidget;
+                    }
+
+                    return this;
+                }
+
+                setBlur(blur) {
+                    this.blur = blur;
+                    return this;
+                }
+
+                setBorder(value) {
+                    this.border = value 
+                    return this;
+                }
+
+                setButtons(...buttonNames) {
+                    for (let buttonName of buttonNames) {
+                        if (buttonName in { ok:0, cancel:0, save:0 }) {
+                            let buttonText = Packages.getString(buttonName);
+
+                            this.buttons[buttonName] = createElementFromOuterHtml(
+                                `<input-widget type="button" class="button-medium" value="${buttonText}" evt-click="${buttonName}"></input-widget>`
+                            );
+                        }
+                    }
+
+                    return this;
+                }
+
+                setContent(value) {
+                    if (typeof value == 'string') {
+                        this.content = mkHtmlElement('div');
+                        let text = Packages.getString(value);
+                        this.content.setInnerHtml(text);
+                    }
+                    else if (value instanceof HtmlElement) {
+                        this.content = value;
+                    }
+
+                    return this;
+                }
+
+                setLocation(value) {
+                    this.location = value;
+                    return this;
+                }
+
+                setSize(width, height) {
+                    if (isPhone()) {
+                        this.size = {
+                            width: Win.getInnerWidth(),
+                            height: Win.getInnerHeight(),
+                        };
+                    }
+                    else if (typeof width == 'string') {
+                        if (width == 'fill') {
+                            this.size = {
+                                width: Win.getInnerWidth() - 40,
+                                height: Win.getInnerHeight() - 40,
+                            };
+                        }
+                        else if (width != 'auto') {
+                            try {
+                                let size = TextUtils.parseAttributeEncoded(width);
+
+                                if (typeof size == 'object') {
+                                    if (typeof size.width == 'number' && typeof size.height == 'number') {
+                                        this.size = {
+                                            width: size.width,
+                                            height: size.height,
+                                        };
+                                    }
+                                }
+                            }
+                            catch (e) {
+                                this.size = {
+                                    width: Win.getInnerWidth() - 40,
+                                    height: Win.getInnerHeight() - 40,
+                                };
+                            }
+                        }
+                    }
+                    else if (typeof width == 'number' && typeof height == 'number') {
+                        this.size = {
+                            width: width,
+                            height: height,
+                        };
+                    }
+                    
+                    return this;
+                }
+
+                show() {
+                    return new Promise((ok, fail) => {
+                        this.shield = mkHtmlElement('div');
+                        this.shield.setAttribute('design', 'modal-widget-shield');
+                        this.focused = Doc.getActiveElement();
+
+                        if (this.focused) {
+                            this.focused.blur();
+                        }
+
+                        this.filters = [];
+                        this.bodyChildren = Doc.getBody().getChildElements();
+
+                        for (let bodyChild of this.bodyChildren) {
+                            this.filters.push(Doc.getBody().getChildElementAt(0).getStyle('filter'));
+                            bodyChild.setStyle({ filter: `blur(${this.blur})` });
+                        }
+
+                        this.on('dragstart', message => this.onDragStart(message.event));
+                        this.on('dragover', message => this.onDragOverModal(message.event));
+                        this.on('dragend', message => this.onDragEnd(message.event));
+                        this.shield.on('dragover', message => this.onDragOverShield(message.event));
+
+                        Doc.getBody().append(this.shield);
+                        this.shield.append(this);
+                        this.closed = buttonName => ok(buttonName);
+
+                        if (Object.keys(this.buttons).length) {
+                            Object.values(this.buttons)[0].focus();
+                        }
+
+                        if (!Win.modal || !Object.is(Win.modal, this)) {
+                            if (!Object.is(Win.modal, this)) {
+                                ModalWidget.hide();
+                                Win.modal = this;
+                            }
+                        }
+                    });
+                }
+            }
+        </script>
+        <style>
+            [design=self] {
+                margin: 0px;
+            }
+            [design=buttons] {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                width: 100%;
+            }
+            [design=grid] {
+                width: 100%;
+                height: 100%;
+            }
+            [design=container] {
+                width: 100%;
+                height: 100%;
+                padding: 0px;
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                overflow: scroll;
+            }
+            [design=shield] {
+                display: flex;
+                flex-direction: row;
+                justify-content: center;
+                align-items: center;
+                position: fixed;
+                z-index: 100;
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+                background-color: transparent;
+                cursor: default;
+            }
+        </style>
+    </widget>
+    <script>
+        define(function displayDialog(opts) {
+            let modal = createElement('modal-widget');
+
+            if (opts.anchor) {
+                modal.setAnchor(opts.anchor);
+            }
+
+            if (typeof opts.blur == 'string') {
+                modal.setBlur(opts.blur);
+            }
+
+            if (typeof opts.border == 'boolean') {
+                modal.setBorder(opts.border);
+            }
+
+            if (Array.isArray(opts.buttons)) {
+                modal.setButtons(...opts.buttons);
+            }
+
+            if (opts.content) {
+                modal.setContent(opts.content);
+            }
+
+            if (typeof opts.location == 'string') {
+                modal.setLocation(opts.location);
+            }
+
+            if (typeof opts.size == 'object') {
+                modal.setSize(opts.size.width, opts.size.height);
+            }
+
+            return modal.show();
+        });
+        
+        define(function displayNoYesDialog(opts) {
+            opts.buttons = [ 'no', 'yes' ];
+            return displayDialog(opts);
+        });
+
+        define(function displayOkDialog(opts) {
+            opts.buttons = [ 'ok' ];
+            return displayDialog(opts);
+        });
+
+        define(function displayOkCancelDialog(opts) {
+            opts.buttons = [ 'ok', 'cancel' ];
+            return displayDialog(opts);
+        });
+
+        define(function displaySaveCancelDialog(opts) {
+            opts.buttons = [ 'save', 'cancel' ];
+            return displayDialog(opts);
+        });
+
+        define(function displayYesNoDialog(opts) {
+            opts.buttons = [ 'yes', 'no' ];
+            return displayDialog(opts);
+        });
+    </script>
+    <images>
+        modalDrag-dark#data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAj0lEQVR4AeyV0QqAIAxFq4/rwQ/2oZ8r9nCGhJI4UgYLxoXpjbuD4rEt/nwHuHK+pSwQfROwTI43CASBIOCbwJnSLsWdHlHfBEYmfnuUgDwqPVX+gP21HmstxaMBaMxWDSCHqafKgOyv9VhrKR4NQGO2+g7AAbNQ803AMjneIBAEgoBvAjw03OkR/Z3AV6gHAAD//1mCbawAAAAGSURBVAMAFPVoQXbpijQAAAAASUVORK5CYII=
+        modalDrag-light#data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAACXBIWXMAAAsTAAALEwEAmpwYAAAARElEQVR4nO3RMQoAMAjF0Nz/0r9Lx0IHKVZIwFF5IFit7GkrAhCAAASkE2BP/pnLnHaqd/4A2MjS/c8IQAACEJBOAONbVNxTrTQENs8AAAAASUVORK5CYII=
+    </images>
+    <strings lang="en">
+        cancel = Cancel\
+        no = No\
+        ok = OK\
+        save = Save\
+        yes = Yes\
+    </strings>
+</bundle>

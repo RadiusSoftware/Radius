@@ -39,8 +39,7 @@ define(class RdsShape {
                 this.keys = {};
             }
             else if (arg === EnumType) {
-                this.type = arg;
-                this.enum = null;
+                throwError('Generic enum category is NOT a valid type.');
             }
             else if (arg instanceof BaseType) {
                 this.type = arg;
@@ -118,12 +117,7 @@ define(class RdsShape {
             return this.verifyObject((value));
         }
         else if (this.type == EnumType) {
-            if (this.enum) {
-                return this.enum.has(value);
-            }
-            else {
-                return this.type.verify(value);
-            }
+            return this.enum.has(value);
         }
         else if (this.type == ClassType) {
             return ClassType.instanceOf(this.clss, value);

@@ -40,7 +40,7 @@ createService(class PermissionSetService extends Service {
     async init() {
         singleton(class PermissionSetThunk extends Thunk {
             async getPermissionTypeSet() {
-                let permissionTypes = mkStringSet();
+                let permissionTypes = mkRdsEnum();
 
                 for (let permissionType of await mkSettingsHandle().getSetting('permissionTypes')) {
                     permissionTypes.set(permissionType);
@@ -89,7 +89,7 @@ createService(class PermissionSetService extends Service {
         if (message.uuid in this.permissionSets) {
             let copy = {
                 uuid: Crypto.generateUUID(),
-                types: mkStringSet(),
+                types: mkRdsEnum(),
             };
 
             this.permissionSets[copy.uuid] = copy;
@@ -103,7 +103,7 @@ createService(class PermissionSetService extends Service {
     async onCreatePermissionSet(message) {
         let pset = {
             uuid: Crypto.generateUUID(),
-            types: mkStringSet(),
+            types: mkRdsEnum(),
         };
 
         this.permissionSets[pset.uuid] = pset;

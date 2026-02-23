@@ -1,0 +1,817 @@
+<!DOCTYPE bundle>
+<bundle>
+    <widget tagname="grid-widget">
+        <script>
+            class GridWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                    this.rows = [];
+                    this.cols = [];
+                    this.cells = 0;
+                    this.rowGap = '0px';
+                    this.colGap = '0px';
+                }
+
+                computeGeometry() {
+                    this.rows.length == 0 ? this.rows.push('100%') : null;
+                    this.cols.length == 0 ? this.cols.push('100%') : null;
+                    this.cells = this.rows.length * this.cols.length;
+
+                    let style = {
+                        display: 'grid',
+                        gridTemplateRows: `${this.rows.join(' ')}`,
+                        gridTemplateColumns: `${this.cols.join(' ')}`,
+                        rowGap: `${this.rowGap}`,
+                        colGap: `${this.colGap}`,
+                    };
+
+                    this.setStyle(style);
+                }
+                
+                generatePlaceholders() {
+                    this.clear();
+
+                    for (let i = 0; i < this.cells; i++) {
+                        this.append(mkHtmlElement('div'));
+                    }
+
+                    return this;
+                }
+
+                getAt(row, col) {
+                    let index = row * this.cols.length + col;
+                    return this.getChildAt(index);
+                }
+                
+                getCols() {
+                    return this.cols;
+                }
+
+                getRows() {
+                    return this.rows;
+                }
+
+                init() {
+                    super.init();
+
+                    if (this.getRdsColCount) {
+                        this.setColCount(parseInt(this.getRdsColCount()));
+                    }
+
+                    if (this.getRdsColGap) {
+                        this.colGap = this.getRdsColGap();
+                    }
+
+                    if (this.getRdsCols) {
+                        this.cols = TextUtils.split(this.getRdsCols(), ',');
+                    }
+
+                    if (this.getRdsRowCount) {
+                        this.setRowCount(parseInt(this.getRdsRowCount()));
+                    }
+
+                    if (this.getRdsRowGap) {
+                        this.rowGap = this.getRdsRowGap();
+                    }
+
+                    if (this.getRdsRows) {
+                        this.rows = TextUtils.split(this.getRdsRows(), ',');
+                    }
+
+                    this.computeGeometry();
+
+                    if (this.getRdsPlaceholders) {
+                        this.generatePlaceholders();
+                    }
+                }
+
+                setAt(row, col, htmlElement) {
+                    let index = row * this.cols.length + col;
+                    let child = this.getChildAt(index);
+                    child.replace(htmlElement);
+                    return this;
+                }
+
+                setColCount(count) {
+                    let cols = [];
+
+                    if (count > 0) {
+                        this.cols = [];
+                        let width = `${100/count}%`;
+
+                        for (let i = 0; i < count; i++) {
+                            this.cols.push(width);
+                        }
+                    }
+
+                    return this;
+                }
+
+                setColGap(colGap) {
+                    this.colGap = colGap;
+                    return this;
+                }
+
+                setCols(cols) {
+                    this.cols = cols;
+                    return this;
+                }
+
+                setGeometry(rows, cols) {
+                    this.rows = rows;
+                    this.cols = cols;
+                    return this;
+                }
+
+                setRowCount(count) {
+                    this.rows = [];
+
+                    if (count > 0) {
+                        let height = `${100/count}%`;
+
+                        for (let i = 0; i < count; i++) {
+                            this.rows.push(height);
+                        }
+                    }
+
+                    return this;
+                }
+
+                setRowGap(rowGap) {
+                    this.rowGap = rowGap;
+                    return this;
+                }
+
+                setRows(rows) {
+                    this.rows = rows;
+                    return this;
+                }
+            }
+        </script>
+    </widget>
+    <widget tagname="table-widget">
+        <script>
+            class TableWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                    this.columns = [];
+                    this.setInnerHtml('<table design="table-widget-table"><tbody design="table-widget-tbody"></tbody></table>');
+                    this.table = this.getChildElementAt(0);                    
+                }
+
+                appendColumn(columnName) {
+                    let text = Packages.getString(columnName);
+                    this.columns.push(text);
+                    return this;
+                }
+
+                appendRow(cells) {
+                    let tr = this.createRow(cells);
+                    this.getBody().append(tr);
+                    return tr;
+                }
+
+                appendRows(...htmlElements) {
+                    for (let htmlElement of htmlElements) {
+                        if (htmlElement.getTagName() == 'tablerow') {
+                            let cells = [];
+                            let clickEvent = this.getRdsClick ? this.getRdsClick() : '';
+                            
+                            if (htmlElement.getRdsClick) {
+                                clickEvent = htmlElement.getRdsClick();
+                            }
+
+                            for (let i = 0; i < this.columns.length; i++) {
+                                let childElement = htmlElement.getChildElementAt(i);
+
+                                if (childElement && childElement.getTagName() == 'tablecell') {
+                                    if (childElement.getRdsClick) {
+                                        if (childElement.getRdsClick()) {
+                                            clickEvent = childElement.getRdsClick();
+                                        }
+                                    }
+
+                                    let content = Packages.getString(childElement.getInnerHtml());
+                                    content ? null : content = '';
+                                    cells.push({ content: content, evtclick: clickEvent });
+                                }
+                            }
+
+                            this.appendRow(cells);
+                        }
+                    }
+                }
+
+                clearRows() {
+                    this.getBody().clear();
+                    return this;
+                }
+
+                createRow(cells) {
+                    let docNodeCells = [];
+                    let row = [ '<tr design="table-widget-tr">' ];
+
+                    for (let cell of cells) {
+                        let active = false;
+                        row.push(`<td`);
+
+                        for (let key in cell) {
+                            if (key !== 'content') {
+                                if (key.startsWith('evt')) {
+                                    row.push(` evt-${key.substring(3)}`);
+
+                                    if (key.substring(3) == 'click') {
+                                        active = true;
+                                        row.push(' design="table-widget-td-active"');
+                                    }
+                                }
+                                else {
+                                    row.push(` ${key}="${cell[key]}"`);
+                                }
+                            }
+                        }
+
+                        if (!active) {
+                            row.push(' design="table-widget-td-inactive"');
+                        }
+
+                        row.push('>');
+
+                        if (typeof cell.content == 'string') {
+                            row.push(Packages.getString(cell.content));
+                        }
+
+                        row.push('</td>');
+
+                        if (cell.content instanceof DocNode) {
+                            docNodeCells.push(cell.content);
+                        }
+                        else {
+                            docNodeCells.push(null);
+                        }
+                    }
+
+                    row.push('</tr>');
+                    let tr = createElementFromOuterHtml(row.join(' '));
+
+
+                    for (let i = 0; i < docNodeCells.length; i++) {
+                        if (docNodeCells[i] !== null) {
+                            tr.getChildElementAt(i).append(docNodeCells[i]);
+                        }
+                    }
+ 
+                    return tr;
+                }
+
+                deleteRowAt(index) {
+                    let tr = this.getBody().getChildElementAt(index);
+                    
+                    if (tr instanceof HtmlElement && tr.getTagName() == 'tr') {
+                        tr.remove();
+                    }
+
+                    return this;
+                }
+
+                deleteRows(index, count) {
+                    let rows = this.getBody().getChildElements();
+
+                    for (let i = index; i < rows.length && i < index + count; i++) {
+                        rows[i].remove();
+                    }
+                    
+                    return this;
+                }
+
+                getBody() {
+                    for (let childElement of this.table.getChildElements()) {
+                        if (childElement.getTagName() == 'tbody') {
+                            return childElement;
+                        }
+                    }
+
+                    return null;
+                }
+
+                getHead() {
+                    for (let childElement of this.table.getChildElements()) {
+                        if (childElement.getTagName() == 'thead') {
+                            return childElement;
+                        }
+                    }
+
+                    let thead = createElementFromOuterHtml('<thead design="table-widget-thead"></thead>');
+                    this.table.append(thead);
+                    return thead;
+                }
+
+                getRowAt(index) {
+                    return this.getBody().getChildElementAt(index);
+                }
+
+                getRowCount() {
+                    return this.getBody().getChildElements().length;
+                }
+
+                init() {
+                    super.init();
+
+                    for (let htmlElement of this.getInnerElements()) {
+                        if (htmlElement.getTagName() == 'tablecol') {
+                            this.appendColumn(htmlElement.getInnerHtml());
+                        }
+                    }
+
+                    if (this.getRdsColumns) {
+                        this.showColumns();
+                    }
+                    else if (this.getRdsColumnCount) {
+                        this.setColumnCount(parseInt(this.getRdsColumnCount()));
+                    }
+
+                    if (this.getRdsHeading) {
+                        this.showHeading(this.getRdsHeading());
+                    }
+
+                    this.appendRows(...this.getInnerElements());
+                }
+
+                insertRowAfter(index, cells) {
+                    let tr = this.createRow(cells);
+                    this.getBody().getChildAt(index).insertAfter(tr);
+                    return tr;
+                }
+
+                insertRowBefore(index, cells) {
+                    let tr = this.createRow(cells);
+                    this.getBody().getChildAt(index).insertBefore(tr);
+                    return tr;
+                }
+
+                setColumnCount(columnCount) {
+                    this.columns = [];
+
+                    for (let i = 0; i < columnCount; i++) {
+                        this.columns.push('');
+                    }
+
+                    return this;
+                }
+
+                showColumns() {
+                    let thead = this.getHead();
+                    let tr = createElementFromOuterHtml('<tr design="table-widget-tr"></tr>');
+                    thead.append(tr);
+                    
+                    for (let column of this.columns) {
+                        let columnText = Packages.getString(column);
+                        tr.append(
+                            createElementFromOuterHtml(`<th design="table-widget-th">${columnText}</th>`)
+                        );
+                    }
+                }
+
+                showHeading(title) {
+                    let thead = this.getHead();
+                    let text = '';
+
+                    if (typeof title == 'string') {
+                        text = Packages.getString(title.trim());
+                    }
+
+                    if (text) {
+                        let tr = createElementFromOuterHtml(
+                            `<tr design="table-widget-tr">
+                                <th colspan="${this.columns.length}" design="table-widget-th">${text}</th>
+                            </tr>`
+                        );
+
+                        thead.prepend(tr);
+                    }
+                }
+
+                [Symbol.iterator]() {
+                    return this.getBody().getChildElements()[Symbol.iterator];
+                }
+            }
+        </script>
+        <style>
+            [design=self] {
+                display: block;
+                width: 100%;
+                height: 100%;
+            }
+            [design=table] {
+                width: 100%;
+                border-collapse: collapse;
+                border-spacing: 0px;
+                empty-cells: show;
+                table-layout: auto;
+            }
+            [design=thead] {
+                height: auto;
+            }
+            [design=th] {
+                color: var(--label-color);
+                padding-top: 8px;
+                padding-bottom: 8px;
+                font-weight: bold;
+                text-align: center;
+                border-style: solid;
+                border-color: var(--border-color);
+                border-width: 1px;
+            }
+            [design=tbody] {
+                width: 100%;
+                height: 100%;
+            }
+            [design=tr] {
+                height: auto;
+            }
+            [design=td-inactive] {
+                width: auto;
+                text-align: left;
+                padding-left: 8px;
+                padding-right: 8px;
+                padding-top: 6px;
+                padding-bottom: 6px;
+            }
+            [design=td-active] {
+                width: auto;
+                text-align: left;
+                padding-left: 8px;
+                padding-right: 8px;
+                padding-top: 6px;
+                padding-bottom: 6px;
+            }
+            [design=td-active]:hover {
+                color: var(--hover-color);
+                cursor: pointer;
+            }
+        </style>
+    </widget>
+    <widget tagname="selector-widget">
+        <script>
+            class SelectorWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                    this.mode = '#NOMODE#';
+                    this.modes = {};
+                    this.childTransition = '';
+                    this.childStyleTrigger = '';
+                }
+
+                addMode(mode, clientElement) {
+                    if (!(mode in this.modes)) {
+                        this.append(clientElement);
+                        this.modes[mode] = clientElement;
+
+                        if (mode == this.mode) {
+                            clientElement.setStyle('display', '');
+                        }
+                        else {
+                            clientElement.setStyle('display', 'none');
+                        }
+
+                        return true;
+                    }
+
+                    return false;
+                }
+
+                clearMode() {
+                    this.setMode('#NOMODE#');
+                    return this;
+                }
+
+                getClientElement(mode) {
+                    return this.modes[mode];
+                }
+
+                getMode() {
+                    return this.mode;
+                }
+
+                hasMode(mode) {
+                    return mode in this.modes;
+                }
+
+                init() {
+                    if (!this.getRdsBindMethod) {
+                        this.getRdsBindMethod = () => 'selectorMode,setMode';
+                    }
+
+                    super.init();
+
+                    if (this.getRdsChildTransition && this.getRdsChildStyleTrigger) {
+                        this.childTransition = this.getRdsChildTransition();
+                        this.childStyleTrigger = this.getRdsChildStyleTrigger();
+                    }
+
+                    for (let innerElement of this.getInnerElements()) {
+                        if (innerElement.getRdsSelectorMode) {
+                            let mode = innerElement.getRdsSelectorMode();
+                            this.addMode(mode, innerElement);
+                        }
+                    }
+                }
+
+                listClientElements() {
+                    return Object.values(this.modes);
+                }
+
+                listModes() {
+                    return Object.keys(this.modes);
+                }
+                
+                removeMode(mode) {
+                    if (mode in this.modes) {
+                        let clientElement = this.modes[mode];
+                        clientElement.clearStyle('display');
+                        clientElement.remove();
+                        delete this.modes[mode];
+
+                        if (mode = this.mode) {
+                            this.mode = '#NOMODE#';
+                        }
+                    }
+
+                    return this;
+                }
+
+                removeModes() {
+                    this.mode = '#NOMODE#'
+                    this.modes = {};
+
+                    for (let clientElement of this.getChildElements()) {
+                        clientElement.clearStyle('display');
+                    }
+
+                    this.clear();
+                    return this;
+                }
+
+                replaceClientElement(mode, clientElement) {
+                    if (mode in this.modes) {
+                        let prevClientElement = this.modes[mode];
+
+                        if (!Object.is(prevClientElement, clientElement)) {
+                            this.modes[mode] = clientElement;
+                            prevClientElement.replace(clientElement);
+
+                            if (mode == this.mode) {
+                                clientElement.setStyle('display', '');
+                            }
+                            else {
+                                clientElement.setStyle('display', 'none');
+                            }
+                        }
+                    }
+
+                    return this;
+                }
+
+                setMode(mode) {
+                    if (mode != '#NOMODE#' && mode != this.mode) {
+                        if (this.mode != '#NOMODE#') {
+                            this.modes[this.mode].setStyle('display', 'none');
+                        }
+
+                        if (mode in this.modes) {
+                            let clientElement = this.modes[mode];
+                            clientElement.setStyle('display', '');
+                            clientElement.autofocus();
+
+                            if (this.childTransition) {
+                                clientElement.setTransition(this.childTransition);
+                                clientElement.setStyleTrigger(this.childStyleTrigger);
+                            }
+                        }
+
+                        this.mode = mode;
+                    }
+
+                    return this;
+                }
+
+                [Symbol.iterator]() {
+                    return Object.keys(this.modes)[Symbol.iterator]();
+                }
+            }
+        </script>
+    </widget>
+    <widget tagname="navigator-widget">
+        <script>
+            class NavigatorWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+
+                addMode(mode, locator, clientElement) {
+                    if (this.selector.addMode(mode, clientElement)) {
+                        let text = Packages.getString(locator);
+                        let div = createElementFromOuterHtml(`<div design="navigator-widget-nav-item" evt-click="selectItem">${text}</div>`);
+                        this.items.append(div);
+                        div.pin('mode', mode);
+                        clientElement.pin('displayText', text);
+                        clientElement.pin('displayDiv', div);
+                    }
+
+                    return this;
+                }
+
+                clearMode() {
+                    this.selector.clearMode();
+                    return this;
+                }
+
+                collapse() {
+                    if (this.expanded) {
+                        this.collapseButton.setStyle({ display: 'none' });
+                        this.expandButton.setStyle({ display: '' });
+                        this.frame.setCols([`${this.collapsedWidth*2}px`, 'auto']);
+                        this.items.setStyle({ visibility: 'hidden' });
+                        this.frame.computeGeometry();
+                        this.expanded = false;
+                    }
+
+                    return this;
+                }
+
+                computeLayout() {
+                    this.expandedWidth = 0;
+
+                    for (let clientElement of this.selector.listClientElements()) {
+                        let div = clientElement.getPinned('displayDiv');
+                        let naturalStyle = div.computeNaturalStyle();
+                        let naturalWidth = Number.parseInt(naturalStyle.width);
+                        naturalWidth > this.expandedWidth ? this.expandedWidth = naturalWidth : null;
+                    }
+                }
+
+                expand() {
+                    if (!this.expanded) {
+                        this.collapseButton.setStyle({ display: '' });
+                        this.expandButton.setStyle({ display: 'none' });
+                        this.frame.setCols([`${this.expandedWidth*2}px`, 'auto']);
+                        this.frame.once('transitionend', () => this.items.setStyle({ visibility: 'visible' }));
+                        this.frame.computeGeometry();
+                        this.expanded = true;
+                    }
+
+                    return this;
+                }
+
+                getClientElement(mode) {
+                    return this.selector.getClientElement();
+                }
+
+                getMode() {
+                    return this.selector.getMode();
+                }
+
+                getText(mode) {
+                    if (this.hasMode) {
+                        let clientElement = this.selector.getClientElement(mode);
+                        return clientElement.getPinned('displayText');
+                    }
+
+                    return '';
+                }
+
+                hasMode(mode) {
+                    return this.selector.hasMode;
+                }
+
+                init() {
+                    super.init();
+                    this.items = this.getTagged('items');
+                    this.frame = this.getTagged('frame');
+                    this.selector = this.getTagged('content');
+                    this.collapseButton = this.getTagged('collapse');
+                    this.expandButton = this.getTagged('expand');
+
+                    if (this.getRdsChildTransition && this.getRdsChildStyleTrigger) {
+                        this.selector.childTransition = this.getRdsChildTransition();
+                        this.selector.childStyleTrigger = this.getRdsChildStyleTrigger();
+                    }
+
+                    for (let innerElement of this.getInnerElements()) {
+                        if (innerElement.getRdsNavigatorMode && innerElement.getRdsNavigatorText) {
+                            let mode = innerElement.getRdsNavigatorMode();
+                            let locator = innerElement.getRdsNavigatorText();
+                            this.addMode(mode, locator, innerElement);
+                        }
+                        else {
+                            innerElement.remove();
+                        }
+                    }
+
+                    this.computeLayout();
+                    this.collapsedWidth = 24;
+                    this.frame.setTransition('property:grid-template-columns;duration:.5s');
+                    this.expand();
+                }
+
+                async onCollapse(message) {
+                    this.collapse();
+                }
+
+                async onExpand(message) {
+                    this.expand();
+                }
+
+                async onSelectItem(message) {
+                    this.setMode(message.htmlElement.getPinned('mode'));
+                }
+
+                removeMode(mode) {
+                    if (this.hasMode(mode)) {
+
+                    }
+
+                    return this;
+                }
+
+                setMode(mode) {
+                    this.selector.setMode(mode);
+                    return this;
+                }
+            }
+        </script>
+        <html rds-controller>
+            <grid-widget tag-frame class="fill">
+                <grid-widget design="nav-widget" rds-rows="32px,auto">
+                    <div design="nav-bar">
+                        <svg tag-collapse rds-shape="arrowleft" class="icon icon-small" evt-click="collapse"></svg>
+                        <svg tag-expand rds-shape="arrowright" class="icon icon-small" evt-click="expand"></svg>
+                    </div>
+                    <div tag-items design="nav-items"></div>
+                </grid-widget>
+                <selector-widget tag-content design="content-panel" rds-child-transition="property:opacity; duration:.5s;" rds-child-style-trigger="opacity:.1,1">
+                </selector-widget>
+            </grid-widget>
+        </html>
+        <style>
+            [design=nav-widget] {
+                margin: 2px;
+                padding: 3px;
+                border: solid 1px var(--border-color);
+                border-radius: 3px;
+            }
+            [design=nav-bar] {
+                display: flex;
+                flex-direction: row;
+                justify-content: end;
+                align-items: end;
+            }
+            [design=nav-items] {
+                display: inline;
+                flex-direction: column;
+                justify-content: left;
+                user-select: none;
+            }
+            [design=nav-item] {
+                width: auto;
+                margin-top: 12px;
+                margin-bottom: 12px;
+                margin-left: 6px;
+                margin-right: 6px;
+                font-family:Arial, Helvetica, sans-serif;
+                font-size: 16px;
+            }
+            [design=nav-item]:hover {
+                cursor: pointer;
+                color: var(--hover-color);
+
+            }
+            [design=content-panel] {
+                margin: 0px;
+                padding: 0px;
+            }
+        </style>
+    </widget>
+    <!-- **************************************************************************************************** -->
+    <!-- **************************************************************************************************** -->
+    <widget tagname="stack-widget">
+        <script>
+            class StackWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+            }
+        </script>
+    </widget>
+    <!-- **************************************************************************************************** -->
+    <!-- **************************************************************************************************** -->
+    <widget tagname="wizard-widget">
+        <script>
+            class WizardWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+            }
+        </script>
+    </widget>
+</bundle>

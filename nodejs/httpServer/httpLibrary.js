@@ -46,7 +46,7 @@ createService(class HttpLibraryService extends Service {
             return mkFailure(`HttpLibrary.adding to library at "${libEntry.path}": INVALID MODE`);
         }
 
-        if (!BooleanType.is(libEntry.once)) {
+        if (!BooleanType.verify(libEntry.once)) {
             return mkFailure(`HttpLibrary.adding to library at "${libEntry.path}": INVALID ONCE`);
         }
 

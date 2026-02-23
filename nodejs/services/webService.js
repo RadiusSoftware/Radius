@@ -112,10 +112,10 @@ define(class WebServiceHandle extends Handle {
     }
 
     async create(options) {
-        if (FunctionType.is(options.clss) && Data.classExtends(options.clss, WebService)) {
+        if (FunctionType.verify(options.clss) && Data.classExtends(options.clss, WebService)) {
             options.fqn = options.clss['#fqn'];
         }
-        else if (!StringType.is(options.fqn)) {
+        else if (!StringType.verify(options.fqn)) {
             this.id = '';
             return this;
         }

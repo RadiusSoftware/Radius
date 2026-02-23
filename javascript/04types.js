@@ -339,7 +339,7 @@ singleton(class JsonType extends BaseType {
     }
 
     toBool(value) {
-        if (this.is(value)) {
+        if (this.verify(value)) {
             return toJson(fromJson(value)) != {};
         }
         

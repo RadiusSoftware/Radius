@@ -161,10 +161,10 @@ define(class Server extends Emitter {
     async start(settingName) {
         let settings = await mkSettingsHandle().getSetting(settingName);
 
-        if (ObjectType.verify(settings)) {
+        if (settings) {
             this.settings = settings;
 
-            if (typeof this.settings.workers == 'number') {
+            if (this.settings.enabled) {
                 for (let i = 0; i < this.settings.workers; i++) {
                     await this.startWorker();
                 }
@@ -211,7 +211,7 @@ define(async function createServer(...args) {
             clss = args[1];
         }
 
-        if (Data.classExtends(clss, Server)) {
+        if (Data.extends(clss, Server)) {
             if (!(clss.name in Server.servers)) {
                 let server = new clss();
                 await server.init();

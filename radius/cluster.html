@@ -1,0 +1,24 @@
+<!DOCTYPE httpx>
+<bundle>
+    <httpx>
+        <opt key="title" type="StringType" value="Manage Cluster"></opt>
+        <opt key="tagName" type="StringType" value="cluster-app"></opt>
+        <opt key="bodyClass" type="StringType" value="center noscroll"></opt>
+        <opt key="setting" name="clusterPath" type="StringType" value="${context.url}"></opt>
+    </httpx>
+    <widget tagname="cluster-app">
+        <script>
+            class ClusterApp extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+            }
+        </script>
+        <html rds-controller>
+            CONNECT / DISCONNECT FROM CLUSTER
+        </html>
+    </widget>
+    <strings lang="en">
+        cluster = cluster\
+    </strings>
+</bundle>

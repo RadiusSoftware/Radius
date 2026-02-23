@@ -1,0 +1,390 @@
+<!DOCTYPE httpx>
+<bundle>
+    <httpx>
+        <opt key="title" type="StringType" value="Authorize"></opt>
+        <opt key="tagName" type="StringType" value="auth-app"></opt>
+        <opt key="bodyClass" type="StringType" value="center noscroll"></opt>
+        <opt key="setting" name="authorizePath" type="StringType" value="${context.url}"></opt>
+    </httpx>
+    <widget tagname="auth-app">
+        <script>
+            class AuthApp extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+
+                async init() {
+                    super.init();
+
+                    this.getChildElementAt(0).on('DocNodeInitialized', async message => {
+                        await this.handleState(await Api.getAuthState());
+                        let username = await Api.getUsername();
+                        this.setControllerValue('username', username);
+                    });
+                }
+
+                async handleState(state) {
+                    if (state instanceof Failure) {
+                        await displayOkDialog({
+                            content: state.getInfo(),
+                        });
+                    }
+                    else if (state == 'live') {
+                        let path = await Api.getTargetPath();
+
+                        if (path == Location.getPathname()) {
+                            Location.assign('/');
+                        }
+                        else {
+                            Location.assign(path);
+                        }
+                    }
+                    else {
+                        this.setControllerValue('selectorMode', state);
+                    }
+                }
+
+                async onBack(message) {
+                    let state = await Api.submitRevert();
+                    await this.handleState(state);
+                }
+
+                async onEulaAccept(message) {
+                    let state = await Api.submitAcceptEula();
+                    await this.handleState(state);
+                }
+
+                async onEulaDecline(message) {
+                    let state = await Api.submitRevert();
+                    await this.handleState(state);
+                }
+
+                async onForgotPassword(message) {
+                    // TODO ********************************************************
+                    console.log(message);
+                }
+
+                async onForgotUsername(message) {
+                    // TODO ********************************************************
+                    console.log(message);
+                }
+
+                async onSubmitDeviceForget(message) {
+                    let state = await Api.submitDeviceRemember(false);
+                    await this.handleState(state);
+                }
+
+                async onSubmitDeviceRemember(message) {
+                    let state = await Api.submitDeviceRemember(true);
+                    await this.handleState(state);
+                }
+
+                async onSubmitPassword(message) {
+                    let password = this.getControllerValue('password');
+                    let state = await Api.submitPassword(password);
+                    await this.handleState(state);
+                }
+
+                async onSubmitSetPassword(message) {
+                    let password = this.getControllerValue('password1');
+                    let state = await Api.submitSetPassword(password);
+                    await this.handleState(state);
+                }
+
+                async onSubmitUsername(message) {
+                    let username = this.getControllerValue('username');
+                    let state = await Api.submitUsername(username);
+                    await this.handleState(state);
+                }
+            }
+        </script>
+        <html rds-controller>
+            <selector-widget rds-child-transition="property:opacity; duration:2s;" rds-child-style-trigger="opacity:.1,1">
+                <accepteula-widget rds-selector-mode="accept-eula"></accepteula-widget>
+                <code-widget rds-selector-mode="submit-code"></code-widget>
+                <forgotpassword-widget rds-selector-mode="forgot-password"></forgotpassword-widget>
+                <forgotusername-widget rds-selector-mode="forgot-username"></forgotusername-widget>
+                <password-widget rds-selector-mode="submit-password"></password-widget>
+                <rememberdevice-widget rds-selector-mode="remember-device"></rememberdevice-widget>
+                <setpassword-widget rds-selector-mode="set-password"></setpassword-widget>
+                <username-widget rds-selector-mode="submit-username"></username-widget>
+                <verifychannels-widget rds-selector-mode="verify-channels"></verifychannels-widget>
+            </selector-widget>
+        </html>
+        <style>
+            [design=self] {
+                width: 100%;
+                height: 100%;
+            }
+        </style>
+    </widget>
+    <widget tagname="accepteula-widget">
+        <html rds-dynamic-size>
+            <grid-widget class="fill" rds-rows="auto,20px,80px,60px">
+                <div rds-fragment="radius.org.eula"></div>
+                <div></div>
+                <div class="space-around">
+                    <input-widget type="button" class="button-wide" value="##accept##" evt-click="eulaAccept"></input-widget>
+                    <input-widget type="button" class="button-wide" value="##decline##" evt-click="eulaDecline"></input-widget>
+                </div>
+                <div></div>
+            </grid-widget>
+        </html>
+        <style>
+            [design=self] {
+                display: block;
+                overflow: scroll;
+                margin: 0;
+                padding: 0;
+            }
+        </style>
+    </widget>
+    <!-- ************************************************************************************************************ -->
+    <!-- ************************************************************************************************************ -->
+    <widget tagname="code-widget">
+        <html>
+            SPECIFY CODE
+        </html>
+        <style>
+            [design=self] {
+                margin: 0;
+                padding: 0;
+            }
+        </style>
+    </widget>
+    <!-- ************************************************************************************************************ -->
+    <!-- ************************************************************************************************************ -->
+    <widget tagname="forgotpassword-widget">
+        <script>
+            class ForgotPasswordWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+            }
+        </script>
+        <html>
+            FORGOT PASSWORD
+        </html>
+        <style>
+            [design=self] {
+                margin: 0;
+                padding: 0;
+            }
+        </style>
+    </widget>
+    <!-- ************************************************************************************************************ -->
+    <!-- ************************************************************************************************************ -->
+    <widget tagname="forgotusername-widget">
+        <html>
+            FORGOT USERNAME
+        </html>
+        <style>
+            [design=self] {
+                margin: 0;
+                padding: 0;
+            }
+        </style>
+    </widget>
+    <widget tagname="password-widget">
+        <html class="center fill">
+            <form evt-submit="submitPassword">
+                <div design="box">
+                    <grid-widget class="fill" rds-rows="auto,28px,48px,18px,28px,48px,60px,auto,auto">
+                        <div></div>
+                        <div class="label">##emailAddr##</div>
+                        <input-widget type="email" class="fillhorz" design="input" rds-bind="username" disabled></input-widget>
+                        <div></div>
+                        <div class="label">##password##</div>
+                        <input-widget type="password" class="fillhorz" design="input" rds-bind="password" required autofocus></input-widget>
+                        <div></div>
+                        <div class="space-around">
+                            <input-widget type="button" class="button-wide" value="##forgotPassword##" evt-click="forgotPassword"></input-widget>
+                            <input-widget type="button" class="button-wide" value="##back##" evt-click="back"></input-widget>
+                            <input-widget type="submit" class="button-wide" value="##next##"></input-widget>
+                        </div>
+                        <div></div>
+                    </grid-widget>
+                </div>
+            </form>
+        </html>
+        <style>
+            [design=self] {
+                margin: 0;
+                padding: 18px;
+            }
+            [design=box] {
+                width: 500px;
+                height: 500px;
+                padding: 12px;
+                border-style: solid;
+                border-width: 1px;
+                border-color: var(--border-color);
+                border-radius: var(--border-radius-1);
+            }
+        </style>
+    </widget>
+    <!-- ************************************************************************************************************ -->
+    <!-- ************************************************************************************************************ -->
+    <widget tagname="rememberdevice-widget">
+        <html class="center fill">
+            <form evt-submit="submitPassword">
+                <div design="box">
+                    <grid-widget class="fill" rds-rows="auto,28px,48px,18px,28px,48px,60px,auto,auto">
+                        <div></div>
+                        <div class="label">##emailAddr##</div>
+                        <input-widget type="email" class="fillhorz" design="input" rds-bind="username" disabled></input-widget>
+                        <div></div>
+                        <div></div>
+                        <div class="label">##rememberMe##</div>
+                        <div></div>
+                        <div class="space-around">
+                            <input-widget type="button" class="button-wide" value="##forget##" evt-click="submitDeviceForget"></input-widget>
+                            <input-widget type="button" class="button-wide" value="##remember##" evt-click="submitDeviceRemember"></input-widget>
+                        </div>
+                        <div></div>
+                    </grid-widget>
+                </div>
+            </form>
+        </html>
+        <style>
+            [design=self] {
+                margin: 0;
+                padding: 18px;
+            }
+            [design=box] {
+                width: 500px;
+                height: 500px;
+                padding: 12px;
+                border-style: solid;
+                border-width: 1px;
+                border-color: var(--border-color);
+                border-radius: var(--border-radius-1);
+            }
+        </style>
+    </widget>
+    <widget tagname="setpassword-widget">
+        <html class="center fill">
+            <form evt-submit="submitSetPassword">
+                <script validitycheck rds-diagnostic="##passwordMatchFailure##" rds-element="password2">
+                    () => this.getControllerValue('password1') == this.getControllerValue('password2');
+                </script>
+                <script validitycheck rds-diagnostic="##passwordRequiredChars##" rds-element="password2">
+                    () => {
+                        let password = this.getControllerValue('password1');
+                        if (!password.match(/[a-zA-Z]/)) return false;
+                        if (!password.match(/[0-9]/)) return false;
+                        if (!password.match(/[-_/?;:'"!@#$%^&*+=(){}[\]]/)) return false;
+                        return true;
+                    }
+                </script>
+                <div design="box">
+                    <grid-widget class="fill" rds-rows="auto,28px,48px,18px,28px,48px,60px,auto,auto">
+                        <div></div>
+                        <div class="label">##newPasswordEnter##</div>
+                        <input-widget type="password" name="password1" class="fillhorz" design="input" rds-bind="password1" required pattern=".{8,20}" evt-input="password" autofocus></input-widget>
+                        <div></div>
+                        <div class="label">##newPasswordRepeat##</div>
+                        <input-widget type="password" name="password2" class="fillhorz" design="input" rds-bind="password2" required pattern=".{8,20}" evt-input="password" rds-validator></input-widget>
+                        <div></div>
+                        <div class="space-around">
+                            <input-widget type="button" class="button-wide" value="##newPasswordCancel##" evt-click="back"></input-widget>
+                            <input-widget type="submit" class="button-wide" value="##newPasswordSet##"></input-widget>
+                        </div>
+                        <div></div>
+                    </grid-widget>
+                </div>
+            </form>
+        </html>
+        <style>
+            [design=self] {
+                margin: 0;
+                padding: 18px;
+            }
+            [design=box] {
+                width: 500px;
+                height: 500px;
+                padding: 12px;
+                border-style: solid;
+                border-width: 1px;
+                border-color: var(--border-color);
+                border-radius: var(--border-radius-1);
+            }
+        </style>
+    </widget>
+    <widget tagname="username-widget">
+        <html class="center fill">
+            <form evt-submit="submitUsername">
+                <div design="box">
+                    <grid-widget class="fill" rds-rows="auto,28px,48px,18px,28px,48px,60px,auto,auto">
+                        <div></div>
+                        <div class="label">##emailEnter##</div>
+                        <input-widget type="email" class="fillhorz" design="input" rds-bind="username" required autofocus></input-widget>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div class="space-around">
+                            <input-widget type="button" class="button-wide" value="##forgotUsername##" evt-click="forgotUsername"></input-widget>
+                            <input-widget type="submit" class="button-wide" value="##next##"></input-widget>
+                        </div>
+                        <div></div>
+                    </grid-widget>
+                </div>
+            </form>
+        </html>
+        <style>
+            [design=self] {
+                margin: 0;
+                padding: 18px;
+            }
+            [design=box] {
+                width: 500px;
+                height: 500px;
+                padding: 12px;
+                border-style: solid;
+                border-width: 1px;
+                border-color: var(--border-color);
+                border-radius: var(--border-radius-1);
+            }
+        </style>
+    </widget>
+    <!-- ************************************************************************************************************ -->
+    <!-- ************************************************************************************************************ -->
+    <widget tagname="verifychannels-widget">
+        <html>
+            VERIFY CHANNELS
+        </html>
+        <style>
+            [design=self] {
+                margin: 0;
+                padding: 0;
+            }
+        </style>
+    </widget>
+    <strings lang="en">
+        accept = Accept\
+        badEmailAddress = Invalid or undeliverable email address\
+        back = Go Back\
+        decline = Decline\
+        emailAddr = Your Email Address\
+        emailEnter = Enter Email Address\
+        forget = Forget\
+        forgotUsername = Forgot Username\
+        forgotPassword = Forgot Password\
+        newPasswordCancel = Cancel\
+        newPasswordEnter = Enter New Password\
+        newPasswordRepeat = Repeat New Password\
+        newPasswordSet = Set Password\
+        next = Next\
+        password = Enter Your Password\
+        passwordFailure = Invalid password\
+        passwordMatchFailure = Passwords Do Not Match\
+        passwordRequiredChars = Required characters: alphabetic, numeric, or "-_/?;:'"!@#$%^&*+=(){}[]"\
+        passwordUsed = Password has been used and cannot be reused\
+        remember = Remember\
+        rememberMe = Remember me on this Device?\
+        usernameFailure = Unable to find user\
+        verify = verify\
+        verificationCode = verification code\
+    </strings>
+</bundle>
