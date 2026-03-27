@@ -193,14 +193,11 @@ define(function createElement(tagName, attrs) {
     let html = [`<${tagName}`];
 
     for (let attr of attributes) {
-        if (ObjectType.verify(attr.value) || ArrayType.verify(attr.value)) {
-            html.push(` ${attr.name}="${Tunnel.push(attr.value)}"`);
-        }
-        else if (UndefinedType.verify(attr.value) || NullType.verify(attr.value)) {
+        if (UndefinedType.verify(attr.value) || NullType.verify(attr.value)) {
             html.push(` ${attr.name}`);
         }
-        else {
-            let string = attr.value.toString();
+        else if (StringType.verify(attr.value)) {
+            let string = attr.value.toString().trim();
 
             if (string) {
                 html.push(` ${attr.name}="${string}"`);
@@ -208,6 +205,9 @@ define(function createElement(tagName, attrs) {
             else {
                 html.push(` ${attr.name}`);
             }
+        }
+        else {
+            html.push(` ${attr.name}="${Tunnel.push(attr.value)}"`);
         }
     }
 
@@ -240,11 +240,12 @@ define(function createElementFromOuterHtml(html) {
 
 
 /*****
- * Initialization is how elements are dynamijcally built and configured when
- * added to the document tree.  Note that elements are initialized from the top
- * to the bottom to ensure that controllers have been created and are available
- * when the init() methods are invoked.  Also note that the controller is made
- * available right here to make it available during initialization.
+ * When the mutation observer notices that a node is added to the document,
+ * there are processes required to prepare that node for inclusion in the HTML
+ * document: (a) use the Packages features to process the node and replace text
+ * placeholders with the localized text, (b) call the node's init() method,
+ * which is a non-async method used for configuring the node, and finally,
+ * (c) mark the node as being initialized.
 *****/
 Doc.on('Mutation-Add', message => {
     for (let addedNode of message.added) {
@@ -256,16 +257,6 @@ Doc.on('Mutation-Add', message => {
                 Packages.processNode(docNode);
                 docNode.init();
                 docNode.initializedSelf = true;
-                
-                (async () => {
-                    await docNode.subTreeInitialization();
-                    docNode.subTreeInitialized();
-
-                    docNode.emit({
-                        name: 'DocNodeInitialized',
-                        element: docNode,
-                    });
-                })();
             }
         }
     }
@@ -623,9 +614,6 @@ define(class DocNode extends Emitter {
         });
     }
 
-    subTreeInitialized() {
-    }
-
     unpin(key) {
         delete this.pinned[key];
         return this;
@@ -758,8 +746,7 @@ define(class DocElement extends DocNode {
     constructor(node) {
         super(node);
         this.listeners = {};
-        this.propagation = mkStringSet();
-        this.controller = null;
+        this.propagation = mkRdsEnum();
 
         for (let attribute of this.getAttributes()) {
             try {
@@ -772,14 +759,6 @@ define(class DocElement extends DocNode {
                     
                     this.on(eventName, message => {
                         let docElement = this;
-                        
-                        if (eventName == 'submit') {
-                            message.event.preventDefault();
-
-                            if (message.htmlElement.checkValidity() !== true) {
-                                return;
-                            }
-                        }
 
                         while (docElement) {
                             let value = attribute.value;
@@ -794,21 +773,11 @@ define(class DocElement extends DocNode {
                     });
                 }
                 else if (attribute.name.startsWith('rds-')) {
-                    if (attribute.value.startsWith('TUNNEL:')) {
-                        let rdsName = attribute.name.substring(4);
-                        let value = Tunnel.pop(attribute.value);
-
-                        if (value) {
-                            this.pin(rdsName, value);
-                        }
-                    }
-                    else {
-                        let rdsName = attribute.name.substring(4);
-                        let snakeCase = rdsName.replaceAll('-', '_');
-                        let pascalCase = TextUtils.toPascalCase(snakeCase);
-                        let rdsValue = typeof attribute.value == 'string' ? attribute.value.trim() : '';
-                        this[`getRds${pascalCase}`] = () => rdsValue;
-                    }
+                    let rdsName = attribute.name.substring(4);
+                    let snakeCase = rdsName.replaceAll('-', '_');
+                    let pascalCase = RdsText.toPascalCase(snakeCase);
+                    let rdsValue = StringType.verify(attribute.value) ? attribute.value.trim() : '';
+                    this[`getRds${pascalCase}`] = () => rdsValue;
                 }
             }
             catch (e) {
@@ -923,52 +892,6 @@ define(class DocElement extends DocNode {
         return this;
     }
 
-    entangle(key) {
-        if (this.controller) {
-            this.controller.set(key);
-
-            if (this.getTagName() in { input:0, select:0, textarea:0 }) {
-                this.controller.entangleInput(this, key);
-            }
-            else {
-                this.controller.entangleInner(this, key);
-            }
-        }
-
-        return this;
-    }
-
-    entangleAttribute(name, key) {
-        if (this.controller) {
-            this.controller.set(key);
-            this.controller.entangleAttribute(this, name, key);
-        }
-
-        return this;
-    }
-
-    entangleAttributeFlag(name, key) {
-        if (this.controller) {
-            this.controller.set(key);
-            this.controller.entangleAttributeFlag(this, name, key);
-        }
-
-        return this;
-    }
-    
-    entangleMethod(key, methodName) {
-        if (this.controller && typeof this[methodName] == 'function') {
-            this.controller.on(key, message => this[methodName](message.value));
-            let value = this.controller.get(key);
-
-            if (value !== undefined) {
-                this[methodName](value);
-            }
-        }
-
-        return this;
-    }
-
     enumerateElementDescendents() {
         let elements = [];
         let stack = this.getChildren().reverse();
@@ -990,7 +913,7 @@ define(class DocElement extends DocNode {
 
     filterAttributes(...ignoredAttributes) {
         let filtered = {};
-        let ignored = mkStringSet(...ignoredAttributes);
+        let ignored = mkRdsEnum(...ignoredAttributes);
 
         for (let attribute of this.getAttributes()) {
             if (!ignored.has(attribute.name)) {
@@ -1107,7 +1030,7 @@ define(class DocElement extends DocNode {
     }
 
     getClassNames() {
-        let set = mkStringSet();
+        let set = mkRdsEnum();
 
         for (let key of this.node.classList) {
             set.set(key)
@@ -1152,44 +1075,6 @@ define(class DocElement extends DocNode {
         else {
             return liveStyle[key];
         }
-    }
-
-    getController() {
-        return this.controller;
-    }
-
-    getControllerKey(key) {
-        if (this.controller) {
-            return this.controller.get(key);
-        }
-
-        return undefined;
-    }
-
-    getControllerKeys() {
-        if (this.controller) {
-            return this.controller.getKeys();
-        }
-
-        return [];
-    }
-
-    getControllerValue(key) {
-        if (this.controller) {
-            return this.controller.get(key);
-        }
-
-        return null;
-    }
-
-    getControllerValues() {
-        let values = {};
-
-        if (this.controller) {
-            return this.controller.getValues();
-        }
-
-        return values;
     }
 
     getId() {
@@ -1282,23 +1167,11 @@ define(class DocElement extends DocNode {
     }
 
     hasAttribute(name) {
-        return mkStringSet(this.node.getAttributeNames()).has(name);
+        return mkRdsEnum(this.node.getAttributeNames()).has(name);
     }
 
     hasClassName(className) {
         return this.node.classList.contains(className);
-    }
-
-    hasController() {
-        return this.controller != null;
-    }
-
-    hasControllerKey(key) {
-        if (this.controller) {
-            return this.controller.has(key);
-        }
-
-        return false;
     }
 
     hasPointerCapture(pointerId) {
@@ -1311,51 +1184,39 @@ define(class DocElement extends DocNode {
     
     init() {
         super.init();
-
-        if (this.getRdsController) {
-            this.controller = mkController();
-        }
-        else {
-            this.controller = null;
-            let node = this.getParent();
-
-            while (node) {
-                if (node.controller) {
-                    this.controller = node.controller;
-                    break;
-                }
-
-                node = node.getParent();
+        
+        if (this.getRdsDefine) {
+            for (let entry of RdsText.parseAttributeEncoded()) {
+                let [ dotted, string ] = entry;
+                let value = Tunnel.pop(string);
+                Controller.set(dotted, value);
             }
         }
-
+        
         if (this.getRdsBind) {
-            this.entangle(this.getRdsBind());
+            Controller.bind(this, this.getRdsBind());
         }
 
         if (this.getRdsBindAttr) {
-            let [ key, name ] = this.getRdsBindAttr().split(',');
-            this.entangleAttribute(key, name);
+            let [ dotted, attrName ] = this.getRdsBindAttr().split(',');
+            Controller.bindAttribute(this, attrName, dotted);
         }
 
         if (this.getRdsBindAttrFlag) {
-            let [ key, name ] = this.getRdsBindAttrFlag().split(',');
-            this.entangleAttributeFlag(key, name);
+            let [ dotted, attrName ] = this.getRdsBindAttrFlag().split(',');
+            Controller.bindAttributeFlag(this, attrName, dotted);
         }
 
         if (this.getRdsBindMethod) {
-            let [ key, methodName ] = this.getRdsBindMethod().split(',');
-            this.entangleMethod(key, methodName);
+            let [ dotted, methodName ] = this.getRdsBindMethod().split(',');
+            Controller.bindMethod(this, methodName, dotted);
         }
 
-        if (this.getRdsDisabled) {
-            this.entangleAttributeFlag('disabled', this.getRdsDisabled());
-        }
-
-        if (this.getRdsSetValue) {
-            for (let entry of Object.entries(TextUtils.parseAttributeEncoded(this.getRdsSetValue()))) {
-                let [ key, string ] = entry;
-                this.setControllerValue(key, TextUtils.stringToValue(string));
+        if (this.getRdsSet) {
+            for (let entry of Object.entries(RdsText.parseAttributeEncoded(this.getRdsSetValue()))) {
+                let [ dotted, string ] = entry;
+                let value = Tunnel.pop(string);
+                Controller.set(dotted, value);
             }
         }
 
@@ -1375,8 +1236,6 @@ define(class DocElement extends DocNode {
         if (this.getRdsDynamicSize) {
             this.setDynamicSize();
         }
-
-        this.runInlineScripts();
     }
 
     insertAdjacentElement(position, element) {
@@ -1392,14 +1251,6 @@ define(class DocElement extends DocNode {
     insertAdjacentHtml(where, data) {
         this.node.insertAdjacentText(where, data);
         return this;
-    }
-
-    isControllerArray(key) {
-        if (this.controller) {
-            return this.controller.isArray(key);
-        }
-
-        return false;
     }
 
     off(name, handler) {
@@ -1483,22 +1334,9 @@ define(class DocElement extends DocNode {
         return null;
     }
 
-    runInlineScripts() {
-        let element = this;
-
-        for (let childElement of this.getChildElements()) {
-            if (childElement.getTagName() == 'script') {
-                try {
-                    eval(childElement.getInnerHtml());
-                }
-                catch (e) {}
-            }
-        }
-    }
-
     selectAncestor(attrEncoded) {
         let htmlElement = this.getParentElement();
-        let opts = TextUtils.parseAttributeEncoded(attrEncoded);
+        let opts = RdsText.parseAttributeEncoded(attrEncoded);
 
         while (htmlElement) {
             if (opts.tagname) {
@@ -1536,7 +1374,7 @@ define(class DocElement extends DocNode {
     }
 
     setAttributes(source, ...ignoredAttributes) {
-        let ignored = mkStringSet(...ignoredAttributes);
+        let ignored = mkRdsEnum(...ignoredAttributes);
 
         for (let attribute of source.getAttributes()) {
             if (!ignored.has(attribute.name)) {
@@ -1558,19 +1396,6 @@ define(class DocElement extends DocNode {
     setClassNames(classNames) {
         if (classNames) {
             this.node.className = classNames;
-        }
-
-        return this;
-    }
-
-    setController(controller) {
-        this.controller = controller;
-        return this;
-    }
-
-    setControllerValue(key, value) {
-        if (this.controller) {
-            this.controller.set(key, value);
         }
 
         return this;
@@ -1663,10 +1488,10 @@ define(class DocElement extends DocNode {
     setStyleTrigger(value) {
         let style0 = {};
         let style1 = {};
-        let properties = TextUtils.parseAttributeEncoded(value);
+        let properties = RdsText.parseAttributeEncoded(value);
 
         for (let key in properties) {
-            let [ value0, value1 ] = TextUtils.split(properties[key], ',');
+            let [ value0, value1 ] = RdsText.split(properties[key], ',');
             style0[key] = value0;
             style1[key] = value1;
         }
@@ -1677,7 +1502,7 @@ define(class DocElement extends DocNode {
     }
 
     setTransition(value) {
-        let properties = TextUtils.parseAttributeEncoded(value);
+        let properties = RdsText.parseAttributeEncoded(value);
         let transition = {};
 
         for (let key in properties) {
@@ -1700,40 +1525,6 @@ define(class DocElement extends DocNode {
 
         this.setStyle(transition);
         return this;
-    }
-
-    subTreeInitialized() {
-        super.subTreeInitialized();
-
-        for (let childElement of this.getChildElements()) {
-            if (childElement.getTagName() == 'script' && childElement.hasAttribute('validitycheck')) {
-                let  func;
-                let locator;
-                let element;
-                eval(`func = ${childElement.getInnerHtml().trim()}`);
-
-                if (childElement.getRdsDiagnostic) {
-                    locator = childElement.getRdsDiagnostic();
-                }
-
-                if (childElement.getRdsElement) {
-                    let elementName = childElement.getRdsElement();
-                    element = this.getElement(elementName);
-                }
-
-                if (typeof func == 'function') {
-                    if (locator && typeof locator == 'string') {
-                        if (element instanceof HtmlElement) {
-                            this.checks.push({
-                                func: func,
-                                element: element,
-                                diagnostic: locator,
-                            });
-                        }
-                    }
-                }
-            }
-        }
     }
 
     [Symbol.iterator]() {

@@ -219,7 +219,7 @@
                     super.init();
 
                     if (this.getRdsButtons) {
-                        this.setButtons(TextUtils.split(this.getRdsButtons(), ','));
+                        this.setButtons(RdsText.split(this.getRdsButtons(), ','));
                     }
 
                     if (this.getRdsContent) {
@@ -531,7 +531,7 @@
                         }
                         else if (width != 'auto') {
                             try {
-                                let size = TextUtils.parseAttributeEncoded(width);
+                                let size = RdsText.parseAttributeEncoded(width);
 
                                 if (typeof size == 'object') {
                                     if (typeof size.width == 'number' && typeof size.height == 'number') {

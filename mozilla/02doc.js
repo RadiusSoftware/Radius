@@ -190,7 +190,7 @@ singleton(class Doc extends Emitter {
     }
 
     getCookie(name) {
-        for (let cookieString of TextUtils.split(document.cookie, '; ')) {
+        for (let cookieString of RdsText.split(document.cookie, '; ')) {
             let [ cookieName, cookieValue ] = cookieString.split('=');
 
             if (cookieName.trim() == name) {
@@ -202,7 +202,7 @@ singleton(class Doc extends Emitter {
     }
 
     getCookieArray() {
-        return TextUtils.split(document.cookie, '; ').map(cookieString => {
+        return RdsText.split(document.cookie, '; ').map(cookieString => {
             return mkCookie(cookieString);
         });
     }
@@ -210,7 +210,7 @@ singleton(class Doc extends Emitter {
     getCookieMap() {
         let cookies = {};
 
-        TextUtils.split(document.cookie, '; ').forEach(cookieString => {
+        RdsText.split(document.cookie, '; ').forEach(cookieString => {
             let cookie = mkCookie(cookieString);
             cookies[cookie.getName()] = cookie;
         });

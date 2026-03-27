@@ -246,6 +246,14 @@ if (LibCluster.isPrimary) {
                 }
             }
 
+            let expr = mkExpExpr(
+                2,
+                16,
+            );
+
+            console.log(await expr.eval());
+            return;
+
             if (await this.initializeRadiusDbms()) {
                 await this.buildConfiguration();
 

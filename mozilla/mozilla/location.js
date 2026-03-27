@@ -37,7 +37,7 @@ singleton(class Location {
         this.pathname = location.pathname;
         this.port = location.port;
         this.protocol = location.protocol;
-        this.segments = TextUtils.split(this.pathname, '/');
+        this.segments = RdsText.split(this.pathname, '/');
         this.applicationPath = `/${this.segments[0]}`;
         this.applicationOrigin = `${this.origin}${this.applicationPath}`;
         this.applicationWidget = null;

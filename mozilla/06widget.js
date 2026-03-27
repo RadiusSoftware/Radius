@@ -63,7 +63,7 @@ singleton(class WidgetLibrary {
             widget.className = Widget.name;
         }
 
-        let tagNameParts = TextUtils.split(widget.tagName, '-');
+        let tagNameParts = RdsText.split(widget.tagName, '-');
 
         if (tagNameParts.length != 2 || !tagNameParts[0] || !tagNameParts[1]) {
             throw new Error(`Invalid tag name for Widget registration" "${widget.tagName}"`);

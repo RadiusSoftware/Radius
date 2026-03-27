@@ -63,7 +63,7 @@
                     }
 
                     if (this.getRdsCols) {
-                        this.cols = TextUtils.split(this.getRdsCols(), ',');
+                        this.cols = RdsText.split(this.getRdsCols(), ',');
                     }
 
                     if (this.getRdsRowCount) {
@@ -75,7 +75,7 @@
                     }
 
                     if (this.getRdsRows) {
-                        this.rows = TextUtils.split(this.getRdsRows(), ',');
+                        this.rows = RdsText.split(this.getRdsRows(), ',');
                     }
 
                     this.computeGeometry();

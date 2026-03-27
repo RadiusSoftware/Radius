@@ -3,7 +3,7 @@
     <widget tagname="input-widget">
         <script>
             class InputWidget extends Widget {
-                static stdInputTypes = mkStringSet(
+                static stdInputTypes = mkRdsEnum(
                     'color',
                     'date',
                     'datetime-local',
@@ -64,7 +64,7 @@
 ;                   }
 
                     if (!options.length && this.getRdsOptions) {
-                        let opts = TextUtils.parseAttributeEncoded(this.getRdsOptions());
+                        let opts = RdsText.parseAttributeEncoded(this.getRdsOptions());
 
                         for (let value in opts) {
                             options.push({ value: value, text: opts[value] });

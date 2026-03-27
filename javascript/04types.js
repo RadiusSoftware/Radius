@@ -34,6 +34,32 @@ define(class BaseType {
     }
 });
 
+singleton(class AnyType extends BaseType {
+    fromString(str) {
+        return fromJson('');
+    }
+
+    getDefault() {
+        return '';
+    }
+
+    isScalar() {
+        return true;
+    }
+
+    toBool(value) {
+        return false;
+    }
+
+    toString(value) {
+        return '';
+    }
+
+    verify(value) {
+        return true;
+    }
+});
+
 singleton(class ArrayType extends BaseType {
     fromString(str) {
         return fromJson(str);
@@ -57,6 +83,32 @@ singleton(class ArrayType extends BaseType {
 
     verify(value) {
         return Array.isArray(value);
+    }
+});
+
+singleton(class AnyType extends BaseType {
+    fromString(str) {
+        return str;
+    }
+
+    getDefault() {
+        return '';
+    }
+
+    isScalar() {
+        return true;
+    }
+
+    toBool(value) {
+        return value ? true : false;
+    }
+
+    toString(value) {
+        return value.toString();
+    }
+
+    verify(value) {
+        return true;
     }
 });
 
@@ -279,7 +331,7 @@ singleton(class EnumType extends BaseType {
     }
 
     getDefault() {
-        return '';
+        return mkRdsEnum();
     }
 
     isScalar() {
@@ -405,6 +457,42 @@ singleton(class NumberType extends BaseType {
     }
 
     toBool(value) {
+        return value != 0;
+    }
+
+    toString(value) {
+        return value.toString();
+    }
+
+    verify(value) {
+        if (value != NaN) {
+            return typeof value == 'number' || value instanceof Number;
+        }
+
+        return false;
+    }
+});
+
+singleton(class NumericType extends BaseType {
+    fromString(str) {
+        if (str.indexOf('.') >= 0) {
+            return parseFloat(str);
+        }
+        else {
+            return parseInt(str);
+        }
+    }
+
+    getDefault() {
+        return 0;
+    }
+
+    isScalar() {
+        return true;
+    }
+
+    toBool(value) {
+        if (typeof value == 'bigint') return valjue != 0n;
         return value != 0;
     }
 

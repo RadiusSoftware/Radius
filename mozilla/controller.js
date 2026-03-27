@@ -22,215 +22,201 @@
 
 
 /*****
- * The controller contains owns the data that's used by one or more htmlElements
- * and widgets for controlling display and edit values.  Moreover, the controller
- * provides the features for binding display surfaces and attributes to those
- * values as they change.  Generally speaking, a controller controls the display
- * values for a subbranch of the HTML document.  Please note that only widgets
- * may contain subbranch controllers.  Hence, using a controller requires that
- * use of a widget, event if it's just a BaseWidget or "base-widget" tag.
+ * A controller expression is one that uses a dotted key for a controller value.
+ * It's one of the extended types that returns an actual dependency to a key in
+ * the controller and it returns the controller value when evaluated.
 *****/
-define(class Controller extends Emitter {
-    constructor(value) {
+/*
+define(class ControllerExpXXX extends Expr {
+    constructor(dotted) {
         super();
-        this.objekt = mkObjekt(value);
-        this.entanglements = mkEntanglements();
-        this.objekt.on('Update', message => this.onUpdate(message));
+        this.dotted = dotted;
     }
 
-    clear() {
-        delete Controller.controllers[this.id];
-        return this;
+    async eval() {
+        return Controller.get(dotted);
     }
 
-    delete(key) {
-        let { objekt, propertyName } = this.resolve(key);
+    getDependencies() {
+        return [ this.dotted ];
+    }
 
-        if (objekt) {
-            delete objekt[propertyName];
+    static fromJson(obj) {
+        return mkControllerExpr(obj.dotted);
+    }
+});
+*/
+
+
+/*****
+ * The controller is a single global class providing features defined by the
+ * standard "C" part of the MVC GUI model.  A controller contains operational
+ * data, entangles GUI elements with those values, and notifies other listeners
+ * when changes to those data values are executed.  The controller is how the
+ * Radius framework provides features for controlling viewables with data.
+*****/
+singleton(class Controller extends Emitter {
+    constructor() {
+        super();
+        this.data = {};
+        this.bound = {};
+        this.shapes = {};
+    }
+
+    bind(docElement, arg) {
+        let { expr, dependencies } = evalExpression(arg);
+        
+        if (docElement instanceof DocElement) {
+            if (docElement.getTagName() in { input:0, select:0, textarea:0 }) {
+                // entangle input
+            }
+            else {
+                // entangle inner
+            }
         }
 
         return this;
     }
 
-    entangleAttribute(docElement, name, key) {
-        let { objekt, propertyName } = this.resolve(key);
+    bindAttribute(docElement, attributeName, expr) {
+        // TODO ************************************************************************
+        // TODO ************************************************************************
+    }
 
-        if (objekt) {
-            this.entanglements.entangleAttribute(docElement, name, ()=>objekt[propertyName]);
+    bindAttributeFlag(docElement, attributeName, expr) {
+        // TODO ************************************************************************
+        // TODO ************************************************************************
+    }
+
+    bindFunction(func, expr) {
+        // TODO ************************************************************************
+        // TODO ************************************************************************
+    }
+
+    bindMethod(docElement, methodName, expr) {
+        // TODO ************************************************************************
+        // TODO ************************************************************************
+    }
+
+    /*
+    delete(dotted) {
+        if (Data.has(this.data, dotted)) {
+            let value = Data.get(this.data, dotted);
+            Data.delete(this.data, dotted);
+            this.onUpdate(dotted, 'delete', value);
+            
+            this.emit({
+                name: 'Delete',
+                dotted: dotted,
+                value: value,
+            });
         }
 
         return this;
     }
+    */
 
-    entangleAttributeFlag(docElement, name, key) {
-        let { objekt, propertyName } = this.resolve(key);
-
-        if (objekt) {
-            this.entanglements.entangleAttributeFlag(docElement, name, ()=>objekt[propertyName]);
+    define(key, shape, value) {
+        if (key in this.data) {
+            throwError(`Controller key "${key}" is already defined.`);
         }
 
+        if (shape instanceof RdsShape) {
+            var rdsShape = shape;
+        }
+        else if (shape instanceof BaseType) {
+             var rdsShape = mkRdsShape(shape);
+        }
+        else {
+            throwError(`Controller shape is NOT a valid value.`);
+        }
+
+        this.data[key] = rdsShape.getDefault();
+        this.shapes[key] = rdsShape;
+        this.set(key, value);
         return this;
     }
 
-    entangleInner(docElement, key) {
-        let { objekt, propertyName } = this.resolve(key);
-
-        if (objekt) {
-            this.entanglements.entangleInner(docElement, ()=>objekt[propertyName]);
+    evalExpression(value) {
+        if (StringType.verify(value)) {
+            var expr = mkControllerExpr(value);
+        }
+        else {
+            var expr = wrapExpressionOperand(value);
         }
 
-        return this;
+        let dependencies = expr
+        return { expr: expr, dependencies: dependencies };
     }
 
-    entangleInput(docElement, key) {
-        let { objekt, propertyName } = this.resolve(key);
+    get(dotted) {
+        return Data.get(this.data, dotted);
+    }
 
-        if (objekt) {
-            this.entanglements.entangleInput(docElement, objekt, propertyName);
+    getShape(dotted) {
+        let shape = null;
+        let array = RdsText.split(dotted, '.');
+
+        if (array.length) {
+            shape = this.shapes[array[0]];
+
+            if (shape && array.length > 1) {
+                shape = shape.get(array.slice(1).join('.'));
+            }
         }
 
-        return this;
+        return shape;
     }
 
-    get(key) {
-        let { objekt, propertyName } = this.resolve(key);
-
-        if (objekt) {
-            return objekt[propertyName];
-        }
-
-        return undefined;
+    has(dotted) {
+        return Data.has(this.data, dotted);
     }
 
-    getKeys() {
-        return Object.keys(this.objekt);
-    }
+    set(dotted, newValue) {
+        let shape = this.getShape(dotted);
 
-    getObjekt(key) {
-        let { objekt, propertyName } = this.resolve(key);
-        return objekt;
-    }
+        if (shape) {
+            if (shape.verify(newValue)) {
+                let oldValue = Data.get(this.data, dotted);
 
-    getValue(key) {
-        let { objekt, propertyName } = this.resolve(key);
-
-        if (objekt) {
-            let value = objekt[propertyName];
-            return Objekt.isObjekt(value) ? value.getValue() : value;
-        }
-
-        return undefined;
-    }
-
-    getValues() {
-        return this.objekt.getValue();
-    }
-
-    has(key) {
-        let { objekt, propertyName } = this.resolve(key);
-
-        if (objekt) {
-            return propertyName in objekt;
-        }
-
-        return false;
-    }
-
-    isArray(key) {
-        let { objekt, propertyName } = this.resolve(key);
-
-        if (objekt) {
-            if (propertyName) {
-                if (Objekt.isObjekt(objekt[propertyName])) {
-                    return objekt[propertyName].isArray();
+                if (Data.areEqual(oldValue, newValue)) {
+                    this.emit({
+                        name: 'SetNoChange',
+                        dotted: dotted,
+                        value: newValue,
+                    });
                 }
-            }
-            else {
-                return objekt.isArray();
-            }
-        }
-
-        return false;
-    }
-
-    onUpdate(message) {
-        let forward = Data.copy(message);
-        forward.name = message.key;
-        this.emit(forward);
-    }
-
-    resolve(dotted) {
-        let propertyName = null;
-        let objekt = this.objekt;
-
-        if (typeof dotted == 'string' && dotted.match(/[a-zA-Z0-9_.][a-zA-Z0-9_.]*/)) {
-            let segments = TextUtils.split(dotted, '.');
-
-            if (segments.length == 1) {
-                propertyName = dotted;
-            }
-            else {
-                propertyName = segments[segments.length - 1];
-
-                for (let i = 0; i < segments.length - 1; i++) {
-                    let segment = segments[i];
-                    let property = objekt[segment];
-
-                    if (Objekt.isObjekt(property)) {
-                        objekt = property;
-                    }
-                    else {
-                        propertyName = null;
-                        objekt = null;
-                        break;
-                    }
-                }
-            }
-        }
-
-        return { objekt: objekt, propertyName: propertyName };
-    }
-
-    set(key, value) {
-        let { objekt, propertyName } = this.resolve(key);
-
-        if (ObjectType.verify(value)) {
-            if (propertyName) {
-                objekt[propertyName] = value;
-            }
-            else {
-                for (let key in value) {
-                    this.objekt[key] = Data.clone(value[key]);
+                else {
+                    Data.set(this.data, dotted, newValue);
+                    this.updated(dotted, oldValue, newValue);
                 }
             }
         }
         else {
-            if (propertyName) {
-                if (value == undefined) {
-                    if (!objekt.has(propertyName)) {
-                        objekt[propertyName] = '';
-                    }
-                }
-                else if (value != objekt[propertyName]) {
-                    objekt[propertyName] = value;
-                }
-            }
-        }
-
-        return this;
-    }
-
-    [Symbol.iterator]() {
-        let values = [];
-
-        for (let key of Reflect.ownKeys(this.objekt)) {
-            values.push({
-                name: key,
-                value: this.objekt[key],
+            this.emit({
+                name: 'SetFailed',
+                dotted: dotted,
+                value: newValue,
             });
         }
 
-        return values[Symbol.iterator]();
+;       return this;
+    }
+
+    updated(dotted, oldValue, newValue) {
+        let entanglements = this.bound[dotted];
+
+        if (entanglements) {
+            for (let entanglement of entanglements) {
+                entanglement.broadcast(dotted);
+            }
+        }
+
+        this.emit({
+            name: 'Set',
+            dotted: dotted,
+            oldValue: oldValue,
+            newValue: newValue,
+        });
     }
 });

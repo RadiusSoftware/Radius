@@ -108,6 +108,7 @@ define(class HttpWorker extends Worker {
     async handleRequest(httpReq, httpRsp) {
         let req = mkHttpRequest(this, httpReq);
         let rsp = mkHttpResponse(this, httpRsp);
+        console.log(`\n${req.getFullRequest()}\n`);
 
         let handle = {
             req: req,

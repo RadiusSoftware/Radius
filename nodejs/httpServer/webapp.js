@@ -108,7 +108,7 @@ define(class Webapp extends HttpX {
 
         let htmlPath = __filename.replace('.js', '.html');
         let htmlCode = (await FileSystem.readFile(htmlPath)).toString();
-        this.htmlTemplate = mkTextTemplate(htmlCode);
+        this.htmlTemplate = mkRdsTemplate(htmlCode);
 
         this.api = await mkApi(this).init();
         this.endpoints = mkBuffer(toJson(this.api.listEndpoints())).toString('hex');

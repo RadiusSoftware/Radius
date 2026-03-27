@@ -244,6 +244,34 @@ singleton(class Data {
     }
 
     /*****
+     * Given an object and a "dotted path", e.g., x.alpha.numeric, this method
+     * deletes that object property.
+    *****/
+    delete(obj, dotted) {
+        if (StringType.verify(dotted)) {
+            let object = obj;
+            let segments = RdsText.split(dotted, '.');
+
+            for (let i = 0; i < segments.length; i++) {
+                let segment = segments[i];
+
+                if (i == segments.length - 1) {
+                    delete object[segment];
+                }
+                else {
+                    if (!ObjectType.verify(object[segment])) {
+                        break;
+                    }
+
+                    object = object[segment];
+                }
+            }
+        }
+
+        return obj;
+    }
+
+    /*****
      * Generates an array containing the class hierarchy list for the given class.
      * The first element of the returned hierarchy contains the class itself.  As
      * we dig down into base classes, they are pushed onto the array value, such
@@ -373,34 +401,6 @@ singleton(class Data {
 
     /*****
      * Given an object and a "dotted path", e.g., x.alpha.numeric, this method
-     * deletes that object property.
-    *****/
-    delete(obj, dotted) {
-        if (StringType.verify(dotted)) {
-            let object = obj;
-            let segments = RdsText.split(dotted, '.');
-
-            for (let i = 0; i < segments.length; i++) {
-                let segment = segments[i];
-
-                if (i == segments.length - 1) {
-                    delete object[segment];
-                }
-                else {
-                    if (!ObjectType.verify(object[segment])) {
-                        break;
-                    }
-
-                    object = object[segment];
-                }
-            }
-        }
-
-        return obj;
-    }
-
-    /*****
-     * Given an object and a "dotted path", e.g., x.alpha.numeric, this method
      * returns the implied value or undefined if the path does NOT exist within
      * the object structure.
     *****/
@@ -454,9 +454,11 @@ singleton(class Data {
         return false;
     }
 
+
     /*****
-     * Given an object and a "dotted path", e.g., x.alpha.numeric, this method
-     * sets the provided value and extends data points if necessary.
+     * Given a dotted path, an object, and a value, ensure the entire path in
+     * dotted exists and set the value.  Note that conflicting values along the
+     * way will be overwritten to accompated the provided dotted path.
     *****/
     set(obj, dotted, value) {
         if (StringType.verify(dotted)) {

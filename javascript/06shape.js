@@ -85,6 +85,49 @@ define(class RdsShape {
         return shape;
     }
 
+    get(dotted) {
+        let shape = this;
+        let keys = RdsText.split(dotted, '.');
+        
+        for (let key of keys) {
+            if (shape.type === ObjectType && key in shape.keys) {
+                shape = shape.keys[key];
+            }
+            else {
+                shape = null;
+                break;
+            }
+        }
+        
+        return shape;
+    }
+
+    getDefault() {
+        if (this.type === ArrayType) {
+            return this.vals.map(val => val.getDefault());
+        }
+        else if (this.type == ObjectType) {
+            let value = {};
+
+            for (let key in this.keys) {
+                if (!key.startsWith('_')) {
+                    value[key] = this.keys[key].getDefault();
+                }
+            }
+
+            return value;
+        }
+        else if (this.type == EnumType) {
+            return this.enum;
+        }
+        else if (this.type === StringType) {
+            return StringType.getDefault();
+        }
+        else {
+            return this.type.getDefault();
+        }
+    }
+
     getKeys() {
         return Object.keys(this.keys);
     }

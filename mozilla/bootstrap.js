@@ -87,6 +87,8 @@ function assessUserAgent() {
 *****/
 Doc.on('DOMContentLoaded', async () => {
     webappSettings = fromJson(mkBuffer(webappSettings, 'hex'));
+    console.log(webappSettings);
+    return;
 
     define(async function callServer(message) {
         const rsp = await mkHttpRequest().post(Location.getApplicationPath(), message);

@@ -405,7 +405,7 @@ createService(class UserService extends Service {
 
         if (dboUser instanceof DboUser) {
             let permissionSet = mkPermissionSet();
-            let permissionTypeSet = mkStringSet(...dboUser.permissions);
+            let permissionTypeSet = mkRdsEnum(...dboUser.permissions);
 
             for (let permissionType of message.permissions) {
                 if (!permissionTypeSet.has(permissionType)) {
