@@ -250,6 +250,7 @@ if (LibCluster.isPrimary) {
             // *****************************************************************************
             // *****************************************************************************
 
+            /*
             let obja = {
                 string: 'hello string world',
                 number: 47,
@@ -278,20 +279,16 @@ if (LibCluster.isPrimary) {
             objb.circ = objb;
 
             console.log(Data.compare(obja, objb));
-            
-            return;
-
-            console.log(
-                Data.compare(
-                    parseInt,
-                    Cat
-                )
-            )
-
-            /*
-            let expr = mkIsBooleanExpr(true);
-            console.log(await expr.eval());
             */
+
+            let expr = mkFunctionExpr(
+                (alpha, beta) => `${alpha}-${beta}`,
+                'ALPHA',
+                'BETA',
+                'GAMMA'
+            );
+
+            console.log(await expr.eval());
 
             return;
             // *****************************************************************************

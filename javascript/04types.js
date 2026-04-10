@@ -525,8 +525,10 @@ singleton(class JsonType extends BaseType {
 
     verify(value) {
         try {
-            let object = fromJson(value);
-            return true;
+            if (typeof value == 'string') {
+                let object = fromJson(value);
+                return true;
+            }
         }
         catch (e) {}
         return false;

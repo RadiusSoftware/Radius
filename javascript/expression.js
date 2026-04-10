@@ -166,50 +166,53 @@ define(class AddExpr extends Expr {
     }
 });
 
-/*
 define(class AndExpr extends Expr {
-    constructor(lhs, rhs) {
-        super();
-        this.lhs = wrapExpressionOperand(lhs);
-        this.rhs = wrapExpressionOperand(rhs);
+    constructor(...operands) {
+        super(...operands);
     }
 
     async eval() {
-        if (await this.lhs.evalBool()) {
-            if (await this.rhs.evalBool()) {
-                return true;
+        let and = false;
+        let operands = await this.evalOperands();
+
+        if (operands.length > 0) {
+            and = operands[0];
+
+            for (let operand of operands.slice(1)) {
+                and &&= operand;
             }
         }
-
-        return false;
+        
+        return and;
     }
 
     static fromJson(obj) {
-        return mkAndExpr(obj.lhs, obj.rhs);
+        return mkAndExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(BooleanType), '...' ];
     }
 });
 
 define(class ConcatExpr extends Expr {
-    constructor(...args) {
-        super();
-        this.args = args.map(arg => wrapExpressionOperand(arg));
+    constructor(...operands) {
+        super(...operands);
     }
 
     async eval() {
-        let strings = [];
-
-        for (let arg of this.args) {
-            strings.push(new String(await arg.eval()));
-        }
-
-        return strings.join('');
+        let operands = await this.evalOperands();
+        return operands.join('');
     }
 
     static fromJson(obj) {
-        return mkConcatExpr(obj.args);
+        return mkConcatExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(StringType), '...' ];
     }
 });
-*/
 
 define(class DivExpr extends Expr {
     constructor(...operands) {
@@ -278,61 +281,62 @@ define(class ExpExpr extends Expr {
     }
 });
 
-/*
-define(class FuncExpr extends Expr {
-    constructor(func, ...args) {
-        super();
-        this.func = func;
-        this.args = args.map(arg => wrapExpressionOperand(arg));
+define(class FunctionExpr extends Expr {
+    constructor(...operands) {
+        super(...operands);
     }
 
     async eval() {
-        let args = [];
-
-        for (let arg of this.args) {
-            args.push(await arg.eval());
-        }
-
-        return await waitOn(Reflect.apply(this.func, null, args));
+        let operands = await this.evalOperands();
+        return wait(operands[0](...operands.slice(1)));
     }
 
     static fromJson(obj) {
-        return mkFuncExpr(obj.func, obj.args);
+        return mkFunctionExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(FunctionType), mkRdsShape(AnyType), '...' ];
     }
 });
 
 define(class GeExpr extends Expr {
-    constructor(lhs, rhs) {
-        super();
-        this.lhs = wrapExpressionOperand(lhs);
-        this.rhs = wrapExpressionOperand(rhs);
+    constructor(lh, rh) {
+        super(lh, rh);
     }
 
     async eval() {
-        return (await this.lhs.eval()) >= (await this.lhs.eval());
+        let [ lh, rh ] = await this.evalOperands();
+        return Data.ge(lh, rh);
     }
 
     static fromJson(obj) {
-        return mkGeExpr(obj.lhs, obj.rhs);
+        return mkGeExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(AnyType), mkRdsShape(AnyType) ];
     }
 });
 
 define(class GtExpr extends Expr {
-    constructor(lhs, rhs) {
-        super();
-        this.lhs = wrapExpressionOperand(lhs);
-        this.rhs = wrapExpressionOperand(rhs);
+    constructor(lh, rh) {
+        super(lh, rh);
     }
 
     async eval() {
-        return (await this.lhs.eval()) > (await this.lhs.eval());
+        let [ lh, rh ] = await this.evalOperands();
+        return Data.gt(lh, rh);
     }
 
     static fromJson(obj) {
-        return mkGtExpr(obj.lhs, obj.rhs);
+        return mkGtExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(AnyType), mkRdsShape(AnyType) ];
     }
 });
-*/
 
 define(class IsArrayExpr extends Expr {
     constructor(value) {
@@ -543,45 +547,61 @@ define(class IsNumberExpr extends Expr {
     }
 });
 
-/*
 define(class LeExpr extends Expr {
-    constructor(lhs, rhs) {
-        super();
-        this.lhs = wrapExpressionOperand(lhs);
-        this.rhs = wrapExpressionOperand(rhs);
+    constructor(lh, rh) {
+        super(lh, rh);
     }
 
     async eval() {
-        return (await this.lhs.eval()) <= (await this.lhs.eval());
+        let [ lh, rh ] = await this.evalOperands();
+        return Data.le(lh, rh);
     }
 
     static fromJson(obj) {
-        return mkLeExpr(obj.lhs, obj.rhs);
+        return mkLeExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(AnyType), mkRdsShape(AnyType) ];
     }
 });
 
 define(class LowerExpr extends Expr {
-    constructor(str) {
-        super(str);
-    }
-}
-
-define(class LtExpr extends Expr {
-    constructor(lhs, rhs) {
-        super();
-        this.lhs = wrapExpressionOperand(lhs);
-        this.rhs = wrapExpressionOperand(rhs);
+    constructor(...operands) {
+        super(...operands);
     }
 
     async eval() {
-        return (await this.lhs.eval()) < (await this.lhs.eval());
+        return (await this.evalOperands())[0].toLowerCase();
     }
 
     static fromJson(obj) {
-        return mkLtExpr(obj.lhs, obj.rhs);
+        return mkLowerExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(StringType) ];
     }
 });
-*/
+
+define(class LtExpr extends Expr {
+    constructor(lh, rh) {
+        super(lh, rh);
+    }
+
+    async eval() {
+        let [ lh, rh ] = await this.evalOperands();
+        return Data.lt(lh, rh);
+    }
+
+    static fromJson(obj) {
+        return mkLtExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(AnyType), mkRdsShape(AnyType) ];
+    }
+});
 
 define(class MulExpr extends Expr {
     constructor(...operands) {
@@ -621,7 +641,7 @@ define(class NeExpr extends Expr {
     }
 
     static fromJson(obj) {
-        return mkEqExpr(...this.operands);
+        return mkNeExpr(...this.operands);
     }
 
     getShapes() {
@@ -629,69 +649,74 @@ define(class NeExpr extends Expr {
     }
 });
 
-/*
 define(class NorExpr extends Expr {
-    constructor(lhs, rhs) {
-        super();
-        this.lhs = wrapExpressionOperand(lhs);
-        this.rhs = wrapExpressionOperand(rhs);
+    constructor(...operands) {
+        super(...operands);
     }
 
     async eval() {
-        if (await this.lhs.evalBool()) {
-            return false;
-        }
-        else if (await this.rhs.evalBool()) {
-            return false;
-        }
+        let nor = true;
+        let operands = await this.evalOperands();
 
-        return true;
+        for (let operand of operands) {
+            nor = !operand ? nor : false;
+        }
+        
+        return nor;
     }
 
     static fromJson(obj) {
-        return mkNorExpr(obj.lhs, obj.rhs);
+        return mkNorExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(BooleanType), '...' ];
     }
 });
 
 define(class NotExpr extends Expr {
-    constructor(expr) {
-        super();
-        this.expr = wrapExpressionOperand(expr);
+    constructor(...operands) {
+        super(...operands);
     }
 
     async eval() {
-        return !(await this.expr.evalBool());
+        let operands = await this.evalOperands();
+        return operands[0] === false;
     }
 
     static fromJson(obj) {
-        return mkNotExpr(obj.expr);
+        return mkNotExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(BooleanType) ];
     }
 });
 
 define(class OrExpr extends Expr {
-    constructor(lhs, rhs) {
-        super();
-        this.lhs = wrapExpressionOperand(lhs);
-        this.rhs = wrapExpressionOperand(rhs);
+    constructor(...operands) {
+        super(...operands);
     }
 
     async eval() {
-        if (await this.lhs.evalBool()) {
-            return true;
-        }
+        let or = false;
+        let operands = await this.evalOperands();
 
-        if (await this.rhs.evalBool()) {
-            return true;
+        for (let operand of operands) {
+            or = operand ? true : or;
         }
-
-        return false;
+        
+        return or;
     }
 
     static fromJson(obj) {
-        return mkOrExpr(obj.lhs, obj.rhs);
+        return mkOrExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(BooleanType), '...' ];
     }
 });
-*/
 
 define(class RootExpr extends Expr {
     constructor(number, exp) {
@@ -731,6 +756,24 @@ define(class SqrtExpr extends Expr {
     }
 });
 
+define(class StringExpr extends Expr {
+    constructor(...operands) {
+        super(...operands);
+    }
+
+    async eval() {
+        return (await this.evalOperands())[0].toString();
+    }
+
+    static fromJson(obj) {
+        return mkStirngExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(AnyType) ];
+    }
+});
+
 define(class SubExpr extends Expr {
     constructor(...operands) {
         super(...operands);
@@ -741,7 +784,7 @@ define(class SubExpr extends Expr {
         let operands = await this.evalOperands();
 
         if (operands.length > 0) {
-            sum = this.operands[0];
+            sum = operands[0];
 
             for (let operand of operands.slice(1)) {
                 sum -= operand;
@@ -760,63 +803,63 @@ define(class SubExpr extends Expr {
     }
 });
 
-/*
 define(class TernaryExpr extends Expr {
-    constructor(cond, ifTrue, ifFalse) {
-        super();
-        this.cond = wrapExpressionOperand(cond);
-        this.ifTrue = wrapExpressionOperand(ifTrue);
-        this.ifFalse = wrapExpressionOperand(ifFalse);
+    constructor(...operands) {
+        super(...operands);
     }
 
     async eval() {
-        if (await this.cond.evalBool()) {
-            return await this.ifTrue.eval();
+        const evaluate = async operand => {
+            if (operand instanceof Expr) {
+                return await operand.eval();
+            }
+            else {
+                return operand;
+            }
+        };
+
+        if (this.operands.length == 3) {
+            let operand = await evaluate(this.operands[0]);
+
+            if (typeof operand == 'boolean') {
+                if (operand) {
+                    return await evaluate(this.operands[1]);
+                }
+                else {
+                    return await evaluate(this.operands[2]);
+                }
+            }
+            else {
+                throwError('TernaryExpr first operand must be a boolean expression!')
+            }
         }
         else {
-            return await this.ifFalse.eval();                
+            throwError('TernaryExpr requires 3 operands!')
         }
     }
 
     static fromJson(obj) {
-        return mkSwitchExpr(obj.expr, obj.ifTrue, obj.ifFalse);
+        return mkTernaryExpr(...this.operands);
+    }
+
+    getShapes() {
     }
 });
 
 define(class UpperExpr extends Expr {
-    constructor(str) {
-        super(str);
-    }
-}
-
-define(class XorExpr extends Expr {
-    constructor(lhs, rhs) {
-        super();
-        this.lhs = wrapExpressionOperand(lhs);
-        this.rhs = wrapExpressionOperand(rhs);
+    constructor(...operands) {
+        super(...operands);
     }
 
     async eval() {
-        if (await this.lhs.evalBool()) {
-            if (await this.rhs.evalBool()) {
-                return false;
-            }
-            else {
-                return true;
-            }
-        }
-        else {
-            if (await this.rhs.evalBool()) {
-                return true;
-            }
-            else {
-                return false;
-            }
-        }
+        return (await this.evalOperands())[0].toUpperCase();
     }
 
     static fromJson(obj) {
-        return mkXorExpr(obj.lhs, obj.rhs);
+        return mkUpperExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(StringType) ];
     }
 });
-*/

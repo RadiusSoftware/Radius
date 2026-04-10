@@ -356,7 +356,7 @@ singleton(class Data {
     /*****
      * Tests if a is strictly greater than or equal to b.
     *****/
-    le(a, b) {
+    ge(a, b) {
         return this.compare(a, b) in { eq:0, gt:0 };
     }
 
@@ -391,7 +391,7 @@ singleton(class Data {
     /*****
      * Tests if a is strictly greater than b.
     *****/
-    lt(a, b) {
+    gt(a, b) {
         return this.compare(a, b) == 'gt';
     }
 
