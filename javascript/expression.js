@@ -29,6 +29,21 @@
  * algorithm in a DBMS.
 *****/
 define (class Expr {
+    static types = {};
+
+    static {
+        Namespace.on('ClassDefined', message => {
+            if (Data.extends(message.clss, Expr)) {
+                if (message.clss !== Expr) {
+                    Expr.types[message.clss['#fqn']] = {
+                        ns: message.namespace,
+                        clss: message.clss,
+                    };
+                }
+            }
+        });
+    }
+
     constructor() {
         if (Reflect.getPrototypeOf(this).constructor !== Expr) {
             this.operands = arguments;
@@ -225,23 +240,24 @@ define(class DivExpr extends Expr {
     }
 });
 
-/*
 define(class EqExpr extends Expr {
-    constructor(lhs, rhs) {
-        super();
-        this.lhs = wrapExpressionOperand(lhs);
-        this.rhs = wrapExpressionOperand(rhs);
+    constructor(lh, rh) {
+        super(lh, rh);
     }
 
     async eval() {
-        return (await this.lhs.eval()) == (await this.lhs.eval());
+        let [ lh, rh ] = await this.evalOperands();
+        return Data.eq(lh, rh);
     }
 
     static fromJson(obj) {
-        return mkEqExpr(obj.lhs, obj.rhs);
+        return mkEqExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(AnyType), mkRdsShape(AnyType) ];
     }
 });
-*/
 
 define(class ExpExpr extends Expr {
     constructor(number, exp) {
@@ -316,7 +332,218 @@ define(class GtExpr extends Expr {
         return mkGtExpr(obj.lhs, obj.rhs);
     }
 });
+*/
 
+define(class IsArrayExpr extends Expr {
+    constructor(value) {
+        super(value);
+    }
+
+    async eval() {
+        let [ value ] = await this.evalOperands();
+        return ArrayType.verify(value);
+    }
+
+    static fromJson(obj) {
+        return mkIsArrayExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(AnyType) ];
+    }
+});
+
+define(class IsBigIntExpr extends Expr {
+    constructor(value) {
+        super(value);
+    }
+
+    async eval() {
+        let [ value ] = await this.evalOperands();
+        return BigIntType.verify(value);
+    }
+
+    static fromJson(obj) {
+        return mkIsBigIntExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(AnyType) ];
+    }
+});
+
+define(class IsBooleanExpr extends Expr {
+    constructor(value) {
+        super(value);
+    }
+
+    async eval() {
+        let [ value ] = await this.evalOperands();
+        return BooleanType.verify(value);
+    }
+
+    static fromJson(obj) {
+        return mkIsBooleanExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(AnyType) ];
+    }
+});
+
+define(class IsBufferExpr extends Expr {
+    constructor(value) {
+        super(value);
+    }
+
+    async eval() {
+        let [ value ] = await this.evalOperands();
+        return BufferType.verify(value);
+    }
+
+    static fromJson(obj) {
+        return mkIsBufferExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(AnyType) ];
+    }
+});
+
+define(class IsDateExpr extends Expr {
+    constructor(value) {
+        super(value);
+    }
+
+    async eval() {
+        let [ value ] = await this.evalOperands();
+        return DateType.verify(value);
+    }
+
+    static fromJson(obj) {
+        return mkIsDateExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(AnyType) ];
+    }
+});
+
+define(class IsDateTimeExpr extends Expr {
+    constructor(value) {
+        super(value);
+    }
+
+    async eval() {
+        let [ value ] = await this.evalOperands();
+        return DateTimeType.verify(value);
+    }
+
+    static fromJson(obj) {
+        return mkIsDateTimeExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(AnyType) ];
+    }
+});
+
+define(class IsDoubleExpr extends Expr {
+    constructor(value) {
+        super(value);
+    }
+
+    async eval() {
+        let [ value ] = await this.evalOperands();
+        return DoubleType.verify(value);
+    }
+
+    static fromJson(obj) {
+        return mkIsDoubleExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(AnyType) ];
+    }
+});
+
+define(class IsEnumExpr extends Expr {
+    constructor(value) {
+        super(value);
+    }
+
+    async eval() {
+        let [ value ] = await this.evalOperands();
+        return value instanceof RdsEnum;
+    }
+
+    static fromJson(obj) {
+        return mkIsEnumExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(AnyType) ];
+    }
+});
+
+define(class IsFunctionExpr extends Expr {
+    constructor(value) {
+        super(value);
+    }
+
+    async eval() {
+        let [ value ] = await this.evalOperands();
+        return FunctionType.verify(value);
+    }
+
+    static fromJson(obj) {
+        return mkIsFunctionExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(AnyType) ];
+    }
+});
+
+define(class IsJsonExpr extends Expr {
+    constructor(value) {
+        super(value);
+    }
+
+    async eval() {
+        let [ value ] = await this.evalOperands();
+        return JsonType.verify(value);
+    }
+
+    static fromJson(obj) {
+        return mkIsJsonExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(AnyType) ];
+    }
+});
+
+define(class IsNumberExpr extends Expr {
+    constructor(value) {
+        super(value);
+    }
+
+    async eval() {
+        let [ value ] = await this.evalOperands();
+        return NumberType.verify(value);
+    }
+
+    static fromJson(obj) {
+        return mkIsNumberExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(AnyType) ];
+    }
+});
+
+/*
 define(class LeExpr extends Expr {
     constructor(lhs, rhs) {
         super();
@@ -332,6 +559,12 @@ define(class LeExpr extends Expr {
         return mkLeExpr(obj.lhs, obj.rhs);
     }
 });
+
+define(class LowerExpr extends Expr {
+    constructor(str) {
+        super(str);
+    }
+}
 
 define(class LtExpr extends Expr {
     constructor(lhs, rhs) {
@@ -377,6 +610,25 @@ define(class MulExpr extends Expr {
     }
 });
 
+define(class NeExpr extends Expr {
+    constructor(lh, rh) {
+        super(lh, rh);
+    }
+
+    async eval() {
+        let [ lh, rh ] = await this.evalOperands();
+        return !Data.eq(lh, rh);
+    }
+
+    static fromJson(obj) {
+        return mkEqExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(AnyType), mkRdsShape(AnyType) ];
+    }
+});
+
 /*
 define(class NorExpr extends Expr {
     constructor(lhs, rhs) {
@@ -413,22 +665,6 @@ define(class NotExpr extends Expr {
 
     static fromJson(obj) {
         return mkNotExpr(obj.expr);
-    }
-});
-
-define(class NeExpr extends Expr {
-    constructor(lhs, rhs) {
-        super();
-        this.lhs = wrapExpressionOperand(lhs);
-        this.rhs = wrapExpressionOperand(rhs);
-    }
-
-    async eval() {
-        return (await this.lhs.eval()) != (await this.lhs.eval());
-    }
-
-    static fromJson(obj) {
-        return mkNeExpr(obj.lhs, obj.rhs);
     }
 });
 
@@ -546,6 +782,12 @@ define(class TernaryExpr extends Expr {
         return mkSwitchExpr(obj.expr, obj.ifTrue, obj.ifFalse);
     }
 });
+
+define(class UpperExpr extends Expr {
+    constructor(str) {
+        super(str);
+    }
+}
 
 define(class XorExpr extends Expr {
     constructor(lhs, rhs) {

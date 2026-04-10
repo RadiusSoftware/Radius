@@ -77,6 +77,28 @@
                 this.array = array;
             }
 
+            static compare(a, b) {
+                if (BufferType.verify(a) && BufferType.verify(b)) {
+                    for (let i = 0; i < a.array.length && i < b.array.length; i++) {
+                        if (a.array[i] > b.array[i]) {
+                            return 'gt';
+                        }
+
+                        if (a.array[i] < b.array[i]) {
+                            return 'lt';
+                        }
+                    }
+
+                    if (a.array.length == b.array.length) {
+                        return 'eq';
+                    }
+
+                    return a.array.length > b.array.length ? 'gt' : 'lt';
+                }
+
+                return 'ne';
+            }
+
             toString(encoding) {
                 if (encoding == 'base64') {
                     let decoder = new TextDecoder('utf-8');

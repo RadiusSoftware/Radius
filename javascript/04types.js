@@ -29,6 +29,26 @@
  * and objects derived from ProtoType.
 *****/
 define(class BaseType {
+    compare(a, b) {
+        let jsType = getJsType(a);
+
+        if (jsType === getJsType(b)) {
+            if (a > b) {
+                return 'gt';
+            }
+
+            if (a < b) {
+                return 'lt';
+            }
+
+            if (a === b) {
+                return 'eq';
+            }
+        }
+        
+        return 'ne';
+    }
+
     getName() {
         return Reflect.getPrototypeOf(this).constructor.name;
     }
@@ -36,31 +56,70 @@ define(class BaseType {
 
 singleton(class AnyType extends BaseType {
     fromString(str) {
-        return fromJson('');
+        return undefined;
     }
 
     getDefault() {
-        return '';
+        return undefined;
     }
 
     isScalar() {
-        return true;
+        return undefined;
     }
 
     toBool(value) {
+        let jsType = getJsType(value);
+
+        if (jsType !== undefined) {
+            return jsType.toBool(value);
+        }
+
         return false;
     }
 
     toString(value) {
-        return '';
+        return value.toString();
     }
 
     verify(value) {
-        return true;
+        let jsType = getJsType(value);
+        return jsType !== undefined;
     }
 });
 
 singleton(class ArrayType extends BaseType {
+    compare(a, b) {
+        if (this.verify(a) && this.verify(b)) {
+            for (let i = 0; i < a.length && i < b.length; i++) {
+                let ela = a[i];
+                let elb = b[i];
+                let jsType = getJsType(ela);
+
+                if (getJsType(elb) !== jsType) {
+                    return 'ne';
+                }
+
+                let comp = jsType.compare(ela, elb);
+
+                if (comp != 'eq') {
+                    return comp;
+                }
+            }
+
+            if (a.length > b.length) {
+                return 'gt';
+            }
+
+            if (a.length < b.length) {
+                return 'lt';
+            }
+
+            return 'eq';
+        }
+        
+        return 'ne';
+    }
+
     fromString(str) {
         return fromJson(str);
     }
@@ -83,32 +142,6 @@ singleton(class ArrayType extends BaseType {
 
     verify(value) {
         return Array.isArray(value);
-    }
-});
-
-singleton(class AnyType extends BaseType {
-    fromString(str) {
-        return str;
-    }
-
-    getDefault() {
-        return '';
-    }
-
-    isScalar() {
-        return true;
-    }
-
-    toBool(value) {
-        return value ? true : false;
-    }
-
-    toString(value) {
-        return value.toString();
-    }
-
-    verify(value) {
-        return true;
     }
 });
 
@@ -139,6 +172,22 @@ singleton(class BigIntType extends BaseType {
 });
 
 singleton(class BooleanType extends BaseType {
+    compare(a, b) {
+        if (this.verify(a) && this.verify(b)) {
+            if (a === true) {
+                return a === b ? 'eq' : 'gt';
+            }
+            else if (b === true) {
+                return 'lt';
+            }
+            else {
+                return 'eq';
+            }
+        }
+
+        return 'ne';
+    }
+
     fromString(str) {
         let bool;
         eval(`bool = ${str} === true`);
@@ -167,6 +216,23 @@ singleton(class BooleanType extends BaseType {
 });
 
 singleton(class BufferType extends BaseType {
+    compare(a, b) {
+        if (this.verify(a) && this.verify(b)) {
+            let comp = Buffer.compare(a, b);
+
+            if (comp == -1) {
+                return 'lt';
+            }
+            else if (comp == 1) {
+                return 'gt';
+            }
+
+            return 'eq';
+        }
+
+        return 'ne';
+    }
+
     fromString(str, coding) {
         return mkBuffer(str, coding ? coding : 'hex');
     }
@@ -193,28 +259,29 @@ singleton(class BufferType extends BaseType {
 });
 
 singleton(class ClassType extends BaseType {
-    constructor() {
-        super();
-        define(class NOCLASS {});
+    compare(a, b) {
+        if (this.verify(a) && this.verify(b)) {
+            if (a.name == b.name) {
+                return 'eq';
+            }
+
+            return a.name > b.name ? 'gt' : 'lt';
+        }
+
+        return 'ne';
     }
 
     fromString(str) {
-        return globalThis.NOCLASS;
+        return fromJson(str);
     }
 
     getDefault() {
-        return globalThis.NOCLASS;
+        return new Object();
     }
 
     instanceOf(clss, value) {
-        if (FunctionType.verify(clss)) {
-            if ('#fqn' in clss) {
-                let nsclass = Namespace.getClass(clss['#fqn']);
-
-                if (nsclass) {
-                    return value instanceof nsclass;
-                }
-            }
+        if (this.verify(clss)) {
+            return value instanceof clss;
         }
 
         return false;
@@ -233,9 +300,13 @@ singleton(class ClassType extends BaseType {
     }
 
     verify(value) {
-        if (FunctionType.verify(value)) {
-            if ('#fqn' in value) {
-                return Namespace.getClass(value['#fqn']) ? true : false;
+        if (typeof value == 'function') {
+            if (value.toString().startsWith('class ')) {
+                return true;
+            }
+
+            if (value.toString().match(/\[native code\]/)) {
+                return nativeClasses.has(value.name);
             }
         }
 
@@ -244,6 +315,14 @@ singleton(class ClassType extends BaseType {
 });
 
 singleton(class DateType extends BaseType {
+    compare(a, b) {
+        if (getJsType(a) === this && getJsType(b) === this) {
+            return super.compare(a.valueOf(), b.valueOf());
+        }
+
+        return 'ne';
+    }
+
     fromString(str) {
         return mkTime(str);
     }
@@ -270,6 +349,14 @@ singleton(class DateType extends BaseType {
 });
 
 singleton(class DateTimeType extends BaseType {
+    compare(a, b) {
+        if (getJsType(a) === this && getJsType(b) === this) {
+            return super.compare(a.valueOf(), b.valueOf());
+        }
+
+        return 'ne';
+    }
+
     fromString(str) {
         return mkTime(str);
     }
@@ -326,6 +413,28 @@ singleton(class DoubleType extends BaseType {
 });
 
 singleton(class EnumType extends BaseType {
+    compare(a, b) {
+        if (this.verify(a) && this.verify(b)) {
+            let aKeys = Object.keys(a.values).sort();
+            let bKeys = Object.keys(b.values).sort();
+
+            for (let i = 0; i < aKeys.length && i < bKeys.length; i++) {
+                if (aKeys[i] > bKeys[i]) {
+                    return 'gt';
+                }
+
+                if (aKeys[i] < bKeys[i]) {
+                    return 'lt';
+                }
+            }
+
+            if (aKeys.length == bKeys.length) return 'eq';
+            return aKeys.length > bKeys.length ? 'gt' : 'lt';
+        }
+
+        return 'ne';
+    }
+
     fromString(str) {
         return fromJson(str);
     }
@@ -352,6 +461,18 @@ singleton(class EnumType extends BaseType {
 });
 
 singleton(class FunctionType extends BaseType {
+    compare(a, b) {
+        if (this.verify(a) && this.verify(b)) {
+            if (a.name == b.name) {
+                return 'eq';
+            }
+
+            return a.name > b.name ? 'gt' : 'lt';
+        }
+
+        return 'ne';
+    }
+
     fromString(str) {
         return fromJson(str);
     }
@@ -510,6 +631,71 @@ singleton(class NumericType extends BaseType {
 });
 
 singleton(class ObjectType extends BaseType {
+    compare(a, b) {
+        let stack = [{ a: a, b: b, path: '' }];
+        let circular = new WeakMap();
+        
+        while (stack.length) {
+            let { a, b, path } = stack.pop();
+            
+            if (this.verify(a)) {
+                if (this.verify(b)) {
+                    let aPath = circular.get(a);
+                    let bPath = circular.get(b);
+
+                    if (StringType.verify(aPath) || StringType.verify(bPath)) {
+                        if (aPath === bPath) {
+                            continue;
+                        }
+                        else {
+                            return 'ne';
+                        }
+                    }
+                    
+                    let aKeys = Object.keys(a).sort();
+                    let bKeys = Object.keys(b).sort();
+
+                    circular.set(a, path);
+                    circular.set(b, path);
+
+                    for (let i = 0; i < aKeys.length && i < bKeys.length; i++) {
+                        let aKey = aKeys[i];
+                        let bKey = bKeys[i];
+
+                        if (aKey > bKey) {
+                            return 'gt';
+                        }
+
+                        if (aKey < bKey) {
+                            return 'lt';
+                        }
+
+                        let aValue = a[aKey];
+                        let bValue = b[bKey];
+
+                        let backPath = path ? `${path}.${aKey}` : aKey;
+                        stack.push({ a: aValue, b: bValue, path: backPath });
+                    }
+
+                    if (aKeys.length > bKeys.length) return 'gt';
+                    if (aKeys.length < bKeys.length) return 'lt';
+                }
+                else {
+                    return 'ne';
+                }
+            }
+            else {
+                let comp = Data.compare(a, b);
+
+                if (comp != 'eq') {
+                    return comp;
+                }
+            }
+        }
+        
+        return 'eq';
+    }
+
     fromString(str) {
         return fromJson(str);
     }
@@ -546,6 +732,15 @@ singleton(class ObjectType extends BaseType {
 });
 
 singleton(class RegexType extends BaseType {
+    compare(a, b) {
+        if (this.verify(a) && this.verify(b)) {
+            if (a.toString() == b.toString()) return 'eq';
+            return a.toString() > b.toString() ? 'gt' : 'lt';
+        }
+
+        return 'ne';
+    }
+
     fromString(str, flags) {
         return new RegExp(str, flags);
     }
@@ -959,6 +1154,37 @@ singleton(class UInt64Type extends classOf(BigIntType) {
 
 
 /*****
+ * A (hopefully) exhaustive list of native Javascript classes.
+*****/
+const nativeClasses = mkRdsEnum(
+    'Array',
+    'ArrayBuffer',
+    'AsyncGenerator',
+    'AsyncInterator',
+    'Boolean',
+    'DataView',
+    'Date',
+    'Generator',
+    'Int8Array',
+    'Int16Array',
+    'Int32Array',
+    'Int64Array',
+    'Iterator',
+    'Math',
+    'Number',
+    'Object',
+    'Proxy',
+    'String',
+    'Symbol',
+    'UInt8Array',
+    'UInt16Array',
+    'UInt32Array',
+    'UInt64Array',
+    'WeakMap',
+);
+
+
+/*****
  * Global function that returns the essential javascript data type for the
  * given value.  Note that the essential data type does not include constrained
  * types such as Int16 or UInt32.  Constrained types cannot be infered from a
@@ -975,7 +1201,10 @@ define(function getJsType(value) {
     if (typename == 'string') return StringType;
 
     if (typename == 'function') {
-        if (Namespace.classes.has(value)) return ClassType;
+        if (ClassType.verify(value)) {
+            return ClassType;
+        }
+
         return FunctionType;
     }
 

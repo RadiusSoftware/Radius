@@ -211,7 +211,7 @@ define(class TableAnalysis {
     }
 
     analyzePrimaryKeys() {
-        if (!Data.areEqual(this.table1.getPrimaryKey(), this.table2.getPrimaryKey())) {
+        if (Data.ne(this.table1.getPrimaryKey(), this.table2.getPrimaryKey())) {
             this.setDiff({
                 level: 'table',
                 table1: this.table1,

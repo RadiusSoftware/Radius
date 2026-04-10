@@ -179,7 +179,7 @@ singleton(class Controller extends Emitter {
             if (shape.verify(newValue)) {
                 let oldValue = Data.get(this.data, dotted);
 
-                if (Data.areEqual(oldValue, newValue)) {
+                if (Data.ne(oldValue, newValue)) {
                     this.emit({
                         name: 'SetNoChange',
                         dotted: dotted,

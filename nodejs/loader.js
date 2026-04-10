@@ -246,13 +246,57 @@ if (LibCluster.isPrimary) {
                 }
             }
 
-            let expr = mkExpExpr(
-                2,
-                16,
-            );
+            // *****************************************************************************
+            // *****************************************************************************
+            // *****************************************************************************
 
-            console.log(await expr.eval());
+            let obja = {
+                string: 'hello string world',
+                number: 47,
+                subobj: {
+                    account: 'beta',
+                    subobj2: {
+                        god: 'Hercules',
+                        hero: 'Achilles',
+                    },
+                }
+            };
+
+            let objb = {
+                number: 47,
+                string: 'hello string world',
+                subobj: {
+                    account: 'beta',
+                    subobj2: {
+                        god: 'Hercules',
+                        hero: 'achilles',
+                    },
+                }
+            };
+
+            obja.circ = obja;
+            objb.circ = objb;
+
+            console.log(Data.compare(obja, objb));
+            
             return;
+
+            console.log(
+                Data.compare(
+                    parseInt,
+                    Cat
+                )
+            )
+
+            /*
+            let expr = mkIsBooleanExpr(true);
+            console.log(await expr.eval());
+            */
+
+            return;
+            // *****************************************************************************
+            // *****************************************************************************
+            // *****************************************************************************
 
             if (await this.initializeRadiusDbms()) {
                 await this.buildConfiguration();

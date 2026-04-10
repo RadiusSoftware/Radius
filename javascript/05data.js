@@ -23,78 +23,6 @@
 
 singleton(class Data {
     /*****
-     * This is the most generic and powerful comparison function for two js values.
-     * The return value is a simple boolean specifying whether the two argument
-     * values are identical.  For aggregate values, objects, that means comparing
-     * the instance types and all of their contents to determine if there are any
-     * differences.  For arrays, that includes checking the length and order of
-     * the array elements.  This function is fully recursive and can deal with
-     * circular references.
-    *****/
-    areEqual(a, b) {
-        let stack = [{ a: a, b: b }];
-        let circular = new WeakMap();
-        
-        while (stack.length) {
-            let { a, b } = stack.pop();
-            
-            if (ObjectType.verify(a)) {
-                if (ObjectType.verify(b)) {
-                    if (circular.has(a)) {
-                        if (circular.get(a) !== b) {
-                            return false;
-                        }
-                    }
-                    else {
-                        if (a instanceof Reflect.getPrototypeOf(b).constructor) {
-                            circular.set(a, b);
-             
-                            if (Array.isArray(a)) {
-                                if (a.length == b.length) {
-                                    for (let i = 0; i < a.length; i++) {
-                                        stack.push({ a: a[i], b: b[i] });
-                                    }
-                                }
-                                else {
-                                    return false;
-                                }
-                            }
-                            else {
-                                let keysA = Object.keys(a);
-             
-                                if (keysA.length == Object.keys(b).length) {
-                                    for (let key of keysA) {
-                                        if (key in b) {
-                                            stack.push({ a: a[key], b: b[key]});
-                                        }
-                                        else {
-                                            return false;
-                                        }
-                                    }
-                                }
-                                else {
-                                    return false;
-                                }
-                            }
-                        }
-                        else {
-                            return false;
-                        }
-                    }
-                }
-                else {
-                    return false;
-                }
-            }
-            else if (a !== b) {
-                return false;
-            }
-        }
-        
-        return true;
-    }
-
-    /*****
      * Performs a binary search and returns the index, at which to insert the value
      * into the given array.  If the array contains one or more values (in a sequence)
      * of the same value and the provided value matches the sequence, the returned
@@ -213,6 +141,25 @@ singleton(class Data {
 
         return clone;
     }
+
+    /*****
+     * This function compares two generic js values to determine whether they are
+     * one of eq, lt, le, gt, or get.  The return value is one of these values.
+     * For aggregate values, objects, that means comparing the instance types and
+     * all of their content to determine if there are any differences.  For
+     * arrays, that includes checking the length and order of the array elements.
+     * This function is fully recursive and can deal with circular references.
+    *****/
+    compare(a, b) {
+        let jsType = getJsType(a);
+
+        if (jsType === getJsType(b)) {
+            return jsType.compare(a, b);
+        }
+        else {
+            return 'ne';
+        }
+    }
     
     /*****
      * Function to create a shallow copy of the original or src object.  A shallow
@@ -329,6 +276,13 @@ singleton(class Data {
     }
 
     /*****
+     * Tests whether two values are strictly equal.
+    *****/
+    eq(a, b) {
+        return this.compare(a, b) == 'eq';
+    }
+
+    /*****
      * This has essentially one use.  It's shorthand for determining whether a
      * CTOR function, i.e., class, is a sub ctor-class of the given base ctor.
      * This function expects that both of the arguments are functions, class ctors
@@ -400,6 +354,13 @@ singleton(class Data {
     }
 
     /*****
+     * Tests if a is strictly greater than or equal to b.
+    *****/
+    le(a, b) {
+        return this.compare(a, b) in { eq:0, gt:0 };
+    }
+
+    /*****
      * Given an object and a "dotted path", e.g., x.alpha.numeric, this method
      * returns the implied value or undefined if the path does NOT exist within
      * the object structure.
@@ -425,6 +386,13 @@ singleton(class Data {
         }
 
         return undefined;
+    }
+
+    /*****
+     * Tests if a is strictly greater than b.
+    *****/
+    lt(a, b) {
+        return this.compare(a, b) == 'gt';
     }
 
     /*****
@@ -454,6 +422,26 @@ singleton(class Data {
         return false;
     }
 
+    /*****
+     * Tests if a is strictly less than or equal to b.
+    *****/
+    le(a, b) {
+        return this.compare(a, b) in { eq:0, lt:0 };
+    }
+
+    /*****
+     * Tests if a is strictly less than b.
+    *****/
+    lt(a, b) {
+        return this.compare(a, b) == 'lt';
+    }
+
+    /*****
+     * Tests whether two values are NOT strictly equal.
+    *****/
+    ne(a, b) {
+        return this.compare(a, b) != 'eq';
+    }
 
     /*****
      * Given a dotted path, an object, and a value, ensure the entire path in
