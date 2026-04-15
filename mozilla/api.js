@@ -47,7 +47,7 @@ singleton(class Api {
             let definedArg = definedArgs[i];
             let callingArg = callingArgs[i];
 
-            if (definedArg.shape.validate(callingArg) !== true) {
+            if (definedArg.shape.verify(callingArg) !== true) {
                 return mkFailure(`Invalid argument "${definedArg.name}" provided for API call "${name}"`);
             }
         }

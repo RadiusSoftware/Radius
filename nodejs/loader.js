@@ -103,6 +103,13 @@ if (LibCluster.isPrimary) {
                     ]
                 );
 
+                await settings.defineSetting(
+                    'cluster',
+                    'system',
+                    BooleanType,
+                    false
+                );
+
                 await settings.defineSetting('radiusPath', 'general', StringType, '/radius');
                 await settings.defineSetting('acceptCookiesName', 'privacy', StringType, 'kibble');
                 await settings.defineSetting('acceptCookiesDays', 'privacy', Int32Type, 180);
@@ -116,7 +123,6 @@ if (LibCluster.isPrimary) {
                 await settings.defineSetting('forgetDeviceDays', 'security', Int32Type, 90);
                 await settings.defineSetting('packages', 'package', ArrayType, []);
                 await settings.defineSetting('webServicesPath', 'server', StringType, '/ws');
-                await settings.defineSetting('cluster', 'cluster', BooleanType, false);
                 await settings.defineSetting('system#settings-initialized', 'system', BooleanType, true);
 
                 const { publicKey, privateKey } = await Crypto.generateKeyPair('rsa');
@@ -245,55 +251,6 @@ if (LibCluster.isPrimary) {
                     this.nodejsFramework.push(`require('${sourceFile.path}');`);
                 }
             }
-
-            // *****************************************************************************
-            // *****************************************************************************
-            // *****************************************************************************
-
-            /*
-            let obja = {
-                string: 'hello string world',
-                number: 47,
-                subobj: {
-                    account: 'beta',
-                    subobj2: {
-                        god: 'Hercules',
-                        hero: 'Achilles',
-                    },
-                }
-            };
-
-            let objb = {
-                number: 47,
-                string: 'hello string world',
-                subobj: {
-                    account: 'beta',
-                    subobj2: {
-                        god: 'Hercules',
-                        hero: 'achilles',
-                    },
-                }
-            };
-
-            obja.circ = obja;
-            objb.circ = objb;
-
-            console.log(Data.compare(obja, objb));
-            */
-
-            let expr = mkFunctionExpr(
-                (alpha, beta) => `${alpha}-${beta}`,
-                'ALPHA',
-                'BETA',
-                'GAMMA'
-            );
-
-            console.log(await expr.eval());
-
-            return;
-            // *****************************************************************************
-            // *****************************************************************************
-            // *****************************************************************************
 
             if (await this.initializeRadiusDbms()) {
                 await this.buildConfiguration();

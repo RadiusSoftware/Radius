@@ -240,30 +240,6 @@ define(function createElementFromOuterHtml(html) {
 
 
 /*****
- * When the mutation observer notices that a node is added to the document,
- * there are processes required to prepare that node for inclusion in the HTML
- * document: (a) use the Packages features to process the node and replace text
- * placeholders with the localized text, (b) call the node's init() method,
- * which is a non-async method used for configuring the node, and finally,
- * (c) mark the node as being initialized.
-*****/
-Doc.on('Mutation-Add', message => {
-    for (let addedNode of message.added) {
-        let docNodes = addedNode.enumerateDescendents();
-        docNodes.unshift(addedNode);
-
-        for (let docNode of docNodes) {
-            if (!docNode.initializedSelf) {
-                Packages.processNode(docNode);
-                docNode.init();
-                docNode.initializedSelf = true;
-            }
-        }
-    }
-});
-
-
-/*****
  * The DocNode class provides a wrapper for existing DOM HTMLElements and Text
  * objects.  This class is NOT used for creating new objects.  It's only for
  * wrapping existing objects with a more efficient API.  DocNode is the base
@@ -1167,7 +1143,7 @@ define(class DocElement extends DocNode {
     }
 
     hasAttribute(name) {
-        return mkRdsEnum(this.node.getAttributeNames()).has(name);
+        return mkRdsEnum(...this.node.getAttributeNames()).has(name);
     }
 
     hasClassName(className) {
@@ -1184,41 +1160,6 @@ define(class DocElement extends DocNode {
     
     init() {
         super.init();
-        
-        if (this.getRdsDefine) {
-            for (let entry of RdsText.parseAttributeEncoded()) {
-                let [ dotted, string ] = entry;
-                let value = Tunnel.pop(string);
-                Controller.set(dotted, value);
-            }
-        }
-        
-        if (this.getRdsBind) {
-            Controller.bind(this, this.getRdsBind());
-        }
-
-        if (this.getRdsBindAttr) {
-            let [ dotted, attrName ] = this.getRdsBindAttr().split(',');
-            Controller.bindAttribute(this, attrName, dotted);
-        }
-
-        if (this.getRdsBindAttrFlag) {
-            let [ dotted, attrName ] = this.getRdsBindAttrFlag().split(',');
-            Controller.bindAttributeFlag(this, attrName, dotted);
-        }
-
-        if (this.getRdsBindMethod) {
-            let [ dotted, methodName ] = this.getRdsBindMethod().split(',');
-            Controller.bindMethod(this, methodName, dotted);
-        }
-
-        if (this.getRdsSet) {
-            for (let entry of Object.entries(RdsText.parseAttributeEncoded(this.getRdsSetValue()))) {
-                let [ dotted, string ] = entry;
-                let value = Tunnel.pop(string);
-                Controller.set(dotted, value);
-            }
-        }
 
         if (this.getRdsTransition) {
             this.setTransition(this.getRdsTransition())

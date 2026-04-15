@@ -22,33 +22,6 @@
 
 
 /*****
- * A controller expression is one that uses a dotted key for a controller value.
- * It's one of the extended types that returns an actual dependency to a key in
- * the controller and it returns the controller value when evaluated.
-*****/
-/*
-define(class ControllerExpXXX extends Expr {
-    constructor(dotted) {
-        super();
-        this.dotted = dotted;
-    }
-
-    async eval() {
-        return Controller.get(dotted);
-    }
-
-    getDependencies() {
-        return [ this.dotted ];
-    }
-
-    static fromJson(obj) {
-        return mkControllerExpr(obj.dotted);
-    }
-});
-*/
-
-
-/*****
  * The controller is a single global class providing features defined by the
  * standard "C" part of the MVC GUI model.  A controller contains operational
  * data, entangles GUI elements with those values, and notifies other listeners
@@ -61,6 +34,7 @@ singleton(class Controller extends Emitter {
         this.data = {};
         this.bound = {};
         this.shapes = {};
+        this.initialized = new WeakMap();
     }
 
     bind(docElement, arg) {
@@ -172,6 +146,52 @@ singleton(class Controller extends Emitter {
         return Data.has(this.data, dotted);
     }
 
+    initNode(docNode) {
+        if (!this.initialized.has(docNode)) {
+            this.initialized.set(docNode, true);
+            Packages.processNode(docNode);
+
+            if (docNode instanceof DocElement) {
+                if (docNode.getRdsDefine) {
+                    for (let entry of RdsText.parseAttributeEncoded(docNode.getRdsDefine())) {
+                        let [ dotted, string ] = entry;
+                        let value = Tunnel.pop(string);
+                        this.set(dotted, value);
+                    }
+                }
+                
+                if (docNode.getRdsBind) {
+                    this.bind(docNode, docNode.getRdsBind());
+                }
+
+                if (docNode.getRdsBindAttr) {
+                    let [ dotted, attrName ] = docNode.getRdsBindAttr().split(',');
+                    this.bindAttribute(docNode, attrName, dotted);
+                }
+
+                if (docNode.getRdsBindAttrFlag) {
+                    let [ dotted, attrName ] = docNode.getRdsBindAttrFlag().split(',');
+                    this.bindAttributeFlag(docNode, attrName, dotted);
+                }
+
+                if (docNode.getRdsBindMethod) {
+                    let [ dotted, methodName ] = docNode.getRdsBindMethod().split(',');
+                    this.bindMethod(docNode, methodName, dotted);
+                }
+
+                if (docNode.getRdsSet) {
+                    for (let entry of Object.entries(RdsText.parseAttributeEncoded(docNode.getRdsSet()))) {
+                        let [ dotted, string ] = entry;
+                        let value = Tunnel.pop(string);
+                        this.set(dotted, value);
+                    }
+                }
+
+                docNode.init();
+            }
+        }
+    }
+
     set(dotted, newValue) {
         let shape = this.getShape(dotted);
 
@@ -218,5 +238,51 @@ singleton(class Controller extends Emitter {
             oldValue: oldValue,
             newValue: newValue,
         });
+    }
+});
+
+
+/*****
+ * When the mutation observer notices that a node is added to the document,
+ * there are processes required to prepare that node for inclusion in the HTML
+ * document: (a) use the Packages features to process the node and replace text
+ * placeholders with the localized text, (b) call the node's init() method,
+ * which is a non-async method used for configuring the node, and finally,
+ * (c) mark the node as being initialized.
+*****/
+Doc.on('Mutation-Add', message => {
+    for (let addedNode of message.added) {
+        let docNodes = addedNode.enumerateDescendents();
+        docNodes.unshift(addedNode);
+
+        for (let docNode of docNodes) {
+            Controller.initNode(docNode);
+        }
+    }
+});
+
+
+/*****
+ * A controller expression is one that uses a dotted key for a controller value.
+ * It's one of the extended types that returns an actual dependency to a key in
+ * the controller and it returns the controller value when evaluated.
+*****/
+define(class CtlExpr extends Expr {
+    constructor(dotted) {
+        super(dotted);
+        this.dependencies = [{ type: 'controller', dotted: dotted }];
+    }
+
+    async eval() {
+        let dotted = await this.evalOperands();
+        return Controller.get(dotted);
+    }
+
+    static fromJson(obj) {
+        return mkCtlExpr(...this.operands);
+    }
+
+    getShapes() {
+        return [ mkRdsShape(StringType) ];
     }
 });
