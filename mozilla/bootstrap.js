@@ -105,30 +105,5 @@ Doc.on('DOMContentLoaded', async () => {
         await Packages.require(packageName);
     }
     
-    let styles = [];
-    const { phone, tablet, computer } = assessUserAgent();
-    styles.push(`\n\n/* ${Navigator.getUserAgent()} */`);
-    styles.push(`/* phone = ${phone} */`);
-    styles.push(`/* tablet = ${tablet} */`);
-    styles.push(`/* computer = ${computer} */`);
-
-    if (phone) {
-        styles.push(`.micro { display: unset };`);
-        styles.push(`.macro { display: none };`);
-    }
-    else if (tablet) {
-        styles.push(`.micro { display: none };`);
-        styles.push(`.macro { display: unset };`);
-    }
-    else {
-        styles.push(`.micro { display: none };`);
-        styles.push(`.macro { display: unset };`);
-    }
-
-    define(function isPhone() { return phone; });
-    define(function isTablet() { return tablet; });
-    define(function isComputer() { return computer; });
-
-    Doc.queryOne('#primary-stylesheet').append(mkDocText(styles.join('\n')));
     Packages.openApplication();
 });

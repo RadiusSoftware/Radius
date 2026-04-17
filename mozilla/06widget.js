@@ -147,4 +147,10 @@ define(class Widget extends HtmlElement {
     hasInnerElements() {
         return this.innerElements.length > 0;
     }
+
+    init() {
+        super.init();
+
+        
+    }
 });

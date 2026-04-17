@@ -220,7 +220,8 @@ define(class Package {
             let filePath = handle.fileNames[fileName];
             
             if (fileName.endsWith('.css')) {
-                this.mozilla.styleSheets.push(await FileSystem.readFileAsString(filePath));
+                let cssText = await FileSystem.readFileAsString(filePath);
+                this.mozilla.styleSheets.push(cssText);
             }
             else if (fileName.endsWith('.js')) {
                 await this.registerCode(filePath);
@@ -543,10 +544,6 @@ define(class Package {
         langGroup[key] = scrubbedTextArray.join('').trim();
     }
 
-    async processStyle(styleElement) {
-        this.mozilla.styleSheets.push(this.scrubStyleText(styleElement.getInnerHtml()));
-    }
-
     async processWidget(widgetElement) {
         let tagName = widgetElement.getAttribute('tagname');
 
@@ -629,6 +626,11 @@ define(class Package {
                     
                     widget.innerHtml = this.substituteMarkers(childElement.getInnerHtml().trim());
                 }
+                // *********************************************************
+                // *********************************************************
+                // *********************************************************
+                // *********************************************************
+                /*
                 else if (tagName == 'style') {
                     let innerHtml = childElement.getInnerHtml();
                     let matches = [...innerHtml.matchAll(/\[design=([a-zA-Z0-9-_]+)\]/g)];
@@ -641,6 +643,7 @@ define(class Package {
                     innerHtml = innerHtml.replaceAll('[self]', `[design=${widget.tagName}-self]`);
                     widget.style = this.scrubStyleText(innerHtml);
                 }
+                */
             }
 
             this.mozilla.widgets[widget.tagName] = widget;

@@ -23,377 +23,540 @@
 
 (() => {
     /*****
-     * A dynamic wrapper for a single DOM stylesheet object.  Like all other wrappers,
-     * when a value is returned, such as a rules list, the return value is also a
-     * wrapper object.  Our mission here is to allow application developers to cleanly
-     * analyze and modify stylesheets from within application code.
+     * In the CSS object model, some objects have a cssRules property, while others
+     * do not.  It's not as simple as one would hope to distinguish between them.
+     * We have therefore added a rules-list base type and a non-rules-list base type
+     * for other object.  These base types provide a uniform API for all objects
+     * with regards to rules lists but also provides information regarding the rules
+     * list satus of the underlying CSS object.
     *****/
-    define(class CssStyleSheet {
-        constructor(cssStyleSheet) {
-            this.cssGroup = cssStyleSheet;
+    class CssRuleListBase {
+        constructor(cssObject) {
+            this.native = cssObject;
         }
 
-        createRule(cssText, index) {
-            let ruleList = mkCssRuleList(this.cssGroup, this.cssGroup.cssRules);
-            let ruleIndex = this.cssGroup.insertRule(cssText, index ? index : ruleList.length());
-            let cssRule = this.cssGroup.cssRules.item(ruleIndex);
-            let ctor = Reflect.getPrototypeOf(cssRule).constructor;
-            return CssMakers.get(ctor)(this.cssGroup, cssRule);
+        appendRule(cssRule) {
+            // TODO **********************************************************************
+        }
+
+        deleteRule(index) {
+            // TODO **********************************************************************
+        }
+
+        enumerateRules() {
+            let enumerated = [];
+            let stack = this.getArray();
+
+            while (stack.length) {
+                let rule = stack.shift();
+                enumerated.push(rule);
+
+                for (let cssRule of rule.getRules().getArray().reverse()) {
+                    stack.unshift(cssRule);
+                }
+            }
+
+            return enumerated;
+        }
+
+        getArray() {
+            let array = [];
+
+            for (let i = 0; i < this.native.cssRules.length; i++) {
+                let rule = this.native.cssRules.item(i);
+                array.push(wrapCssObject(rule));
+            }
+
+            return array;
+        }
+
+        getRuleCount() {
+            return this.native.cssRules ? this.native.cssRules.length : 0;
+        }
+
+        getRule(index) {
+            if (this.native) {
+                let cssRule = this.cssRuleList.item(index);
+                let ctor = Reflect.getPrototypeOf(cssRule).constructor;
+                return CssMakers.get(ctor)(this.cssGroup, cssRule);
+            }
+        }
+
+        hasRules() {
+            return true;
+        }
+
+        insertRule(cssRule, index) {
+            // TODO **********************************************************************
+        }
+
+        [Symbol.iterator]() {
+            return this.getArray()[Symbol.iterator]();
+        }
+    }
+
+    class CssNoRuleListBase {
+        constructor(cssObject) {
+            this.native = cssObject;
+        }
+
+        appendRule(cssRule) {
+            return this;
+        }
+
+        deleteRule(index) {
+            return this;
+        }
+
+        enumerateRules() {
+            return [];
+        }
+
+        getArray() {
+            return [];
+        }
+
+        getRuleCount() {
+            return 0;
+        }
+
+        getRule(index) {
+            return null;
+        }
+
+        hasRules() {
+            return false;
+        }
+
+        insertRule(cssRule, index) {
+            return this;
+        }
+
+        [Symbol.iterator]() {
+            return [][Symbol.iterator]();
+        }
+    }
+
+
+    /*****
+     * The CssStyleSheet class wraps the features and functionality of both the
+     * StyleSheet and CSSStyleSheet classes into one handy wrapper.  When fetching
+     * styles sheets with the Doc singleton, an instance of this object is that
+     * which is returned.
+    *****/
+    define(class CssStyleSheet extends CssRuleListBase {
+        constructor(cssStyleSheet) {
+            super(cssStyleSheet);
+        }
+
+        disable() {
+            this.native.disabled = true;
+            return this;
+        }
+
+        enable() {
+            this.native.disabled = false;
+            return this;
         }
 
         getHref() {
-            return this.cssGroup.href;
-        }
-
-        getLanguage() {
-            return this.cssGroup.type();
+            return this.native.href;
         }
 
         getMedia() {
-            return this.cssGroup.media;
+            return this.native.media;
         }
 
         getOwnerNode() {
-            return this.cssGroup.ownerNode;
+            if (this.native.ownerNode) {
+                return wrapNode(this.native.ownerNode);
+            }
+
+            return null;
+        }
+
+        getOwnerRule() {
+            if (this.native.ownerRule) {
+                return mkCssImportrule(this.native.ownerRule);
+            }
+
+            return null;
         }
 
         getParentStyleSheet() {
-            return mkCssStyleSheet(this.cssGroup.parentStyleSheet);
-        }
+            if (this.native.parentStyleSheet) {
+                return mkCssStyleSheet(this.native.parentStyleSheet);
+            }
 
-        getRule(index) {
-            return mkCssStyleRule(this.cssGroup, this.cssGroup.cssRules[index]);
-        }
-
-        getRules() {
-            return mkCssRuleList(this.cssGroup, this.cssGroup.cssRules);
+            return null;
         }
 
         getTitle() {
-            return this.cssGroup.title;
+            return this.native.title;
+        }
+
+        getType() {
+            return this.native.type;
+        }
+
+        isDisabled() {
+            return this.native.disabled;
         }
 
         isEnabled() {
-            return !this.cssGroup.disable;
-        }
-
-        search(selector) {
-            for (let styleRule of this) {
-                if (styleRule.type() == 'CssStyleRule') {
-                    if (styleRule.selector() == selector) {
-                        return styleRule;
-                    }
-                }
-            }
-        }
-
-        [Symbol.iterator]() {
-            return mkCssRuleList(this.cssGroup, this.cssGroup.cssRules)[Symbol.iterator]();
+            return !this.native.disabled;
         }
     });
 
 
     /*****
-     * A rule list contains a list of style rules of various types.  Some rules are
-     * singular while other rules may be groupiing rules that contain their own rule
-     * list in a recursive fashion.  Note that we also have the means here to 
+     * There are two basic rule base classes, one for listful rules and one for
+     * non-listful rules.  Listful means they have a rules list, non-listfuls
+     * do NOT have a rules list, i.e., cssRules property in the native object.
     *****/
-    define(class CssRuleList {
-        constructor(cssGroup, cssRuleList) {
-            this.cssGroup = cssGroup;
-            this.cssRuleList = cssRuleList;
-        }
-
-        getItem(index) {
-            let cssRule = this.cssRuleList.item(index);
-            let ctor = Reflect.getPrototypeOf(cssRule).constructor;
-            return CssMakers.get(ctor)(this.cssGroup, cssRule);
-        }
-
-        getLength() {
-            return this.cssRuleList.length;
-        }
-
-        [Symbol.iterator]() {
-            let rulesArray = [];
-
-            for (let cssRule of this.cssRuleList) {
-                let ctor = Reflect.getPrototypeOf(cssRule).constructor;
-                let rule = CssMakers.get(ctor)(this, cssRule);
-                rulesArray.push(rule);
-            }
-
-            return rulesArray[Symbol.iterator]();
-        }
-    });
-
-
-    /*****
-     * The fundamental interface is the base class for all of the CSS rule classes,
-     * and provides common features that are applicable to all of derived or CSS
-     * style subclasses.  
-    *****/
-    define(class CssRule {
-        constructor(cssGroup, cssRule) {
-            this.cssGroup = cssGroup;
-            this.cssRule = cssRule;
+    class CssRuleWithRuleList extends CssRuleListBase {
+        super(cssObject) {
+            this.super(cssObject);
         }
 
         getCssText() {
-            return this.cssRule.cssText;
+            return this.native.cssText;
         }
 
-        getIndex() {
-            for (let i = 0; i < this.cssGroup.length; i++) {
-                if (Object.verify(this.cssRule, this.cssGroup.item(i))) {
-                    return i;
-                }
+        getParentRule() {
+            if (this.native.parentRule) {
+                return wrapCssObject(this.native.parentRule);
             }
-        }
 
-        getParent() {
-            this.cssRule.parentRule;
-        }
-
-        getRuleList() {
-            return this.ruleList;
-        }
-
-        getStyleSheet() {
-            return this.ruleList.styleSheet;
-        }
-
-        remove() {
-            this.cssGroup.deleteRule(this.index());
-        }
-    });
-
-
-    /*****
-     * A grouping rule is a CSS rule that behaves in a manner similar to the style
-     * sheet itself.  It has its own rules list and has been made to be iterable to
-     * make scanning and searching rules simple then it would be otherwise.  Rules
-     * may also be accessed by index but the catch with that is you need to know the
-     * index, which requires a sweep through the group's rules to ascertain what that
-     * index is.
-    *****/
-    define(class CssGroupingRule extends CssRule {
-        constructor(cssGroup, cssRule) {
-            super(cssGroup, cssRule);
-        }
-
-        createRule(cssText, index) {
-            let ruleList = mkCssRuleList(this.cssGroup, this.cssGroup.cssRules);
-            let ruleIndex = this.cssGroup.insertRule(cssText, index);
-            let cssRule = this.cssGroup.cssRules.item(ruleIndex);
-            let ctor = Reflect.getPrototypeOf(cssRule).constructor;
-            return CssMakers.get(ctor)(this.cssGroup, cssRule);
+            return null;
         }
 
         getParentStyleSheet() {
-            return mkCssStyleSheet(this.cssGroup.parentStyleSheet);
+            if (this.native.parentStyleSheet) {
+                return wrapCssObject(this.nativeParentStyleSheet);
+            }
+
+            return null;
+        }
+    };
+
+    class CssRuleNoRuleList extends CssNoRuleListBase {
+        super(cssObject) {
+            this.super(cssObject);
         }
 
-        getRule(index) {
-            return mkCssRuleList(this.cssGroup, this.cssRule.cssRules).item(index);
+        getCssText() {
+            return this.native.cssText;
         }
 
-        getRules() {
-            return mkCssRuleList(this.cssGroup, this.cssRule.cssRules);
+        getParentRule() {
+            if (this.native.parentRule) {
+                return wrapCssObject(this.native.parentRule);
+            }
+
+            return null;
+        }
+
+        getParentStyleSheet() {
+            if (this.native.parentStyleSheet) {
+                return wrapCssObject(this.nativeParentStyleSheet);
+            }
+
+            return null;
+        }
+    };
+
+
+    /*****
+    *****/
+    define(class CssFontFaceDescriptors {
+        constructor(cssFontFaceDescriptors) {
+            // TODO **********************************************************************
+        }
+    });
+
+
+    /*****
+    *****/
+    define(class CssMediaList {
+        constructor(mediaList) {
+            // TODO **********************************************************************
+        }
+    });
+
+
+    /*****
+    *****/
+    define(class CssPageDescriptors {
+        constructor(cssPageDescriptors) {
+            // TODO **********************************************************************
+        }
+    });
+
+
+    /*****
+     * This is the wrapper for the native CSSStyleDeclaration object. Styles are
+     * large complex objects containing all of the style properties, values, and
+     * all of the logic associated with them.  A style properties object can be
+     * used to modify the live style of elements in an HTML document.  Note that
+     * style properties also implent the style declaration interface.
+    *****/
+    define(class CssStyleDeclaration {
+        constructor(cssStyleDeclaration) {
+            this.native = cssStyleDeclaration;
+        }
+
+        getCssText() {
+            return this.native.cssText;
+        }
+
+        getItem(index) {
+            return this.native.item(index);
+        }
+
+        getLength() {
+            return this.native.length;
+        }
+
+        getParentRule() {
+            return wrapCssObject(this.native.parentRule);
+        }
+
+        getPropertyPriority(property) {
+            return this.native.getPropertyPriority(property);
+        }
+
+        getPropertyValue(property) {
+            return this.native.getPropertyValue(property);
+        }
+
+        removeProperty(property) {
+            this.native.removeProperty(property);
+            return this;
+        }
+
+        setProperty(property, value, priority) {
+            this.native.setProperty(property, value, priority);
+            return this;
         }
 
         [Symbol.iterator]() {
-            return mkCssRuleList(this.cssGroup, this.cssRule.cssRules)[Symbol.iterator]();
+            let properties = [];
+
+            for (let i = 0; i < this.native.length; i++) {
+                properties.push(this.native.item(i));
+            }
+
+            return properties[Symbol.iterator]();
         }
     });
 
 
     /*****
-     * A condition rule is one that uses specific rules to determine whether rules
-     * contained within the condition rule should be active.  Notice that condition
-     * rule extends grouping rule.  There are no rule classes that are a condition
-     * rule without being a grouping rule.
+     * Here's the list of specific style-rule types.  Generally speaking, these
+     * instances are returned by the rule-list API object.  They may be created
+     * by the developer and can also be inserted and appended to a specifc node,
+     * meanning either rule or stylesheet.  Unimplemnted rules are:
+     * 
+     *      CSSCounterStyleRule
+     *      CSSFontFeatureValuesRule
+     *      CSSFontPalletteValuesRule
+     *      CSSLayerBlockRule
+     *      CSSLayerStatementRule
+     *      CSSNestedDeclarations
+     *      CSSViewTransitionRule
     *****/
-    define(class CssConditionRule extends CssGroupingRule {
-        constructor(cssGroup, cssRule) {
-            super(cssGroup, cssRule);
+   define(class CssFontFaceRule extends CssRuleNoRuleList {
+    constructor(cssFontFaceDescriptors) {
+        super(cssFontFaceDescriptors);
+    }
+
+    getStyle() {
+        return mkCssFontFaceDescriptors(this.native.style);
+    }
+   });
+
+    define(class CssImportRule extends CssRuleWithRuleList {
+        constructor(cssImportRule) {
+            super(cssImportRule);
         }
 
-        getConditionText() {
-            return this.cssRule.conditionText;
+        getHref() {
+            return this.native.href;
+        }
+
+        getLayerName() {
+            return this.native.layerName;
+        }
+
+        getMediaList() {
+            if (this.native.mediaList) {
+                return mkCssMediaList(this.native.mediaList);
+            }
+
+            return null;
+        }
+
+        getStyleSheet() {
+            if (this.native.styleSheet) {
+                return wrapCssObject(this.styleSheet);
+            }
+
+            return null;
+        }
+
+        getSupportsText() {
+            return this.native.supportsText;
         }
     });
 
-
-    /*****
-     * These are the specific CSS rules instances that are created by the browser.
-     * They have one of either two differing base rules, either CssRule or the
-     * more interestng CssConditionRule.  Rules derived from CssConditionRule are
-     * also CssGroupingRules and consequently are CSS rule containers.
-    *****/
-    define(class CssFontFaceRule extends CssRule {
-        constructor(cssGroup, cssRule) {
-            super(cssGroup, cssRule);
+    define(class CssKeyframeRule extends CssRuleWithRuleList {
+        constructor(cssKeyframerule) {
+            super(cssKeyframerule);
         }
-
-        getType() {
-            return 'CssFontFaceRule';
-        }
-    });
-
-    define(class CssImportRule extends CssRule {
-        constructor(cssGroup, cssRule) {
-            super(cssGroup, cssRule);
-        }
-
-        getType() {
-            return 'CssImportRule';
-        }
-    });
-
-    define(class CssKeyframeRule extends CssRule {
-        constructor(cssGroup, cssRule) {
-            super(cssGroup, cssRule);
-        }
-
+        
         getKeyText() {
-            return this.cssRule.keyText;
+            return this.native.keyFrameText;
         }
 
-        gettType() {
-            return 'CssKeyframeRule';
+        getStyle() {
+            return mkCssStyleDeclaration(this.native.style);
         }
     });
 
-    define(class CssKeyframesRule extends CssRule {
-        constructor(cssGroup, cssRule) {
-            super(cssGroup, cssRule);
-        }
-
-        getRules() {
-            return mkCssRuleList(this.cssRule, this.cssRule.cssRules);
+    define(class CssKeyframesRule extends CssRuleWithRuleList {
+        constructor(cssKeyframesrule) {
+            super(cssKeyframesrule);
         }
 
         getName() {
-            return this.cssRule.name;
-        }
-
-        getType() {
-            return 'CssKeyframesRule';
+            return this.native.name;
         }
     });
 
-    define(class CssMediaRule extends CssConditionRule {
-        constructor(cssGroup, cssRule) {
-            super(cssGroup, cssRule);
+    define(class CssMediaRule extends CssRuleWithRuleList {
+        constructor(cssMediaRule) {
+            super(cssMediaRule);
+        }
+
+        getConditionText() {
+            return this.native.conditionText;
         }
 
         getMedia() {
-            return this.cssRule.media;
-        }
-
-        getType() {
-            return 'CssMediaRule';
+            return mkCssMediaList(this.native.media);
         }
     });
 
-    define(class CssNamespaceRule extends CssRule {
-        constructor(cssGroup, cssRule) {
-            super(cssGroup, cssRule);
+    define(class CssNamespaceRule extends CssRuleNoRuleList {
+        constructor(cssNamespaceRule) {
+            super(cssNamespaceRule);
         }
 
         getNamespaceURI() {
-            return this.cssRule.namespaceURI;
+            return this.native.getNamespaceURI;
         }
 
         getPrefix() {
-            return this.cssRule.prefix;
-        }
-
-        getType() {
-            return 'CssNamespaceRule';
+            return this.native.prefix;
         }
     });
 
-    define(class CssPageRule extends CssRule {
-        constructor(cssGroup, cssRule) {
-            super(cssGroup, cssRule);
+    define(class CssPageRule extends CssRuleNoRuleList {
+        constructor(cssPageRule) {
+            super(cssPageRule);
         }
 
-        getSelector() {
-            return this.cssRule.selectorText;
+        getSelectorArray() {
+            return RdsText.split(this.native.selectorText, ',');
         }
 
-        getType() {
-            return 'CssPageRule';
-        }
-    });
-
-    define(class CssStyleRule extends CssRule {
-        constructor(cssGroup, cssRule) {
-            super(cssGroup, cssRule);
+        getSelectorText() {
+            return this.native.selectorText;
         }
 
-        change(values) {
-            for (let entry of Object.entries(values)) {
-                let [ name, value ] = entry;
-                this.cssRule.style[name] = value;
-            }
-
+        setSelectorText(selectorText) {
+            this.native.selectorText = selectorText;
             return this;
         }
 
-        clear() {
-            while (this.cssRule.style.length) {
-                let property = this.cssRule.style.item(0);
-                this.cssRule.style.removeProperty(property);
-            }
-
-            return this;
-        }
-
-        getSelector() {
-            return this.cssRule.selectorText;
-        }
-
-        getSettings(values) {
-            return this.cssRule.style;
-        }
-
-        getType() {
-            return 'CssStyleRule';
-        }
-
-        set(values) {
-            this.clear();
-            return this.change(values);
+        getStyle() {
+            return mkCssPageDescriptors(this.native.style);
         }
     });
 
-    define(class CssSupportsRule extends CssConditionRule {
-        constructor(cssGroup, cssRule) {
-            super(cssGroup, cssRule);
+    define(class CssStyleRule extends CssRuleNoRuleList {
+        constructor(cssStyleRule) {
+            super(cssStyleRule);
         }
 
-        getType() {
-            return 'CssSupportsRule';
+        getSelectorArray() {
+            return RdsText.split(this.native.selectorText, ',');
+        }
+
+        getSelectorText() {
+            return this.native.selectorText;
+        }
+
+        getStyle() {
+            return mkCssStyleDeclaration(this.native.style);
+        }
+
+        setSelectorText(selectorText) {
+            this.native.selectorText = selectorText;
+            return this;
+        }
+    });
+
+    define(class CssSupportsRule extends CssRuleWithRuleList {
+        constructor(cssSupportsRule) {
+            super(cssSupportsRule);
+        }
+
+        getConditionText() {
+            return this.native.conditionText;
         }
     });
 
 
     /*****
-     * This weak map is used for finding maker function, e.g., mkMediaRul(), based on
-     * a given DOM CSS class type.  This is the complete enumeration of all CSS rule
-     * types supported by the DOM specification and by this software.
+     * Like HTML nodes, this features provides a clean mechanism for wrapping and
+     * return CSS objects as objects from the framework.  Note that there is not
+     * an individual class for each of the native CSS objects.  We are providing
+     * higher level functional objects.
     *****/
-    const CssMakers = new WeakMap();
-    CssMakers.set(CSSFontFaceRule, mkCssFontFaceRule);
-    CssMakers.set(CSSImportRule, mkCssImportRule);
-    CssMakers.set(CSSKeyframeRule, mkCssKeyframeRule);
-    CssMakers.set(CSSKeyframesRule, mkCssKeyframesRule);
-    CssMakers.set(CSSMediaRule, mkCssMediaRule);
-    CssMakers.set(CSSNamespaceRule, mkCssNamespaceRule);
-    CssMakers.set(CSSPageRule, mkCssPageRule);
-    CssMakers.set(CSSStyleRule, mkCssStyleRule);
-    CssMakers.set(CSSSupportsRule, mkCssSupportsRule);
+    const cssMakers = new WeakMap();
+    cssMakers.set(CSSFontFaceRule, mkCssFontFaceRule);
+    cssMakers.set(CSSImportRule, mkCssImportRule);
+    cssMakers.set(CSSKeyframeRule, mkCssKeyframeRule);
+    cssMakers.set(CSSKeyframesRule, mkCssKeyframesRule);
+    cssMakers.set(CSSMediaRule, mkCssMediaRule);
+    cssMakers.set(CSSNamespaceRule, mkCssNamespaceRule);
+    cssMakers.set(CSSPageRule, mkCssPageRule);
+    cssMakers.set(CSSStyleRule, mkCssStyleRule);
+    cssMakers.set(CSSSupportsRule, mkCssSupportsRule);
+
+    function wrapCssObject(cssObject) {
+        if (cssObject instanceof CssRuleWithRuleList) {
+            return cssObject;
+        }
+        else if (cssObject instanceof CssRuleNoRuleList) {
+            return cssObject;
+        }
+        else if (cssObject instanceof CssStyleSheet) {
+            return cssObject;
+        }
+        else if (cssObject instanceof CSSStyleSheet) {
+            return mkCssStyleSheet(cssObject);
+        }
+        else {
+            let ctor = Reflect.getPrototypeOf(cssObject).constructor;
+
+            if (cssMakers.has(ctor)) {
+                return cssMakers.get(ctor)(cssObject);
+            }
+        }
+
+        return null;
+    }
 })();
