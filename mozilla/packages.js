@@ -261,22 +261,18 @@ singleton(class Packages {
 
             for (let rule of newStyleSheet) {
                 if (rule instanceof CssStyleRule) {
+
+                    console.log(rule.getSelectorArray());
+                //if (implementorof(rule, CssRules)) {
+
+                    /*
                     for (let property of rule.getStyle()) {
                         let value = rule.getStyle().getPropertyValue(property);
                         console.log(`${property} = ${value}`);
                     }
+                    */
                 }
             }
-
-            /*
-            newStyleSheet.getRules().enumerate().forEach(rule => {
-                if (rule.hasSelector()) {
-                    console.log(rule.getSelectorArray());
-                }
-
-                this
-            });
-            */
 
             styleElement.remove();
         }

@@ -61,6 +61,7 @@
         static namespaces = {};
         static initializers = [];
         static emitter = null;
+        static implementors = {};
 
         constructor(ns) {
             ns = typeof ns == 'string' ? ns : '';
@@ -81,52 +82,82 @@
 
                 this.ns = ns;
                 this.object = object;
-                this.object.define = (...args) => this.define(...args);
-                this.object.singleton = (...args) => this.singleton(...args);
+                this.object.define = (func, ...interfaces) => this.define(func, ...interfaces);
+                this.object.singleton = (clss) => this.singleton(clss);
+                this.object.interface = clss => this.interface(clss);
                 Namespace.namespaces[ns] = this;
             }
         }
 
-        define(...funcs) {
-            for (let func of funcs) {
-                if (typeof func == 'function') {
-                    if (func.name && func.name.length) {
-                        if (!(func.name in this.object)) {
-                            if (func.toString().startsWith('class')) {
-                                this.defineClass(func);
-                            }
-                            else {
-                                this.defineFunction(func);
-                            }
+        define(func, ...interfaces) {
+            if (typeof func == 'function') {
+                if (func.name && func.name.length) {
+                    if (!(func.name in this.object)) {
+                        if (func.toString().startsWith('class')) {
+                            this.defineClass(func, ...interfaces);
                         }
                         else {
-                            throwError(`Namespace.define(): Duplicate class or funciton name: "${func.name}"`);
+                            this.defineFunction(func);
                         }
                     }
                     else {
-                        throwError(`Namespace.define(): Unnamed function or class.`);
+                        throwError(`Namespace.define(): Duplicate class or funciton name: "${func.name}"`);
                     }
                 }
                 else {
-                    throwError(`Namespace.define(): Provided function argument is not of type "function".`);
+                    throwError(`Namespace.define(): Unnamed function or class.`);
                 }
+            }
+            else {
+                throwError(`Namespace.define(): Provided function argument is not of type "function".`);
             }
 
             return this;
         }
 
-        defineClass(clss) {
+        defineClass(clss, ...interfaces) {
             if (clss.name.match(/^[A-Z]/)) {
                 let makerName = `mk${clss.name}`;
 
                 this.object[makerName] = (...args) => {
-                    return Reflect.construct(clss, args);
+                    let object = Reflect.construct(clss, args);
+
+                    for (let iface of interfaces) {
+                        if (typeof iface.prototype.ctor == 'function') {
+                            Reflect.apply(iface.prototype.ctor, object, []);
+                        }
+                    }
+
+                    return object;
                 }
 
                 this.object[makerName]['#namespace'] = this.ns;
                 this.object[clss.name] = clss;
                 this.object[clss.name]['#namespace'] = this.ns;
                 this.object[clss.name]['#fqn'] = this.ns ? `${this.ns}.${clss.name}` : clss.name;
+
+                if (interfaces.length) {
+                    Namespace.implementors[this.object[clss.name]['#fqn']] = new WeakMap();
+
+                    for (let iface of interfaces) {
+                        if (ClassType.verify(iface) && iface['#interface']) {
+                            Namespace.implementors[this.object[clss.name]['#fqn']].set(iface, true);
+
+                            for (let methodName of Reflect.ownKeys(iface.prototype)) {
+                                let method = iface.prototype[methodName];
+
+                                if (typeof method == 'function') {
+                                    if (methodName != 'constructor') {
+                                        clss.prototype[methodName] = iface.prototype[methodName];
+                                    }
+                                }
+                            }
+                        }
+                        else {
+                            throw throwError(`Namespace.defineClass() "${clss['#fqn']}" invalid interface encountered.`);
+                        }
+                    }
+                }
 
                 for (let key of Reflect.ownKeys(clss)) {
                     if (key == 'init' && typeof clss[key] == 'function') {
@@ -221,6 +252,25 @@
             }
         }
 
+        interface(clss) {
+            if (typeof clss == 'function') {
+                if (clss.name.match(/^[A-Z]/)) {
+                    this.object[clss.name] = clss;
+                    this.object[clss.name]['#interface'] = true;
+                    this.object[clss.name]['#namespace'] = this.ns;
+                    this.object[clss.name]['#fqn'] = this.ns ? `${this.ns}.${clss.name}` : clss.name;
+                }
+                else {
+                    throw throwError(`Namespace.interface(), class name must start with an upper-case letter: ${clss.name}`);
+                }
+            }
+            else {
+                throw throwError(`Namespace.interface(), invalid parameter provided. Expectingh a class definition.`);
+            }
+
+            return this;
+        }
+
         static off(...args) {
             if (Namespace.emitter) {
                 Namespace.emitter.off(...args);
@@ -302,6 +352,41 @@
     globalThis.mkNamespace['#namespace'] = '';
     mkNamespace();
 })();
+
+
+/*****
+ * Core function that checks whether an object implements the specified
+ * interfaces.  The check simply checks that the prototype of the object
+ * has all of the functions in the specified interfaces.
+*****/
+define(function implementorof(object, ...interfaces) {
+    for (let interface of interfaces) {
+        if (typeof interface == 'function' && interface['#interface']) {
+            let implemented = false;
+
+            for (let ctor of Data.enumerateClassHierarchy(object)) {
+                let fqn = ctor['#fqn'];
+
+                if (fqn) {
+                    let implementor = Namespace.implementors[fqn];
+
+                    if (implementor) {
+                        if (implementor.has(interface)) {
+                            implemented = true;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!implemented) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+});
 
 
 /*****
