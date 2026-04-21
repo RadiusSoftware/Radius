@@ -23,56 +23,6 @@
 
 
 /*****
- * Our three major categories that we're searching for are phone, tablet, and
- * computer.  What we're really looking for is to distringuish between phone,
- * table, and computer.  Our approach is to find the phones and tablets after
- * which we assume everythiing else is a computer.
-*****/
-function assessUserAgent() {
-    let flags = { phone: false, tablet: false, computer: false };
-    let userAgent = Navigator.getUserAgent();
-    
-    if (userAgent.match(/iphone|pixel/i) != null) {
-        flags.phone = true;
-        return flags;
-    }
-    
-    if (userAgent.match(/ipad/i) != null) {
-        flags.tablet = true;
-        return flags;
-    }
-    
-    if (userAgent.match(/android/i) != null) {
-        if (userAgent.match(/moto|tablet/i) != null) {
-            flags.phone = true;
-            return flags;
-        }
-
-        if (userAgent.match(/U;|15E148|SM-X906C|YT-J706X|NRD90M|SGP771|SM-T827R4|SM-T550|KFTHWI|LG-V410/) != null) {
-            flags.tablet = true;
-            return flags;
-        }
-
-        flags.phone = true;
-        return flags;
-    }
-    
-    if (userAgent.match(/intel mac/i) != null) {
-        flags.computer = true;
-        return flags;
-    }
-    
-    if (userAgent.match(/macintosh/i) != null) {
-        flags.computer = true;
-        return flags;
-    }
-
-    flags.computer = true;
-    return flags;
-}
-
-
-/*****
  * This is the code that must be called upon loading and compiling the rest of
  * the Radius Mozilla framework.  This function initializes the HTML document,
  * finalizes the code, and manages the data connection to the Radius server.

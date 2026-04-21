@@ -40,32 +40,6 @@ singleton(class Packages {
         Doc.on('DOMContentLoaded', () => {
             this.styleElement = Doc.queryOne('#stylesheet');
             this.styleSheet = Doc.getStyleSheet();
-
-            const { phone, tablet, computer } = assessUserAgent();
-            define(function isPhone() { return phone; });
-            define(function isTablet() { return tablet; });
-            define(function isComputer() { return computer; });
-
-            let style = [];
-            style.push(`/* ${Navigator.getUserAgent()} */`);
-            style.push(`/* phone = ${phone} */`);
-            style.push(`/* tablet = ${tablet} */`);
-            style.push(`/* computer = ${computer} */`);
-
-            if (phone) {
-                style.push(`.micro { display: unset };`);
-                style.push(`.macro { display: none };`);
-            }
-            else if (tablet) {
-                style.push(`.micro { display: none };`);
-                style.push(`.macro { display: unset };`);
-            }
-            else {
-                style.push(`.micro { display: none };`);
-                style.push(`.macro { display: unset };`);
-            }
-
-            this.styleElement.setInnerHtml(style.join('\n'));
         });
     }
 
@@ -252,29 +226,10 @@ singleton(class Packages {
     registerStyleSheets(pkg) {
         let textNode = mkDocText(`\n/* Package Name "${pkg.name}" */`);
         this.styleElement.append(textNode);
-        
+
         for (let styleSheet of pkg.styleSheets) {
-            let styleElement = createElementFromOuterHtml(`<style>\n${styleSheet}\n</style>`);
-            Doc.getHead().append(styleElement);
-            let styleSheets = Doc.getStyleSheets();
-            let newStyleSheet = styleSheets[styleSheets.length - 1];
-
-            for (let rule of newStyleSheet) {
-                if (rule instanceof CssStyleRule) {
-
-                    console.log(rule.getSelectorArray());
-                //if (implementorof(rule, CssRules)) {
-
-                    /*
-                    for (let property of rule.getStyle()) {
-                        let value = rule.getStyle().getPropertyValue(property);
-                        console.log(`${property} = ${value}`);
-                    }
-                    */
-                }
-            }
-
-            styleElement.remove();
+            let styleText = mkDocText(styleSheet + '\n');
+            this.styleElement.append(styleText);
         }
     }
 

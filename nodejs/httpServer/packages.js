@@ -626,24 +626,6 @@ define(class Package {
                     
                     widget.innerHtml = this.substituteMarkers(childElement.getInnerHtml().trim());
                 }
-                // *********************************************************
-                // *********************************************************
-                // *********************************************************
-                // *********************************************************
-                /*
-                else if (tagName == 'style') {
-                    let innerHtml = childElement.getInnerHtml();
-                    let matches = [...innerHtml.matchAll(/\[design=([a-zA-Z0-9-_]+)\]/g)];
-
-                    for (let match of matches) {
-                        let styleCode = `${widget.tagName}-${match[1]}`;
-                        innerHtml = innerHtml.replace(match[0], `[design=${styleCode}]`)
-                    }
-
-                    innerHtml = innerHtml.replaceAll('[self]', `[design=${widget.tagName}-self]`);
-                    widget.style = this.scrubStyleText(innerHtml);
-                }
-                */
             }
 
             this.mozilla.widgets[widget.tagName] = widget;

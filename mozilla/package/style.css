@@ -4,6 +4,7 @@
     --border-radius-2: 12px;
     --radio-radius: 32px;
 }
+
 @media (prefers-color-scheme: light) {
     :root {
         --background-color: white;
@@ -43,6 +44,7 @@
         --value-string-color: green;
     }
 }
+
 @media (prefers-color-scheme: dark) {
     :root {
         --background-color: rgb(10, 10, 10);
@@ -82,12 +84,74 @@
         --value-string-color: lime;
     }
 }
+
+@media (max-width: 480px) {
+    .phone {
+        display: unset;
+    }
+    .tablet {
+        display: none;
+    }
+    .medium {
+        display: none;
+    }
+    .large {
+        display: none;
+    }
+}
+
+@media (480px <= width <= 768px) {
+    .phone {
+        display: none;
+    }
+    .tablet {
+        display: unset;
+    }
+    .medium {
+        display: none;
+    }
+    .large {
+        display: none;
+    }
+}
+
+@media (768px <= width <= 1024px) {
+    .phone {
+        display: none;
+    }
+    .tablet {
+        display: none;
+    }
+    .medium {
+        display: unset;
+    }
+    .large {
+        display: none;
+    }
+}
+
+@media (min-width: 1024px) {
+    .phone {
+        display: none;
+    }
+    .tablet {
+        display: none;
+    }
+    .medium {
+        display: none;
+    }
+    .large {
+        display: unset;
+    }
+}
+
 html {
     width: 100vw;
     height: 100vh;
     padding: 0px;
     box-sizing: border-box;
 }
+
 body {
     width: 100%;
     height: 100%;
@@ -97,4 +161,300 @@ body {
     font-size: 16px;
     color: var(--color);
     background-color: var(--background-color);
+}
+
+.h1 {
+    font-size: 20px;
+    font-weight: bold;
+    color: var(--label-color);
+    margin-top: 12px;
+    margin-bottom: 12px;
+}
+
+.h2 {
+    font-size: 20px;
+    font-weight: bold;
+    margin-top: 12px;
+    margin-bottom: 8px;
+}
+
+.h3 {
+    font-size: 17px;
+    font-weight: bold;
+    margin-top: 8px;
+    margin-bottom: 6px;
+}
+
+.h4 {
+    font-size: 17px;
+    font-weight: bold;
+    margin-top: 8px;
+    margin-bottom: 4px;
+}
+
+.h5 {
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 8px;
+    margin-bottom: 4px;
+}
+
+.input-widget-button {
+    height: 48px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    border-color: var(--border-color);
+    border-width: 1px;
+    border-style: solid;
+    border-radius: var(--border-radius-1);
+    outline: none;
+    color: var(--button-color);
+    background-color: var(--button-background-color);
+    font-size: 16px;
+    cursor: pointer;
+    transition-property: background-color;
+    transition-duration: .5s;
+
+    &:focus {
+        color: var(--hover-color);
+        border-color: var(--hover-border-color);
+        outline-color: var(--hover-border-color);
+        outline-style: solid;
+        outline-width: 3px;
+    }
+
+    &:hover {
+        color: var(--hover-color);
+        background-color: var(--button-hover-background-color);
+    }
+    
+    &:disabled {
+        color: var(--hover-color);
+        background-color: var(--disabled-button-color);
+        cursor: default;
+    }
+}
+
+.input-widget-checkbox {
+    appearance: none;
+    width: 32px;
+    height: 32px;
+    margin: 0px;
+    padding: 0px;
+    background-color: var(--label-background-color);
+    border-color: var(--faint-border-color);
+    border-width: 1px;
+    border-style: solid;
+    border-radius: var(--border-radius-1);
+    cursor: pointer;
+
+    &::after {
+        margin-left: 4px;
+        margin-bottom: 4px;
+        content: "✓";
+        font-size: 28px;
+        font-family: Arial, Helvetica, sans-serif;
+        color: var(--label-background-color);
+
+    }
+
+    &:checked::after {
+        margin-left: 4px;
+        margin-bottom: 4px;
+        content: "✓";
+        font-size: 28px;
+        font-family: Arial, Helvetica, sans-serif;
+        color: var(--checked-color);
+    }
+
+    &:hover {
+        outline-color: var(--hover-border-color);
+        outline-style: solid;
+        outline-width: 3px;
+    }
+
+    &:focus {
+        outline-color: var(--hover-border-color);
+        outline-style: solid;
+        outline-width: 3px;
+    }
+
+    &:disabled {
+        opacity: .4;
+        cursor: default;
+    }
+}
+
+.input-widget-essay {
+    margin-top: 6px;
+    margin-bottom: 6px;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    border-color: var(--border-color);
+    border-width: 1px;
+    border-style: solid;
+    border-radius: var(--border-radius-1);
+    outline: none;
+    color: var(--color);
+    background-color: var(--textarea-background-color);
+
+    &:focus {
+        border-color: var(--hover-border-color);
+        outline-color: var(--hover-border-color);
+        outline-style: solid;
+        outline-width: 3px;
+        color: var(--hover-color);
+        background-color: var(--hover-background-color);
+    }
+
+    &:hover {
+        color: var(--hover-color);
+        background-color: var(--hover-background-color);
+    }
+
+    &:invalid {
+        border-color: var(--error-color);
+        outline-color: var(--error-color);
+    }
+}
+.input-widget-input {
+    display: flex;
+    align-items: center;
+    height: 40px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+    margin-left: 0px;
+    margin-right: 0px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    border-style: solid;
+    border-color: var(--border-color);
+    border-width: 1px;
+    border-radius: var(--border-radius-1);
+    font-size: 16px;
+    color: var(--color);
+    background-color: var(--background-color);
+    outline: none;
+
+    &:-webkit-autofill {
+        -webkit-text-fill-color: var(--color);
+        box-shadow: 0 0 0 30px var(--background-color) inset !important;
+        -webkit-box-shadow: 0 0 0 30px var(--background-color) inset !important;
+
+    }
+
+    &:focus {
+        border-color: var(--hover-border-color);
+        outline-color: var(--hover-border-color);
+        outline-style: solid;
+        outline-width: 3px;
+        color: var(--button-color);
+        background-color: var(--background-color);
+    }
+
+    &:hover {
+        -webkit-text-fill-color: var(--hover-color);
+        box-shadow: 0 0 0 30px var(--hover-background-color) inset !important;
+        -webkit-box-shadow: 0 0 0 30px var(--hover-background-color) inset !important;
+
+    }
+
+    &:invalid {
+        border-color: var(--error-color);
+        outline-color: var(--error-color);
+    }
+}
+
+input-widget-radio {
+    appearance: none;
+    content: "";
+    width: var(--radio-radius);
+    height: var(--radio-radius);
+    margin-left: 6px;
+    margin-right: 8px;
+    padding: 0px;
+    background-color: var(--label-background-color);
+    border-color: var(--faint-border-color);
+    border-width: 1px;
+    border-style: solid;
+    border-radius:  var(--radio-radius);
+    cursor: pointer;
+
+    &::after {
+        margin-left: 4px;
+        margin-bottom: 4px;
+        content: "✓";
+        font-size: 26px;
+        font-family: Arial, Helvetica, sans-serif;
+        color: var(--label-background-color);
+
+    }
+    
+    &:checked::after {
+        margin-left: 4px;
+        margin-bottom: 4px;
+        content: "✓";
+        font-size: 26px;
+        font-family: Arial, Helvetica, sans-serif;
+        color: var(--checked-color);
+    }
+
+    &:hover {
+        outline-color: var(--hover-border-color);
+        outline-style: solid;
+        outline-width: 3px;
+    }
+
+    &:focus {
+        outline-color: var(--hover-border-color);
+        outline-style: solid;
+        outline-width: 3px;
+    }
+
+    &:disabled {
+        opacity: .4;
+        cursor: default;
+    }
+}
+
+.input-widget-radio-div {
+    margin-top: 6px;
+    margin-bottom: 6px;
+}
+
+.input-widget-radio-fieldset {
+    margin-top: 6px;
+    margin-bottom: 6px;
+    border-color: var(--border-color);
+    border-width: 1px;
+    border-style: solid;
+    border-radius: var(--border-radius-2);
+}
+
+.input-widget-radio-legend {
+    font-size: 14px;
+}
+
+.input-widget-width-narrow {
+    width: 100px;
+    margin-left: 12px;
+    margin-right: 12px;
+}
+
+.input-widget-width-medium {
+    width: 140px;
+    margin-left: 12px;
+    margin-right: 12px;
+}
+
+.input-widget-width-wide {
+    width: 160px;
+    margin-left: 12px;
+    margin-right: 12px;
 }

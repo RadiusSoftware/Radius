@@ -27,6 +27,7 @@
                 buildOptions() {
                     let options = [];
 
+                    /*
                     if (this.getRdsOptionsKey) {
                         let opts = this.getControllerValue(this.getRdsOptionsKey());
                         
@@ -70,20 +71,21 @@
                             options.push({ value: value, text: opts[value] });
                         }
                     }
+                    */
 
                     return options;
                 }
 
                 createFieldSet(attributes) {
-                    let attrs = this.filterAttributes('design', 'type', 'rds-bind', 'rds-disabled');
-                    attrs.design = 'input-widget-radio-fieldset';
+                    let attrs = this.filterAttributes('type', 'class', 'rds-bind', 'rds-disabled');
+                    attrs.class = `input-widget-radio-fieldset ${attrs.class}`;
                     let fieldset = createElement('fieldset', attrs);
                     let options = this.buildOptions();
 
                     attrs = {
                         type: 'radio',
                         name: 'UNSPECIFIED',
-                        design: 'input-widget-radio',
+                        class: 'input-widget-radio',
                     };
 
                     if (this.getRdsBind) {
@@ -119,7 +121,7 @@
                                 createElement('input', attrs),
                                 mkHtmlElement('label', {
                                     for: attrs.id,
-                                    design: 'input-widget-radio-label',
+                                    design: 'input-widget-radio-legend',
                                 })
                                 .setInnerHtml(option.text),
                             )
@@ -242,27 +244,27 @@
 
                         if (InputWidget.stdInputTypes.has(type)) {
                             attributes.type = type;
-                            attributes.design = 'input-widget-input';
+                            attributes.design = `input-widget-input ${attributes.class}`;
                             editor = createElement('input', attributes);
                         }
                         else if (type in { button:0, submit:0 }) {
                             attributes.type = type;
-                            attributes.design = 'input-widget-button';
+                            attributes.class = `input-widget-button ${attributes.class}`;
                             editor = createElement('input', attributes);
                         }
-                        /*
                         else if (type == 'checkbox') {
                             attributes.type = type;
-                            attributes.design = 'input-widget-checkbox';
+                            attributes.class = `input-widget-checkbox ${attributes.class}`;
                             editor = createElement('input', attributes);
                         }
                         else if (type == 'essay') {
-                            attributes.design = 'input-widget-essay';
+                            attributes.class = `input-widget-essay ${attributes.class}`;
                             editor = createElement('textarea', attributes);
                         }
                         else if (type == 'fieldset') {
                             editor = this.createFieldSet(attributes);
                         }
+                        /*
                         else if (type == 'select') {
                             editor = this.createSelect(attributes);
                             editor.once('focusin', message => InputWidget.layoutSelect(editor));
@@ -315,223 +317,6 @@
             }
         </script>
         <style>
-            [design=button] {
-                height: 48px;
-                margin-top: 6px;
-                margin-bottom: 6px;
-                padding-left: 4px;
-                padding-right: 4px;
-                padding-top: 6px;
-                padding-bottom: 6px;
-                border-color: var(--border-color);
-                border-width: 1px;
-                border-style: solid;
-                border-radius: var(--border-radius-1);
-                outline: none;
-                color: var(--button-color);
-                background-color: var(--button-background-color);
-                font-size: 16px;
-                cursor: pointer;
-                transition-property: background-color;
-                transition-duration: .5s;
-            }
-            [design=button]:focus {
-                color: var(--hover-color);
-                border-color: var(--hover-border-color);
-                outline-color: var(--hover-border-color);
-                outline-style: solid;
-                outline-width: 3px;
-            }
-            [design=button]:hover {
-                color: var(--hover-color);
-                background-color: var(--button-hover-background-color);
-            }
-            [design=button]:disabled {
-                color: var(--hover-color);
-                background-color: var(--disabled-button-color);
-                cursor: default;
-            }
-            [design=checkbox] {
-                appearance: none;
-                width: 32px;
-                height: 32px;
-                margin: 0px;
-                padding: 0px;
-                background-color: var(--label-background-color);
-                border-color: var(--faint-border-color);
-                border-width: 1px;
-                border-style: solid;
-                border-radius: var(--border-radius-1);
-                cursor: pointer;
-
-            }
-            [design=checkbox]::after {
-                margin-left: 4px;
-                margin-bottom: 4px;
-                content: "✓";
-                font-size: 28px;
-                font-family: Arial, Helvetica, sans-serif;
-                color: var(--label-background-color);
-
-            }
-            [design=checkbox]:checked::after {
-                margin-left: 4px;
-                margin-bottom: 4px;
-                content: "✓";
-                font-size: 28px;
-                font-family: Arial, Helvetica, sans-serif;
-                color: var(--checked-color);
-            }
-            [design=checkbox]:hover {
-                outline-color: var(--hover-border-color);
-                outline-style: solid;
-                outline-width: 3px;
-            }
-            [design=checkbox]:focus {
-                outline-color: var(--hover-border-color);
-                outline-style: solid;
-                outline-width: 3px;
-            }
-            [design=checkbox]:disabled {
-                opacity: .4;
-                cursor: default;
-            }
-            [design=essay] {
-                margin-top: 6px;
-                margin-bottom: 6px;
-                padding-left: 4px;
-                padding-right: 4px;
-                padding-top: 6px;
-                padding-bottom: 6px;
-                border-color: var(--border-color);
-                border-width: 1px;
-                border-style: solid;
-                border-radius: var(--border-radius-1);
-                outline: none;
-                color: var(--color);
-                background-color: var(--textarea-background-color);
-            }
-            [design=essay]:focus {
-                border-color: var(--hover-border-color);
-                outline-color: var(--hover-border-color);
-                outline-style: solid;
-                outline-width: 3px;
-                color: var(--hover-color);
-                background-color: var(--hover-background-color);
-            }
-            [design=essay]:hover {
-                color: var(--hover-color);
-                background-color: var(--hover-background-color);
-            }
-            [design=essay]:invalid {
-                border-color: var(--error-color);
-                outline-color: var(--error-color);
-            }
-            [design=input] {
-                display: flex;
-                align-items: center;
-                height: 40px;
-                margin-top: 6px;
-                margin-bottom: 6px;
-                margin-left: 0px;
-                margin-right: 0px;
-                padding-top: 4px;
-                padding-bottom: 4px;
-                border-style: solid;
-                border-color: var(--border-color);
-                border-width: 1px;
-                border-radius: var(--border-radius-1);
-                font-size: 16px;
-                color: var(--color);
-                background-color: var(--background-color);
-                outline: none;
-            }
-            [design=input]:-webkit-autofill {
-                -webkit-text-fill-color: var(--color);
-                box-shadow: 0 0 0 30px var(--background-color) inset !important;
-                -webkit-box-shadow: 0 0 0 30px var(--background-color) inset !important;
-
-            }
-            [design=input]:focus {
-                border-color: var(--hover-border-color);
-                outline-color: var(--hover-border-color);
-                outline-style: solid;
-                outline-width: 3px;
-                color: var(--button-color);
-                background-color: var(--background-color);
-            }
-            [design=input]:hover {
-                -webkit-text-fill-color: var(--hover-color);
-                box-shadow: 0 0 0 30px var(--hover-background-color) inset !important;
-                -webkit-box-shadow: 0 0 0 30px var(--hover-background-color) inset !important;
-
-            }
-            [design=input]:invalid {
-                border-color: var(--error-color);
-                outline-color: var(--error-color);
-            }
-            [design=radio] {
-                appearance: none;
-                content: "";
-                width: var(--radio-radius);
-                height: var(--radio-radius);
-                margin-left: 6px;
-                margin-right: 8px;
-                padding: 0px;
-                background-color: var(--label-background-color);
-                border-color: var(--faint-border-color);
-                border-width: 1px;
-                border-style: solid;
-                border-radius:  var(--radio-radius);
-                cursor: pointer;
-
-            }
-            [design=radio]::after {
-                margin-left: 4px;
-                margin-bottom: 4px;
-                content: "✓";
-                font-size: 26px;
-                font-family: Arial, Helvetica, sans-serif;
-                color: var(--label-background-color);
-
-            }
-            [design=radio]:checked::after {
-                margin-left: 4px;
-                margin-bottom: 4px;
-                content: "✓";
-                font-size: 26px;
-                font-family: Arial, Helvetica, sans-serif;
-                color: var(--checked-color);
-            }
-            [design=radio]:hover {
-                outline-color: var(--hover-border-color);
-                outline-style: solid;
-                outline-width: 3px;
-            }
-            [design=radio]:focus {
-                outline-color: var(--hover-border-color);
-                outline-style: solid;
-                outline-width: 3px;
-            }
-            [design=radio]:disabled {
-                opacity: .4;
-                cursor: default;
-            }
-            [design=radio-div] {
-                margin-top: 6px;
-                margin-bottom: 6px;
-            }
-            [design=radio-fieldset] {
-                margin-top: 6px;
-                margin-bottom: 6px;
-                border-color: var(--border-color);
-                border-width: 1px;
-                border-style: solid;
-                border-radius: var(--border-radius-2);
-            }
-            [design=radio-lengnd] {
-                font-size: 14px;
-            }
             [design=select] {
                 display: flex;
                 align-items: center;
