@@ -10,6 +10,8 @@
         <script>
             class CookieAcceptorApp extends Widget {
                 init() {
+                    super.init();
+
                     let shape = mkRdsShape({
                         first: StringType,
                         _second: [ BooleanType ],

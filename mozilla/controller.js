@@ -215,10 +215,8 @@ singleton(class Controller extends Emitter {
             docNode.init();
             this.nodes.set(docNode, {});
             
-            if (docNode.replacement instanceof DocNode) {
-                // ****************************************************** TRANSFER PROPERTIES TO REPLACEMENY
-                // this.nodes.set(docNode.replacement, {});
-                docNode.replace(docNode.replacement);
+            if (docNode.hasReplacement()) {
+                docNode.replace(docNode.getReplacement());
             }
         }
     }

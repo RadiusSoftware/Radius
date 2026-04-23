@@ -46,7 +46,8 @@ singleton(class Packages {
     getFragment(fragmentId) {
         if (fragmentId in this.fragments) {
             let innerHtml = this.fragments[fragmentId];
-            return createElementFromOuterHtml(innerHtml);
+            let nodes = createElementFromOuterHtml(innerHtml);
+            return Array.isArray(nodes) ? nodes : [ nodes ];
         }
 
         return mkHtmlElement('div');

@@ -121,37 +121,13 @@ define(class Widget extends HtmlElement {
         super(arg);
         this.widgetData = globalThis[widgetDataKey];
         delete globalThis[widgetDataKey];
-        this.innerElements = this.getChildElements();
         
         if (this.widgetData.innerHtml) {
             this.setInnerHtml(this.widgetData.innerHtml);
         }
     }
 
-    getInnerElementCount() {
-        return this.innerElements.length;
-    }
-
-    getInnerElementAt(index) {
-        return this.innerElements[index];
-    }
-
-    getInnerElements() {
-        return Data.copy(this.innerElements);
-    }
-
     getPackage() {
         return this.widgetData.package;
-    }
-
-    hasInnerElements() {
-        return this.innerElements.length > 0;
-    }
-
-    init() {
-        super.init();
-        // ******************************************************************************************
-        // ******************************************************************************************
-        // ******************************************************************************************
     }
 });

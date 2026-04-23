@@ -415,6 +415,10 @@ define(class DocNode extends Emitter {
     getProperty(name) {
         return this.node[name];
     }
+
+    getReplacement() {
+        return this.replacement;
+    }
     
     getSiblingNext() {
         if (this.node.nextSibling) {
@@ -456,6 +460,10 @@ define(class DocNode extends Emitter {
 
     hasProperty(name) {
         return name in this.node;
+    }
+
+    hasReplacement() {
+        return this.replacement instanceof DocElement;
     }
 
     init() {
@@ -1161,13 +1169,14 @@ define(class DocElement extends DocNode {
     init() {
         super.init();
 
-        if (this.getRdsFragment) {
-            let fragment = Packages.getFragment(this.getRdsFragment());
-            this.append(fragment);
-        }
-
         if (this.getRdsDynamicSize) {
             this.setDynamicSize();
+        }
+
+        if (this.getRdsFragment) {
+            this.clear();
+            let fragment = Packages.getFragment(this.getRdsFragment());
+            this.append(fragment);
         }
     }
 
