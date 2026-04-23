@@ -370,12 +370,23 @@ singleton(class Data {
             let value = obj;
 
             for (let key of RdsText.split(dotted, '.')) {
-                if (!ObjectType.verify(value)) {
-                    return undefined;
-                }
+                if (ArrayType.verify(value)) {
+                    let index = parseInt(key);
 
-                if (key in value) {
-                    value = value[key];
+                    if (index in value) {
+                        value = value[index];
+                    }
+                    else {
+                        return undefined;
+                    }
+                }
+                else if (ObjectType.verify(value)) {
+                    if (key in value) {
+                        value = value[key];
+                    }
+                    else {
+                        return undefined;
+                    }
                 }
                 else {
                     return undefined;
@@ -404,12 +415,23 @@ singleton(class Data {
             let value = obj;
 
             for (let key of RdsText.split(dotted, '.')) {
-                if (!ObjectType.verify(value)) {
-                    return false;
-                }
+                if (ArrayType.verify(value)) {
+                    let index = parseInt(key);
 
-                if (key in value) {
-                    value = value[key];
+                    if (index in value) {
+                        value = value[index];
+                    }
+                    else {
+                        return false;
+                    }
+                }
+                else if (ObjectType.verify(value)) {
+                    if (key in value) {
+                        value = value[key];
+                    }
+                    else {
+                        return false;
+                    }
                 }
                 else {
                     return false;
@@ -457,14 +479,31 @@ singleton(class Data {
                 let segment = segments[i];
 
                 if (i == segments.length - 1) {
-                    object[segment] = value;
+                    if (ArrayType.verify(object)) {
+                        object[parseInt(segment)] = value;
+                    }
+                    else if (ObjectType.verify(object)) {
+                        object[segment] = value;
+                    }
                 }
                 else {
-                    if (!ObjectType.verify(object[segment])) {
-                        object[segment] = new Object();
+                    let index = parseInt(segment);
+                    
+                    if (!ObjectType.verify(object)) {
+                        if (index.toString() == segment) {
+                            object[index] = new Object();
+                        }
+                        else {
+                            object[segment] = new Object();
+                        }
                     }
 
-                    object = object[segment];
+                    if (index.toString() == segment) {
+                        object = object[index];
+                    }
+                    else {
+                        object = object[segment];
+                    }
                 }
             }
         }

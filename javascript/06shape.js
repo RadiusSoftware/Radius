@@ -46,7 +46,7 @@ define(class RdsShape {
             }
             else if (ArrayType.verify(arg)) {
                 this.type = ArrayType;
-                this.vals = arg.map(el => mkRdsShape(el));
+                this.clss = mkRdsShape(arg[0]);
             }
             else if (ClassType.verify(arg)) {
                 this.type = ClassType;
@@ -81,7 +81,6 @@ define(class RdsShape {
         obj.enum ? shape.enum = obj.enum : null;
         obj.expr ? shape.expr = obj.expr : null;
         obj.keys ? shape.keys = obj.keys : null;
-        obj.vals ? shape.vals = obj.vals : null;
         return shape;
     }
 
@@ -90,8 +89,20 @@ define(class RdsShape {
         let keys = RdsText.split(dotted, '.');
         
         for (let key of keys) {
-            if (shape.type === ObjectType && key in shape.keys) {
-                shape = shape.keys[key];
+            if (shape.type === ObjectType) {
+                if (key in shape.keys) {
+                    shape = shape.keys[key];
+                }
+                else if (`_${key}` in shape.keys) {
+                    shape = shape.keys[`_${key}`];
+                }
+                else {
+                    shape = null;
+                    break;
+                }
+            }
+            else if (shape.type == ArrayType) {
+                shape = shape.clss;
             }
             else {
                 shape = null;
@@ -104,7 +115,7 @@ define(class RdsShape {
 
     getDefault() {
         if (this.type === ArrayType) {
-            return this.vals.map(val => val.getDefault());
+            return [ this.clss.getDefault() ];
         }
         else if (this.type == ObjectType) {
             let value = {};
@@ -188,16 +199,7 @@ define(class RdsShape {
         }
 
         for (let arrayElement of value) {
-            let ok = false;
-
-            for (let shape of this.vals) {
-                if (shape.verify(arrayElement)) {
-                    ok = true;
-                    break;
-                }
-            }
-
-            if (!ok) {
+            if (!this.clss.verify(arrayElement)) {
                 return false;
             }
         }

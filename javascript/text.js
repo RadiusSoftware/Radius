@@ -23,6 +23,44 @@
 
 singleton(class RdsText {
     /*****
+     * Smart append function that only appends if there's something to append.
+    *****/
+    concat(value1, value2, separator) {
+        if (value1 === undefined || value1 === null) {
+            var str1 = '';
+        }
+        else {
+            var str1 = value1.toString();
+        }
+        
+        if (value2 === undefined || value2 === null) {
+            var str2 = '';
+        }
+        else {
+            var str2 = value2.toString();
+        }
+
+        if (str1) {
+            if (str2) {
+                if (typeof separator == 'string') {
+                    return `${str1}${separator}${str2}`;
+                }
+                else {
+                    return `${str1} ${str2}`;
+                }
+            }
+            else {
+                return str1;
+            }
+        }
+        else if (str2) {
+            return str2;
+        }
+
+        return '';
+    }
+
+    /*****
      * This extends the disinfectString() utility method to recursively ensure
      * that all strings within an object tree are properly disinfected.  See the
      * disinfectString() for additional information regarding the string clean

@@ -244,23 +244,24 @@
 
                         if (InputWidget.stdInputTypes.has(type)) {
                             attributes.type = type;
-                            attributes.design = `input-widget-input ${attributes.class}`;
+                            attributes.class = RdsText.concat('input-widget-input', attributes.class);
                             editor = createElement('input', attributes);
                         }
                         else if (type in { button:0, submit:0 }) {
                             attributes.type = type;
-                            attributes.class = `input-widget-button ${attributes.class}`;
+                            attributes.class = RdsText.concat('input-widget-button', attributes.class);
                             editor = createElement('input', attributes);
                         }
                         else if (type == 'checkbox') {
                             attributes.type = type;
-                            attributes.class = `input-widget-checkbox ${attributes.class}`;
+                            attributes.class = RdsText.concat('input-widget-checkbox', attributes.class);
                             editor = createElement('input', attributes);
                         }
                         else if (type == 'essay') {
-                            attributes.class = `input-widget-essay ${attributes.class}`;
+                            attributes.class = RdsText.concat('input-widget-essay', attributes.class);
                             editor = createElement('textarea', attributes);
                         }
+                        /*
                         else if (type == 'fieldset') {
                             editor = this.createFieldSet(attributes);
                         }
@@ -283,7 +284,8 @@
                         }
                         */
 
-                        this.replace(editor);
+                        //this.replace(editor);
+                        return editor;
                     }
                 }
 
@@ -444,6 +446,17 @@
     <widget tagname="file-widget">
         <script>
             class FileWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+            }
+        </script>
+    </widget>
+    -->
+    <!--
+    <widget tagname="form-widget">
+        <script>
+            class FormWidget extends Widget {
                 constructor(arg) {
                     super(arg);
                 }

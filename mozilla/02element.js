@@ -1161,14 +1161,6 @@ define(class DocElement extends DocNode {
     init() {
         super.init();
 
-        if (this.getRdsTransition) {
-            this.setTransition(this.getRdsTransition())
-        }
-
-        if (this.getRdsStyleTrigger) {
-            this.setStyleTrigger(this.getRdsStyleTrigger());
-        }
-
         if (this.getRdsFragment) {
             let fragment = Packages.getFragment(this.getRdsFragment());
             this.append(fragment);
@@ -1423,48 +1415,6 @@ define(class DocElement extends DocNode {
             this.node.style[arg] = value;
         }
 
-        return this;
-    }
-
-    setStyleTrigger(value) {
-        let style0 = {};
-        let style1 = {};
-        let properties = RdsText.parseAttributeEncoded(value);
-
-        for (let key in properties) {
-            let [ value0, value1 ] = RdsText.split(properties[key], ',');
-            style0[key] = value0;
-            style1[key] = value1;
-        }
-
-        this.setStyle(style0);
-        setTimeout(() => this.setStyle(style1), 20);
-        return this;
-    }
-
-    setTransition(value) {
-        let properties = RdsText.parseAttributeEncoded(value);
-        let transition = {};
-
-        for (let key in properties) {
-            if (key == 'behavior') {
-                transition['transition-behavior'] = properties[key];
-            }
-            else if (key == 'delay') {
-                transition['transition-delay'] = properties[key];
-            }
-            else if (key == 'duration') {
-                transition['transition-duration'] = properties[key];
-            }
-            else if (key == 'property') {
-                transition['transition-property'] = properties[key];
-            }
-            else if (key == 'timing') {
-                transition['transition-timing-function'] = properties[key];
-            }
-        }
-
-        this.setStyle(transition);
         return this;
     }
 

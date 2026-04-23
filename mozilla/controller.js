@@ -32,24 +32,22 @@ singleton(class Controller extends Emitter {
     constructor() {
         super();
         this.data = {};
-        this.bound = {};
         this.shapes = {};
+        this.bindings = {};
         this.initialized = new WeakMap();
     }
 
-    bind(docElement, arg) {
-        let { expr, dependencies } = evalExpression(arg);
-        
-        if (docElement instanceof DocElement) {
-            if (docElement.getTagName() in { input:0, select:0, textarea:0 }) {
-                // entangle input
-            }
-            else {
-                // entangle inner
-            }
-        }
+    bind(dotted) {
+        let binding = this.bindings[dotted];
 
-        return this;
+        if (!binding) {
+            binding = {
+                dotted: dotted,
+                expressions: [],
+            };
+
+            this.bindings[dotted] = binding;
+        }
     }
 
     bindAttribute(docElement, attributeName, expr) {
@@ -62,6 +60,25 @@ singleton(class Controller extends Emitter {
         // TODO ************************************************************************
     }
 
+    bindElement(docElement, expr) {
+        return;
+        // TODO ************************************************************************
+        // TODO ************************************************************************
+        for (let dependency of expr.getDependencies()) {
+            if (dependency.type == 'controller') {
+                console.log(dependency);
+                if (docElement.getTagName() in { input:0, select:0, textarea:0 }) {
+                    // entangle input
+                }
+                else {
+                    // entangle inner
+                }
+            }
+        }
+
+        return this;
+    }
+
     bindFunction(func, expr) {
         // TODO ************************************************************************
         // TODO ************************************************************************
@@ -72,8 +89,14 @@ singleton(class Controller extends Emitter {
         // TODO ************************************************************************
     }
 
-    /*
+    bindProperty(docElement, property, expr) {
+        // TODO ************************************************************************
+        // TODO ************************************************************************
+    }
+
     delete(dotted) {
+        // TODO ************************************************************************
+        // TODO ************************************************************************
         if (Data.has(this.data, dotted)) {
             let value = Data.get(this.data, dotted);
             Data.delete(this.data, dotted);
@@ -88,11 +111,14 @@ singleton(class Controller extends Emitter {
 
         return this;
     }
-    */
 
     define(key, shape, value) {
         if (key in this.data) {
             throwError(`Controller key "${key}" is already defined.`);
+        }
+
+        if (key.indexOf('.') >= 0) {
+            throwError(`Controller key "${key}" must be a simple string, not a dotted value.`);
         }
 
         if (shape instanceof RdsShape) {
@@ -109,18 +135,6 @@ singleton(class Controller extends Emitter {
         this.shapes[key] = rdsShape;
         this.set(key, value);
         return this;
-    }
-
-    evalExpression(value) {
-        if (StringType.verify(value)) {
-            var expr = mkControllerExpr(value);
-        }
-        else {
-            var expr = wrapExpressionOperand(value);
-        }
-
-        let dependencies = expr
-        return { expr: expr, dependencies: dependencies };
     }
 
     get(dotted) {
@@ -146,24 +160,19 @@ singleton(class Controller extends Emitter {
         return Data.has(this.data, dotted);
     }
 
-    initNode(docNode) {
+    async initNode(docNode) {
+        // TODO ************************************************************************
+        // TODO ************************************************************************
         if (!this.initialized.has(docNode)) {
             this.initialized.set(docNode, true);
             Packages.processNode(docNode);
 
             if (docNode instanceof DocElement) {
-                if (docNode.getRdsDefine) {
-                    for (let entry of RdsText.parseAttributeEncoded(docNode.getRdsDefine())) {
-                        let [ dotted, string ] = entry;
-                        let value = Tunnel.pop(string);
-                        this.set(dotted, value);
-                    }
-                }
-                
                 if (docNode.getRdsBind) {
-                    this.bind(docNode, docNode.getRdsBind());
+                    this.bindElement(docNode, mkControllerExpr(docNode.getRdsBind()));
                 }
 
+                /*
                 if (docNode.getRdsBindAttr) {
                     let [ dotted, attrName ] = docNode.getRdsBindAttr().split(',');
                     this.bindAttribute(docNode, attrName, dotted);
@@ -179,15 +188,18 @@ singleton(class Controller extends Emitter {
                     this.bindMethod(docNode, methodName, dotted);
                 }
 
-                if (docNode.getRdsSet) {
-                    for (let entry of Object.entries(RdsText.parseAttributeEncoded(docNode.getRdsSet()))) {
-                        let [ dotted, string ] = entry;
-                        let value = Tunnel.pop(string);
-                        this.set(dotted, value);
-                    }
+                if (docNode.getRdsBindProperty) {
+                    let [ dotted, property ] = docNode.getRdsBindProperty().split(',');
+                    this.bindProperty(docNode, property, dotted);
                 }
+                */
 
-                docNode.init();
+                let docElement = await wait(docNode.init());
+                
+                if (docElement) {
+                    docNode.replace(docElement);
+                    this.initialized.set(docElement, true);
+                }
             }
         }
     }
@@ -199,7 +211,7 @@ singleton(class Controller extends Emitter {
             if (shape.verify(newValue)) {
                 let oldValue = Data.get(this.data, dotted);
 
-                if (Data.ne(oldValue, newValue)) {
+                if (Data.eq(oldValue, newValue)) {
                     this.emit({
                         name: 'SetNoChange',
                         dotted: dotted,
@@ -224,14 +236,18 @@ singleton(class Controller extends Emitter {
     }
 
     updated(dotted, oldValue, newValue) {
-        let entanglements = this.bound[dotted];
+        // TODO ************************************************************************
+        // TODO ************************************************************************
+        /*
+        let bindings = this.bindings[dotted];
 
-        if (entanglements) {
-            for (let entanglement of entanglements) {
+        if (bindings) {
+            for (let binding of bindings) {
                 entanglement.broadcast(dotted);
             }
         }
-
+        */
+        
         this.emit({
             name: 'Set',
             dotted: dotted,
@@ -250,13 +266,13 @@ singleton(class Controller extends Emitter {
  * which is a non-async method used for configuring the node, and finally,
  * (c) mark the node as being initialized.
 *****/
-Doc.on('Mutation-Add', message => {
+Doc.on('Mutation-Add', async message => {
     for (let addedNode of message.added) {
         let docNodes = addedNode.enumerateDescendents();
         docNodes.unshift(addedNode);
 
         for (let docNode of docNodes) {
-            Controller.initNode(docNode);
+            await Controller.initNode(docNode);
         }
     }
 });
@@ -267,10 +283,10 @@ Doc.on('Mutation-Add', message => {
  * It's one of the extended types that returns an actual dependency to a key in
  * the controller and it returns the controller value when evaluated.
 *****/
-define(class CtlExpr extends Expr {
+define(class ControllerExpr extends Expr {
     constructor(dotted) {
         super(dotted);
-        this.dependencies = [{ type: 'controller', dotted: dotted }];
+        this.dotted = dotted;
     }
 
     async eval() {
@@ -280,6 +296,15 @@ define(class CtlExpr extends Expr {
 
     static fromJson(obj) {
         return mkCtlExpr(...this.operands);
+    }
+
+    getDependencies() {
+        return [{
+            expr: this,
+            type: 'controller',
+            get: async () => Controller.get(this.dotted),
+            set: async value => Controller.set(this.dotted, value),
+        }];
     }
 
     getShapes() {

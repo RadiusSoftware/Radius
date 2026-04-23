@@ -9,8 +9,28 @@
     <widget tagname="cookieacceptor-app">
         <script>
             class CookieAcceptorApp extends Widget {
-                constructor(arg) {
-                    super(arg);
+                init() {
+                    let shape = mkRdsShape({
+                        first: StringType,
+                        _second: [ BooleanType ],
+                        third: {
+                            a: NumericType,
+                            b: StringType,
+                            c: DateTimeType,
+                        }
+                    });
+
+                    Controller.define('alpha', shape, {
+                        first: 'FIRST',
+                        second: [ true, false, true ],
+                        third: {
+                            a: 17,
+                            b: 'String Type Value',
+                            c: mkTime(),
+                        }
+                    });
+
+                    Controller.on('Set', message => console.log(message));
                 }
 
                 async onAcceptCookies(message) {
@@ -59,6 +79,9 @@
                 <div></div>
                 <div></div>
             </grid-widget>
+            <div>
+                <input-widget type="text" style="margin-top:35px;margin-left:25px;" rds-bind="alpha.third.b"></input-widget>
+            </div>
         </html>
     </widget>
     <strings lang="en">

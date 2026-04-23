@@ -120,7 +120,7 @@ define (class Expr {
         let dependencies = [];
 
         for (let operand of this.operands) {
-            dependencies = dependencies.concat(operand.dependencies);
+            dependencies = dependencies.concat(operand.getDependencies());
         }
 
         return dependencies;

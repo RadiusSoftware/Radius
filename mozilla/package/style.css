@@ -323,6 +323,7 @@ body {
         outline-color: var(--error-color);
     }
 }
+
 .input-widget-input {
     display: flex;
     align-items: center;
@@ -371,7 +372,7 @@ body {
     }
 }
 
-input-widget-radio {
+.input-widget-radio {
     appearance: none;
     content: "";
     width: var(--radio-radius);
