@@ -20,7 +20,7 @@
                         }
                     });
 
-                    Controller.define('alpha', shape, {
+                    Controller.defineData(this, shape, {
                         first: 'FIRST',
                         second: [ true, false, true ],
                         third: {
@@ -80,7 +80,7 @@
                 <div></div>
             </grid-widget>
             <div>
-                <input-widget type="text" style="margin-top:35px;margin-left:25px;" rds-bind="alpha.third.b"></input-widget>
+                <input-widget type="text" style="margin-top:35px;margin-left:25px;" rds-bind="third.b"></input-widget>
             </div>
         </html>
     </widget>

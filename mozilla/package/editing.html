@@ -236,56 +236,52 @@
                 }
  
                 init() {
-                    let attributes = this.filterAttributes('design', 'type');
+                    let attributes = this.filterAttributes('type');
 
                     if (this.hasAttribute('type')) {
-                        let editor;
                         let type = this.getAttribute('type');
 
                         if (InputWidget.stdInputTypes.has(type)) {
                             attributes.type = type;
                             attributes.class = RdsText.concat('input-widget-input', attributes.class);
-                            editor = createElement('input', attributes);
+                            this.replacement = createElement('input', attributes);
                         }
                         else if (type in { button:0, submit:0 }) {
                             attributes.type = type;
                             attributes.class = RdsText.concat('input-widget-button', attributes.class);
-                            editor = createElement('input', attributes);
+                            this.replacement = createElement('input', attributes);
                         }
                         else if (type == 'checkbox') {
                             attributes.type = type;
                             attributes.class = RdsText.concat('input-widget-checkbox', attributes.class);
-                            editor = createElement('input', attributes);
+                            this.replacement = createElement('input', attributes);
                         }
                         else if (type == 'essay') {
                             attributes.class = RdsText.concat('input-widget-essay', attributes.class);
-                            editor = createElement('textarea', attributes);
+                            this.replacement = createElement('textarea', attributes);
                         }
                         /*
                         else if (type == 'fieldset') {
-                            editor = this.createFieldSet(attributes);
+                            this.replacement = this.createFieldSet(attributes);
                         }
                         /*
                         else if (type == 'select') {
-                            editor = this.createSelect(attributes);
-                            editor.once('focusin', message => InputWidget.layoutSelect(editor));
+                            this.replacement = this.createSelect(attributes);
+                            this.replacement.once('focusin', message => InputWidget.layoutSelect(editor));
                         }
                         else if (type == 'submit') {
                             attributes.design = 'input-widget-button';
-                            editor = createElement('submit', attributes);
+                            this.replacement = createElement('submit', attributes);
                         }
                         else if (type == 'toggle') {
-                            editor = this.createToggle(attributes);
+                            this.replacement = this.createToggle(attributes);
                         }
                         else {
                             attributes.type = 'text';
                             attributes.design = 'input-widget-input';
-                            editor = createElement('input', attributes);
+                            this.replacement = createElement('input', attributes);
                         }
                         */
-
-                        //this.replace(editor);
-                        return editor;
                     }
                 }
 
