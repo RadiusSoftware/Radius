@@ -32,7 +32,10 @@
                         }
                     });
 
-                    Controller.on('Set', message => console.log(message));
+                    (async () => {
+                        await pause(1000);
+                        Controller.setDataValue(this, 'first', '*** new string ***');
+                    })();
                 }
 
                 async onAcceptCookies(message) {
@@ -82,7 +85,10 @@
                 <div></div>
             </grid-widget>
             <div>
-                <input-widget type="text" style="margin-top:35px;margin-left:25px;" rds-bind="third.b"></input-widget>
+                <input-widget type="text" style="margin-top:35px;margin-left:25px;" rds-bind="first"></input-widget>
+                <!--
+                <input-widget type="text" style="margin-top:35px;margin-left:25px;" rds-bind="first"></input-widget>
+                -->
             </div>
         </html>
     </widget>
