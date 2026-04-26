@@ -47,7 +47,7 @@ define(class ControllerBinding {
                 this.pull();
             });
         }
-        else if (type == 'AttrExists') {
+        else if (type == 'attrExists') {
             if (typeof name == 'string' && name != '') {
                 this.valid = true;
                 this.type = type;
@@ -61,17 +61,8 @@ define(class ControllerBinding {
                 this.valid = true;
                 this.type = type;
                 this.name = name;
-                // TWO WAY **************************************************************************
-                // TWO WAY **************************************************************************
-            }
-        }
-        else if (type == 'Property') {
-            if (typeof name == 'string' && name != '') {
-                this.valid = true;
-                this.type = type;
-                this.name = name;
-                // TWO WAY **************************************************************************
-                // TWO WAY **************************************************************************
+                // TODO **************************************************************************
+                // TODO **************************************************************************
             }
         }
         else if (type == 'method') {
@@ -83,7 +74,23 @@ define(class ControllerBinding {
                 }
             }
         }
-;
+        else if (type == 'property') {
+            if (typeof name == 'string' && name != '') {
+                this.valid = true;
+                this.type = type;
+                this.name = name;
+                // TODO **************************************************************************
+                // TODO **************************************************************************
+            }
+        }
+        else if (type == 'style') {
+            if (typeof name == 'string' && name != '') {
+                this.valid = true;
+                this.type = type;
+                this.name = name;
+            }
+        }
+
         if (this.valid) {
             let binding = ControllerBinding.get(this);
             
@@ -123,8 +130,8 @@ define(class ControllerBinding {
     }
 
     delete() {
-        // *****************************************************************************
-        // *****************************************************************************
+        // TODO **************************************************************************
+        // TODO **************************************************************************
     }
 
     disable() {
@@ -195,13 +202,9 @@ define(class ControllerBinding {
             // *****************************************************************************
             // *****************************************************************************
         }
-        else if (this.type == 'method') {
-            // *****************************************************************************
-            // *****************************************************************************
-        }
-        else if (this.type == 'property') {
-            // *****************************************************************************
-            // *****************************************************************************
+        else if (this.type == 'style') {
+            let stylePropertyValue = this.docElement.getStyle(this.name);
+            Controller.setDataValue(this.docElement, this.dotted, stylePropertyValue);
         }
 
         this.enable();
@@ -227,8 +230,12 @@ define(class ControllerBinding {
             // *****************************************************************************
         }
         else if (this.type == 'property') {
-            // *****************************************************************************
-            // *****************************************************************************
+            this.docElement.setProperty(this.name, this.expr.eval());
+        }
+        else if (this.type == 'style') {
+            let styleProperty = {};
+            styleProperty[this.name] = this.expr.eval();
+            this.docElement.setStyle(styleProperty);
         }
     }
 });

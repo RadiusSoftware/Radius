@@ -48,7 +48,8 @@ singleton(class Controller extends Emitter {
             }
         });
 
-        Doc.on('Mutation', message => this.onMutation(message));
+        Doc.on('Mutation', message => this.onMutationChildList(message));
+        Doc.on('Attr-Mutation', message => this.onMutationAttr(message));
     }
 
     bindAttrExists(docElement, attributeName, ref) {
@@ -57,11 +58,6 @@ singleton(class Controller extends Emitter {
     }
 
     bindAttrValue(docElement, attributeName, ref) {
-        // TODO ************************************************************************
-        // TODO ************************************************************************
-    }
-
-    bindMethod(docElement, methodName, ref) {
         // TODO ************************************************************************
         // TODO ************************************************************************
     }
@@ -76,27 +72,29 @@ singleton(class Controller extends Emitter {
         return this;
     }
 
-    bindProperty(docElement, property, ref) {
+    bindMethod(docElement, methodName, ref) {
         // TODO ************************************************************************
         // TODO ************************************************************************
     }
 
-    deleteData(docElement) {
-        /*
-        if (Data.has(this.data, dotted)) {
-            let value = Data.get(this.data, dotted);
-            Data.delete(this.data, dotted);
-            this.onUpdate(dotted, 'delete', value);
-            
-            this.emit({
-                name: 'Delete',
-                dotted: dotted,
-                value: value,
-            });
-        }
-
+    bindProperty(docElement, property, ref) {
+        this.setBinding(docElement, ref, 'property', property);
         return this;
-        */
+    }
+
+    bindStyle(docElement, styleProperty, ref) {
+        this.setBinding(docElement, ref, 'style', styleProperty);
+        return this;
+    }
+
+    deleteBindings(docElement) {
+        // TODO ************************************************************************
+        // TODO ************************************************************************
+    }
+
+    deleteData(docElement, dotted) {
+        // TODO ************************************************************************
+        // TODO ************************************************************************
     }
 
     defineData(docElement, shape, value) {
@@ -179,7 +177,7 @@ singleton(class Controller extends Emitter {
             Packages.processNode(docNode);
 
             if (docNode instanceof DocElement) {
-                if (true) {//if (!(docNode instanceof Widget) || docNode.getSetting('type') != 'stub') {
+                if (!(docNode instanceof Widget) || docNode.getSetting('type') != 'stub') {
                     if (docNode.getRdsBind) {
                         if (docNode.getTagName() in { input:0, select:0, textarea:0 }) {
                             this.bindInput(docNode, docNode.getRdsBind());
@@ -204,12 +202,17 @@ singleton(class Controller extends Emitter {
                         let [ dotted, methodName ] = docNode.getRdsBindMethod().split(',');
                         this.bindMethod(docNode, methodName, dotted);
                     }
+                    */
 
                     if (docNode.getRdsBindProperty) {
                         let [ property, dotted ] = docNode.getRdsBindProperty().split(',');
                         this.bindProperty(docNode, property, dotted);
                     }
-                    */
+
+                    if (docNode.getRdsBindStyle) {
+                        let [ styleProperty, dotted ] = docNode.getRdsBindStyle().split(',');
+                        this.bindStyle(docNode, styleProperty, dotted);
+                    }
                 }
             }
 
@@ -237,7 +240,25 @@ singleton(class Controller extends Emitter {
         // TODO ************************************************************************
     }
 
-    onMutation(message) {
+    onMutationAttr(message) {
+        let bindings = this.bindingsByDocElement.get(message.target);
+
+        if (bindings) {
+            for (let binding of bindings.bindings) {
+                if (binding.type == 'attrExists') {
+                    binding.pull();
+                }
+                else if (binding.type == 'attrValue') {
+                    binding.pull();
+                }
+                else if (binding.type == 'style') {
+                    binding.pull();
+                }
+            }
+        }
+    }
+
+    onMutationChildList(message) {
         let bindings = this.bindingsByDocElement.get(message.target);
 
         if (bindings) {
@@ -247,11 +268,6 @@ singleton(class Controller extends Emitter {
                 }
             }
         }
-    }
-
-    onPropertyChanged(docElement, property) {
-        // TODO ************************************************************************
-        // TODO ************************************************************************
     }
 
     setBinding(docElement, ref, type, name) {

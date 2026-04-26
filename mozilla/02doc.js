@@ -94,6 +94,7 @@ singleton(class Doc extends Emitter {
         mutationObserver.observe(document.documentElement, {
             childList: true,
             subtree: true,
+            attributes: true,
         });
     }
 
@@ -422,44 +423,62 @@ singleton(class Doc extends Emitter {
     onMutation(mutationRecords) {
         for (let mutationRecord of mutationRecords) {
             let target = wrapTree(mutationRecord.target);
-            let added = [];
-            let removed = [];
 
-            for (let addedNode of mutationRecord.addedNodes) {
-                if (!Doc.inHead(addedNode)) {
-                    added.push(wrapTree(addedNode));
+            if (!(target instanceof Widget) || target.getSetting('type') != 'stub') {
+                if (mutationRecord.type in { childList:0, subtree:0 }) {
+                    let added = [];
+                    let removed = [];
+
+                    for (let addedNode of mutationRecord.addedNodes) {
+                        if (!Doc.inHead(addedNode)) {
+                            added.push(wrapTree(addedNode));
+                        }
+                    }
+
+                    for (let removedNode of mutationRecord.removedNodes) {
+                        if (!Doc.inHead(removedNode)) {
+                            removed.push(wrapTree(removedNode));
+                        }
+                    }
+
+                    if (this.handles('Mutation-Add') && added.length) {
+                        this.emit({
+                            name: 'Mutation-Add',
+                            type: mutationRecord.type,
+                            target: target,
+                            added: added,
+                        });
+                    }
+
+                    if (this.handles('Mutation-Remove') && removed.length) {
+                        this.emit({
+                            name: 'Mutation-Remove',
+                            type: mutationRecord.type,
+                            target: target,
+                            removed: removed,
+                        });
+                    }
+
+                    if (this.handles('Mutation') && (added.length || removed.length)) {
+                        this.emit({
+                            name: 'Mutation',
+                            type: mutationRecord.type,
+                            target: target,
+                            added: added,
+                            removed: removed,
+                        });
+                    }
                 }
-            }
-
-            for (let removedNode of mutationRecord.removedNodes) {
-                if (!Doc.inHead(removedNode)) {
-                    removed.push(wrapTree(removedNode));
+                else if (mutationRecord.type == 'attributes') {
+                    if (this.handles('Attr-Mutation')) {
+                        this.emit({
+                            name: 'Attr-Mutation',
+                            type: mutationRecord.type,
+                            target: target,
+                            attributeName: mutationRecord.attributeName,
+                        });
+                    }
                 }
-            }
-
-            if (this.handles('Mutation-Add') && added.length) {
-                this.emit({
-                    name: 'Mutation-Add',
-                    target: target,
-                    added: added,
-                });
-            }
-
-            if (this.handles('Mutation-Remove') && removed.length) {
-                this.emit({
-                    name: 'Mutation-Remove',
-                    target: target,
-                    removed: removed,
-                });
-            }
-
-            if (this.handles('Mutation') && (added.length || removed.length)) {
-                this.emit({
-                    name: 'Mutation',
-                    target: target,
-                    added: added,
-                    removed: removed,
-                });
             }
         }
     }
