@@ -22,6 +22,10 @@
 
 
 /*****
+ * The controller binding object defines and controlers the interaction between
+ * a single binding and a single value in the controller.  The binding not only
+ * connects the two, it also provides the two-way interaction between the HTML
+ * element and the controller.
 *****/
 define(class ControllerBinding {
     constructor(docElement, expr, dotted, type, name) {
@@ -34,6 +38,8 @@ define(class ControllerBinding {
         if (type == 'inner') {
             this.valid = true;
             this.type = type;
+            // TODO **************************************************************************
+            // TODO **************************************************************************
         }
         else if (type == 'input') {
             this.valid = true;
@@ -43,16 +49,16 @@ define(class ControllerBinding {
                 this.pull();
             });
         }
-        else if (type == 'attrValue') {
+        else if (type == 'AttrExists') {
             if (typeof name == 'string' && name != '') {
                 this.valid = true;
                 this.type = type;
                 this.name = name;
-                // TWO WAY **************************************************************************
-                // TWO WAY **************************************************************************
+                // TODO **************************************************************************
+                // TODO **************************************************************************
             }
         }
-        else if (type == 'AttrExists') {
+        else if (type == 'attrValue') {
             if (typeof name == 'string' && name != '') {
                 this.valid = true;
                 this.type = type;
@@ -66,6 +72,8 @@ define(class ControllerBinding {
                 this.valid = true;
                 this.type = type;
                 this.name = name;
+                // TWO WAY **************************************************************************
+                // TWO WAY **************************************************************************
             }
         }
         else if (type == 'method') {
@@ -77,7 +85,7 @@ define(class ControllerBinding {
                 }
             }
         }
-
+;
         if (this.valid) {
             let binding = ControllerBinding.get(this);
             
@@ -171,7 +179,11 @@ define(class ControllerBinding {
     }
 
     pull() {
-        if (this.type == 'input') {
+        if (this.type == 'inner') {
+            // *****************************************************************************
+            // *****************************************************************************
+        }
+        else if (this.type == 'input') {
             this.disable();
             let newValue = this.docElement.getProperty('value');
             Controller.setDataValue(this.docElement, this.dotted, newValue);

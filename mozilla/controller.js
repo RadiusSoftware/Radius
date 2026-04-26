@@ -169,9 +169,7 @@ singleton(class Controller extends Emitter {
     }
 
     hasData(docElement, dotted) {
-        /*
-        return Data.has(this.data, dotted);
-        */
+        return this.getDataValue() != undefined;
     }
 
     async initNode(docNode) {
@@ -189,14 +187,14 @@ singleton(class Controller extends Emitter {
                 }
 
                 /*
-                if (docNode.getRdsBindAttr) {
-                    let [ dotted, attrName ] = docNode.getRdsBindAttr().split(',');
-                    this.bindAttribute(docNode, attrName, dotted);
-                }
-
-                if (docNode.getRdsBindAttrFlag) {
+                if (docNode.getRdsBindAttrExists) {
                     let [ dotted, attrName ] = docNode.getRdsBindAttrFlag().split(',');
                     this.bindAttributeFlag(docNode, attrName, dotted);
+                }
+
+                if (docNode.getRdsBindAttrValue) {
+                    let [ dotted, attrName ] = docNode.getRdsBindAttr().split(',');
+                    this.bindAttribute(docNode, attrName, dotted);
                 }
 
                 if (docNode.getRdsBindMethod) {
@@ -218,6 +216,39 @@ singleton(class Controller extends Emitter {
                 docNode.replace(docNode.getReplacement());
             }
         }
+    }
+
+    onAttrAdded(docElement, attrName) {
+        // TODO ************************************************************************
+        // TODO ************************************************************************
+    }
+
+    onAttrRemoved(docElement, attrName) {
+        // TODO ************************************************************************
+        // TODO ************************************************************************
+    }
+
+    onAttrChanged(docElement, attrName) {
+        // TODO ************************************************************************
+        // TODO ************************************************************************
+    }
+
+    onInnerChanged(docElement) {
+        return;
+        let bindings = this.bindingsByDocElement.get(docElement);
+
+        if (bindings) {
+            for (let binding of bindings.bindings) {
+                if (binding.type == 'inner') {
+                    console.log(binding);
+                }
+            }
+        }
+    }
+
+    onPropertyChanged(docElement, property) {
+        // TODO ************************************************************************
+        // TODO ************************************************************************
     }
 
     setBinding(docElement, ref, type, name) {
