@@ -31,11 +31,12 @@
                             c: mkTime(),
                         }
                     });
-
+                    /*
                     (async () => {
                         await pause(1000);
-                        Controller.setDataValue(this, 'first', '*** new string ***');
+                        Controller.setDataValue(this, 'first', 'Bojack Horseman');
                     })();
+                    */
                 }
 
                 async onAcceptCookies(message) {
@@ -86,9 +87,8 @@
             </grid-widget>
             <div>
                 <input-widget type="text" style="margin-top:35px;margin-left:25px;" rds-bind="first"></input-widget>
-                <!--
-                <input-widget type="text" style="margin-top:35px;margin-left:25px;" rds-bind="first"></input-widget>
-                -->
+                <br>
+                <div rds-bind="first"></div>
             </div>
         </html>
     </widget>

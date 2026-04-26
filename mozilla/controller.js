@@ -35,6 +35,18 @@ singleton(class Controller extends Emitter {
         this.nodes = new WeakMap();
         this.bindingsByDotted = {};
         this.bindingsByDocElement = new WeakMap();
+
+        this.on('Set', message => {
+            let byDotted = this.bindingsByDotted[message.dotted];
+            
+            if (byDotted) {
+                for (let binding of byDotted.bindings) {
+                    if (binding.isEnabled()) {
+                        binding.push();
+                    }
+                }
+            }
+        });
     }
 
     bindAttrExists(docElement, attributeName, ref) {
@@ -53,16 +65,18 @@ singleton(class Controller extends Emitter {
     }
 
     bindInner(docElement, ref) {
-        // TODO ************************************************************************
-        // TODO ************************************************************************
+        this.setBinding(docElement, ref, 'inner');
+        return this;
+    }
+
+    bindInput(docElement, ref) {
+        this.setBinding(docElement, ref, 'input');
+        return this;
     }
 
     bindProperty(docElement, property, ref) {
-        if (typeof property == 'string' && property.trim() != '') {
-            this.setBinding(docElement, ref, 'property', property);
-        }
-
-        return this;
+        // TODO ************************************************************************
+        // TODO ************************************************************************
     }
 
     deleteData(docElement) {
@@ -145,9 +159,13 @@ singleton(class Controller extends Emitter {
     }
 
     getDataValue(docElement, dotted) {
-        /*
-        return Data.get(this.data, dotted);
-        */
+        let data = this.getData(docElement);
+
+        if (data) {
+            return Data.get(data.value, dotted);
+        }
+
+        return undefined;
     }
 
     hasData(docElement, dotted) {
@@ -163,7 +181,7 @@ singleton(class Controller extends Emitter {
             if (docNode instanceof DocElement) {
                 if (docNode.getRdsBind) {
                     if (docNode.getTagName() in { input:0, select:0, textarea:0 }) {
-                        this.bindProperty(docNode, 'value', docNode.getRdsBind());
+                        this.bindInput(docNode, docNode.getRdsBind());
                     }
                     else {
                         this.bindInner(docNode, docNode.getRdsBind());
@@ -209,7 +227,7 @@ singleton(class Controller extends Emitter {
             let expr;
 
             if (typeof ref == 'string' && ref.trim() != '') {
-                expr = mkControllerExpr(ref)
+                expr = mkControllerExpr(docElement, ref);
             }
             else if (ref instanceof Expr) {
                 expr = ref;
@@ -218,8 +236,7 @@ singleton(class Controller extends Emitter {
             if (expr) {
                 for (let dependency of expr.getDependencies()) {
                     if (dependency.type == 'controller') {
-                        let binding = mkControllerBinding(docElement, dependency.dotted, type, name);
-                        console.log(binding);
+                        mkControllerBinding(docElement, expr, dependency.dotted, type, name);
                     }
                 }
             }
@@ -227,38 +244,36 @@ singleton(class Controller extends Emitter {
     }
 
     setDataValue(docElement, dotted, newValue) {
-        let shape = this.getDataShape(docElement, dotted);
+        let data = this.getData(docElement);
 
-        if (shape) {
-            if (shape.verify(newValue)) {
-                let oldValue = Data.get(this.data, dotted);
+        if (data) {
+            let shape = data.shape.get(dotted);
 
-                if (Data.eq(oldValue, newValue)) {
-                    this.emit({
-                        name: 'SetNoChange',
-                        dotted: dotted,
-                        value: newValue,
-                    });
-                }
-                else {
-                    Data.set(this.data, dotted, newValue);
+            if (shape) {
+                if (shape.verify(newValue)) {
+                    let oldValue = Data.get(data.value, dotted);
 
-                    this.emit({
-                        name: 'Set',
-                        dotted: dotted,
-                        oldValue: oldValue,
-                        newValue: newValue,
-                    });
+                    if (Data.ne(oldValue, newValue)) {
+                        Data.set(data.value, dotted, newValue);
+
+                        this.emit({
+                            name: 'Set',
+                            dotted: dotted,
+                            oldValue: oldValue,
+                            newValue: newValue,
+                        });
+
+                        return;
+                    }
                 }
             }
         }
-        else {
-            this.emit({
-                name: 'SetFailed',
-                dotted: dotted,
-                value: newValue,
-            });
-        }
+
+        this.emit({
+            name: 'SetFailed',
+            dotted: dotted,
+            value: newValue,
+        });
 
         return this;
     }
@@ -291,153 +306,30 @@ Doc.on('Mutation-Add', async message => {
  * the controller and it returns the controller value when evaluated.
 *****/
 define(class ControllerExpr extends Expr {
-    constructor(dotted) {
-        super(dotted);
+    constructor(docElement, dotted) {
+        super();
         this.dotted = dotted;
+        this.docElement = docElement;
     }
 
     async eval() {
-        let dotted = await this.evalOperands();
-        return Controller.get(dotted);
+        return Controller.getDataValue(this.docElement, this.dotted);
     }
 
     static fromJson(obj) {
-        return mkCtlExpr(...this.operands);
+        return mkControllerExpr(obj.docElement, obj.dotted);
     }
 
     getDependencies() {
         return [{
             type: 'controller',
             expr: this,
+            docElement: this.docElement,
             dotted: this.dotted,
         }];
     }
 
     getShapes() {
         return [ mkRdsShape(StringType) ];
-    }
-});
-
-
-/*****
-*****/
-define(class ControllerBinding {
-    constructor(docElement, dotted, type, name) {
-        this.docElement = docElement;
-        this.dotted = dotted;
-        this.inner = false;
-        this.valid = false;
-        this.enabled = true;
-        
-        if (type == 'inner') {
-            this.valid = true;
-            this.inner = true;
-        }
-        else if (type in { attrValue:0, attrExists:0, property:0 }) {
-            if (typeof name == 'string' && name != '') {
-                this.valid = true;
-                this.type = type;
-                this.name = name;
-            }
-        }
-        else if (type == 'method') {
-            if (typeof name == 'string' && name != '') {
-                if (name in docElement) {
-                    this.valid = true;
-                    this.type = type;
-                    this.name = name;
-                }
-            }
-        }
-
-        if (this.valid) {
-            let binding = ControllerBinding.get(this);
-            console.log(binding);
-            
-            if (binding) {
-                return binding;
-            }
-
-            let byDocElement = Controller.bindingsByDocElement.get(this.docElement);
-            
-            if (!byDocElement) {
-                byDocElement = {
-                    docElement: this.docElement,
-                    bindings: [],
-                };
-
-                Controller.bindingsByDocElement.set(this.docElement, byDocElement);
-            }
-
-            let byDotted = Controller.bindingsByDotted[this.dotted];
-
-            if (!byDotted) {
-                byDotted = {
-                    dotted: this.dotted,
-                    bindings: [],
-                };
-
-                Controller.bindingsByDotted[this.dotted] = byDotted;
-            }
-
-            byDocElement.bindings.push(this);
-            byDotted.bindings.push(this);
-            return this;
-        }
-        
-        return null;
-    }
-
-    delete() {
-        // *****************************************************************************
-        // *****************************************************************************
-    }
-
-    disable() {
-        this.enabled = false;
-        return this;
-    }
-
-    enable() {
-        this.enabled = true;
-        return this;
-    }
-
-    static get(controllerBinding) {
-        if (controllerBinding.valid) {
-            if (controllerBinding.dotted in Controller.bindingsByDotted) {
-                let byDotted = Controller.bindingsByDotted[controllerBinding.dotted];
-
-                for (let binding of byDotted.bindings) {
-                    if (binding.docElement.isSame(controllerBinding.docElement)) {
-                        if (binding.type == controllerBinding.type) {
-                            if (binding.type == 'inner') {
-                                return binding;
-                            }
-
-                            if (binding.type == controllerBinding.type) {
-                                if (binding.name == controllerBinding.name) {
-                                    return binding;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        return null;
-    }
-
-    static has(controllerBinding) {
-        return ControllerBinding.get(controllerBinding) != null;
-    }
-
-    isDisabled() {
-        return !this.enabled;
-    }
-
-    isEnabled() {
-        return this.enabled;
     }
 });
