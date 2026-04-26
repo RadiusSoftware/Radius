@@ -38,8 +38,6 @@ define(class ControllerBinding {
         if (type == 'inner') {
             this.valid = true;
             this.type = type;
-            // TODO **************************************************************************
-            // TODO **************************************************************************
         }
         else if (type == 'input') {
             this.valid = true;
@@ -179,15 +177,16 @@ define(class ControllerBinding {
     }
 
     pull() {
+        this.disable();
+
         if (this.type == 'inner') {
-            // *****************************************************************************
-            // *****************************************************************************
+            let newValue = this.docElement.getInnerHtml();
+            console.log(newValue);
+            Controller.setDataValue(this.docElement, this.dotted, newValue);
         }
         else if (this.type == 'input') {
-            this.disable();
             let newValue = this.docElement.getProperty('value');
             Controller.setDataValue(this.docElement, this.dotted, newValue);
-            this.enable();
         }
         else if (this.type == 'attrValue') {
             // *****************************************************************************
@@ -205,6 +204,8 @@ define(class ControllerBinding {
             // *****************************************************************************
             // *****************************************************************************
         }
+
+        this.enable();
     }
 
     async push() {

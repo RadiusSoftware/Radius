@@ -557,9 +557,14 @@ define(class Package {
                 innerHtml: '',
                 package: this.name,
                 script: '',
+                settings: {},
                 style: '',
                 tagName: tagName,
             };
+
+            if (widgetElement.hasAttribute('settings')) {
+                widget.settings = RdsText.parseAttributeEncoded(widgetElement.getAttribute('settings'));
+            }
 
             widget.attributes.design = `${widget.tagName}-self`;
             let tagNameParts = RdsText.split(widget.tagName.trim().toLowerCase(), '-');

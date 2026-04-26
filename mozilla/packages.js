@@ -248,6 +248,7 @@ singleton(class Packages {
                 tagName: widget.tagName,
                 innerHtml: widget.innerHtml,
                 attributes: widget.attributes,
+                settings: widget.settings,
                 classId: widget.classId,
                 script: widget.script,
             });

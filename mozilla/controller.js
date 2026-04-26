@@ -177,36 +177,38 @@ singleton(class Controller extends Emitter {
             Packages.processNode(docNode);
 
             if (docNode instanceof DocElement) {
-                if (docNode.getRdsBind) {
-                    if (docNode.getTagName() in { input:0, select:0, textarea:0 }) {
-                        this.bindInput(docNode, docNode.getRdsBind());
+                if (!(docNode instanceof Widget) || docNode.getSetting('type') != 'stub') {
+                    if (docNode.getRdsBind) {
+                        if (docNode.getTagName() in { input:0, select:0, textarea:0 }) {
+                            this.bindInput(docNode, docNode.getRdsBind());
+                        }
+                        else {
+                            this.bindInner(docNode, docNode.getRdsBind());
+                        }
                     }
-                    else {
-                        this.bindInner(docNode, docNode.getRdsBind());
+
+                    /*
+                    if (docNode.getRdsBindAttrExists) {
+                        let [ dotted, attrName ] = docNode.getRdsBindAttrFlag().split(',');
+                        this.bindAttributeFlag(docNode, attrName, dotted);
                     }
-                }
 
-                /*
-                if (docNode.getRdsBindAttrExists) {
-                    let [ dotted, attrName ] = docNode.getRdsBindAttrFlag().split(',');
-                    this.bindAttributeFlag(docNode, attrName, dotted);
-                }
+                    if (docNode.getRdsBindAttrValue) {
+                        let [ dotted, attrName ] = docNode.getRdsBindAttr().split(',');
+                        this.bindAttribute(docNode, attrName, dotted);
+                    }
 
-                if (docNode.getRdsBindAttrValue) {
-                    let [ dotted, attrName ] = docNode.getRdsBindAttr().split(',');
-                    this.bindAttribute(docNode, attrName, dotted);
-                }
+                    if (docNode.getRdsBindMethod) {
+                        let [ dotted, methodName ] = docNode.getRdsBindMethod().split(',');
+                        this.bindMethod(docNode, methodName, dotted);
+                    }
 
-                if (docNode.getRdsBindMethod) {
-                    let [ dotted, methodName ] = docNode.getRdsBindMethod().split(',');
-                    this.bindMethod(docNode, methodName, dotted);
+                    if (docNode.getRdsBindProperty) {
+                        let [ property, dotted ] = docNode.getRdsBindProperty().split(',');
+                        this.bindProperty(docNode, property, dotted);
+                    }
+                    */
                 }
-
-                if (docNode.getRdsBindProperty) {
-                    let [ property, dotted ] = docNode.getRdsBindProperty().split(',');
-                    this.bindProperty(docNode, property, dotted);
-                }
-                */
             }
 
             docNode.init();
@@ -234,13 +236,12 @@ singleton(class Controller extends Emitter {
     }
 
     onInnerChanged(docElement) {
-        return;
         let bindings = this.bindingsByDocElement.get(docElement);
 
         if (bindings) {
             for (let binding of bindings.bindings) {
                 if (binding.type == 'inner') {
-                    console.log(binding);
+                    binding.pull();
                 }
             }
         }
