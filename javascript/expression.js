@@ -54,12 +54,12 @@ define (class Expr {
         }
     }
 
-    async evalBool() {
-        let value = await this.eval();
+    evalBool() {
+        let value = this.eval();
         return getJsType(value).toBool(value);
     }
     
-    async evalOperands() {
+    evalOperands() {
         let values = [];
         let repeat = false;
         let shapes = this.getShapes();
@@ -74,7 +74,7 @@ define (class Expr {
             let operand = this.operands[i];
 
             if (operand instanceof Expr) {
-                var value = await operand.eval();
+                var value = operand.eval();
             }
             else {
                 var value = operand;
@@ -93,7 +93,7 @@ define (class Expr {
                 let operand = this.operands[i];
 
                 if (operand instanceof Expr) {
-                    var value = await operand.eval();
+                    var value = operand.eval();
                 }
                 else {
                     var value = operand;
@@ -111,8 +111,8 @@ define (class Expr {
         return values;
     }
 
-    async evalString() {
-        let value = await this.eval();
+    evalString() {
+        let value = this.eval();
         return getJsType(value).toString(value);
     }
 
@@ -144,9 +144,9 @@ define(class AddExpr extends Expr {
         super(...operands);
     }
 
-    async eval() {
+    eval() {
         let sum = 0;
-        let operands = await this.evalOperands();
+        let operands = this.evalOperands();
 
         if (operands.length > 0) {
             for (let operand of operands) {
@@ -171,9 +171,9 @@ define(class AndExpr extends Expr {
         super(...operands);
     }
 
-    async eval() {
+    eval() {
         let and = false;
-        let operands = await this.evalOperands();
+        let operands = this.evalOperands();
 
         if (operands.length > 0) {
             and = operands[0];
@@ -200,8 +200,8 @@ define(class ConcatExpr extends Expr {
         super(...operands);
     }
 
-    async eval() {
-        let operands = await this.evalOperands();
+    eval() {
+        let operands = this.evalOperands();
         return operands.join('');
     }
 
@@ -219,9 +219,9 @@ define(class DivExpr extends Expr {
         super(...operands);
     }
 
-    async eval() {
+    eval() {
         let div = null;
-        let operands = await this.evalOperands();
+        let operands = this.evalOperands();
 
         if (operands.length > 0) {
             div = operands[0];
@@ -248,8 +248,8 @@ define(class EqExpr extends Expr {
         super(lh, rh);
     }
 
-    async eval() {
-        let [ lh, rh ] = await this.evalOperands();
+    eval() {
+        let [ lh, rh ] = this.evalOperands();
         return Data.eq(lh, rh);
     }
 
@@ -267,8 +267,8 @@ define(class ExpExpr extends Expr {
         super(number, exp);
     }
 
-    async eval() {
-        let [ number, exp ] = await this.evalOperands();
+    eval() {
+        let [ number, exp ] = this.evalOperands();
         return Math.pow(number, exp);
     }
 
@@ -286,9 +286,9 @@ define(class FunctionExpr extends Expr {
         super(...operands);
     }
 
-    async eval() {
-        let operands = await this.evalOperands();
-        return wait(operands[0](...operands.slice(1)));
+    eval() {
+        let operands = this.evalOperands();
+        return operands[0](...operands.slice(1));
     }
 
     static fromJson(obj) {
@@ -305,8 +305,8 @@ define(class GeExpr extends Expr {
         super(lh, rh);
     }
 
-    async eval() {
-        let [ lh, rh ] = await this.evalOperands();
+    eval() {
+        let [ lh, rh ] = this.evalOperands();
         return Data.ge(lh, rh);
     }
 
@@ -324,8 +324,8 @@ define(class GtExpr extends Expr {
         super(lh, rh);
     }
 
-    async eval() {
-        let [ lh, rh ] = await this.evalOperands();
+    eval() {
+        let [ lh, rh ] = this.evalOperands();
         return Data.gt(lh, rh);
     }
 
@@ -343,8 +343,8 @@ define(class IsArrayExpr extends Expr {
         super(value);
     }
 
-    async eval() {
-        let [ value ] = await this.evalOperands();
+    eval() {
+        let [ value ] = this.evalOperands();
         return ArrayType.verify(value);
     }
 
@@ -362,8 +362,8 @@ define(class IsBigIntExpr extends Expr {
         super(value);
     }
 
-    async eval() {
-        let [ value ] = await this.evalOperands();
+    eval() {
+        let [ value ] = this.evalOperands();
         return BigIntType.verify(value);
     }
 
@@ -381,8 +381,8 @@ define(class IsBooleanExpr extends Expr {
         super(value);
     }
 
-    async eval() {
-        let [ value ] = await this.evalOperands();
+    eval() {
+        let [ value ] = this.evalOperands();
         return BooleanType.verify(value);
     }
 
@@ -400,8 +400,8 @@ define(class IsBufferExpr extends Expr {
         super(value);
     }
 
-    async eval() {
-        let [ value ] = await this.evalOperands();
+    eval() {
+        let [ value ] = this.evalOperands();
         return BufferType.verify(value);
     }
 
@@ -419,8 +419,8 @@ define(class IsDateExpr extends Expr {
         super(value);
     }
 
-    async eval() {
-        let [ value ] = await this.evalOperands();
+    eval() {
+        let [ value ] = this.evalOperands();
         return DateType.verify(value);
     }
 
@@ -438,8 +438,8 @@ define(class IsDateTimeExpr extends Expr {
         super(value);
     }
 
-    async eval() {
-        let [ value ] = await this.evalOperands();
+    eval() {
+        let [ value ] = this.evalOperands();
         return DateTimeType.verify(value);
     }
 
@@ -457,8 +457,8 @@ define(class IsDoubleExpr extends Expr {
         super(value);
     }
 
-    async eval() {
-        let [ value ] = await this.evalOperands();
+    eval() {
+        let [ value ] = this.evalOperands();
         return DoubleType.verify(value);
     }
 
@@ -476,8 +476,8 @@ define(class IsEnumExpr extends Expr {
         super(value);
     }
 
-    async eval() {
-        let [ value ] = await this.evalOperands();
+    eval() {
+        let [ value ] = this.evalOperands();
         return value instanceof RdsEnum;
     }
 
@@ -495,8 +495,8 @@ define(class IsFunctionExpr extends Expr {
         super(value);
     }
 
-    async eval() {
-        let [ value ] = await this.evalOperands();
+    eval() {
+        let [ value ] = this.evalOperands();
         return FunctionType.verify(value);
     }
 
@@ -514,8 +514,8 @@ define(class IsJsonExpr extends Expr {
         super(value);
     }
 
-    async eval() {
-        let [ value ] = await this.evalOperands();
+    eval() {
+        let [ value ] = this.evalOperands();
         return JsonType.verify(value);
     }
 
@@ -533,8 +533,8 @@ define(class IsNumberExpr extends Expr {
         super(value);
     }
 
-    async eval() {
-        let [ value ] = await this.evalOperands();
+    eval() {
+        let [ value ] = this.evalOperands();
         return NumberType.verify(value);
     }
 
@@ -552,8 +552,8 @@ define(class LeExpr extends Expr {
         super(lh, rh);
     }
 
-    async eval() {
-        let [ lh, rh ] = await this.evalOperands();
+    eval() {
+        let [ lh, rh ] = this.evalOperands();
         return Data.le(lh, rh);
     }
 
@@ -571,8 +571,8 @@ define(class LowerExpr extends Expr {
         super(...operands);
     }
 
-    async eval() {
-        return (await this.evalOperands())[0].toLowerCase();
+    eval() {
+        return (this.evalOperands())[0].toLowerCase();
     }
 
     static fromJson(obj) {
@@ -589,8 +589,8 @@ define(class LtExpr extends Expr {
         super(lh, rh);
     }
 
-    async eval() {
-        let [ lh, rh ] = await this.evalOperands();
+    eval() {
+        let [ lh, rh ] = this.evalOperands();
         return Data.lt(lh, rh);
     }
 
@@ -608,9 +608,9 @@ define(class MulExpr extends Expr {
         super(...operands);
     }
 
-    async eval() {
+    eval() {
         let prod = 1;
-        let operands = await this.evalOperands();
+        let operands = this.evalOperands();
 
         if (operands.length > 0) {
             for (let operand of operands) {
@@ -635,8 +635,8 @@ define(class NeExpr extends Expr {
         super(lh, rh);
     }
 
-    async eval() {
-        let [ lh, rh ] = await this.evalOperands();
+    eval() {
+        let [ lh, rh ] = this.evalOperands();
         return !Data.eq(lh, rh);
     }
 
@@ -654,9 +654,9 @@ define(class NorExpr extends Expr {
         super(...operands);
     }
 
-    async eval() {
+    eval() {
         let nor = true;
-        let operands = await this.evalOperands();
+        let operands = this.evalOperands();
 
         for (let operand of operands) {
             nor = !operand ? nor : false;
@@ -679,8 +679,8 @@ define(class NotExpr extends Expr {
         super(...operands);
     }
 
-    async eval() {
-        let operands = await this.evalOperands();
+    eval() {
+        let operands = this.evalOperands();
         return operands[0] === false;
     }
 
@@ -698,9 +698,9 @@ define(class OrExpr extends Expr {
         super(...operands);
     }
 
-    async eval() {
+    eval() {
         let or = false;
-        let operands = await this.evalOperands();
+        let operands = this.evalOperands();
 
         for (let operand of operands) {
             or = operand ? true : or;
@@ -723,8 +723,8 @@ define(class RootExpr extends Expr {
         super(number, exp);
     }
 
-    async eval() {
-        let [ number, exp ] = await this.evalOperands();
+    eval() {
+        let [ number, exp ] = this.evalOperands();
         return Math.pow(number, 1/exp);
     }
 
@@ -742,8 +742,8 @@ define(class SqrtExpr extends Expr {
         super(number);
     }
 
-    async eval() {
-        let [ number ] = await this.evalOperands();
+    eval() {
+        let [ number ] = this.evalOperands();
         return Math.sqrt(number);
     }
 
@@ -761,8 +761,8 @@ define(class StringExpr extends Expr {
         super(...operands);
     }
 
-    async eval() {
-        return (await this.evalOperands())[0].toString();
+    eval() {
+        return (this.evalOperands())[0].toString();
     }
 
     static fromJson(obj) {
@@ -779,9 +779,9 @@ define(class SubExpr extends Expr {
         super(...operands);
     }
 
-    async eval() {
+    eval() {
         let sum = 0;
-        let operands = await this.evalOperands();
+        let operands = this.evalOperands();
 
         if (operands.length > 0) {
             sum = operands[0];
@@ -808,10 +808,10 @@ define(class TernaryExpr extends Expr {
         super(...operands);
     }
 
-    async eval() {
-        const evaluate = async operand => {
+    eval() {
+        const evaluate = operand => {
             if (operand instanceof Expr) {
-                return await operand.eval();
+                return operand.eval();
             }
             else {
                 return operand;
@@ -819,14 +819,14 @@ define(class TernaryExpr extends Expr {
         };
 
         if (this.operands.length == 3) {
-            let operand = await evaluate(this.operands[0]);
+            let operand = evaluate(this.operands[0]);
 
             if (typeof operand == 'boolean') {
                 if (operand) {
-                    return await evaluate(this.operands[1]);
+                    return evaluate(this.operands[1]);
                 }
                 else {
-                    return await evaluate(this.operands[2]);
+                    return evaluate(this.operands[2]);
                 }
             }
             else {
@@ -851,8 +851,8 @@ define(class UpperExpr extends Expr {
         super(...operands);
     }
 
-    async eval() {
-        return (await this.evalOperands())[0].toUpperCase();
+    eval() {
+        return (this.evalOperands())[0].toUpperCase();
     }
 
     static fromJson(obj) {

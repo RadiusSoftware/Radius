@@ -1384,7 +1384,6 @@ define(class DocElement extends DocNode {
 
     setInnerHtml(innerHtml) {
         this.node.innerHTML = innerHtml;
-        Controller.onInnerChanged(this);
         return this;
     }
 

@@ -47,6 +47,8 @@ singleton(class Controller extends Emitter {
                 }
             }
         });
+
+        Doc.on('Mutation', message => this.onMutation(message));
     }
 
     bindAttrExists(docElement, attributeName, ref) {
@@ -172,12 +174,12 @@ singleton(class Controller extends Emitter {
         return this.getDataValue() != undefined;
     }
 
-    async initNode(docNode) {
+    initNode(docNode) {
         if (!this.nodes.has(docNode)) {
             Packages.processNode(docNode);
 
             if (docNode instanceof DocElement) {
-                if (!(docNode instanceof Widget) || docNode.getSetting('type') != 'stub') {
+                if (true) {//if (!(docNode instanceof Widget) || docNode.getSetting('type') != 'stub') {
                     if (docNode.getRdsBind) {
                         if (docNode.getTagName() in { input:0, select:0, textarea:0 }) {
                             this.bindInput(docNode, docNode.getRdsBind());
@@ -235,8 +237,8 @@ singleton(class Controller extends Emitter {
         // TODO ************************************************************************
     }
 
-    onInnerChanged(docElement) {
-        let bindings = this.bindingsByDocElement.get(docElement);
+    onMutation(message) {
+        let bindings = this.bindingsByDocElement.get(message.target);
 
         if (bindings) {
             for (let binding of bindings.bindings) {
@@ -320,13 +322,13 @@ singleton(class Controller extends Emitter {
  * which is a non-async method used for configuring the node, and finally,
  * (c) mark the node as being initialized.
 *****/
-Doc.on('Mutation-Add', async message => {
+Doc.on('Mutation-Add', message => {
     for (let addedNode of message.added) {
         let docNodes = addedNode.enumerateDescendents();
         docNodes.unshift(addedNode);
 
         for (let docNode of docNodes) {
-            await Controller.initNode(docNode);
+            Controller.initNode(docNode);
         }
     }
 });
@@ -344,7 +346,7 @@ define(class ControllerExpr extends Expr {
         this.docElement = docElement;
     }
 
-    async eval() {
+    eval() {
         return Controller.getDataValue(this.docElement, this.dotted);
     }
 
