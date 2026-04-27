@@ -52,14 +52,14 @@ singleton(class Controller extends Emitter {
         Doc.on('Attr-Mutation', message => this.onMutationAttr(message));
     }
 
-    bindAttrExists(docElement, attributeName, ref) {
-        // TODO ************************************************************************
-        // TODO ************************************************************************
+    bindAttr(docElement, attrName, ref) {
+        this.setBinding(docElement, ref, 'attr', attrName);
+        return this;
     }
 
-    bindAttrValue(docElement, attributeName, ref) {
-        // TODO ************************************************************************
-        // TODO ************************************************************************
+    bindAttrToggle(docElement, attrName, ref) {
+        this.setBinding(docElement, ref, 'attrToggle', attrName);
+        return this;
     }
 
     bindInner(docElement, ref) {
@@ -72,9 +72,12 @@ singleton(class Controller extends Emitter {
         return this;
     }
 
-    bindMethod(docElement, methodName, ref) {
-        // TODO ************************************************************************
-        // TODO ************************************************************************
+    bindMethod(docElement, methodName, ...args) {
+        for (let dotted of args) {
+            this.setBinding(docElement, dotted, 'method', methodName);
+        }
+
+        return this;
     }
 
     bindProperty(docElement, property, ref) {
@@ -175,6 +178,7 @@ singleton(class Controller extends Emitter {
     initNode(docNode) {
         if (!this.nodes.has(docNode)) {
             Packages.processNode(docNode);
+            docNode.configure();
 
             if (docNode instanceof DocElement) {
                 if (!(docNode instanceof Widget) || docNode.getSetting('type') != 'stub') {
@@ -187,22 +191,20 @@ singleton(class Controller extends Emitter {
                         }
                     }
 
-                    /*
-                    if (docNode.getRdsBindAttrExists) {
-                        let [ dotted, attrName ] = docNode.getRdsBindAttrFlag().split(',');
-                        this.bindAttributeFlag(docNode, attrName, dotted);
+                    if (docNode.getRdsBindAttr) {
+                        let [ attrName, dotted ] = docNode.getRdsBindAttr().split(',');
+                        this.bindAttr(docNode, attrName, dotted);
                     }
 
-                    if (docNode.getRdsBindAttrValue) {
-                        let [ dotted, attrName ] = docNode.getRdsBindAttr().split(',');
-                        this.bindAttribute(docNode, attrName, dotted);
+                    if (docNode.getRdsBindAttrToggle) {
+                        let [ attrName, dotted ] = docNode.getRdsBindAttrToggle().split(',');
+                        this.bindAttrToggle(docNode, attrName, dotted);
                     }
 
                     if (docNode.getRdsBindMethod) {
-                        let [ dotted, methodName ] = docNode.getRdsBindMethod().split(',');
-                        this.bindMethod(docNode, methodName, dotted);
+                        let args = docNode.getRdsBindMethod().split(',');
+                        this.bindMethod(docNode, args[0], ...args.slice(1));
                     }
-                    */
 
                     if (docNode.getRdsBindProperty) {
                         let [ property, dotted ] = docNode.getRdsBindProperty().split(',');
@@ -225,30 +227,15 @@ singleton(class Controller extends Emitter {
         }
     }
 
-    onAttrAdded(docElement, attrName) {
-        // TODO ************************************************************************
-        // TODO ************************************************************************
-    }
-
-    onAttrRemoved(docElement, attrName) {
-        // TODO ************************************************************************
-        // TODO ************************************************************************
-    }
-
-    onAttrChanged(docElement, attrName) {
-        // TODO ************************************************************************
-        // TODO ************************************************************************
-    }
-
     onMutationAttr(message) {
         let bindings = this.bindingsByDocElement.get(message.target);
 
         if (bindings) {
             for (let binding of bindings.bindings) {
-                if (binding.type == 'attrExists') {
+                if (binding.type == 'attr') {
                     binding.pull();
                 }
-                else if (binding.type == 'attrValue') {
+                else if (binding.type == 'attrToggle') {
                     binding.pull();
                 }
                 else if (binding.type == 'style') {

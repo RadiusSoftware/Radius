@@ -47,31 +47,25 @@ define(class ControllerBinding {
                 this.pull();
             });
         }
-        else if (type == 'attrExists') {
+        else if (type == 'attr') {
             if (typeof name == 'string' && name != '') {
                 this.valid = true;
                 this.type = type;
                 this.name = name;
-                // TODO **************************************************************************
-                // TODO **************************************************************************
             }
         }
-        else if (type == 'attrValue') {
+        else if (type == 'attrToggle') {
             if (typeof name == 'string' && name != '') {
                 this.valid = true;
                 this.type = type;
                 this.name = name;
-                // TODO **************************************************************************
-                // TODO **************************************************************************
             }
         }
         else if (type == 'method') {
             if (typeof name == 'string' && name != '') {
-                if (name in docElement) {
-                    this.valid = true;
-                    this.type = type;
-                    this.name = name;
-                }
+                this.valid = true;
+                this.type = type;
+                this.name = name;
             }
         }
         else if (type == 'property') {
@@ -79,8 +73,6 @@ define(class ControllerBinding {
                 this.valid = true;
                 this.type = type;
                 this.name = name;
-                // TODO **************************************************************************
-                // TODO **************************************************************************
             }
         }
         else if (type == 'style') {
@@ -194,13 +186,13 @@ define(class ControllerBinding {
             let newValue = this.docElement.getProperty('value');
             Controller.setDataValue(this.docElement, this.dotted, newValue);
         }
-        else if (this.type == 'attrValue') {
-            // *****************************************************************************
-            // *****************************************************************************
+        else if (this.type == 'attr') {
+            let newValue = this.docElement.getAttribute(this.name);
+            Controller.setDataValue(this.docElement, this.dotted, newValue);
         }
-        else if (this.type == 'attrExists') {
-            // *****************************************************************************
-            // *****************************************************************************
+        else if (this.type == 'attrToggle') {
+            let bool = this.docElement.hasAttribute(this.name);
+            Controller.setDataValue(this.docElement, this.dotted, bool);
         }
         else if (this.type == 'style') {
             let stylePropertyValue = this.docElement.getStyle(this.name);
@@ -217,17 +209,19 @@ define(class ControllerBinding {
         else if (this.type == 'input') {
             this.docElement.setProperty('value', this.expr.eval());
         }
-        else if (this.type == 'attrValue') {
-            // *****************************************************************************
-            // *****************************************************************************
+        else if (this.type == 'attr') {
+            this.docElement.setAttribute(this.name, this.expr.eval());
         }
-        else if (this.type == 'attrExists') {
-            // *****************************************************************************
-            // *****************************************************************************
+        else if (this.type == 'attrToggle') {
+            if (this.expr.eval() == true) {
+                this.docElement.setAttribute(this.name);
+            }
+            else {
+                this.docElement.clearAttribute(this.name);
+            }
         }
         else if (this.type == 'method') {
-            // *****************************************************************************
-            // *****************************************************************************
+            this.docElement[this.name]();
         }
         else if (this.type == 'property') {
             this.docElement.setProperty(this.name, this.expr.eval());

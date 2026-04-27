@@ -9,9 +9,7 @@
     <widget tagname="cookieacceptor-app">
         <script>
             class CookieAcceptorApp extends Widget {
-                init() {
-                    super.init();
-
+                configure() {
                     let shape = mkRdsShape({
                         first: StringType,
                         color: StringType,
@@ -33,21 +31,26 @@
                             c: mkTime(),
                         }
                     });
+                }
+
+                init() {
+                    super.init();
 
                     (async () => {
-                        let htmlElement = Doc.getElementById('inner-test');
-
-                        await pause(1000);
-                        //Controller.setDataValue(this, 'color', 'red');
-                        htmlElement.setStyle({ color: 'red' });
-
-                        await pause(1000);
-                        //Controller.setDataValue(this, 'color', 'steelblue');
-                        htmlElement.setStyle({ color: 'steelblue' });
-
-                        await pause(1000);
-                        //Controller.setDataValue(this, 'color', '');
-                        htmlElement.setStyle({ color: '' });
+                        let htmlElement = Doc.getElementById('test1');
+                        let htmlElement2 = Doc.getElementById('test2');
+                        
+                        await pause(2000);
+                        htmlElement.setAttribute('something', 'Bojack Horseman');
+                        
+                        await pause(2000);
+                        Controller.setDataValue(this, 'second.1', true);
+                        //htmlElement.setAttribute('something', 'Bojack Horseman');
+                        
+                        await pause(2000);
+                        htmlElement2.clearAttribute('disabled');
+                        await pause(50);
+                        console.log(Controller.getDataValue(this, 'second.1'));
                     })();
                 }
 
@@ -97,12 +100,11 @@
                 <div></div>
                 <div></div>
             </grid-widget>
-            <div>
+            <div id="test2" rds-bind-attr-toggle="disabled,second.1">
                 <input-widget type="text" style="margin-top:35px;margin-left:25px;" rds-bind="first"></input-widget>
                 <br>
-                <div id="inner-test" rds-bind="first" rds-bind-style="color,color"></div>
+                <div id="test1" rds-bind="first" rds-bind-attr="something,first"></div>
                 <br>
-                <input-widget type="text" style="margin-top:35px;margin-left:25px;" rds-bind="first" rds-bind-style="color,color"></input-widget>
             </div>
         </html>
     </widget>

@@ -476,6 +476,7 @@ singleton(class Doc extends Emitter {
                             type: mutationRecord.type,
                             target: target,
                             attributeName: mutationRecord.attributeName,
+                            oldValue: mutationRecord.oldValue,
                         });
                     }
                 }

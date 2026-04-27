@@ -269,6 +269,9 @@ define(class DocNode extends Emitter {
         return this;
     }
 
+    configure() {
+    }
+
     contains(docNode) {
         return this.node.contains(docNode.node);
     }
