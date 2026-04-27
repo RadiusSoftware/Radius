@@ -1,482 +1,9 @@
 <!DOCTYPE bundle>
 <bundle>
-    <widget tagname="input-widget" settings="type:stub;">
-        <script>
-            class InputWidget extends Widget {
-                static stdInputTypes = mkRdsEnum(
-                    'color',
-                    'date',
-                    'datetime-local',
-                    'email',
-                    'image',
-                    'month',
-                    'number',
-                    'password',
-                    'range',
-                    'tel',
-                    'text',
-                    'time',
-                    'url',
-                    'week',
-                );
-
-                constructor(arg) {
-                    super(arg);
-                }
-
-                buildOptions() {
-                    let options = [];
-
-                    /*
-                    if (this.getRdsOptionsKey) {
-                        let opts = this.getControllerValue(this.getRdsOptionsKey());
-                        
-                        if (Objekt.isObjekt(opts)) {
-                            for (let value in opts) {
-                                options.push({ value: value, text: opts[value] });
-                            }
-                        }
-                    }
-
-                    if (!options.length && this.getInnerElements().length) {
-                        for (let htmlElement of this.getInnerElements()) {
-                            if (htmlElement.getTagName() == 'opt') {
-                                if (htmlElement.hasAttribute('value')) {
-                                    let value = htmlElement.getAttribute('value');
-
-                                    if (htmlElement.getRdsShape) {
-                                        options.push({
-                                            value: value,
-                                            shape: htmlElement.getRdsShape(),
-                                            text: htmlElement.getInnerHtml().trim(),
-                                        });
-                                    }
-                                    else {
-                                        options.push({
-                                            value: value,
-                                            text: htmlElement.getInnerHtml().trim(),
-                                        });
-                                    }
-                                }
-                            }
-                        }
-
-                        this.clear();
-;                   }
-
-                    if (!options.length && this.getRdsOptions) {
-                        let opts = RdsText.parseAttributeEncoded(this.getRdsOptions());
-
-                        for (let value in opts) {
-                            options.push({ value: value, text: opts[value] });
-                        }
-                    }
-                    */
-
-                    return options;
-                }
-
-                createFieldSet(attributes) {
-                    let attrs = this.filterAttributes('type', 'class', 'rds-bind', 'rds-disabled');
-                    attrs.class = `input-widget-radio-fieldset ${attrs.class}`;
-                    let fieldset = createElement('fieldset', attrs);
-                    let options = this.buildOptions();
-
-                    attrs = {
-                        type: 'radio',
-                        name: 'UNSPECIFIED',
-                        class: 'input-widget-radio',
-                    };
-
-                    if (this.getRdsBind) {
-                        attrs.name = this.getRdsBind();
-                        attrs['rds-bind'] = this.getRdsBind();
-                    }
-
-                    if (this.getRdsDisabled) {
-                        attrs['rds-disabled'] = this.getRdsDisabled();
-                    }
-
-                    let legend;
-
-                    for (let innerElement of this.getInnerElements()) {
-                        if (innerElement.getTagName() == 'legend') {
-                            legend = innerElement;
-                        }
-                    }
-
-                    if (legend) {
-                        fieldset.prepend(legend);
-                    }
-
-                    for (let option of options) {
-                        attrs.id = Crypto.generateUUID();
-                        attrs.value = option.value;
-
-                        fieldset.append(
-                            createElement('div', {
-                                design: 'input-widget-radio-div',
-                            })
-                            .append(
-                                createElement('input', attrs),
-                                mkHtmlElement('label', {
-                                    for: attrs.id,
-                                    design: 'input-widget-radio-legend',
-                                })
-                                .setInnerHtml(option.text),
-                            )
-                        );
-                    }
-
-                    return fieldset;
-                }
-
-                createSelect(attributes) {
-                    attributes.design = 'input-widget-select';
-                    let selectElement = createElement('select', attributes);
-                    let options = this.buildOptions();
-
-                    let optionElements = options.map(opt => {
-                        let optionElement = createElement('option', {
-                            value: opt.value,
-                            class: 'input-widget-select-option',
-                        });
-
-                        let innerOption;
-
-                        if (opt.shape) {
-                            innerOption = createElementFromOuterHtml(
-                                `<span>${opt.text.trim()}</span>` +
-                                `<span class="input-widget-select-option-svg"><svg class="icon icon-small" rds-shape="${opt.shape}"></svg></span>`
-                            );
-                        }
-                        else {
-                            innerOption = createElementFromOuterHtml(
-                                `<span>${opt.text.trim()}</span>` +
-                                `<span class="input-widget-select-option-svg"></span>`
-                            );
-                        }
-
-                        optionElement.append(...innerOption);
-                        return optionElement;
-                    });
-
-                    selectElement.append(...optionElements);
-                    return selectElement;
-                }
-
-                createToggle(attributes) {
-                    let bind = '';
-                    let disabled = '';
-
-                    if ('rds-bind' in attributes) {
-                        bind = ` rds-bind="${attributes['rds-bind']}"`;
-                    }
-
-                    if ('rds-disabled' in attributes) {
-                        disabled = ` rds-disabled="${attributes['rds-disabled']}"`;
-                    }
-
-                    let toggle = createElementFromOuterHtml(
-                        `<span${disabled}>
-                            <input type="checkbox"${bind} style="display:none;">
-                            <svg rds-shape="circle"></svg>
-                        </span>`
-                    );
-
-                    const knob = toggle.getChildElementAt(1);
-                    const checkbox = toggle.getChildElementAt(0);
-
-                    const update = () => {
-                        if (checkbox.getProperty('checked')) {
-                            knob.setAttribute('design', 'input-widget-toggle-knob-selected');
-                            toggle.setAttribute('design', 'input-widget-toggle-selected');
-                        }
-                        else {
-                            knob.setAttribute('design', 'input-widget-toggle-knob-unselected');
-                            toggle.setAttribute('design', 'input-widget-toggle-unselected');
-                        }
-
-                        if (!toggle.hasAttribute('disabled')) {
-                            toggle.clearStyle();
-                        }
-                        else {
-                            toggle.setStyle({
-                                opacity: .5,
-                                cursor: 'default',
-                            });
-                        }
-                    }
-
-                    setTimeout(() => update(), 0);
-                    let controller = this.getController();
-
-                    if (controller) {
-                        let objekt = controller.getObjekt();
-
-                        if (objekt) {
-                            objekt.on('Update', message => {
-                                if ('rds-bind' in attributes && message.key == attributes['rds-bind']) {
-                                    update();
-                                }
-                                else if ('rds-disabled' in attributes && message.key == attributes['rds-disabled']) {
-                                    update();
-                                }
-                            });
-                        }
-                    }
-
-                    toggle.on('click', message => {
-                        if (!toggle.hasAttribute('disabled')) {
-                            checkbox.node.click();
-                        }
-                    });
-
-                    return toggle;
-                }
- 
-                init() {
-                    let attributes = this.filterAttributes('type');
-
-                    if (this.hasAttribute('type')) {
-                        let type = this.getAttribute('type');
-
-                        if (InputWidget.stdInputTypes.has(type)) {
-                            attributes.type = type;
-                            attributes.class = RdsText.concat('input-widget-input', attributes.class);
-                            this.replacement = createElement('input', attributes);
-                        }
-                        else if (type in { button:0, submit:0 }) {
-                            attributes.type = type;
-                            attributes.class = RdsText.concat('input-widget-button', attributes.class);
-                            this.replacement = createElement('input', attributes);
-                        }
-                        else if (type == 'checkbox') {
-                            attributes.type = type;
-                            attributes.class = RdsText.concat('input-widget-checkbox', attributes.class);
-                            this.replacement = createElement('input', attributes);
-                        }
-                        else if (type == 'essay') {
-                            attributes.class = RdsText.concat('input-widget-essay', attributes.class);
-                            this.replacement = createElement('textarea', attributes);
-                        }
-                        /*
-                        else if (type == 'fieldset') {
-                            this.replacement = this.createFieldSet(attributes);
-                        }
-                        /*
-                        else if (type == 'select') {
-                            this.replacement = this.createSelect(attributes);
-                            this.replacement.once('focusin', message => InputWidget.layoutSelect(editor));
-                        }
-                        else if (type == 'submit') {
-                            attributes.design = 'input-widget-button';
-                            this.replacement = createElement('submit', attributes);
-                        }
-                        else if (type == 'toggle') {
-                            this.replacement = this.createToggle(attributes);
-                        }
-                        else {
-                            attributes.type = 'text';
-                            attributes.design = 'input-widget-input';
-                            this.replacement = createElement('input', attributes);
-                        }
-                        */
-                    }
-
-                    this.replacement.setAttribute('id', Crypto.generateUUID());
-                }
-
-                static layoutSelect(select) {
-                    let maxWidth = 0;
-                    let hasSvg = false;
-
-                    for (let option of select.getChildElements()) {
-                        let text = option.getChildElementAt(0);
-                        let svg = option.getChildElementAt(1);
-                        
-                        if (text.getClientWidth() > maxWidth) {
-                            maxWidth = text.getClientWidth();
-                        }
-
-                        if (svg.getChildElements().length) {
-                            hasSvg = true;
-                        }
-                    }
-
-                    for (let option of select.getChildElements()) {
-                        option.getChildElementAt(0).setStyle({ width: `${maxWidth+10}px` });
-                    }
-
-                    if (!hasSvg) {
-                        for (let option of select.getChildElements()) {
-                            option.getChildElementAt(1).setStyle({ width: '0px' });
-                        }
-                    }
-                }
-            }
-        </script>
-        <style>
-            [design=select] {
-                display: flex;
-                align-items: center;
-                height: 40px;
-                margin-top: 6px;
-                margin-bottom: 6px;
-                margin-left: 0px;
-                margin-right: 0px;
-                padding-top: 4px;
-                padding-bottom: 4px;
-                border-style: solid;
-                border-color: var(--border-color);
-                border-width: 1px;
-                border-radius: var(--border-radius-1);
-                font-size: 16px;
-                color: var(--color);
-                background-color: var(--textarea-background-color);
-                vertical-align: middle;
-                appearance: base-select;
-            }
-            [design=select]:hover {
-                border-color: var(--hover-border-color);
-                outline-color: var(--hover-border-color);
-                outline-style: solid;
-                outline-width: 3px;
-                color: var(--hover-color);
-                background-color: var(--hover-background-color);
-                cursor: pointer;
-            }
-            [design=select]:focus {
-                border-color: var(--hover-border-color);
-                outline-color: var(--hover-border-color);
-                outline-style: solid;
-                outline-width: 3px;
-                color: var(--hover-color);
-                background-color: var(--hover-background-color);
-                cursor: pointer;
-            }
-            ::picker(select) {
-                padding-top: 12px;
-                padding-bottom: 12px;
-                padding-left: 12px;
-                padding-right: 12px;
-                border-style: solid;
-                border-color: var(--border-color);
-                border-width: 1px;
-                border-radius: var(--border-radius-1);
-                background-color: var(--textarea-background-color);
-                appearance: base-select;
-            }
-            .input-widget-select-option {
-                color: var(--color);
-                background-color: var(--textarea-background-color);
-                font-size: 16px;
-            }
-            .input-widget-select-option::checkmark {
-                order: 1;
-            }
-            .input-widget-select-option:checked {
-                color: var(--hover-color);
-            }
-            .input-widget-select-option:hover {
-                color: var(--hover-color);
-                background-color: var(--hover-background-color);
-                cursor: pointer;
-            }
-            .input-widget-select-option-svg {
-                width: 32px;
-            }
-            [design=toggle-unselected] {
-                display: inline-block;
-                user-select: none;
-                width: 80px;
-                height: 24px;
-                margin: 0px;
-                padding: 0px;
-                background-color: var(--toggle-unselected-background-color);
-                border-color: var(--border-color);
-                border-width: 1px;
-                border-style: solid;
-                border-radius: var(--border-radius-2);
-                cursor: pointer;
-                transition-delay: .45s;
-            }
-            [design=toggle-selected] {
-                display: inline-block;
-                user-select: none;
-                width: 80px;
-                height: 24px;
-                margin: 0px;
-                padding: 0px;
-                background-color: var(--toggle-selected-background-color);
-                border-color: var(--border-color);
-                border-width: 1px;
-                border-style: solid;
-                border-radius: var(--border-radius-2);
-                cursor: pointer;
-                transition-delay: .45s;
-            }
-            [design=toggle-knob-unselected] {
-                width: 20px;
-                height: 20px;
-                margin-top: 2px;
-                margin-bottom: 0px;
-                margin-left: 2px;
-                margin-right: 0px;
-                fill: var(--knob-fill-color);
-                stroke: var(--knob-stroke-color);
-                transition-duration: .45s;
-            }
-            [design=toggle-knob-selected] {
-                width: 20px;
-                height: 20px;
-                margin-top: 2px;
-                margin-bottom: 0px;
-                margin-left: 58px;
-                margin-right: 0px;
-                fill: var(--knob-fill-color);
-                stroke: var(--knob-stroke-color);
-                transition-duration: .45s;
-            }
-        </style>
-    </widget>
-    <!--
-    <widget tagname="file-widget">
-        <script>
-            class FileWidget extends Widget {
-                constructor(arg) {
-                    super(arg);
-                }
-            }
-        </script>
-    </widget>
-    -->
-    <!--
-    <widget tagname="form-widget">
-        <script>
-            class FormWidget extends Widget {
-                constructor(arg) {
-                    super(arg);
-                }
-            }
-        </script>
-    </widget>
-    -->
     <!--
     <widget tagname="busy-widget">
         <script>
             class BusyWidget extends Widget {
-                constructor(arg) {
-                    super(arg);
-                }
-            }
-        </script>
-    </widget>
-    -->
-    <!--
-    <widget tagname="progress-widget">
-        <script>
-            class ProgressWidget extends Widget {
                 constructor(arg) {
                     super(arg);
                 }
@@ -769,6 +296,487 @@
                 outline: 1px solid var(--hover-border-color);
             }
         </style>
+    </widget>
+    -->
+    <widget tagname="input-widget" settings="type:stub;">
+        <script>
+            class InputWidget extends Widget {
+                static stdInputTypes = mkRdsEnum(
+                    'color',
+                    'date',
+                    'datetime-local',
+                    'email',
+                    'image',
+                    'month',
+                    'number',
+                    'password',
+                    'range',
+                    'tel',
+                    'text',
+                    'time',
+                    'url',
+                    'week',
+                );
+
+                constructor(arg) {
+                    super(arg);
+                }
+
+                buildOptions() {
+                    let options = [];
+
+                    /*
+                    if (this.getRdsOptionsKey) {
+                        let opts = this.getControllerValue(this.getRdsOptionsKey());
+                        
+                        if (Objekt.isObjekt(opts)) {
+                            for (let value in opts) {
+                                options.push({ value: value, text: opts[value] });
+                            }
+                        }
+                    }
+
+                    if (!options.length && this.getInnerElements().length) {
+                        for (let htmlElement of this.getInnerElements()) {
+                            if (htmlElement.getTagName() == 'opt') {
+                                if (htmlElement.hasAttribute('value')) {
+                                    let value = htmlElement.getAttribute('value');
+
+                                    if (htmlElement.getRdsShape) {
+                                        options.push({
+                                            value: value,
+                                            shape: htmlElement.getRdsShape(),
+                                            text: htmlElement.getInnerHtml().trim(),
+                                        });
+                                    }
+                                    else {
+                                        options.push({
+                                            value: value,
+                                            text: htmlElement.getInnerHtml().trim(),
+                                        });
+                                    }
+                                }
+                            }
+                        }
+
+                        this.clear();
+;                   }
+
+                    if (!options.length && this.getRdsOptions) {
+                        let opts = RdsText.parseAttributeEncoded(this.getRdsOptions());
+
+                        for (let value in opts) {
+                            options.push({ value: value, text: opts[value] });
+                        }
+                    }
+                    */
+
+                    return options;
+                }
+
+                /*
+                createFieldSet(attributes) {
+                    let attrs = this.filterAttributes('type', 'class', 'rds-bind', 'rds-disabled');
+                    attrs.class = `input-widget-radio-fieldset ${attrs.class}`;
+                    let fieldset = createElement('fieldset', attrs);
+                    let options = this.buildOptions();
+
+                    attrs = {
+                        type: 'radio',
+                        name: 'UNSPECIFIED',
+                        class: 'input-widget-radio',
+                    };
+
+                    if (this.getRdsBind) {
+                        attrs.name = this.getRdsBind();
+                        attrs['rds-bind'] = this.getRdsBind();
+                    }
+
+                    if (this.getRdsDisabled) {
+                        attrs['rds-disabled'] = this.getRdsDisabled();
+                    }
+
+                    let legend;
+
+                    for (let innerElement of this.getInnerElements()) {
+                        if (innerElement.getTagName() == 'legend') {
+                            legend = innerElement;
+                        }
+                    }
+
+                    if (legend) {
+                        fieldset.prepend(legend);
+                    }
+
+                    for (let option of options) {
+                        attrs.id = Crypto.generateUUID();
+                        attrs.value = option.value;
+
+                        fieldset.append(
+                            createElement('div', {
+                                design: 'input-widget-radio-div',
+                            })
+                            .append(
+                                createElement('input', attrs),
+                                mkHtmlElement('label', {
+                                    for: attrs.id,
+                                    design: 'input-widget-radio-legend',
+                                })
+                                .setInnerHtml(option.text),
+                            )
+                        );
+                    }
+
+                    return fieldset;
+                }
+                */
+
+                /*
+                createSelect(attributes) {
+                    attributes.design = 'input-widget-select';
+                    let selectElement = createElement('select', attributes);
+                    let options = this.buildOptions();
+
+                    let optionElements = options.map(opt => {
+                        let optionElement = createElement('option', {
+                            value: opt.value,
+                            class: 'input-widget-select-option',
+                        });
+
+                        let innerOption;
+
+                        if (opt.shape) {
+                            innerOption = createElementFromOuterHtml(
+                                `<span>${opt.text.trim()}</span>` +
+                                `<span class="input-widget-select-option-svg"><svg class="icon icon-small" rds-shape="${opt.shape}"></svg></span>`
+                            );
+                        }
+                        else {
+                            innerOption = createElementFromOuterHtml(
+                                `<span>${opt.text.trim()}</span>` +
+                                `<span class="input-widget-select-option-svg"></span>`
+                            );
+                        }
+
+                        optionElement.append(...innerOption);
+                        return optionElement;
+                    });
+
+                    selectElement.append(...optionElements);
+                    return selectElement;
+                }
+                */
+
+                /*
+                createToggle(attributes) {
+                    let bind = '';
+                    let disabled = '';
+
+                    if ('rds-bind' in attributes) {
+                        bind = ` rds-bind="${attributes['rds-bind']}"`;
+                    }
+
+                    if ('rds-disabled' in attributes) {
+                        disabled = ` rds-disabled="${attributes['rds-disabled']}"`;
+                    }
+
+                    let toggle = createElementFromOuterHtml(
+                        `<span${disabled}>
+                            <input type="checkbox"${bind} style="display:none;">
+                            <svg rds-shape="circle"></svg>
+                        </span>`
+                    );
+
+                    const knob = toggle.getChildElementAt(1);
+                    const checkbox = toggle.getChildElementAt(0);
+
+                    const update = () => {
+                        if (checkbox.getProperty('checked')) {
+                            knob.setAttribute('design', 'input-widget-toggle-knob-selected');
+                            toggle.setAttribute('design', 'input-widget-toggle-selected');
+                        }
+                        else {
+                            knob.setAttribute('design', 'input-widget-toggle-knob-unselected');
+                            toggle.setAttribute('design', 'input-widget-toggle-unselected');
+                        }
+
+                        if (!toggle.hasAttribute('disabled')) {
+                            toggle.clearStyle();
+                        }
+                        else {
+                            toggle.setStyle({
+                                opacity: .5,
+                                cursor: 'default',
+                            });
+                        }
+                    }
+
+                    setTimeout(() => update(), 0);
+                    let controller = this.getController();
+
+                    if (controller) {
+                        let objekt = controller.getObjekt();
+
+                        if (objekt) {
+                            objekt.on('Update', message => {
+                                if ('rds-bind' in attributes && message.key == attributes['rds-bind']) {
+                                    update();
+                                }
+                                else if ('rds-disabled' in attributes && message.key == attributes['rds-disabled']) {
+                                    update();
+                                }
+                            });
+                        }
+                    }
+
+                    toggle.on('click', message => {
+                        if (!toggle.hasAttribute('disabled')) {
+                            checkbox.node.click();
+                        }
+                    });
+
+                    return toggle;
+                }
+                */
+ 
+                init() {
+                    let attributes = this.filterAttributes('type');
+
+                    if (this.hasAttribute('type')) {
+                        let type = this.getAttribute('type');
+
+                        if (InputWidget.stdInputTypes.has(type)) {
+                            attributes.type = type;
+                            attributes.class = RdsText.concat('input-widget-input', attributes.class);
+                            this.replacement = createElement('input', attributes);
+                        }
+                        else if (type in { button:0, submit:0 }) {
+                            attributes.type = type;
+                            attributes.class = RdsText.concat('input-widget-button', attributes.class);
+                            this.replacement = createElement('input', attributes);
+                        }
+                        else if (type == 'checkbox') {
+                            attributes.type = type;
+                            attributes.class = RdsText.concat('input-widget-checkbox', attributes.class);
+                            this.replacement = createElement('input', attributes);
+                        }
+                        else if (type == 'essay') {
+                            attributes.class = RdsText.concat('input-widget-essay', attributes.class);
+                            this.replacement = createElement('textarea', attributes);
+                        }
+                        /*
+                        else if (type == 'fieldset') {
+                            this.replacement = this.createFieldSet(attributes);
+                        }
+                        /*
+                        else if (type == 'select') {
+                            this.replacement = this.createSelect(attributes);
+                            this.replacement.once('focusin', message => InputWidget.layoutSelect(editor));
+                        }
+                        else if (type == 'submit') {
+                            attributes.design = 'input-widget-button';
+                            this.replacement = createElement('submit', attributes);
+                        }
+                        else if (type == 'toggle') {
+                            this.replacement = this.createToggle(attributes);
+                        }
+                        else {
+                            attributes.type = 'text';
+                            attributes.design = 'input-widget-input';
+                            this.replacement = createElement('input', attributes);
+                        }
+                        */
+                    }
+
+                    this.replacement.setAttribute('id', Crypto.generateUUID());
+                }
+
+                /*
+                static layoutSelect(select) {
+                    let maxWidth = 0;
+                    let hasSvg = false;
+
+                    for (let option of select.getChildElements()) {
+                        let text = option.getChildElementAt(0);
+                        let svg = option.getChildElementAt(1);
+                        
+                        if (text.getClientWidth() > maxWidth) {
+                            maxWidth = text.getClientWidth();
+                        }
+
+                        if (svg.getChildElements().length) {
+                            hasSvg = true;
+                        }
+                    }
+
+                    for (let option of select.getChildElements()) {
+                        option.getChildElementAt(0).setStyle({ width: `${maxWidth+10}px` });
+                    }
+
+                    if (!hasSvg) {
+                        for (let option of select.getChildElements()) {
+                            option.getChildElementAt(1).setStyle({ width: '0px' });
+                        }
+                    }
+                }
+                */
+            }
+        </script>
+        <style>
+            [design=select] {
+                display: flex;
+                align-items: center;
+                height: 40px;
+                margin-top: 6px;
+                margin-bottom: 6px;
+                margin-left: 0px;
+                margin-right: 0px;
+                padding-top: 4px;
+                padding-bottom: 4px;
+                border-style: solid;
+                border-color: var(--border-color);
+                border-width: 1px;
+                border-radius: var(--border-radius-1);
+                font-size: 16px;
+                color: var(--color);
+                background-color: var(--textarea-background-color);
+                vertical-align: middle;
+                appearance: base-select;
+            }
+            [design=select]:hover {
+                border-color: var(--hover-border-color);
+                outline-color: var(--hover-border-color);
+                outline-style: solid;
+                outline-width: 3px;
+                color: var(--hover-color);
+                background-color: var(--hover-background-color);
+                cursor: pointer;
+            }
+            [design=select]:focus {
+                border-color: var(--hover-border-color);
+                outline-color: var(--hover-border-color);
+                outline-style: solid;
+                outline-width: 3px;
+                color: var(--hover-color);
+                background-color: var(--hover-background-color);
+                cursor: pointer;
+            }
+            ::picker(select) {
+                padding-top: 12px;
+                padding-bottom: 12px;
+                padding-left: 12px;
+                padding-right: 12px;
+                border-style: solid;
+                border-color: var(--border-color);
+                border-width: 1px;
+                border-radius: var(--border-radius-1);
+                background-color: var(--textarea-background-color);
+                appearance: base-select;
+            }
+            .input-widget-select-option {
+                color: var(--color);
+                background-color: var(--textarea-background-color);
+                font-size: 16px;
+            }
+            .input-widget-select-option::checkmark {
+                order: 1;
+            }
+            .input-widget-select-option:checked {
+                color: var(--hover-color);
+            }
+            .input-widget-select-option:hover {
+                color: var(--hover-color);
+                background-color: var(--hover-background-color);
+                cursor: pointer;
+            }
+            .input-widget-select-option-svg {
+                width: 32px;
+            }
+            [design=toggle-unselected] {
+                display: inline-block;
+                user-select: none;
+                width: 80px;
+                height: 24px;
+                margin: 0px;
+                padding: 0px;
+                background-color: var(--toggle-unselected-background-color);
+                border-color: var(--border-color);
+                border-width: 1px;
+                border-style: solid;
+                border-radius: var(--border-radius-2);
+                cursor: pointer;
+                transition-delay: .45s;
+            }
+            [design=toggle-selected] {
+                display: inline-block;
+                user-select: none;
+                width: 80px;
+                height: 24px;
+                margin: 0px;
+                padding: 0px;
+                background-color: var(--toggle-selected-background-color);
+                border-color: var(--border-color);
+                border-width: 1px;
+                border-style: solid;
+                border-radius: var(--border-radius-2);
+                cursor: pointer;
+                transition-delay: .45s;
+            }
+            [design=toggle-knob-unselected] {
+                width: 20px;
+                height: 20px;
+                margin-top: 2px;
+                margin-bottom: 0px;
+                margin-left: 2px;
+                margin-right: 0px;
+                fill: var(--knob-fill-color);
+                stroke: var(--knob-stroke-color);
+                transition-duration: .45s;
+            }
+            [design=toggle-knob-selected] {
+                width: 20px;
+                height: 20px;
+                margin-top: 2px;
+                margin-bottom: 0px;
+                margin-left: 58px;
+                margin-right: 0px;
+                fill: var(--knob-fill-color);
+                stroke: var(--knob-stroke-color);
+                transition-duration: .45s;
+            }
+        </style>
+    </widget>
+    <!--
+    <widget tagname="file-widget">
+        <script>
+            class FileWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+            }
+        </script>
+    </widget>
+    -->
+    <!--
+    <widget tagname="form-widget" settings="type:stub;">
+        <script>
+            class FormWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+            }
+        </script>
+    </widget>
+    -->
+    <!--
+    <widget tagname="progress-widget">
+        <script>
+            class ProgressWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+            }
+        </script>
     </widget>
     -->
     <strings lang="en">

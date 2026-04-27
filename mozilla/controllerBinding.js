@@ -183,8 +183,14 @@ define(class ControllerBinding {
             Controller.setDataValue(this.docElement, this.dotted, newValue);
         }
         else if (this.type == 'input') {
-            let newValue = this.docElement.getProperty('value');
-            Controller.setDataValue(this.docElement, this.dotted, newValue);
+            if (this.docElement.getAttribute('type') == 'checkbox') {
+                let newValue = this.docElement.getProperty('checked');
+                Controller.setDataValue(this.docElement, this.dotted, newValue);
+            }
+            else {
+                let newValue = this.docElement.getProperty('value');
+                Controller.setDataValue(this.docElement, this.dotted, newValue);
+            }
         }
         else if (this.type == 'attr') {
             let newValue = this.docElement.getAttribute(this.name);
@@ -207,7 +213,12 @@ define(class ControllerBinding {
             this.docElement.setInnerHtml(this.expr.eval());
         }
         else if (this.type == 'input') {
-            this.docElement.setProperty('value', this.expr.eval());
+            if (this.docElement.getAttribute('type') == 'checkbox') {
+                this.docElement.setProperty('checked', this.expr.eval());
+            }
+            else {
+                this.docElement.setProperty('value', this.expr.eval());
+            }
         }
         else if (this.type == 'attr') {
             this.docElement.setAttribute(this.name, this.expr.eval());

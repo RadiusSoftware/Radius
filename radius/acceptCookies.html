@@ -36,22 +36,12 @@
                 init() {
                     super.init();
 
+                    /*
                     (async () => {
-                        let htmlElement = Doc.getElementById('test1');
-                        let htmlElement2 = Doc.getElementById('test2');
-                        
                         await pause(2000);
-                        htmlElement.setAttribute('something', 'Bojack Horseman');
-                        
-                        await pause(2000);
-                        Controller.setDataValue(this, 'second.1', true);
-                        //htmlElement.setAttribute('something', 'Bojack Horseman');
-                        
-                        await pause(2000);
-                        htmlElement2.clearAttribute('disabled');
-                        await pause(50);
-                        console.log(Controller.getDataValue(this, 'second.1'));
+                        Controller.setDataValue(this, 'first', 'to be or not to be');
                     })();
+                    */
                 }
 
                 async onAcceptCookies(message) {
@@ -100,11 +90,8 @@
                 <div></div>
                 <div></div>
             </grid-widget>
-            <div id="test2" rds-bind-attr-toggle="disabled,second.1">
-                <input-widget type="text" style="margin-top:35px;margin-left:25px;" rds-bind="first"></input-widget>
-                <br>
-                <div id="test1" rds-bind="first" rds-bind-attr="something,first"></div>
-                <br>
+            <div>
+                <input-widget type="essay" style="margin-top:25px;margin-left:25px;" rds-bind="first"></input-widget>
             </div>
         </html>
     </widget>
