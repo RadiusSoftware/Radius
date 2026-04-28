@@ -566,7 +566,6 @@ define(class Package {
                 widget.settings = RdsText.parseAttributeEncoded(widgetElement.getAttribute('settings'));
             }
 
-            widget.attributes.design = `${widget.tagName}-self`;
             let tagNameParts = RdsText.split(widget.tagName.trim().toLowerCase(), '-');
 
             if (tagNameParts.length != 2) {

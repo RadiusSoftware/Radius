@@ -18,7 +18,12 @@
                             a: NumericType,
                             b: StringType,
                             c: DateTimeType,
-                        }
+                        },
+                        options: [{
+                            text: StringType,
+                            value: StringType,
+                        }],
+                        selected: StringType,
                     });
 
                     Controller.defineData(this, shape, {
@@ -29,19 +34,23 @@
                             a: 17,
                             b: 'String Type Value',
                             c: mkTime(),
-                        }
+                        },
+                        options: [
+                            { text: 'first-option', value: 'ONE' },
+                            { text: 'second-option', value: 'TWO' },
+                            { text: 'third-option', value: 'THREE' },
+                        ],
+                        selected: 'ONE',
                     });
                 }
 
                 init() {
                     super.init();
 
-                    /*
                     (async () => {
                         await pause(2000);
-                        Controller.setDataValue(this, 'first', 'to be or not to be');
+                        Controller.setDataValue(this, 'selected', 'THREE');
                     })();
-                    */
                 }
 
                 async onAcceptCookies(message) {
@@ -91,7 +100,15 @@
                 <div></div>
             </grid-widget>
             <div>
-                <input-widget type="essay" style="margin-top:25px;margin-left:25px;" rds-bind="first"></input-widget>
+                <input-widget type="fieldset" rds-bind="selected" rds-options-key="options" style="margin-top:25px;margin-left:25px;">
+                    {
+                        "legend": "Setting Choice",
+                        "choices": [
+                            { "value": "ONE", "text": "One" },
+                            { "value": "TWO", "text": "Two" }
+                        ]
+                    }
+                </input-widget>
             </div>
         </html>
     </widget>

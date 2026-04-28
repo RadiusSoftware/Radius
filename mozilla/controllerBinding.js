@@ -183,13 +183,38 @@ define(class ControllerBinding {
             Controller.setDataValue(this.docElement, this.dotted, newValue);
         }
         else if (this.type == 'input') {
-            if (this.docElement.getAttribute('type') == 'checkbox') {
-                let newValue = this.docElement.getProperty('checked');
-                Controller.setDataValue(this.docElement, this.dotted, newValue);
+            // *******************************************************************************************
+            // *******************************************************************************************
+            // *******************************************************************************************
+            /*
+            if (this.docElement.getAttribute('type') == 'select-multiple') {
+                let length = this.docElement.getProperty('selectedOptions').length;
+                Controller.setDataValue(this.docElement, this.dotted, this.docElement.node.value);
+                return;
             }
-            else {
-                let newValue = this.docElement.getProperty('value');
-                Controller.setDataValue(this.docElement, this.dotted, newValue);
+            */
+            
+            switch (this.docElement.getAttribute('type')) {
+                case 'number':
+                    Controller.setDataValue(this.docElement, this.dotted, this.docElement.getProperty('valueAsNumber'));
+                    break;
+
+                case 'date':
+                case 'datetime-local':
+                    Controller.setDataValue(this.docElement, this.dotted, this.docElement.getProperty('valueAsDate'));
+                    break;
+
+                case 'radio':
+                    Controller.setDataValue(this.docElement, this.dotted, this.docElement.getAttribute('value'));
+                    break;
+
+                case 'checkbox':
+                    Controller.setDataValue(this.docElement, this.dotted, this.docElement.getProperty('checked'));
+                    break;
+
+                default:
+                    Controller.setDataValue(this.docElement, this.dotted, this.docElement.getProperty('value'));
+                    break;
             }
         }
         else if (this.type == 'attr') {
@@ -215,6 +240,14 @@ define(class ControllerBinding {
         else if (this.type == 'input') {
             if (this.docElement.getAttribute('type') == 'checkbox') {
                 this.docElement.setProperty('checked', this.expr.eval());
+            }
+            else if (this.docElement.getAttribute('type') == 'radio') {
+                if (this.docElement.getAttribute('value') == this.expr.eval()) {
+                    this.docElement.setProperty('checked', true);
+                }
+                else {
+                    this.docElement.setProperty('checked', false);
+                }
             }
             else {
                 this.docElement.setProperty('value', this.expr.eval());

@@ -119,12 +119,39 @@ singleton(class WidgetLibrary {
 define(class Widget extends HtmlElement {
     constructor(arg) {
         super(arg);
+        this.innerSettings = null;
+        this.innerElements = [];
         this.widgetData = globalThis[widgetDataKey];
         delete globalThis[widgetDataKey];
-        
+        let innerHtml = this.getInnerHtml().trim();
+
+        if (innerHtml) {
+            let innerElements = this.getChildElements();
+
+            if (innerElements.length) {
+                this.innerElements = innerElements;
+            }
+            else if (innerHtml) {
+                try {
+                    if (this.getInnerHtml().trim()) {
+                        this.innerSettings = fromJson(this.getInnerHtml());
+                    }
+                }
+                catch (e) {}
+            }
+        }
+
         if (this.widgetData.innerHtml) {
             this.setInnerHtml(this.widgetData.innerHtml);
         }
+    }
+
+    getInnerElements() {
+        return this.innerElements;
+    }
+
+    getInnerSettings() {
+        return this.innerSettings;
     }
 
     getPackage() {
@@ -133,6 +160,14 @@ define(class Widget extends HtmlElement {
 
     getSetting(key) {
         return this.widgetData.settings[key];
+    }
+
+    hasInnerElements() {
+        return this.innerElements.length > 0;
+    }
+
+    hasInnerSettings() {
+        return this.innerSettings != null;
     }
 
     hasSetting(key) {

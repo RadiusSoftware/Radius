@@ -318,6 +318,12 @@
                     'week',
                 );
 
+                static optsShape = mkRdsShape([{
+                    text: StringType,
+                    value: StringType,
+                    _key: StringType,
+                }]);
+
                 constructor(arg) {
                     super(arg);
                 }
@@ -325,17 +331,16 @@
                 buildOptions() {
                     let options = [];
 
-                    /*
                     if (this.getRdsOptionsKey) {
-                        let opts = this.getControllerValue(this.getRdsOptionsKey());
+                        let optsKey = this.getRdsOptionsKey();
+                        let opts = Controller.getDataValue(this, optsKey);
                         
-                        if (Objekt.isObjekt(opts)) {
-                            for (let value in opts) {
-                                options.push({ value: value, text: opts[value] });
-                            }
+                        if (InputWidget.optsShape.verify(opts)) {
+                            options = opts;
                         }
                     }
 
+                    /*
                     if (!options.length && this.getInnerElements().length) {
                         for (let htmlElement of this.getInnerElements()) {
                             if (htmlElement.getTagName() == 'opt') {
@@ -374,53 +379,36 @@
                     return options;
                 }
 
-                /*
-                createFieldSet(attributes) {
-                    let attrs = this.filterAttributes('type', 'class', 'rds-bind', 'rds-disabled');
-                    attrs.class = `input-widget-radio-fieldset ${attrs.class}`;
+                createFieldSet() {
+                    let attrs = this.filterAttributes('type', 'rds-bind', 'disabled');
+                    attrs.class = 'input-widget-radio-fieldset';
                     let fieldset = createElement('fieldset', attrs);
                     let options = this.buildOptions();
 
-                    attrs = {
+                    let radioAttrs = {
                         type: 'radio',
                         name: 'UNSPECIFIED',
                         class: 'input-widget-radio',
                     };
 
                     if (this.getRdsBind) {
-                        attrs.name = this.getRdsBind();
-                        attrs['rds-bind'] = this.getRdsBind();
-                    }
-
-                    if (this.getRdsDisabled) {
-                        attrs['rds-disabled'] = this.getRdsDisabled();
-                    }
-
-                    let legend;
-
-                    for (let innerElement of this.getInnerElements()) {
-                        if (innerElement.getTagName() == 'legend') {
-                            legend = innerElement;
-                        }
-                    }
-
-                    if (legend) {
-                        fieldset.prepend(legend);
+                        radioAttrs.name = this.getRdsBind();
+                        radioAttrs['rds-bind'] = this.getRdsBind();
                     }
 
                     for (let option of options) {
-                        attrs.id = Crypto.generateUUID();
-                        attrs.value = option.value;
+                        radioAttrs.id = Crypto.generateUUID();
+                        radioAttrs.value = option.value;
 
                         fieldset.append(
                             createElement('div', {
-                                design: 'input-widget-radio-div',
+                                class: 'input-widget-radio-div',
                             })
                             .append(
-                                createElement('input', attrs),
+                                createElement('input', radioAttrs),
                                 mkHtmlElement('label', {
-                                    for: attrs.id,
-                                    design: 'input-widget-radio-legend',
+                                    for: radioAttrs.id,
+                                    class: 'input-widget-radio-label',
                                 })
                                 .setInnerHtml(option.text),
                             )
@@ -429,10 +417,40 @@
 
                     return fieldset;
                 }
-                */
+
+                createLegend() {
+                    if (this.getRdsLegend) {
+                        let legend = createElement('legend', {
+                            class: 'input-widget-radio-legend',
+                        });
+
+                        legend.setInnerHtml(this.getRdsLegend().trim());
+                        return legend;
+                    }
+
+                    if (this.hasInnerElements()) {
+                        for (let innerElement of this.getInnerElements()) {
+                            if (innerElement.getTagName() == 'legend') {
+                                return innerElement;
+                            }
+                        }
+                    }
+                    else if (this.hasInnerSettings()) {
+                        let text = this.getInnerSettings().legend;
+
+                        if (StringType.verify(text)) {
+                            let legend = createElement('legend', {
+                                class: 'input-widget-radio-legend',
+                            });
+
+                            legend.setInnerHtml(text.trim());
+                            return legend;
+                        }
+                    }
+                }
 
                 /*
-                createSelect(attributes) {
+                createSelect() {
                     attributes.design = 'input-widget-select';
                     let selectElement = createElement('select', attributes);
                     let options = this.buildOptions();
@@ -564,9 +582,10 @@
                             attributes.class = RdsText.concat('input-widget-essay', attributes.class);
                             this.replacement = createElement('textarea', attributes);
                         }
-                        /*
                         else if (type == 'fieldset') {
                             this.replacement = this.createFieldSet(attributes);
+                            let legend = this.createLegend();
+                            legend ? this.replacement.prepend(legend) : null;
                         }
                         /*
                         else if (type == 'select') {
