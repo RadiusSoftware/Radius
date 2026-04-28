@@ -100,14 +100,20 @@
                 <div></div>
             </grid-widget>
             <div>
-                <input-widget type="fieldset" rds-bind="selected" rds-options-key="options" style="margin-top:25px;margin-left:25px;">
+                <input-widget type="fieldset" rds-bind="selected" style="margin-top:25px;margin-left:25px;">
+                    <!--
                     {
                         "legend": "Setting Choice",
-                        "choices": [
+                        "options": [
                             { "value": "ONE", "text": "One" },
-                            { "value": "TWO", "text": "Two" }
+                            { "value": "TWO", "text": "Two" },
+                            { "value": "THREE", "text": "Three" }
                         ]
                     }
+                    -->
+                    <option value="ONE">Option 1</option>
+                    <option value="TWO">Option 2</option>
+                    <option value="THREE">Option 3</option>
                 </input-widget>
             </div>
         </html>

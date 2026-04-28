@@ -331,7 +331,19 @@
                 buildOptions() {
                     let options = [];
 
-                    if (this.getRdsOptionsKey) {
+                    if (this.getRdsOptions) {
+                        let opts = RdsText.parseAttributeEncoded(this.getRdsOptions());
+                        
+                        for (let value in opts) {
+                            options.push({ text: opts[value], value: value });
+                        }
+                        
+                        if (!InputWidget.optsShape.verify(options)) {
+                            options = [];
+                        }
+                    }
+
+                    if (!options.length && this.getRdsOptionsKey) {
                         let optsKey = this.getRdsOptionsKey();
                         let opts = Controller.getDataValue(this, optsKey);
                         
@@ -340,41 +352,32 @@
                         }
                     }
 
-                    /*
-                    if (!options.length && this.getInnerElements().length) {
-                        for (let htmlElement of this.getInnerElements()) {
-                            if (htmlElement.getTagName() == 'opt') {
-                                if (htmlElement.hasAttribute('value')) {
-                                    let value = htmlElement.getAttribute('value');
-
-                                    if (htmlElement.getRdsShape) {
-                                        options.push({
-                                            value: value,
-                                            shape: htmlElement.getRdsShape(),
-                                            text: htmlElement.getInnerHtml().trim(),
-                                        });
-                                    }
-                                    else {
-                                        options.push({
-                                            value: value,
-                                            text: htmlElement.getInnerHtml().trim(),
-                                        });
-                                    }
+                    if (!options.length) {
+                        if (this.getInnerElements().length) {
+                            for (let innerElement of this.getInnerElements()) {
+                                if (innerElement.getTagName() == 'option') {
+                                    options.push({
+                                        text: innerElement.getInnerHtml().trim(),
+                                        value: innerElement.getAttribute('value'),
+                                    });
                                 }
                             }
-                        }
-
-                        this.clear();
-;                   }
-
-                    if (!options.length && this.getRdsOptions) {
-                        let opts = RdsText.parseAttributeEncoded(this.getRdsOptions());
-
-                        for (let value in opts) {
-                            options.push({ value: value, text: opts[value] });
+                        
+                            if (!InputWidget.optsShape.verify(options)) {
+                                options = [];
+                            }
                         }
                     }
-                    */
+
+                    if (!options.length) {
+                        if (this.hasInnerSettings() && ArrayType.verify(this.getInnerSettings().options)) {
+                            let opts = this.getInnerSettings().options;
+
+                            if (InputWidget.optsShape.verify(opts)) {
+                                options = opts;
+                            }
+                        }
+                    }
 
                     return options;
                 }
