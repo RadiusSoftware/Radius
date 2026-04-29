@@ -481,7 +481,7 @@
 
                     this.replacement.append(...optionElements);
                 }
-
+                
                 createToggle(attributes) {
                     let bind = '';
                     let disabled = '';
@@ -502,83 +502,55 @@
                         </span>`
                     );
 
-                    const knob = toggle.getChildElementAt(1);
-                    const checkbox = toggle.getChildElementAt(0);
+                    let checkbox = toggle.getChildElementAt(0);
+                    let knob = toggle.getChildElementAt(1);
 
-                    const update = () => {
-                        if (checkbox.getProperty('checked')) {
-                            knob.clearClassName('input-widget-toggle-knob-unselected');
-                            toggle.clearClassName('input-widget-toggle-unselected');
-                            knob.setClassName('input-widget-toggle-knob-selected');
-                            toggle.setClassName('input-widget-toggle-selected');
+                    checkbox.init = () => {
+                        super.init();
+                        checkbox.knob = knob;
+                        checkbox.toggle = toggle;
+
+                        if (checkbox.getRdsBind) {
+                            checkbox.setProperty('checked', Controller.getDataValue(checkbox, checkbox.getRdsBind()));
                         }
                         else {
-                            knob.clearClassName('input-widget-toggle-knob-selected');
-                            toggle.clearClassName('input-widget-toggle-selected');
-                            knob.setClassName('input-widget-toggle-knob-unselected');
-                            toggle.setClassName('input-widget-toggle-unselected');
+                            checkbox.setProperty('checked', false);
                         }
 
-                        if (!timing) {
-                            timing = true;
-                            knob.setStyle('transition-duration', '.45s');
-                            toggle.setStyle('transition-delay', '.45s');
-                        }
+                        checkbox.update();
 
-                        // *****************************************************************
-                        // *****************************************************************
-                        // *****************************************************************
-                        /*
-                        if (toggle.hasAttribute('disabled')) {
-                            toggle.setStyle({
-                                opacity: .5,
-                                cursor: 'default',
-                            });
-                        }
-                        else {
-                            toggle.clearStyle();
-                        }
-                        */
-                    }
-
-                    /*
-                    setTimeout(() => update(), 0);
-                    let controller = this.getController();
-
-                    if (controller) {
-                        let objekt = controller.getObjekt();
-
-                        if (objekt) {
-                            objekt.on('Update', message => {
-                                if ('rds-bind' in attributes && message.key == attributes['rds-bind']) {
-                                    update();
-                                }
-                                else if ('rds-disabled' in attributes && message.key == attributes['rds-disabled']) {
-                                    update();
-                                }
-                            });
-                        }
-                    }
-                    */
-
-                    //setTimeout(() => update(), 0);
-                    //Controller.setAddedCallback(toggle, update);
-                    update();
-
-                    Controller.on('Set', message => {
-                        if ('rds-bind' in attributes && message.dotted == attributes['rds-bind']) {
-                            update();
-                        }
-                        else if ('rds-disabled' in attributes && message.key == attributes['rds-disabled']) {
-                            update();
-                        }
-                    });
-
-                    toggle.on('click', message => {
-                        if (!toggle.hasAttribute('disabled')) {
+                        checkbox.toggle.on('click', message => {
+                        if (!checkbox.toggle.hasAttribute('disabled')) {
                             checkbox.node.click();
                         }
                     });
+
+                        Controller.on('Set', message => {
+                            if ('rds-bind' in attributes && message.dotted == attributes['rds-bind']) {
+                                checkbox.update();
+                            }
+                        });
+
+                        checkbox.knob.setStyle('transition-duration', '.45s');
+                        checkbox.toggle.setStyle('transition-delay', '.45s');
+                    };
+
+                    checkbox.update = () => {
+                        if (checkbox.getProperty('checked')) {
+                            checkbox.knob.clearClassName('input-widget-toggle-knob-unselected');
+                            checkbox.toggle.clearClassName('input-widget-toggle-unselected');
+
+                            checkbox.knob.setClassName('input-widget-toggle-knob-selected');
+                            checkbox.toggle.setClassName('input-widget-toggle-selected');
+                        }
+                        else {
+                            checkbox.knob.clearClassName('input-widget-toggle-knob-selected');
+                            checkbox.toggle.clearClassName('input-widget-toggle-selected');
+
+                            checkbox.knob.setClassName('input-widget-toggle-knob-unselected');
+                            checkbox.toggle.setClassName('input-widget-toggle-unselected');
+                        }
+                    };
 
                     return toggle;
                 }

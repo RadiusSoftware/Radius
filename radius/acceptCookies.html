@@ -46,6 +46,7 @@
 
                         await pause(2000);
                         Controller.setDataValue(this, 'second.0', false);
+                        Controller.setDataValue(this, 'second.1', true);
                     })();
                 }
 
@@ -96,7 +97,7 @@
                 <div></div>
             </grid-widget>
             <div>
-                <input-widget type="toggle" rds-bind="second.0" style="margin-top:25px;margin-left:25px;">
+                <input-widget type="toggle" rds-bind="second.1" style="margin-top:25px;margin-left:25px;">
                     {
                         "legend": "Setting Choice",
                         "options": [
@@ -106,6 +107,8 @@
                         ]
                     }
                 </input-widget>
+                <br>
+                <input-widget type="toggle" rds-bind="second.0" style="margin-top:25px;margin-left:25px;"></input-widget>
             </div>
         </html>
     </widget>
