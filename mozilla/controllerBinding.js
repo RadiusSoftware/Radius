@@ -183,17 +183,6 @@ define(class ControllerBinding {
             Controller.setDataValue(this.docElement, this.dotted, newValue);
         }
         else if (this.type == 'input') {
-            // *******************************************************************************************
-            // *******************************************************************************************
-            // *******************************************************************************************
-            /*
-            if (this.docElement.getAttribute('type') == 'select-multiple') {
-                let length = this.docElement.getProperty('selectedOptions').length;
-                Controller.setDataValue(this.docElement, this.dotted, this.docElement.node.value);
-                return;
-            }
-            */
-            
             switch (this.docElement.getAttribute('type')) {
                 case 'number':
                     Controller.setDataValue(this.docElement, this.dotted, this.docElement.getProperty('valueAsNumber'));

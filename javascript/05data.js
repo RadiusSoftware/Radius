@@ -309,6 +309,10 @@ singleton(class Data {
     }
 
     /*****
+     * A nice and simple one-liner that enables the developer to filter out an
+     * object's values and/or properties based a provided function.  Note that
+     * the object is filtered in place and returns the original object just in
+     * case that's convenient.
     *****/
     filter(object, filter) {
         for (let key of Object.keys(object)) {
@@ -316,6 +320,8 @@ singleton(class Data {
                 delete object[key];
             }
         }
+
+        return object;
     }
 
     /*****
