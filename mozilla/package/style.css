@@ -527,7 +527,9 @@ body {
     border-style: solid;
     border-radius: var(--border-radius-2);
     cursor: pointer;
+    /*
     transition-delay: .45s;
+    */
 }
 
 .input-widget-toggle-selected {
@@ -543,7 +545,9 @@ body {
     border-style: solid;
     border-radius: var(--border-radius-2);
     cursor: pointer;
+    /*
     transition-delay: .45s;
+    */
 }
 
 .input-widget-toggle-knob-unselected {
@@ -555,7 +559,9 @@ body {
     margin-right: 0px;
     fill: var(--knob-fill-color);
     stroke: var(--knob-stroke-color);
+    /*
     transition-duration: .45s;
+    */
 }
 
 .input-widget-toggle-knob-selected {
@@ -567,7 +573,9 @@ body {
     margin-right: 0px;
     fill: var(--knob-fill-color);
     stroke: var(--knob-stroke-color);
+    /*
     transition-duration: .45s;
+    */
 }
 
 .input-widget-width-narrow {

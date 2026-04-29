@@ -39,8 +39,13 @@
                     super.init();
 
                     (async () => {
+                        /*
                         await pause(2000);
                         Controller.setDataValue(this, 'selected', 'THREE');
+                        */
+
+                        await pause(2000);
+                        Controller.setDataValue(this, 'second.0', false);
                     })();
                 }
 

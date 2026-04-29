@@ -35,6 +35,7 @@ singleton(class Controller extends Emitter {
         this.nodes = new WeakMap();
         this.bindingsByDotted = {};
         this.bindingsByDocElement = new WeakMap();
+        this.addedCallbacks = new WeakMap();
 
         this.on('Set', message => {
             let byDotted = this.bindingsByDotted[message.dotted];
@@ -257,6 +258,11 @@ singleton(class Controller extends Emitter {
                 }
             }
         }
+    }
+
+    setAddedCallback(docElement, callback) {
+        this.addedCallbacks.set(docElement, callback);
+        return this;
     }
 
     setBinding(docElement, ref, type, name) {

@@ -485,6 +485,7 @@
                 createToggle(attributes) {
                     let bind = '';
                     let disabled = '';
+                    let timing = false;
 
                     if ('rds-bind' in attributes) {
                         bind = ` rds-bind="${attributes['rds-bind']}"`;
@@ -506,25 +507,41 @@
 
                     const update = () => {
                         if (checkbox.getProperty('checked')) {
-                            knob.setAttribute('design', 'input-widget-toggle-knob-selected');
-                            toggle.setAttribute('design', 'input-widget-toggle-selected');
+                            knob.clearClassName('input-widget-toggle-knob-unselected');
+                            toggle.clearClassName('input-widget-toggle-unselected');
+                            knob.setClassName('input-widget-toggle-knob-selected');
+                            toggle.setClassName('input-widget-toggle-selected');
                         }
                         else {
-                            knob.setAttribute('design', 'input-widget-toggle-knob-unselected');
-                            toggle.setAttribute('design', 'input-widget-toggle-unselected');
+                            knob.clearClassName('input-widget-toggle-knob-selected');
+                            toggle.clearClassName('input-widget-toggle-selected');
+                            knob.setClassName('input-widget-toggle-knob-unselected');
+                            toggle.setClassName('input-widget-toggle-unselected');
                         }
 
-                        if (!toggle.hasAttribute('disabled')) {
-                            toggle.clearStyle();
+                        if (!timing) {
+                            timing = true;
+                            knob.setStyle('transition-duration', '.45s');
+                            toggle.setStyle('transition-delay', '.45s');
                         }
-                        else {
+
+                        // *****************************************************************
+                        // *****************************************************************
+                        // *****************************************************************
+                        /*
+                        if (toggle.hasAttribute('disabled')) {
                             toggle.setStyle({
                                 opacity: .5,
                                 cursor: 'default',
                             });
                         }
+                        else {
+                            toggle.clearStyle();
+                        }
+                        */
                     }
 
+                    /*
                     setTimeout(() => update(), 0);
                     let controller = this.getController();
 
@@ -542,6 +559,20 @@
                             });
                         }
                     }
+                    */
+
+                    //setTimeout(() => update(), 0);
+                    //Controller.setAddedCallback(toggle, update);
+                    update();
+
+                    Controller.on('Set', message => {
+                        if ('rds-bind' in attributes && message.dotted == attributes['rds-bind']) {
+                            update();
+                        }
+                        else if ('rds-disabled' in attributes && message.key == attributes['rds-disabled']) {
+                            update();
+                        }
+                    });
 
                     toggle.on('click', message => {
                         if (!toggle.hasAttribute('disabled')) {
