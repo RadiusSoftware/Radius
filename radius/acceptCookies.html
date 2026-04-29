@@ -9,7 +9,9 @@
     <widget tagname="cookieacceptor-app">
         <script>
             class CookieAcceptorApp extends Widget {
-                configure() {
+                constructor(arg) {
+                    super(arg);
+                    
                     let shape = mkRdsShape({
                         first: StringType,
                         color: StringType,

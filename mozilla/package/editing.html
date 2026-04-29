@@ -481,79 +481,6 @@
 
                     this.replacement.append(...optionElements);
                 }
-                
-                createToggle(attributes) {
-                    let bind = '';
-                    let disabled = '';
-                    let timing = false;
-
-                    if ('rds-bind' in attributes) {
-                        bind = ` rds-bind="${attributes['rds-bind']}"`;
-                    }
-
-                    if ('rds-disabled' in attributes) {
-                        disabled = ` rds-disabled="${attributes['rds-disabled']}"`;
-                    }
-
-                    let toggle = createElementFromOuterHtml(
-                        `<span${disabled}>
-                            <input type="checkbox"${bind} style="display:none;">
-                            <svg rds-shape="circle"></svg>
-                        </span>`
-                    );
-
-                    let checkbox = toggle.getChildElementAt(0);
-                    let knob = toggle.getChildElementAt(1);
-
-                    checkbox.init = () => {
-                        super.init();
-                        checkbox.knob = knob;
-                        checkbox.toggle = toggle;
-
-                        if (checkbox.getRdsBind) {
-                            checkbox.setProperty('checked', Controller.getDataValue(checkbox, checkbox.getRdsBind()));
-                        }
-                        else {
-                            checkbox.setProperty('checked', false);
-                        }
-
-                        checkbox.update();
-
-                        checkbox.toggle.on('click', message => {
-                        if (!checkbox.toggle.hasAttribute('disabled')) {
-                            checkbox.node.click();
-                        }
-                    });
-
-                        Controller.on('Set', message => {
-                            if ('rds-bind' in attributes && message.dotted == attributes['rds-bind']) {
-                                checkbox.update();
-                            }
-                        });
-
-                        checkbox.knob.setStyle('transition-duration', '.45s');
-                        checkbox.toggle.setStyle('transition-delay', '.45s');
-                    };
-
-                    checkbox.update = () => {
-                        if (checkbox.getProperty('checked')) {
-                            checkbox.knob.clearClassName('input-widget-toggle-knob-unselected');
-                            checkbox.toggle.clearClassName('input-widget-toggle-unselected');
-
-                            checkbox.knob.setClassName('input-widget-toggle-knob-selected');
-                            checkbox.toggle.setClassName('input-widget-toggle-selected');
-                        }
-                        else {
-                            checkbox.knob.clearClassName('input-widget-toggle-knob-selected');
-                            checkbox.toggle.clearClassName('input-widget-toggle-selected');
-
-                            checkbox.knob.setClassName('input-widget-toggle-knob-unselected');
-                            checkbox.toggle.setClassName('input-widget-toggle-unselected');
-                        }
-                    };
-
-                    return toggle;
-                }
  
                 init() {
                     let attributes = this.filterAttributes('type');
@@ -594,7 +521,7 @@
                             this.replacement.once('focusin', message => this.layoutSelect());
                         }
                         else if (type == 'toggle') {
-                            this.replacement = this.createToggle(attributes);
+                            this.replacement = createElement('toggle-widget', attributes);
                         }
                     }
 
@@ -664,6 +591,73 @@
         </script>
     </widget>
     -->
+    <widget tagname="toggle-widget">
+        <script>
+            class ToggleWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                    this.checkbox = this.getChildElementAt(0);
+                    this.knob = this.getChildElementAt(1);
+                    this.disabled = false;
+                    this.dotted = '';
+
+                    if (this.getRdsBind) {
+                        this.dotted = this.getRdsBind();
+                        delete this.getRdsBind;
+                    }
+
+                    if (this.hasAttribute('disabled')) {
+                        this.disabled = true;
+                        this.clearAttribute('disabled');
+                        this.checkbox.setAttriute('disabled');
+                    }
+                }
+
+                init() {
+                    super.init();
+
+                    if (this.dotted) {
+                        Controller.bindInput(this.checkbox, this.dotted);
+
+                        Controller.on('Set', message => {
+                            if (message.dotted == this.dotted) {
+                                this.update();
+                            }
+                        });
+                    }
+
+                    this.update();
+                    this.setStyle('transition-delay', '.45s');
+                    this.knob.setStyle('transition-duration', '.45s');
+                    
+                    this.on('click', message => {
+                        if (!this.disabled) {
+                            this.checkbox.node.click();
+                        }
+                    });
+                }
+
+                update() {
+                    if (this.checkbox.getProperty('checked')) {
+                        this.clearClassName('toggle-widget-unselected');
+                        this.knob.clearClassName('toggle-widget-knob-unselected');
+                        this.setClassName('toggle-widget-selected');
+                        this.knob.setClassName('toggle-widget-knob-selected');
+                    }
+                    else {
+                        this.clearClassName('toggle-widget-selected');
+                        this.knob.clearClassName('toggle-widget-knob-selected');
+                        this.setClassName('toggle-widget-unselected');
+                        this.knob.setClassName('toggle-widget-knob-unselected');
+                    }
+                }
+            }
+        </script>
+        <html>
+            <input type="checkbox" style="display:none;">
+            <svg rds-shape="circle"></svg>
+        </html>
+    </widget>
     <strings lang="en">
     </strings>
 </bundle>

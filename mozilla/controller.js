@@ -178,7 +178,6 @@ singleton(class Controller extends Emitter {
     initNode(docNode) {
         if (!this.nodes.has(docNode)) {
             Packages.processNode(docNode);
-            docNode.configure();
 
             if (docNode instanceof DocElement) {
                 if (!(docNode instanceof Widget) || docNode.getSetting('stub') != 'true') {
