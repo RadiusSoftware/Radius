@@ -328,6 +328,75 @@
                     super(arg);
                 }
 
+                buildFieldsetOptions() {
+                    let options = this.buildOptions();
+
+                    let attributes = {
+                        id: '',
+                        type: 'radio',
+                        name: '',
+                        class: 'input-widget-radio',
+                    };
+
+                    if (this.getRdsBind) {
+                        attributes.name = this.getRdsBind();
+                        attributes['rds-bind'] = this.getRdsBind();
+                    }
+
+                    for (let option of options) {
+                        attributes.id = Crypto.generateUUID();
+                        attributes.value = option.value;
+
+                        this.replacement.append(
+                            createElement('div', {
+                                class: 'input-widget-radio-div',
+                            })
+                            .append(
+                                createElement('input', attributes),
+                                mkHtmlElement('label', {
+                                    for: attributes.id,
+                                    class: 'input-widget-radio-label',
+                                })
+                                .setInnerHtml(option.text),
+                            )
+                        );
+                    }
+                }
+
+                buildFieldsetLegend() {
+                    if (this.getRdsLegend) {
+                        let legend = createElement('legend', {
+                            class: 'input-widget-radio-legend',
+                        });
+
+                        legend.setInnerHtml(this.getRdsLegend().trim());
+                        this.replacement.prepend(legend);
+                        return;
+                    }
+
+                    if (this.hasInnerElements()) {
+                        for (let innerElement of this.getInnerElements()) {
+                            if (innerElement.getTagName() == 'legend') {
+                                this.replacement.prepend(innerElement);
+                                return;
+                            }
+                        }
+                    }
+                    else if (this.hasInnerSettings()) {
+                        let text = this.getInnerSettings().legend;
+
+                        if (StringType.verify(text)) {
+                            let legend = createElement('legend', {
+                                class: 'input-widget-radio-legend',
+                            });
+
+                            legend.setInnerHtml(text.trim());
+                            this.replacement.prepend(legend);
+                            return;
+                        }
+                    }
+                }
+
                 buildOptions() {
                     let options = [];
 
@@ -380,76 +449,6 @@
                     }
 
                     return options;
-                }
-
-                createFieldSet() {
-                    let attrs = this.filterAttributes('type', 'rds-bind', 'disabled');
-                    attrs.class = 'input-widget-radio-fieldset';
-                    let fieldset = createElement('fieldset', attrs);
-                    let options = this.buildOptions();
-
-                    let radioAttrs = {
-                        type: 'radio',
-                        name: 'UNSPECIFIED',
-                        class: 'input-widget-radio',
-                    };
-
-                    if (this.getRdsBind) {
-                        radioAttrs.name = this.getRdsBind();
-                        radioAttrs['rds-bind'] = this.getRdsBind();
-                    }
-
-                    for (let option of options) {
-                        radioAttrs.id = Crypto.generateUUID();
-                        radioAttrs.value = option.value;
-
-                        fieldset.append(
-                            createElement('div', {
-                                class: 'input-widget-radio-div',
-                            })
-                            .append(
-                                createElement('input', radioAttrs),
-                                mkHtmlElement('label', {
-                                    for: radioAttrs.id,
-                                    class: 'input-widget-radio-label',
-                                })
-                                .setInnerHtml(option.text),
-                            )
-                        );
-                    }
-
-                    return fieldset;
-                }
-
-                createLegend() {
-                    if (this.getRdsLegend) {
-                        let legend = createElement('legend', {
-                            class: 'input-widget-radio-legend',
-                        });
-
-                        legend.setInnerHtml(this.getRdsLegend().trim());
-                        return legend;
-                    }
-
-                    if (this.hasInnerElements()) {
-                        for (let innerElement of this.getInnerElements()) {
-                            if (innerElement.getTagName() == 'legend') {
-                                return innerElement;
-                            }
-                        }
-                    }
-                    else if (this.hasInnerSettings()) {
-                        let text = this.getInnerSettings().legend;
-
-                        if (StringType.verify(text)) {
-                            let legend = createElement('legend', {
-                                class: 'input-widget-radio-legend',
-                            });
-
-                            legend.setInnerHtml(text.trim());
-                            return legend;
-                        }
-                    }
                 }
 
                 /*
@@ -586,9 +585,11 @@
                             this.replacement = createElement('textarea', attributes);
                         }
                         else if (type == 'fieldset') {
-                            this.replacement = this.createFieldSet(attributes);
-                            let legend = this.createLegend();
-                            legend ? this.replacement.prepend(legend) : null;
+                            attributes.class = 'input-widget-radio-fieldset';
+                            Data.filter(attributes, (key, value) => key.startsWith('rds-bind'));
+                            this.replacement = createElement('fieldset', attributes);
+                            this.buildFieldsetOptions();
+                            this.buildFieldsetLegend();
                         }
                         /*
                         else if (type == 'select') {

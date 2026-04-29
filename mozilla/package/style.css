@@ -442,6 +442,78 @@ body {
     font-size: 14px;
 }
 
+.input-widget-select {
+    display: flex;
+    align-items: center;
+    height: 40px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+    margin-left: 0px;
+    margin-right: 0px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    border-style: solid;
+    border-color: var(--border-color);
+    border-width: 1px;
+    border-radius: var(--border-radius-1);
+    font-size: 16px;
+    color: var(--color);
+    background-color: var(--textarea-background-color);
+    vertical-align: middle;
+    appearance: base-select;
+
+    &:hover {
+        border-color: var(--hover-border-color);
+        outline-color: var(--hover-border-color);
+        outline-style: solid;
+        outline-width: 3px;
+        color: var(--hover-color);
+        background-color: var(--hover-background-color);
+        cursor: pointer;
+    }
+    &:focus {
+        border-color: var(--hover-border-color);
+        outline-color: var(--hover-border-color);
+        outline-style: solid;
+        outline-width: 3px;
+        color: var(--hover-color);
+        background-color: var(--hover-background-color);
+        cursor: pointer;
+    }
+}
+
+::picker(select) {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    padding-left: 12px;
+    padding-right: 12px;
+    border-style: solid;
+    border-color: var(--border-color);
+    border-width: 1px;
+    border-radius: var(--border-radius-1);
+    background-color: var(--textarea-background-color);
+    appearance: base-select;
+}
+.input-widget-select-option {
+    color: var(--color);
+    background-color: var(--textarea-background-color);
+    font-size: 16px;
+}
+.input-widget-select-option::checkmark {
+    order: 1;
+}
+.input-widget-select-option:checked {
+    color: var(--hover-color);
+}
+.input-widget-select-option:hover {
+    color: var(--hover-color);
+    background-color: var(--hover-background-color);
+    cursor: pointer;
+}
+.input-widget-select-option-svg {
+    width: 32px;
+}
+
 .input-widget-width-narrow {
     width: 100px;
     margin-left: 12px;

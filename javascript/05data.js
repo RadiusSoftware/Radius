@@ -309,6 +309,16 @@ singleton(class Data {
     }
 
     /*****
+    *****/
+    filter(object, filter) {
+        for (let key of Object.keys(object)) {
+            if (filter(key, object[key])) {
+                delete object[key];
+            }
+        }
+    }
+
+    /*****
      * This utility function flattens a complex object into a single object containing
      * all of the properties of the original object.  There can be cases where sub-
      * object property names may clash with other sub-object property names.  That's

@@ -19,10 +19,6 @@
                             b: StringType,
                             c: DateTimeType,
                         },
-                        options: [{
-                            text: StringType,
-                            value: StringType,
-                        }],
                         selected: StringType,
                     });
 
@@ -35,11 +31,6 @@
                             b: 'String Type Value',
                             c: mkTime(),
                         },
-                        options: [
-                            { text: 'first-option', value: 'ONE' },
-                            { text: 'second-option', value: 'TWO' },
-                            { text: 'third-option', value: 'THREE' },
-                        ],
                         selected: 'ONE',
                     });
                 }
@@ -101,7 +92,6 @@
             </grid-widget>
             <div>
                 <input-widget type="fieldset" rds-bind="selected" style="margin-top:25px;margin-left:25px;">
-                    <!--
                     {
                         "legend": "Setting Choice",
                         "options": [
@@ -110,10 +100,6 @@
                             { "value": "THREE", "text": "Three" }
                         ]
                     }
-                    -->
-                    <option value="ONE">Option 1</option>
-                    <option value="TWO">Option 2</option>
-                    <option value="THREE">Option 3</option>
                 </input-widget>
             </div>
         </html>
