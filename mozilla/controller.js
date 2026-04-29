@@ -181,7 +181,7 @@ singleton(class Controller extends Emitter {
             docNode.configure();
 
             if (docNode instanceof DocElement) {
-                if (!(docNode instanceof Widget) || docNode.getSetting('type') != 'stub') {
+                if (!(docNode instanceof Widget) || docNode.getSetting('stub') != 'true') {
                     if (docNode.getRdsBind) {
                         if (docNode.getTagName() in { input:0, select:0, textarea:0 }) {
                             this.bindInput(docNode, docNode.getRdsBind());
@@ -221,8 +221,10 @@ singleton(class Controller extends Emitter {
             docNode.init();
             this.nodes.set(docNode, {});
             
-            if (docNode.hasReplacement()) {
-                docNode.replace(docNode.getReplacement());
+            if (docNode instanceof Widget && docNode.getSetting('stub') == 'true') {
+                if (docNode.replacement instanceof DocElement) {
+                    docNode.replace(docNode.replacement);
+                }
             }
         }
     }

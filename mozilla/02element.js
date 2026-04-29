@@ -418,10 +418,6 @@ define(class DocNode extends Emitter {
     getProperty(name) {
         return this.node[name];
     }
-
-    getReplacement() {
-        return this.replacement;
-    }
     
     getSiblingNext() {
         if (this.node.nextSibling) {
@@ -463,10 +459,6 @@ define(class DocNode extends Emitter {
 
     hasProperty(name) {
         return name in this.node;
-    }
-
-    hasReplacement() {
-        return this.replacement instanceof DocElement;
     }
 
     init() {

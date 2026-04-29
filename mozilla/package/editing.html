@@ -298,7 +298,7 @@
         </style>
     </widget>
     -->
-    <widget tagname="input-widget" settings="type:stub;">
+    <widget tagname="input-widget" settings="stub:true;">
         <script>
             class InputWidget extends Widget {
                 static stdInputTypes = mkRdsEnum(
@@ -482,7 +482,6 @@
                     this.replacement.append(...optionElements);
                 }
 
-                /*
                 createToggle(attributes) {
                     let bind = '';
                     let disabled = '';
@@ -552,7 +551,6 @@
 
                     return toggle;
                 }
-                */
  
                 init() {
                     let attributes = this.filterAttributes('type');
@@ -592,11 +590,9 @@
                             this.buildSelectOptions();
                             this.replacement.once('focusin', message => this.layoutSelect());
                         }
-                        /*
                         else if (type == 'toggle') {
                             this.replacement = this.createToggle(attributes);
                         }
-                        */
                     }
 
                     this.replacement.setAttribute('id', Crypto.generateUUID());
@@ -631,60 +627,6 @@
                 }
             }
         </script>
-        <style>
-            [design=toggle-unselected] {
-                display: inline-block;
-                user-select: none;
-                width: 80px;
-                height: 24px;
-                margin: 0px;
-                padding: 0px;
-                background-color: var(--toggle-unselected-background-color);
-                border-color: var(--border-color);
-                border-width: 1px;
-                border-style: solid;
-                border-radius: var(--border-radius-2);
-                cursor: pointer;
-                transition-delay: .45s;
-            }
-            [design=toggle-selected] {
-                display: inline-block;
-                user-select: none;
-                width: 80px;
-                height: 24px;
-                margin: 0px;
-                padding: 0px;
-                background-color: var(--toggle-selected-background-color);
-                border-color: var(--border-color);
-                border-width: 1px;
-                border-style: solid;
-                border-radius: var(--border-radius-2);
-                cursor: pointer;
-                transition-delay: .45s;
-            }
-            [design=toggle-knob-unselected] {
-                width: 20px;
-                height: 20px;
-                margin-top: 2px;
-                margin-bottom: 0px;
-                margin-left: 2px;
-                margin-right: 0px;
-                fill: var(--knob-fill-color);
-                stroke: var(--knob-stroke-color);
-                transition-duration: .45s;
-            }
-            [design=toggle-knob-selected] {
-                width: 20px;
-                height: 20px;
-                margin-top: 2px;
-                margin-bottom: 0px;
-                margin-left: 58px;
-                margin-right: 0px;
-                fill: var(--knob-fill-color);
-                stroke: var(--knob-stroke-color);
-                transition-duration: .45s;
-            }
-        </style>
     </widget>
     <!--
     <widget tagname="file-widget">
@@ -698,7 +640,7 @@
     </widget>
     -->
     <!--
-    <widget tagname="form-widget" settings="type:stub;">
+    <widget tagname="form-widget" settings="stub:true;">
         <script>
             class FormWidget extends Widget {
                 constructor(arg) {

@@ -424,7 +424,7 @@ singleton(class Doc extends Emitter {
         for (let mutationRecord of mutationRecords) {
             let target = wrapTree(mutationRecord.target);
 
-            if (!(target instanceof Widget) || target.getSetting('type') != 'stub') {
+            if (!(target instanceof Widget) || target.getSetting('stub') != 'true') {
                 if (mutationRecord.type in { childList:0, subtree:0 }) {
                     let added = [];
                     let removed = [];

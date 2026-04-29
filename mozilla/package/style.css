@@ -514,6 +514,62 @@ body {
     width: 32px;
 }
 
+.input-widget-toggle-unselected {
+    display: inline-block;
+    user-select: none;
+    width: 80px;
+    height: 24px;
+    margin: 0px;
+    padding: 0px;
+    background-color: var(--toggle-unselected-background-color);
+    border-color: var(--border-color);
+    border-width: 1px;
+    border-style: solid;
+    border-radius: var(--border-radius-2);
+    cursor: pointer;
+    transition-delay: .45s;
+}
+
+.input-widget-toggle-selected {
+    display: inline-block;
+    user-select: none;
+    width: 80px;
+    height: 24px;
+    margin: 0px;
+    padding: 0px;
+    background-color: var(--toggle-selected-background-color);
+    border-color: var(--border-color);
+    border-width: 1px;
+    border-style: solid;
+    border-radius: var(--border-radius-2);
+    cursor: pointer;
+    transition-delay: .45s;
+}
+
+.input-widget-toggle-knob-unselected {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    margin-bottom: 0px;
+    margin-left: 2px;
+    margin-right: 0px;
+    fill: var(--knob-fill-color);
+    stroke: var(--knob-stroke-color);
+    transition-duration: .45s;
+}
+
+.input-widget-toggle-knob-selected {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    margin-bottom: 0px;
+    margin-left: 58px;
+    margin-right: 0px;
+    fill: var(--knob-fill-color);
+    stroke: var(--knob-stroke-color);
+    transition-duration: .45s;
+}
+
 .input-widget-width-narrow {
     width: 100px;
     margin-left: 12px;
