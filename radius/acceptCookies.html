@@ -11,45 +11,6 @@
             class CookieAcceptorApp extends Widget {
                 constructor(arg) {
                     super(arg);
-                    
-                    let shape = mkRdsShape({
-                        first: StringType,
-                        color: StringType,
-                        _second: [ BooleanType ],
-                        third: {
-                            a: NumericType,
-                            b: StringType,
-                            c: DateTimeType,
-                        },
-                        selected: StringType,
-                    });
-
-                    Controller.defineData(this, shape, {
-                        first: 'FIRST',
-                        color: '',
-                        second: [ true, false, true ],
-                        third: {
-                            a: 17,
-                            b: 'String Type Value',
-                            c: mkTime(),
-                        },
-                        selected: 'ONE',
-                    });
-                }
-
-                init() {
-                    super.init();
-
-                    (async () => {
-                        /*
-                        await pause(2000);
-                        Controller.setDataValue(this, 'selected', 'THREE');
-                        */
-
-                        await pause(2000);
-                        Controller.setDataValue(this, 'second.0', false);
-                        Controller.setDataValue(this, 'second.1', true);
-                    })();
                 }
 
                 async onAcceptCookies(message) {
@@ -69,14 +30,14 @@
                 <div></div>
                 <div></div>
                 <grid-widget rds-rows="auto,120px">
-                    <div class="accept-cookies-text">
+                    <div class="radiusorg-accept-cookies-text">
                         <h1 class="h1">We value your privacy</h1>
-                        <div class="accept-cookies-paragraph">
+                        <div class="radiusorg-accept-cookies-paragraph">
                             This website uses cookies to enahnace your user experience and is required to continue
                             using this website.  This website collects personal data to identify authorized users and
                             to prevent unauthorized agents from accessing user data.
                         </div>
-                        <div class="accept-cookies-paragraph">
+                        <div class="radiusorg-accept-cookies-paragraph">
                             You can continue using advanced features on this website by clicking "Accept Cookies".
                             Click the "Decline Cookies" button to block cookies from this website and forwarded to
                             view additional information about cookies.
@@ -88,7 +49,7 @@
                             <li>Cookies will be used to confirm acceptance of cookies from this website.</li>
                         </ul>
                     </div>
-                    <div class="accept-cookies-button-panel">
+                    <div class="radiusorg-accept-cookies-button-panel">
                         <input-widget type="button" class="input-widget-width-wide" value="##accept##" evt-click="acceptCookies"></input-widget>
                         <input-widget type="button" class="input-widget-width-wide" value="##decline##" evt-click="declineCookies"></input-widget>
                     </div>
@@ -98,20 +59,6 @@
                 <div></div>
                 <div></div>
             </grid-widget>
-            <div>
-                <input-widget type="toggle" rds-bind="second.1" style="margin-top:25px;margin-left:25px;">
-                    {
-                        "legend": "Setting Choice",
-                        "options": [
-                            { "value": "ONE", "text": "One" },
-                            { "value": "TWO", "text": "Two" },
-                            { "value": "THREE", "text": "Three" }
-                        ]
-                    }
-                </input-widget>
-                <br>
-                <input-widget type="toggle" rds-bind="second.0" style="margin-top:25px;margin-left:25px;"></input-widget>
-            </div>
         </html>
     </widget>
     <strings lang="en">

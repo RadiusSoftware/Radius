@@ -90,14 +90,32 @@ singleton(class Controller extends Emitter {
         return this;
     }
 
-    deleteBindings(docElement) {
-        // TODO ************************************************************************
-        // TODO ************************************************************************
+    deleteBindingsByDocElement(docElement) {
+        let bindingEntry = this.bindingsByDocElement.get(docElement);
+
+        if (bindingEntry) {
+            let array = Data.copy(bindingEntry.bindings);
+
+            for (let binding of array) {
+                binding.delete();
+            }
+        }
+
+        return this;
     }
 
-    deleteData(docElement, dotted) {
-        // TODO ************************************************************************
-        // TODO ************************************************************************
+    deleteBindingsByDotted(dotted) {
+        let bindingEntry = this.bindingsByDotted[dotted];
+
+        if (bindingEntry) {
+            let array = Data.copy(bindingEntry.bindings);
+
+            for (let binding of array) {
+                binding.delete();
+            }
+        }
+
+        return this;
     }
 
     defineData(docElement, shape, value) {

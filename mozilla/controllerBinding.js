@@ -122,8 +122,29 @@ define(class ControllerBinding {
     }
 
     delete() {
-        // TODO **************************************************************************
-        // TODO **************************************************************************
+        let bindingEntry = Controller.bindingsByDocElement.get();
+
+        if (bindingEntry) {
+            for (let i = 0; i < bindingEntry.bindings.length; i++) {
+                if (Object.is(bindingEntry.bindings[i])) {
+                    bindingEntry.bindings.splice(i, 1);
+                    break;
+                }
+            }
+        }
+
+        bindingEntry = Controller.bindingsByDotted[this.dotted];
+
+        if (bindingEntry) {
+            for (let i = 0; i < bindingEntry.bindings.length; i++) {
+                if (Object.is(bindingEntry.bindings[i])) {
+                    bindingEntry.bindings.splice(i, 1);
+                    break;
+                }
+            }
+        }
+
+        return this;
     }
 
     disable() {
