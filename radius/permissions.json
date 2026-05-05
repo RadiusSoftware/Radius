@@ -14,10 +14,10 @@
     "auth": {
         "radius:signedin": "-"
     },
-    "sysadminXYZ": {
+    "sysadmin": {
         "radius:system": "+"
     },
-    "sysadmin": {
+    "sysadminXYZ": {
         "radius:cookies": "-",
         "radius:session": "-",
         "radius:signedin": "-"

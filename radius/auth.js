@@ -31,6 +31,7 @@ define(class AuthApp extends Webapp {
     // ********************
     // forgotPassword
     // ********************
+    /*
     async [Api.define(
         'forgotPassword',
         {
@@ -39,10 +40,12 @@ define(class AuthApp extends Webapp {
     )](trx, username) {
         // TODO **************************************************************
     }
+    */
 
     // ********************
     // forgotUsername
     // ********************
+    /*
     async [Api.define(
         'forgotUsername',
         {
@@ -51,6 +54,7 @@ define(class AuthApp extends Webapp {
     )](trx, phoneNumber) {
         // TODO **************************************************************
     }
+    */
 
     // ********************
     // getAuthState
@@ -64,24 +68,29 @@ define(class AuthApp extends Webapp {
     // ********************
     // getTargetPath
     // ********************
+    /*
     async [Api.define(
         'getTargetPath',
     )](trx) {
         return await trx.session.getInitialPath();
     }
+    */
 
     // ********************
     // getUsername
     // ********************
+    /*
     async [Api.define(
         'getUsername',
     )](trx) {
         return await trx.session.getUsername();
     }
+    */
 
     // ********************
     // setPassword
     // ********************
+    /*
     async [Api.define(
         'setPassword',
         {
@@ -90,19 +99,23 @@ define(class AuthApp extends Webapp {
     )](trx, password) {
         // TODO **************************************************************
     }
+    */
 
     // ********************
     // submitAcceptEula
     // ********************
+    /*
     async [Api.define(
         'submitAcceptEula',
     )](trx) {
         return await trx.session.submitAcceptEula();
     }
+    */
 
     // ********************
     // submitCode
     // ********************
+    /*
     async [Api.define(
         'submitCode',
         {
@@ -111,10 +124,12 @@ define(class AuthApp extends Webapp {
     )](trx, code) {
         // TODO **************************************************************
     }
+    */
 
     // ********************
     // submitDeviceRemember
     // ********************
+    /*
     async [Api.define(
         'submitDeviceRemember',
         {
@@ -127,10 +142,12 @@ define(class AuthApp extends Webapp {
 
         return  mkFailure('radius.org.httpOnly');
     }
+    */
 
     // ********************
     // submitPassword
     // ********************
+    /*
     async [Api.define(
         'submitPassword',
         {
@@ -139,19 +156,23 @@ define(class AuthApp extends Webapp {
     )](trx, password) {
         return await trx.session.submitPassword(password);
     }
+    */
 
     // ********************
     // submitRevert
     // ********************
+    /*
     async [Api.define(
         'submitRevert',
     )](trx) {
         return await trx.session.submitRevert();
     }
+    */
 
     // ********************
     // submitSetPassword
     // ********************
+    /*
     async [Api.define(
         'submitSetPassword',
         {
@@ -160,10 +181,12 @@ define(class AuthApp extends Webapp {
     )](trx, password) {
         return await trx.session.submitSetPassword(password);
     }
+    */
 
     // ********************
     // submitUsername
     // ********************
+    /*
     async [Api.define(
         'submitUsername',
         {
@@ -172,4 +195,5 @@ define(class AuthApp extends Webapp {
     )](trx, username) {
         return await trx.session.submitUsername(username);
     }
+    */
 });

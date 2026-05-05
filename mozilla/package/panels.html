@@ -150,6 +150,383 @@
         </script>
     </widget>
     <!--
+    <widget tagname="navigator-widget">
+        <script>
+            class NavigatorWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+
+                addMode(mode, locator, clientElement) {
+                    if (this.selector.addMode(mode, clientElement)) {
+                        let text = Packages.getString(locator);
+                        let div = createElementFromOuterHtml(`<div design="navigator-widget-nav-item" evt-click="selectItem">${text}</div>`);
+                        this.items.append(div);
+                        div.pin('mode', mode);
+                        clientElement.pin('displayText', text);
+                        clientElement.pin('displayDiv', div);
+                    }
+
+                    return this;
+                }
+
+                clearMode() {
+                    this.selector.clearMode();
+                    return this;
+                }
+
+                collapse() {
+                    if (this.expanded) {
+                        this.collapseButton.setStyle({ display: 'none' });
+                        this.expandButton.setStyle({ display: '' });
+                        this.frame.setCols([`${this.collapsedWidth*2}px`, 'auto']);
+                        this.items.setStyle({ visibility: 'hidden' });
+                        this.frame.computeGeometry();
+                        this.expanded = false;
+                    }
+
+                    return this;
+                }
+
+                computeLayout() {
+                    this.expandedWidth = 0;
+
+                    for (let clientElement of this.selector.listClientElements()) {
+                        let div = clientElement.getPinned('displayDiv');
+                        let naturalStyle = div.computeNaturalStyle();
+                        let naturalWidth = Number.parseInt(naturalStyle.width);
+                        naturalWidth > this.expandedWidth ? this.expandedWidth = naturalWidth : null;
+                    }
+                }
+
+                expand() {
+                    if (!this.expanded) {
+                        this.collapseButton.setStyle({ display: '' });
+                        this.expandButton.setStyle({ display: 'none' });
+                        this.frame.setCols([`${this.expandedWidth*2}px`, 'auto']);
+                        this.frame.once('transitionend', () => this.items.setStyle({ visibility: 'visible' }));
+                        this.frame.computeGeometry();
+                        this.expanded = true;
+                    }
+
+                    return this;
+                }
+
+                getClientElement(mode) {
+                    return this.selector.getClientElement();
+                }
+
+                getMode() {
+                    return this.selector.getMode();
+                }
+
+                getText(mode) {
+                    if (this.hasMode) {
+                        let clientElement = this.selector.getClientElement(mode);
+                        return clientElement.getPinned('displayText');
+                    }
+
+                    return '';
+                }
+
+                hasMode(mode) {
+                    return this.selector.hasMode;
+                }
+
+                init() {
+                    super.init();
+                    this.items = this.getTagged('items');
+                    this.frame = this.getTagged('frame');
+                    this.selector = this.getTagged('content');
+                    this.collapseButton = this.getTagged('collapse');
+                    this.expandButton = this.getTagged('expand');
+
+                    if (this.getRdsChildTransition && this.getRdsChildStyleTrigger) {
+                        this.selector.childTransition = this.getRdsChildTransition();
+                        this.selector.childStyleTrigger = this.getRdsChildStyleTrigger();
+                    }
+
+                    for (let innerElement of this.getInnerElements()) {
+                        if (innerElement.getRdsNavigatorMode && innerElement.getRdsNavigatorText) {
+                            let mode = innerElement.getRdsNavigatorMode();
+                            let locator = innerElement.getRdsNavigatorText();
+                            this.addMode(mode, locator, innerElement);
+                        }
+                        else {
+                            innerElement.remove();
+                        }
+                    }
+
+                    this.computeLayout();
+                    this.collapsedWidth = 24;
+                    this.frame.setTransition('property:grid-template-columns;duration:.5s');
+                    this.expand();
+                }
+
+                async onCollapse(message) {
+                    this.collapse();
+                }
+
+                async onExpand(message) {
+                    this.expand();
+                }
+
+                async onSelectItem(message) {
+                    this.setMode(message.htmlElement.getPinned('mode'));
+                }
+
+                removeMode(mode) {
+                    if (this.hasMode(mode)) {
+
+                    }
+
+                    return this;
+                }
+
+                setMode(mode) {
+                    this.selector.setMode(mode);
+                    return this;
+                }
+            }
+        </script>
+        <html rds-controller>
+            <grid-widget tag-frame class="fill">
+                <grid-widget design="nav-widget" rds-rows="32px,auto">
+                    <div design="nav-bar">
+                        <svg tag-collapse rds-shape="arrowleft" class="icon icon-small" evt-click="collapse"></svg>
+                        <svg tag-expand rds-shape="arrowright" class="icon icon-small" evt-click="expand"></svg>
+                    </div>
+                    <div tag-items design="nav-items"></div>
+                </grid-widget>
+                <selector-widget tag-content design="content-panel" rds-child-transition="property:opacity; duration:.5s;" rds-child-style-trigger="opacity:.1,1">
+                </selector-widget>
+            </grid-widget>
+        </html>
+        <style>
+            [design=nav-widget] {
+                margin: 2px;
+                padding: 3px;
+                border: solid 1px var(--border-color);
+                border-radius: 3px;
+            }
+            [design=nav-bar] {
+                display: flex;
+                flex-direction: row;
+                justify-content: end;
+                align-items: end;
+            }
+            [design=nav-items] {
+                display: inline;
+                flex-direction: column;
+                justify-content: left;
+                user-select: none;
+            }
+            [design=nav-item] {
+                width: auto;
+                margin-top: 12px;
+                margin-bottom: 12px;
+                margin-left: 6px;
+                margin-right: 6px;
+                font-family:Arial, Helvetica, sans-serif;
+                font-size: 16px;
+            }
+            [design=nav-item]:hover {
+                cursor: pointer;
+                color: var(--hover-color);
+
+            }
+            [design=content-panel] {
+                margin: 0px;
+                padding: 0px;
+            }
+        </style>
+    </widget>
+    -->
+    <widget tagname="selector-widget">
+        <script>
+            class SelectorWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                    this.mode = '#NOMODE#';
+                    this.modes = {};
+                }
+
+                addMode(mode, clientElement) {
+                    if (!(mode in this.modes)) {
+                        this.append(clientElement);
+                        this.modes[mode] = clientElement;
+
+                        if (mode == this.mode) {
+                            clientElement.setStyle('display', '');
+                        }
+                        else {
+                            clientElement.setStyle('display', 'none');
+                        }
+
+                        return true;
+                    }
+
+                    return false;
+                }
+
+                clearMode() {
+                    this.setMode('#NOMODE#');
+                    return this;
+                }
+
+                getClientElement(mode) {
+                    return this.modes[mode];
+                }
+
+                getMode() {
+                    return this.mode;
+                }
+
+                hasMode(mode) {
+                    return mode in this.modes;
+                }
+
+                init() {
+                    for (let clientElement of this.getInnerElements()) {
+                        if (clientElement instanceof DocElement) {
+                            let mode = clientElement.getAttribute('rds-mode');
+
+                            if (mode) {
+                                this.addMode(mode, clientElement);
+                            }
+                        }
+                    }
+
+                    /*
+                    if (!this.getRdsBindMethod) {
+                        this.getRdsBindMethod = () => 'selectorMode,setMode';
+                    }
+                    */
+
+                    super.init();
+
+                    /*
+                    (async () => {
+                        await pause(1000);
+                        let element = this.getInnerElements()[0];
+                            element.setStyle({
+                                display: '',
+                                opacity: '1.0',
+                            });
+                    })();
+                    */
+
+                    /*
+                    if (this.getRdsChildTransition && this.getRdsChildStyleTrigger) {
+                        this.childTransition = this.getRdsChildTransition();
+                        this.childStyleTrigger = this.getRdsChildStyleTrigger();
+                    }
+
+                    for (let innerElement of this.getInnerElements()) {
+                        if (innerElement.getRdsSelectorMode) {
+                            let mode = innerElement.getRdsSelectorMode();
+                            this.addMode(mode, innerElement);
+                        }
+                    }
+                    */
+                }
+
+                listClientElements() {
+                    return Object.values(this.modes);
+                }
+
+                listModes() {
+                    return Object.keys(this.modes);
+                }
+                
+                removeMode(mode) {
+                    if (mode in this.modes) {
+                        let clientElement = this.modes[mode];
+                        clientElement.clearStyle('display');
+                        clientElement.remove();
+                        delete this.modes[mode];
+
+                        if (mode = this.mode) {
+                            this.mode = '#NOMODE#';
+                        }
+                    }
+
+                    return this;
+                }
+
+                removeModes() {
+                    this.mode = '#NOMODE#'
+                    this.modes = {};
+
+                    for (let clientElement of this.getChildElements()) {
+                        clientElement.clearStyle('display');
+                    }
+
+                    this.clear();
+                    return this;
+                }
+
+                replaceClientElement(mode, clientElement) {
+                    if (mode in this.modes) {
+                        let prevClientElement = this.modes[mode];
+
+                        if (!Object.is(prevClientElement, clientElement)) {
+                            this.modes[mode] = clientElement;
+                            prevClientElement.replace(clientElement);
+
+                            if (mode == this.mode) {
+                                clientElement.setStyle('display', '');
+                            }
+                            else {
+                                clientElement.setStyle('display', 'none');
+                            }
+                        }
+                    }
+
+                    return this;
+                }
+
+                setMode(mode) {
+                    if (mode != '#NOMODE#' && mode != this.mode) {
+                        if (this.mode != '#NOMODE#') {
+                            this.modes[this.mode].setStyle('display', 'none');
+                        }
+
+                        if (mode in this.modes) {
+                            let clientElement = this.modes[mode];
+                            clientElement.setStyle('display', '');
+                            clientElement.autofocus();
+
+                            if (this.childTransition) {
+                                clientElement.setTransition(this.childTransition);
+                                clientElement.setStyleTrigger(this.childStyleTrigger);
+                            }
+                        }
+
+                        this.mode = mode;
+                    }
+
+                    return this;
+                }
+
+                [Symbol.iterator]() {
+                    return Object.keys(this.modes)[Symbol.iterator]();
+                }
+            }
+        </script>
+    </widget>
+    <!--
+    <widget tagname="stack-widget">
+        <script>
+            class StackWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+            }
+        </script>
+    </widget>
+    -->
+    <!--
     <widget tagname="table-widget">
         <script>
             class TableWidget extends Widget {
@@ -451,373 +828,6 @@
                 cursor: pointer;
             }
         </style>
-    </widget>
-    -->
-    <!--
-    <widget tagname="selector-widget">
-        <script>
-            class SelectorWidget extends Widget {
-                constructor(arg) {
-                    super(arg);
-                    this.mode = '#NOMODE#';
-                    this.modes = {};
-                    this.childTransition = '';
-                    this.childStyleTrigger = '';
-                }
-
-                addMode(mode, clientElement) {
-                    if (!(mode in this.modes)) {
-                        this.append(clientElement);
-                        this.modes[mode] = clientElement;
-
-                        if (mode == this.mode) {
-                            clientElement.setStyle('display', '');
-                        }
-                        else {
-                            clientElement.setStyle('display', 'none');
-                        }
-
-                        return true;
-                    }
-
-                    return false;
-                }
-
-                clearMode() {
-                    this.setMode('#NOMODE#');
-                    return this;
-                }
-
-                getClientElement(mode) {
-                    return this.modes[mode];
-                }
-
-                getMode() {
-                    return this.mode;
-                }
-
-                hasMode(mode) {
-                    return mode in this.modes;
-                }
-
-                init() {
-                    if (!this.getRdsBindMethod) {
-                        this.getRdsBindMethod = () => 'selectorMode,setMode';
-                    }
-
-                    super.init();
-
-                    if (this.getRdsChildTransition && this.getRdsChildStyleTrigger) {
-                        this.childTransition = this.getRdsChildTransition();
-                        this.childStyleTrigger = this.getRdsChildStyleTrigger();
-                    }
-
-                    for (let innerElement of this.getInnerElements()) {
-                        if (innerElement.getRdsSelectorMode) {
-                            let mode = innerElement.getRdsSelectorMode();
-                            this.addMode(mode, innerElement);
-                        }
-                    }
-                }
-
-                listClientElements() {
-                    return Object.values(this.modes);
-                }
-
-                listModes() {
-                    return Object.keys(this.modes);
-                }
-                
-                removeMode(mode) {
-                    if (mode in this.modes) {
-                        let clientElement = this.modes[mode];
-                        clientElement.clearStyle('display');
-                        clientElement.remove();
-                        delete this.modes[mode];
-
-                        if (mode = this.mode) {
-                            this.mode = '#NOMODE#';
-                        }
-                    }
-
-                    return this;
-                }
-
-                removeModes() {
-                    this.mode = '#NOMODE#'
-                    this.modes = {};
-
-                    for (let clientElement of this.getChildElements()) {
-                        clientElement.clearStyle('display');
-                    }
-
-                    this.clear();
-                    return this;
-                }
-
-                replaceClientElement(mode, clientElement) {
-                    if (mode in this.modes) {
-                        let prevClientElement = this.modes[mode];
-
-                        if (!Object.is(prevClientElement, clientElement)) {
-                            this.modes[mode] = clientElement;
-                            prevClientElement.replace(clientElement);
-
-                            if (mode == this.mode) {
-                                clientElement.setStyle('display', '');
-                            }
-                            else {
-                                clientElement.setStyle('display', 'none');
-                            }
-                        }
-                    }
-
-                    return this;
-                }
-
-                setMode(mode) {
-                    if (mode != '#NOMODE#' && mode != this.mode) {
-                        if (this.mode != '#NOMODE#') {
-                            this.modes[this.mode].setStyle('display', 'none');
-                        }
-
-                        if (mode in this.modes) {
-                            let clientElement = this.modes[mode];
-                            clientElement.setStyle('display', '');
-                            clientElement.autofocus();
-
-                            if (this.childTransition) {
-                                clientElement.setTransition(this.childTransition);
-                                clientElement.setStyleTrigger(this.childStyleTrigger);
-                            }
-                        }
-
-                        this.mode = mode;
-                    }
-
-                    return this;
-                }
-
-                [Symbol.iterator]() {
-                    return Object.keys(this.modes)[Symbol.iterator]();
-                }
-            }
-        </script>
-    </widget>
-    -->
-    <!--
-    <widget tagname="navigator-widget">
-        <script>
-            class NavigatorWidget extends Widget {
-                constructor(arg) {
-                    super(arg);
-                }
-
-                addMode(mode, locator, clientElement) {
-                    if (this.selector.addMode(mode, clientElement)) {
-                        let text = Packages.getString(locator);
-                        let div = createElementFromOuterHtml(`<div design="navigator-widget-nav-item" evt-click="selectItem">${text}</div>`);
-                        this.items.append(div);
-                        div.pin('mode', mode);
-                        clientElement.pin('displayText', text);
-                        clientElement.pin('displayDiv', div);
-                    }
-
-                    return this;
-                }
-
-                clearMode() {
-                    this.selector.clearMode();
-                    return this;
-                }
-
-                collapse() {
-                    if (this.expanded) {
-                        this.collapseButton.setStyle({ display: 'none' });
-                        this.expandButton.setStyle({ display: '' });
-                        this.frame.setCols([`${this.collapsedWidth*2}px`, 'auto']);
-                        this.items.setStyle({ visibility: 'hidden' });
-                        this.frame.computeGeometry();
-                        this.expanded = false;
-                    }
-
-                    return this;
-                }
-
-                computeLayout() {
-                    this.expandedWidth = 0;
-
-                    for (let clientElement of this.selector.listClientElements()) {
-                        let div = clientElement.getPinned('displayDiv');
-                        let naturalStyle = div.computeNaturalStyle();
-                        let naturalWidth = Number.parseInt(naturalStyle.width);
-                        naturalWidth > this.expandedWidth ? this.expandedWidth = naturalWidth : null;
-                    }
-                }
-
-                expand() {
-                    if (!this.expanded) {
-                        this.collapseButton.setStyle({ display: '' });
-                        this.expandButton.setStyle({ display: 'none' });
-                        this.frame.setCols([`${this.expandedWidth*2}px`, 'auto']);
-                        this.frame.once('transitionend', () => this.items.setStyle({ visibility: 'visible' }));
-                        this.frame.computeGeometry();
-                        this.expanded = true;
-                    }
-
-                    return this;
-                }
-
-                getClientElement(mode) {
-                    return this.selector.getClientElement();
-                }
-
-                getMode() {
-                    return this.selector.getMode();
-                }
-
-                getText(mode) {
-                    if (this.hasMode) {
-                        let clientElement = this.selector.getClientElement(mode);
-                        return clientElement.getPinned('displayText');
-                    }
-
-                    return '';
-                }
-
-                hasMode(mode) {
-                    return this.selector.hasMode;
-                }
-
-                init() {
-                    super.init();
-                    this.items = this.getTagged('items');
-                    this.frame = this.getTagged('frame');
-                    this.selector = this.getTagged('content');
-                    this.collapseButton = this.getTagged('collapse');
-                    this.expandButton = this.getTagged('expand');
-
-                    if (this.getRdsChildTransition && this.getRdsChildStyleTrigger) {
-                        this.selector.childTransition = this.getRdsChildTransition();
-                        this.selector.childStyleTrigger = this.getRdsChildStyleTrigger();
-                    }
-
-                    for (let innerElement of this.getInnerElements()) {
-                        if (innerElement.getRdsNavigatorMode && innerElement.getRdsNavigatorText) {
-                            let mode = innerElement.getRdsNavigatorMode();
-                            let locator = innerElement.getRdsNavigatorText();
-                            this.addMode(mode, locator, innerElement);
-                        }
-                        else {
-                            innerElement.remove();
-                        }
-                    }
-
-                    this.computeLayout();
-                    this.collapsedWidth = 24;
-                    this.frame.setTransition('property:grid-template-columns;duration:.5s');
-                    this.expand();
-                }
-
-                async onCollapse(message) {
-                    this.collapse();
-                }
-
-                async onExpand(message) {
-                    this.expand();
-                }
-
-                async onSelectItem(message) {
-                    this.setMode(message.htmlElement.getPinned('mode'));
-                }
-
-                removeMode(mode) {
-                    if (this.hasMode(mode)) {
-
-                    }
-
-                    return this;
-                }
-
-                setMode(mode) {
-                    this.selector.setMode(mode);
-                    return this;
-                }
-            }
-        </script>
-        <html rds-controller>
-            <grid-widget tag-frame class="fill">
-                <grid-widget design="nav-widget" rds-rows="32px,auto">
-                    <div design="nav-bar">
-                        <svg tag-collapse rds-shape="arrowleft" class="icon icon-small" evt-click="collapse"></svg>
-                        <svg tag-expand rds-shape="arrowright" class="icon icon-small" evt-click="expand"></svg>
-                    </div>
-                    <div tag-items design="nav-items"></div>
-                </grid-widget>
-                <selector-widget tag-content design="content-panel" rds-child-transition="property:opacity; duration:.5s;" rds-child-style-trigger="opacity:.1,1">
-                </selector-widget>
-            </grid-widget>
-        </html>
-        <style>
-            [design=nav-widget] {
-                margin: 2px;
-                padding: 3px;
-                border: solid 1px var(--border-color);
-                border-radius: 3px;
-            }
-            [design=nav-bar] {
-                display: flex;
-                flex-direction: row;
-                justify-content: end;
-                align-items: end;
-            }
-            [design=nav-items] {
-                display: inline;
-                flex-direction: column;
-                justify-content: left;
-                user-select: none;
-            }
-            [design=nav-item] {
-                width: auto;
-                margin-top: 12px;
-                margin-bottom: 12px;
-                margin-left: 6px;
-                margin-right: 6px;
-                font-family:Arial, Helvetica, sans-serif;
-                font-size: 16px;
-            }
-            [design=nav-item]:hover {
-                cursor: pointer;
-                color: var(--hover-color);
-
-            }
-            [design=content-panel] {
-                margin: 0px;
-                padding: 0px;
-            }
-        </style>
-    </widget>
-    -->
-    <!--
-    <widget tagname="stack-widget">
-        <script>
-            class StackWidget extends Widget {
-                constructor(arg) {
-                    super(arg);
-                }
-            }
-        </script>
-    </widget>
-    -->
-    <!--
-    <widget tagname="wizard-widget">
-        <script>
-            class WizardWidget extends Widget {
-                constructor(arg) {
-                    super(arg);
-                }
-            }
-        </script>
     </widget>
     -->
 </bundle>

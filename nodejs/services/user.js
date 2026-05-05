@@ -549,18 +549,6 @@ define(class UserHandle extends Handle {
         return mkEmailAddrHandle(emailAddrId);
     }
 
-    async getEmailAddr2() {
-        let emailAddrId;
-
-        if (this.id) {
-            emailAddrId = await this.callService({
-                id: this.id
-            });
-        }
-
-        return mkEmailAddrHandle(emailAddrId);
-    }
-
     async getEulaAccepted() {
         if (this.id) {
             return await this.callService({
@@ -825,7 +813,9 @@ define(class UserHandle extends Handle {
         return this;
     }
 
-    async setEmail2(emailAddr) {
+    async setHandle(handle) {
+        // ***************************************************************************
+        // ***************************************************************************
         if (this.id) {
             await this.callService({
                 id: this.id,

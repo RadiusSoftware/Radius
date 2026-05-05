@@ -20,6 +20,7 @@
  * THE SOFTWARE.
 *****/
 "user strict"
+
 LibCluster      = require('node:cluster');
 LibFileSystem   = require('node:fs');
 LibOs           = require('node:os');
@@ -67,70 +68,7 @@ if (LibCluster.isPrimary) {
 
         async buildConfiguration() {
             let settings = mkSettingsHandle();
-
-            if (!await settings.loadSettings()) {
-                await settings.defineSetting(
-                    'httpServer',
-                    'server',
-                    mkRdsShape({
-                        enabled: BooleanType,
-                        workers: UInt16Type,
-                        _ipv4: StringType,
-                        _ipv6: StringType,
-                        _host: StringType,
-                        _cert: StringType,
-                        _auth: StringType,
-                    }),
-                    {
-                        enabled: true,
-                        workers: 1,
-                        ipv4: '0.0.0.0',
-                        ipv6: '::',
-                    }
-                );
-                
-                await settings.defineSetting(
-                    'permissionTypes',
-                    'security',
-                    [ StringType ],
-                    [
-                        'radius:cookies',
-                        'radius:session',
-                        'radius:signedin',
-                        'radius:admin',
-                        'radius:system',
-                        'radius:websocket',
-                    ]
-                );
-
-                await settings.defineSetting(
-                    'cluster',
-                    'system',
-                    BooleanType,
-                    false
-                );
-
-                await settings.defineSetting('radiusPath', 'general', StringType, '/radius');
-                await settings.defineSetting('acceptCookiesName', 'privacy', StringType, 'kibble');
-                await settings.defineSetting('acceptCookiesDays', 'privacy', Int32Type, 180);
-                await settings.defineSetting('sessionTimeoutMillis', 'security', Int32Type, 120*60*60*1000);
-                await settings.defineSetting('sessionShutdowntMillis', 'security', Int32Type, 240*60*60*1000);
-                await settings.defineSetting('sessionCookiePrefix', 'security', StringType, 'sx-');
-                await settings.defineSetting('loginMaxFailures', 'security', Int32Type, 4);
-                await settings.defineSetting('loginMaxMfaMinutes', 'security', Int32Type, 5);
-                await settings.defineSetting('passwordMaxDays', 'security', Int32Type, -1);
-                await settings.defineSetting('passwordHistoryMaxDays', 'security', Int32Type, 365);
-                await settings.defineSetting('forgetDeviceDays', 'security', Int32Type, 90);
-                await settings.defineSetting('packages', 'package', ArrayType, []);
-                await settings.defineSetting('webServicesPath', 'server', StringType, '/ws');
-                await settings.defineSetting('system#settings-initialized', 'system', BooleanType, true);
-
-                const { publicKey, privateKey } = await Crypto.generateKeyPair('rsa');
-                let publicPem = publicKey.export({ type: 'pkcs1', format: 'pem' });
-                let privatePem = privateKey.export({ type: 'pkcs1', format: 'pem' });
-                await settings.defineSetting('publicKey', 'security', StringType, publicPem);
-                await settings.defineSetting('privateKey', 'security', StringType, privatePem);
-            }
+            await settings.loadSettings();
 
             for (let arg of Object.values(this.args)) {
                 if (arg.settingName) {
@@ -145,7 +83,6 @@ if (LibCluster.isPrimary) {
 
             await settings.defineTemporarySetting('nodeId', 'system', StringType, Crypto.generateUUID());
             await settings.defineTemporarySetting('bootTime', 'system', DateType, mkTime());
-            await settings.defineTemporarySetting('sessionCookieName', 'system', StringType, Crypto.generateUUID());
 
             await settings.defineTemporarySetting(
                 'nodejsFramework',
@@ -222,6 +159,79 @@ if (LibCluster.isPrimary) {
             return false;
         }
 
+        async initializeSystem() {
+            let dbms = mkDbmsThunk();
+            let settings = mkSettingsHandle()
+
+            await settings.defineSetting(
+                'httpServer',
+                'server',
+                mkRdsShape({
+                    enabled: BooleanType,
+                    workers: UInt16Type,
+                    _ipv4: StringType,
+                    _ipv6: StringType,
+                    _host: StringType,
+                    _cert: StringType,
+                    _auth: StringType,
+                }),
+                {
+                    enabled: true,
+                    workers: 1,
+                    ipv4: '0.0.0.0',
+                    ipv6: '::',
+                }
+            );
+            
+            await settings.defineSetting(
+                'permissionTypes',
+                'security',
+                [ StringType ],
+                [
+                    'radius:cookies',
+                    'radius:session',
+                    'radius:signedin',
+                    'radius:admin',
+                    'radius:system',
+                    'radius:websocket',
+                ]
+            );
+
+            await settings.defineSetting(
+                'cluster',
+                'system',
+                BooleanType,
+                false
+            );
+
+            await settings.defineSetting('radiusPath', 'general', StringType, '/radius');
+            await settings.defineSetting('acceptCookiesName', 'privacy', StringType, 'kibble');
+            await settings.defineSetting('acceptCookiesDays', 'privacy', Int32Type, 180);
+            await settings.defineSetting('sessionTimeoutMillis', 'security', Int32Type, 120*60*60*1000);
+            await settings.defineSetting('sessionShutdowntMillis', 'security', Int32Type, 240*60*60*1000);
+            await settings.defineSetting('sessionCookieName', 'security', StringType, `sxkibble`);
+            await settings.defineSetting('loginMaxFailures', 'security', Int32Type, 4);
+            await settings.defineSetting('loginMaxMfaMinutes', 'security', Int32Type, 5);
+            await settings.defineSetting('passwordMaxDays', 'security', Int32Type, -1);
+            await settings.defineSetting('passwordHistoryMaxDays', 'security', Int32Type, 365);
+            await settings.defineSetting('forgetDeviceDays', 'security', Int32Type, 90);
+            await settings.defineSetting('packages', 'package', ArrayType, []);
+            await settings.defineSetting('webServicesPath', 'server', StringType, '/ws');
+            await settings.defineSetting('system#settings-initialized', 'system', BooleanType, true);
+
+            const { publicKey, privateKey } = await Crypto.generateKeyPair('rsa');
+            let publicPem = publicKey.export({ type: 'pkcs1', format: 'pem' });
+            let privatePem = privateKey.export({ type: 'pkcs1', format: 'pem' });
+            await settings.defineSetting('publicKey', 'security', StringType, publicPem);
+            await settings.defineSetting('privateKey', 'security', StringType, privatePem);
+
+            await dbms.createObj(DboTeam, {
+                name: '',
+                active: true,
+                settings: {},
+            });
+        }
+
         async launchServers() {
             // **********************************************************************************
             // **********************************************************************************
@@ -253,8 +263,11 @@ if (LibCluster.isPrimary) {
             }
 
             if (await this.initializeRadiusDbms()) {
-                await this.buildConfiguration();
+                if (!await mkSettingsHandle().isInitialized()) {
+                    this.initializeSystem();
+                }
 
+                await this.buildConfiguration();
                 let permissionTypes = await mkSettingsHandle().getSetting('permissionTypes');
                 await mkPermissionSetHandle().addPermissionTypes(...permissionTypes);
 

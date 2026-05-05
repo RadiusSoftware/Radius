@@ -250,7 +250,6 @@ define(class DocNode extends Emitter {
     constructor(node) {
         super();
         this.node = node;
-        this.pinned = {};
         this.initializedSelf = false;
         this.node[nodeKey] = this;
         return this;
@@ -312,6 +311,18 @@ define(class DocNode extends Emitter {
         for (let descendent of this.enumerateElementDescendents()) {
             if (descendent.getAttribute(attrName) == attrValue) {
                 return descendent;
+            }
+        }
+
+        return null;
+    }
+
+    getChildByTagName(tagName) {
+        for (let descendent of this.enumerateElementDescendents()) {
+            if (descendent instanceof DocElement) {
+                if (descendent.getTagName() == tagName) {
+                    return descendent;
+                }
             }
         }
 
@@ -411,10 +422,6 @@ define(class DocNode extends Emitter {
         return null;
     }
 
-    getPinned(key) {
-        return this.pinned[key];
-    }
-
     getProperty(name) {
         return this.node[name];
     }
@@ -451,10 +458,6 @@ define(class DocNode extends Emitter {
     
     hasParent() {
         return this.node.parentNode != null;
-    }
-
-    hasPinned(key) {
-        return key in this.pinned;
     }
 
     hasProperty(name) {
@@ -511,11 +514,6 @@ define(class DocNode extends Emitter {
 
     log() {
         console.log(this.node);
-        return this;
-    }
-
-    pin(key, value) {
-        this.pinned[key] = value;
         return this;
     }
 
@@ -591,11 +589,6 @@ define(class DocNode extends Emitter {
                 ok();
             }
         });
-    }
-
-    unpin(key) {
-        delete this.pinned[key];
-        return this;
     }
 });
 
@@ -948,10 +941,6 @@ define(class DocElement extends DocNode {
     focus() {
         this.node.focus();
         return this;
-    }
-
-    getApplication() {
-        return Doc.getBody().getChildAt(0);
     }
 
     getAttribute(name) {

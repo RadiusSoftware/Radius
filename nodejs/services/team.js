@@ -113,14 +113,6 @@ createService(class TeamService extends Service {
     async onOpenNoTeam(message) {
         let dbms = mkDbmsThunk();
         let noTeam = await dbms.selectOneObj(DboTeam, { name: '' });
-
-        if (!noTeam) {
-            noTeam = await dbms.createObj(DboTeam, {
-                name: '',
-                active: true,
-            });
-        }
-
         return noTeam.id;
     }
 

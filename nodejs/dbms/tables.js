@@ -163,7 +163,6 @@ define(function mkFrameworkSchema() {
                     { name: 'firstName', type: StringType, size: 50 },
                     { name: 'lastName', type: StringType, size: 50 },
                     { name: 'emailAddrId', type: StringType, size: 50 },
-                    { name: 'emailAddr2Id', type: StringType, size: 50 },
                     { name: 'phoneId', type: StringType, size: 50 },
                     { name: 'authAppId', type: StringType, size: 50 },
                     { name: 'active', type: BooleanType },
@@ -172,11 +171,10 @@ define(function mkFrameworkSchema() {
                     { name: 'failedLogins', type: Int32Type },
                     { name: 'permissions', type: JsonType },
                     { name: 'settings', type: JsonType },
-                    { name: 'verifier', type: JsonType },
+                    { name: 'verified', type: JsonType },
                 ],
                 indexes: [
                     { columnItems: [ { column: 'emailAddrId', direction: 'asc' } ]},
-                    { columnItems: [ { column: 'emailAddr2Id', direction: 'asc' } ]},
                     { columnItems: [ { column: 'phoneId', direction: 'asc' } ]},
                     { columnItems: [ { column: 'teamId', direction: 'asc' } ]},
                 ]

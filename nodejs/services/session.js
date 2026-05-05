@@ -30,11 +30,9 @@
  * is used as a handle to send messages to the user if there's an available web
  * socket connection in place.
 *****/
-define(class Session extends Emitter {
+define(class Session {
     constructor() {
-        super();
         this.token = '';
-        this.live = false;
         this.data = {};
         this.addrHistory = [];
         this.initialPath = '';
@@ -42,7 +40,7 @@ define(class Session extends Emitter {
         this.uuid = Crypto.generateUUID();
         this.team = mkTeamHandle();
         this.user = mkUserHandle();
-        this.auths = [ 'submit-username' ];
+        this.state = '';
         this.userAgent = '';
         this.timeout = null;
     }
@@ -70,16 +68,6 @@ define(class Session extends Emitter {
 
     getAcceptedCookies() {
         return this.acceptedCookies;
-    }
-
-    getAuthState() {
-        if (this.auths.length) {
-            return this.auths[0];
-        }
-        else {
-            this.live = true;
-            return 'live';
-        }
     }
 
     getData(key) {
@@ -110,6 +98,10 @@ define(class Session extends Emitter {
         return this.token;
     }
 
+    getState() {
+        return this.state;
+    }
+
     getUser() {
         return this.user;
     }
@@ -133,21 +125,8 @@ define(class Session extends Emitter {
         return this.uuid;
     }
 
-    async gotoNextAuthStep() {
-        if (this.auths.length) {
-            return this.auths[0];
-        }
-        else {
-            this.live = true;
-
-            if (!(await this.permissions.hasPermission('radius:signedin'))) {
-                await this.permissions.setPermissions('radius:signedin');
-                let userPermissions = await this.user.getPermissions();
-                await this.permissions.setPermissions(...userPermissions);
-            }
-
-            return 'live';
-        }
+    hasAcceptedCookies() {
+        return this.acceptedCookies != '';
     }
 
     hasData(key) {
@@ -171,16 +150,42 @@ define(class Session extends Emitter {
         return await this.permissions.listPermissions();
     }
 
-    async revert() {
+    async setAcceptedCookies(acceptedCookiesCookie) {
+        this.acceptedCookies = acceptedCookiesCookie;
+
+        if (this.acceptedCookies) {
+            await this.setPermissions('radius:cookies');
+        }
+
+        return this;
+    }
+
+    setData(name, value) {
+        console.log(`\n*** Set Data`);
+        console.log(value);
+        this.data[name] = value;
+        return this;
+    }
+
+    async setPermissions(...permissionTypes) {
+        await this.permissions.setPermissions(...permissionTypes);
+        return this;
+    }
+
+    setState(state) {
+        this.state = state;
+        return this;
+    }
+
+    async signout() {
         if (this.timeout) {
             clearTimeout(this.timeout);
             this.timeout = null;
         }
 
-        this.live = false;
+        this.state = 'session:submit-email';
         this.teamHandle = mkTeamHandle();
         this.userHandle = mkUserHandle();
-        this.auths = [ 'submit-username' ];
 
         for (let permission of await this.permissions.listPermissions()) {
             if (!(permission in { 'radius:cookies':0, 'radius:session':0 })) {
@@ -188,11 +193,370 @@ define(class Session extends Emitter {
             }
         }
 
-        this.touch();
-        return this.auths[0];
+        this.timeout = setTimeout(async () => {
+            SessionService.delete(this);
+        }, this.shutdownMillis);
+
+        return this.state;
+    }
+    
+    touch() {
+        if (this.timeout) {
+            clearTimeout(this.timeout);
+            this.timeout = null;
+        }
+
+        if (this.state == 'session:live') {
+            this.timeout = setTimeout(async () => {
+                await this.signOut();
+            }, this.timeoutMillis);
+        }
+
+        return this;
+    }
+});
+
+
+/*****
+ * The session service is responsible for managing the closely guarded set of
+ * sessions on the instance.  Sessions contain highly sensitive crptographic
+ * and user data.  Sessions are established for all hosts and users that want
+ * to interact with the Radius server instance.  Sessions are established for
+ * all browser connections initially with a state of ''.  Sessions will timeout
+ * after a prescribed time period, which means they revert from an 'ok' or other
+ * signed-in states to the 'unknown' or '' state.
+*****/
+createService(class SessionService extends Service {
+    constructor() {
+        super();
+        this.sessions = {};
+        this.stateMap = {};
+
+        this.stateArr = [
+            'session:submit-email',
+            'session:verify-email',
+            'session:submit-password',
+            'session:forgot-password',
+            'session:set-password',
+            'session:submit-emailcode',
+            'session:submit-phonecode',
+            'session:submit-authappcode',
+            'session:accept-eula',
+            'session:live',
+        ];
+
+        for (let i = 0; i < this.stateArr.length; i++) {
+            let stateName = this.stateArr[i];
+            this.stateMap[stateName] = i;
+        }
     }
 
-    async setAuthentication() {
+    async onClearPermissions(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            let permissions = session.getPermissions();
+
+            if (message.permissions.length) {
+                await permissions.deletePermissions(...message.permissions);
+            }
+            else {
+                await permissions.deletePermissions(...(await permissions.listPermissions()));
+            }
+
+            return message.token;
+        }
+
+        return mkFailure('#NoSession');
+    }
+
+    deleteSession(session) {
+        if (session.getToken() in this.sessions) {
+            delete this.sessions[session.getToken()];
+        }
+
+        return this;
+    }
+
+    async onAuthorize(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            return await session.authorize(message.required);
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onClearData(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            session.clearData(message.dataName);
+            return message.token;
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onCreateSession(message) {
+        let session = await mkSession().init();
+        session.addRemoteHost(message.remoteHost);
+        session.initialPath = message.initialPath;
+        session.userAgent = message.userAgent;
+        session.acceptedCookies = message.acceptedCookies;
+        this.sessions[session.getToken()] = session;
+        return session.getToken();
+    }
+
+    async onGetData(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            return session.getData(message.dataName);
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onGetInitialPath(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            return session.getInitialPath();
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onGetState(message) {
+        if (message.token in this.sessions) {
+            return this.sessions[message.token].getState();
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onHasPermission(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            return await session.hasPermission(message.permissionType);
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onListPermissions(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            return await session.listPermissions();
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onOpen(message) {
+        if (message.token in this.sessions) {
+            return message.token;
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onSetAcceptedCookies(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            session.acceptedCookies = message.acceptCookiesUUID;
+            return message.token;
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onSetData(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            session.setData(message.dataName, message.value);
+            return message.token;
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onSetPermissions(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            await session.setPermissions(...message.permissions);
+            return message.token;
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onSignOut(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            await session.revert();
+            return message.token;
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onTouch(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            session.touch();
+            return message.token;
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    /*
+    async onAddRemoteHost(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            session.addRemoteHost(message.remoteHost);
+            return message.token;
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onDelete(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            session.untouch();
+            delete this.sessions[message.token];
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onGetNextAuthState(message) {
+        if (message.token in this.sessions) {
+            return this.sessions[message.token].getAuthState();
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onGetRemoteHost(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            return session.getRemoteHost();
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onGetRemoteHostHistory(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            return session.getRemoteHostHistory();
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onGetUser(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            return session.getUser();
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onGetUserAgent(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            return session.getAgentType();
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onGetUsername(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            return await session.getUsername();
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onPopData(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            let value = session.getData(message.dataName);
+            session.clearData(message.dataName);
+            return value;
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+    
+    async onSubmitAcceptEula(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            return await session.submitAcceptEula();
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+    
+    async onSubmitPassword(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            return await session.submitPassword(message.password);
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+    
+    async onSubmitRememberDevice(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            return await session.submitRememberDevice(message.rememberMe);
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onSubmitRevert(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            return await session.revert();
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+    
+    async onSubmitAcceptEula(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            return await session.submitAcceptEula();
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+    
+    async onSubmitSetPassword(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            return await session.submitSetPassword(message.password);
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+    
+    async onSubmitUsername(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            return await session.submitUsername(message.username);
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+    
+    async gotoNextState() {
         this.auths = [];
         let deviceId = this.acceptedCookies;
         let emailOnline = (await mkEmailerHandle().getStatus()) == 'online';
@@ -262,16 +626,6 @@ define(class Session extends Emitter {
         }
     }
 
-    setData(name, value) {
-        this.data[name] = value;
-        return this;
-    }
-
-    async setPermissions(...permissionTypes) {
-        await this.permissions.setPermissions(...permissionTypes);
-        return this;
-    }
-
     async submitAcceptEula() {
         if (this.getAuthState() == 'accept-eula') {
             await this.user.setEulaAccepted(true);
@@ -295,25 +649,6 @@ define(class Session extends Emitter {
         }
     }
 
-    async submitRememberDevice(rememberMe) {
-        if (this.getAuthState() == 'remember-device') {
-            let deviceId = this.acceptedCookies;
-
-            if (deviceId) {
-                if (rememberMe) {
-                    await this.user.rememberDevice(deviceId);
-                }
-                else {
-                    await this.user.forgetDevice(deviceId);
-                }
-
-                this.auths.shift();
-            }
-
-            return await this.gotoNextAuthStep();
-        }
-    }
-
     async submitSetPassword(password) {
         if (this.getAuthState() == 'set-password') {
             let result = await mkPasswordHandle().setPassword(this.user.id, password);
@@ -331,7 +666,7 @@ define(class Session extends Emitter {
     }
 
     async submitUsername(username) {
-        if (this.getAuthState() == 'submit-username') {
+        if (this.getState() == 'submit-username') {
             let settings = mkSettingsHandle();
             let clusterStatus = await settings.getSetting('radiusCluster');
 
@@ -377,353 +712,7 @@ define(class Session extends Emitter {
 
         return mkFailure('radius.org.usernameFailure');
     }
-    
-    touch() {
-        if (this.timeout) {
-            clearTimeout(this.timeout);
-            this.timeout = null;
-        }
-
-        if (!this.live) {
-            this.timeout = setTimeout(async () => {
-                this.emit({
-                    name: 'SessionShutdown',
-                    token: this.token,
-                    session: this,
-                });
-            }, this.shutdownMillis);
-        }
-        else {
-            this.timeout = setTimeout(async () => {
-                await this.signOut();
-            }, this.timeoutMillis);
-        }
-
-        return this;
-    }
-
-    untouch() {
-        if (this.timeout) {
-            clearTimeout(this.timeout);
-        }
-
-        this.timout = null;
-    }
-});
-
-
-/*****
- * The session service is responsible for managing the closely guarded set of
- * sessions on the instance.  Sessions contain highly sensitive crptographic
- * and user data.  Sessions are established for all hosts and users that want
- * to interact with the Radius server instance.  Sessions are established for
- * all browser connections initially with a state of ''.  Sessions will timeout
- * after a prescribed time period, which means they revert from an 'ok' or other
- * signed-in states to the 'unknown' or '' state.
-*****/
-createService(class SessionService extends Service {
-    constructor() {
-        super();
-        this.sessions = {};
-    }
-
-    async onAddRemoteHost(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            session.addRemoteHost(message.remoteHost);
-            return message.token;
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onAuthorize(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            return await session.authorize(message.required);
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onClearData(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            session.clearData(message.dataName);
-            return message.token;
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onClearPermissions(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            let permissions = session.getPermissions();
-
-            if (message.permissions.length) {
-                await permissions.deletePermissions(...message.permissions);
-            }
-            else {
-                await permissions.deletePermissions(...(await permissions.listPermissions()));
-            }
-
-            return message.token;
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onCreateSession(message) {
-        let session = await mkSession().init();
-        session.addRemoteHost(message.remoteHost);
-        session.initialPath = message.initialPath;
-        session.userAgent = message.userAgent;
-        session.acceptedCookies = message.acceptedCookies;
-        message.acceptedCookies ? await session.setPermissions('radius:cookies') : null;
-        this.sessions[session.getToken()] = session;
-        session.on('*', message => this.onSessionMessage(message));
-        return session.getToken();
-    }
-
-    async onDelete(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            session.untouch();
-            delete this.sessions[message.token];
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onGetData(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            return session.getData(message.dataName);
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onGetInitialPath(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            return session.getInitialPath();
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onGetNextAuthState(message) {
-        if (message.token in this.sessions) {
-            return this.sessions[message.token].getAuthState();
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onGetRemoteHost(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            return session.getRemoteHost();
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onGetRemoteHostHistory(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            return session.getRemoteHostHistory();
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onGetUser(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            return session.getUser();
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onGetUserAgent(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            return session.getAgentType();
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onGetUsername(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            return await session.getUsername();
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onHasPermission(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            return await session.hasPermission(message.permissionType);
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onListPermissions(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            return await session.listPermissions();
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onOpen(message) {
-        if (message.token in this.sessions) {
-            return message.token;
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onPopData(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            let value = session.getData(message.dataName);
-            session.clearData(message.dataName);
-            return value;
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onSessionMessage(message) {
-        if (message.name == 'SessionShutdown') {
-            if (message.token in this.sessions) {
-                delete this.sessions[message.token];
-            }
-        }
-    }
-
-    async onSetAcceptedCookies(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            session.acceptedCookies = message.acceptCookiesUUID;
-            return message.token;
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onSetData(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            session.setData(message.dataName, message.value);
-            return message.token;
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onSetPermissions(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            await session.setPermissions(...message.permissions);
-            return message.token;
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onSignOut(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            await session.revert();
-            return message.token;
-        }
-
-        return mkFailure('NOSESSION');
-    }
-    
-    async onSubmitAcceptEula(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            return await session.submitAcceptEula();
-        }
-
-        return mkFailure('NOSESSION');
-    }
-    
-    async onSubmitPassword(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            return await session.submitPassword(message.password);
-        }
-
-        return mkFailure('NOSESSION');
-    }
-    
-    async onSubmitRememberDevice(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            return await session.submitRememberDevice(message.rememberMe);
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onSubmitRevert(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            return await session.revert();
-        }
-
-        return mkFailure('NOSESSION');
-    }
-    
-    async onSubmitAcceptEula(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            return await session.submitAcceptEula();
-        }
-
-        return mkFailure('NOSESSION');
-    }
-    
-    async onSubmitSetPassword(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            return await session.submitSetPassword(message.password);
-        }
-
-        return mkFailure('NOSESSION');
-    }
-    
-    async onSubmitUsername(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            return await session.submitUsername(message.username);
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async onTouch(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            session.touch();
-            return message.token;
-        }
-
-        return mkFailure('NOSESSION');
-    }
+    */
 });
 
 
@@ -738,21 +727,6 @@ define(class SessionHandle extends Handle {
     constructor(token) {
         super();
         this.token = token ? token : '';
-    }
-
-    async addRemoteHost(remoteHost) {
-        if (this.token) {
-            let rsp = await this.callService({
-                token: this.token,
-                remoteHost: remoteHost,
-            });
-
-            if (rsp instanceof Failure) {
-                this.token = '';
-            }
-        }
-
-        return this;
     }
 
     async authorize(requiredPermissions) {
@@ -770,15 +744,7 @@ define(class SessionHandle extends Handle {
             }
         }
 
-        return false;
-    }
-
-    async back() {
-        if (this.token) {
-            return await this.callService({
-                token: this.token,
-            });
-        }
+        return mkFailure('#NOSESSION');
     }
 
     async clearData(name) {
@@ -822,18 +788,6 @@ define(class SessionHandle extends Handle {
         return this;
     }
 
-    async delete() {
-        if (this.token) {
-            await this.callService({
-                token: this.token,
-            });
-
-            this.token = '';
-        }
-
-        return this;
-    }
-
     static fromJson(value) {
         return mkSessionHandle(value.token);
     }
@@ -852,7 +806,7 @@ define(class SessionHandle extends Handle {
             return rsp;
         }
 
-        return mkFailure('NOSESSION');
+        return mkFailure('#NOSESSION');
     }
 
     async getInitialPath() {
@@ -872,104 +826,18 @@ define(class SessionHandle extends Handle {
         return '/';
     }
 
-    async getNextAuthState() {
+    async getState() {
         if (this.token) {
-            let rsp = await this.callService({
+            return await this.callService({
                 token: this.token,
             });
-
-            if (rsp instanceof Failure) {
-                this.token = '';
-            }
-            
-            return rsp;
         }
 
-        return mkFailure('NOSESSION');
-    }
-
-    async getRemoteHost() {
-        if (this.token) {
-            let rsp = await this.callService({
-                token: this.token,
-            });
-
-            if (rsp instanceof Failure) {
-                this.token = '';
-            }
-            
-            return rsp;
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async getRemoteHostHistory() {
-        if (this.token) {
-            let rsp = await this.callService({
-                token: this.token,
-            });
-
-            if (rsp instanceof Failure) {
-                this.token = '';
-            }
-            
-            return rsp;
-        }
-
-        return mkFailure('NOSESSION');
+        return mkFailure('#NOSESSION');
     }
 
     getToken() {
         return this.token;
-    }
-
-    async getUser() {
-        if (this.token) {
-            let rsp = await this.callService({
-                token: this.token,
-            });
-
-            if (rsp instanceof Failure) {
-                this.token = '';
-            }
-            
-            return rsp;
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async getUserAgent() {
-        if (this.token) {
-            let rsp = await this.callService({
-                token: this.token,
-            });
-
-            if (rsp instanceof Failure) {
-                this.token = '';
-            }
-            
-            return rsp;
-        }
-
-        return mkFailure('NOSESSION');
-    }
-
-    async getUsername() {
-        if (this.token) {
-            let rsp = await this.callService({
-                token: this.token,
-            });
-
-            if (rsp instanceof Failure) {
-                this.token = '';
-            }
-            
-            return rsp;
-        }
-
-        return mkFailure('NOSESSION');
     }
 
     async hasPermission(key) {
@@ -986,7 +854,7 @@ define(class SessionHandle extends Handle {
             return rsp;
         }
 
-        return mkFailure('NOSESSION');
+        return mkFailure('#NOSESSION');
     }
 
     async listPermissions() {
@@ -1002,7 +870,7 @@ define(class SessionHandle extends Handle {
             return rsp;
         }
 
-        return mkFailure('NOSESSION');
+        return mkFailure('#NOSESSION');
     }
 
     async open(token) {
@@ -1010,7 +878,7 @@ define(class SessionHandle extends Handle {
             token: token ? token : this.token,
         });
 
-            if (rsp instanceof Failure) {
+        if (rsp instanceof Failure) {
             this.token = '';
         }
         else {
@@ -1018,24 +886,6 @@ define(class SessionHandle extends Handle {
         }
 
         return this;
-    }
-
-    async popData(name) {
-        if (this.token) {
-            let rsp = await this.callService({
-                token: this.token,
-                dataName: name,
-            });
-
-            if (rsp instanceof Failure) {
-                this.token = '';
-            }
-            else {
-                return rsp;
-            }
-        }
-
-        return mkFailure('NOSESSION');
     }
 
     async setAcceptedCookies(acceptCookiesUUID) {
@@ -1094,70 +944,6 @@ define(class SessionHandle extends Handle {
         return this;
     }
 
-    async submitAcceptEula() {
-        if (this.token) {
-            return await this.callService({
-                token: this.token,
-            });
-        }
-
-        return mkFailure('NOSESSION');
-     }
-
-    async submitPassword(password) {
-        if (this.token) {
-            return await this.callService({
-                token: this.token,
-                password: password,
-            });
-        }
-
-        return mkFailure('NOSESSION');
-     }
-
-    async submitRememberDevice(rememberMe) {
-        if (this.token) {
-            return await this.callService({
-                token: this.token,
-                rememberMe: rememberMe,
-            });
-        }
-
-        return mkFailure('NOSESSION');
-     }
-
-    async submitRevert() {
-        if (this.token) {
-            return await this.callService({
-                token: this.token,
-            });
-        }
-
-        return mkFailure('NOSESSION');
-     }
-
-    async submitSetPassword(password) {
-        if (this.token) {
-            return await this.callService({
-                token: this.token,
-                password: password,
-            });
-        }
-
-        return mkFailure('NOSESSION');
-     }
-
-    async submitUsername(username) {
-        if (this.token) {
-            return await this.callService({
-                token: this.token,
-                username: username,
-            });
-        }
-
-        return mkFailure('NOSESSION');
-     }
-
     async touch() {
         if (this.token) {
             let rsp = await this.callService({
@@ -1171,4 +957,219 @@ define(class SessionHandle extends Handle {
 
         return this;
     }
+
+    /*
+    async addRemoteHost(remoteHost) {
+        if (this.token) {
+            let rsp = await this.callService({
+                token: this.token,
+                remoteHost: remoteHost,
+            });
+
+            if (rsp instanceof Failure) {
+                this.token = '';
+            }
+        }
+
+        return this;
+    }
+
+    async back() {
+        if (this.token) {
+            return await this.callService({
+                token: this.token,
+            });
+        }
+    }
+
+    async delete() {
+        if (this.token) {
+            await this.callService({
+                token: this.token,
+            });
+
+            this.token = '';
+        }
+
+        return this;
+    }
+
+    async getNextAuthState() {
+        if (this.token) {
+            let rsp = await this.callService({
+                token: this.token,
+            });
+
+            if (rsp instanceof Failure) {
+                this.token = '';
+            }
+            
+            return rsp;
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async getRemoteHost() {
+        if (this.token) {
+            let rsp = await this.callService({
+                token: this.token,
+            });
+
+            if (rsp instanceof Failure) {
+                this.token = '';
+            }
+            
+            return rsp;
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async getRemoteHostHistory() {
+        if (this.token) {
+            let rsp = await this.callService({
+                token: this.token,
+            });
+
+            if (rsp instanceof Failure) {
+                this.token = '';
+            }
+            
+            return rsp;
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async getUser() {
+        if (this.token) {
+            let rsp = await this.callService({
+                token: this.token,
+            });
+
+            if (rsp instanceof Failure) {
+                this.token = '';
+            }
+            
+            return rsp;
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async getUserAgent() {
+        if (this.token) {
+            let rsp = await this.callService({
+                token: this.token,
+            });
+
+            if (rsp instanceof Failure) {
+                this.token = '';
+            }
+            
+            return rsp;
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async getUsername() {
+        if (this.token) {
+            let rsp = await this.callService({
+                token: this.token,
+            });
+
+            if (rsp instanceof Failure) {
+                this.token = '';
+            }
+            
+            return rsp;
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async popData(name) {
+        if (this.token) {
+            let rsp = await this.callService({
+                token: this.token,
+                dataName: name,
+            });
+
+            if (rsp instanceof Failure) {
+                this.token = '';
+            }
+            else {
+                return rsp;
+            }
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async submitAcceptEula() {
+        if (this.token) {
+            return await this.callService({
+                token: this.token,
+            });
+        }
+
+        return mkFailure('#NOSESSION');
+     }
+
+    async submitPassword(password) {
+        if (this.token) {
+            return await this.callService({
+                token: this.token,
+                password: password,
+            });
+        }
+
+        return mkFailure('#NOSESSION');
+     }
+
+    async submitRememberDevice(rememberMe) {
+        if (this.token) {
+            return await this.callService({
+                token: this.token,
+                rememberMe: rememberMe,
+            });
+        }
+
+        return mkFailure('#NOSESSION');
+     }
+
+    async submitRevert() {
+        if (this.token) {
+            return await this.callService({
+                token: this.token,
+            });
+        }
+
+        return mkFailure('#NOSESSION');
+     }
+
+    async submitSetPassword(password) {
+        if (this.token) {
+            return await this.callService({
+                token: this.token,
+                password: password,
+            });
+        }
+
+        return mkFailure('#NOSESSION');
+     }
+
+    async submitUsername(username) {
+        if (this.token) {
+            return await this.callService({
+                token: this.token,
+                username: username,
+            });
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+    */
 });

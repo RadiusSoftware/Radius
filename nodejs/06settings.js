@@ -138,6 +138,17 @@ createService(class SettingsService extends Service {
         return message.settingName in this.settings;
     }
 
+    async onIsInitialized(message) {
+        let dbms = mkDbmsThunk();
+
+        let dboSetting = await dbms.selectOneObj(
+            DboSetting,
+            { name: 'system#settings-initialized' }
+        );
+
+        return dboSetting && dboSetting.value === true;
+    }
+
     async onListSettings(message) {
         let list = Object.values(this.settings);
 
@@ -167,25 +178,15 @@ createService(class SettingsService extends Service {
 
     async onLoadSettings(message) {
         let dbms = mkDbmsThunk();
+        let storedSettings = await dbms.selectObj(DboSetting);
 
-        let dboSetting = await dbms.selectOneObj(
-            DboSetting,
-            { name: 'system#settings-initialized' }
-        );
-
-        if (dboSetting && dboSetting.value === true) {
-            let storedSettings = await dbms.selectObj(DboSetting);
-
-            if (storedSettings.length > 0) {
-                for (let storedSetting of storedSettings) {
-                    this.settings[storedSetting.name] = storedSetting;
-                }
-
-                return true;
+        if (storedSettings.length > 0) {
+            for (let storedSetting of storedSettings) {
+                this.settings[storedSetting.name] = storedSetting;
             }
         }
 
-        return false;
+        return true;
     }
 
     async onSetSetting(message) {
@@ -263,6 +264,11 @@ define(class SettingsHandle extends Handle {
     async hasSetting(settingName) {
         return await this.callService({
             settingName: settingName,
+        });
+    }
+
+    async isInitialized() {
+        return await this.callService({
         });
     }
 

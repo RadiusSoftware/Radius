@@ -569,17 +569,22 @@
         </script>
     </widget>
     -->
-    <!--
     <widget tagname="form-widget" settings="stub:true;">
         <script>
             class FormWidget extends Widget {
                 constructor(arg) {
                     super(arg);
                 }
+
+                init() {
+                    super.init();
+                    let attrs = this.filterAttributes();
+                    this.replacement = createElement('form', attrs);
+                    this.replacement.append(...this.getInnerElements());
+                }
             }
         </script>
     </widget>
-    -->
     <!--
     <widget tagname="progress-widget">
         <script>

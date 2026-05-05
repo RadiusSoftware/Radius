@@ -163,7 +163,6 @@ define(class DocNode extends Emitter {
         }
         else {
             this.node = node;
-            this.pinned = {};
             this.node[nodeKey] = this;
             return this;
         }
@@ -265,10 +264,6 @@ define(class DocNode extends Emitter {
             return wrapNode(this.node.parentNode);
         }
     }
-
-    getPinned(name) {
-        return this.pinned[name];
-    }
   
     getSiblingNext() {
         let index = this.getNodeIndex();
@@ -290,10 +285,6 @@ define(class DocNode extends Emitter {
 
     hasChildNodes() {
         return this.node.childNodes.length > 0;
-    }
-
-    hasPinned(name) {
-        return name in this.pinned;
     }
 
     insertAfter(...docNodes) {
@@ -380,11 +371,6 @@ define(class DocNode extends Emitter {
             );
         }
 
-        return this;
-    }
-
-    setPinned(name, value) {
-        this.pinned[name] = value;
         return this;
     }
 

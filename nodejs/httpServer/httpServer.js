@@ -174,14 +174,6 @@ define(class HttpWorker extends Worker {
                     handle.sessionCookie.setHttpOnly();
                     handle.rsp.setCookie(handle.sessionCookie);
                 }
-
-                for (let cookie of handle.req.getCookieArray()) {
-                    if (cookie.getName().startsWith(this.sessionCookiePrefix)) {
-                        if (cookie.getName() != this.sessionCookieName) {
-                            handle.rsp.clearCookie(cookie);
-                        }
-                    }
-                }
                 
                 if (!(await handle.session.authorize(handle.libEntry.pset))) {
                     if (this.acceptCookiesPath) {
@@ -254,8 +246,7 @@ define(class HttpWorker extends Worker {
     async init() {
         await super.init();
         let settings = mkSettingsHandle();
-        this.sessionCookiePrefix = await settings.getSetting('sessionCookiePrefix');
-        this.sessionCookieName = `${this.sessionCookiePrefix}${await settings.getSetting('sessionCookieName')}`;
+        this.sessionCookieName = await settings.getSetting('sessionCookieName');
         this.acceptCookiesName = await settings.getSetting('acceptCookiesName');
         this.acceptCookiesDays = await settings.getSetting('acceptCookiesDays');
         this.acceptCookiesPath = await settings.getSetting('acceptCookiesPath');
@@ -368,8 +359,6 @@ define(class HttpWorker extends Worker {
                 if (arg.name in variables) {
                     let value = variables[arg.name];
 
-                    // ************************************************************************************
-                    // ************************************************************************************
                     if (arg.type instanceof DataShape) {
                         if (arg.type.validate(value)) {
                             argumentsList.push(value);
