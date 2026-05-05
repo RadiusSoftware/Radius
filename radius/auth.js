@@ -57,12 +57,12 @@ define(class AuthApp extends Webapp {
     */
 
     // ********************
-    // getAuthState
+    // getSessionState
     // ********************
     async [Api.define(
-        'getAuthState',
+        'getSessionState',
     )](trx) {
-        return await trx.session.getNextAuthState();
+        return await trx.session.getState();
     }
 
     // ********************

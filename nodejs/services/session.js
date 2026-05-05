@@ -40,14 +40,17 @@ define(class Session {
         this.uuid = Crypto.generateUUID();
         this.team = mkTeamHandle();
         this.user = mkUserHandle();
-        this.state = '';
+        this.state = 'session:submit-email';
         this.userAgent = '';
         this.timeout = null;
     }
 
     addRemoteHost(addr) {
         if (addr != this.getRemoteHost()) {
-            this.addrHistory.push(addr);
+            this.addrHistory.push({
+                time: mkTime(),
+                addr: addr,
+            });
         }
 
         return this;
@@ -80,7 +83,7 @@ define(class Session {
 
     getRemoteHost() {
         if (this.addrHistory.length) {
-            return this.addrHistory[this.addrHistory.length - 1];
+            return this.addrHistory[this.addrHistory.length - 1].addr;
         }
 
         return '';
@@ -200,10 +203,14 @@ define(class Session {
         return this.state;
     }
     
-    touch() {
+    touch(remoteHost) {
         if (this.timeout) {
             clearTimeout(this.timeout);
             this.timeout = null;
+        }
+
+        if (remoteHost) {
+            this.addRemoteHost(remoteHost);
         }
 
         if (this.state == 'session:live') {
@@ -251,32 +258,6 @@ createService(class SessionService extends Service {
         }
     }
 
-    async onClearPermissions(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            let permissions = session.getPermissions();
-
-            if (message.permissions.length) {
-                await permissions.deletePermissions(...message.permissions);
-            }
-            else {
-                await permissions.deletePermissions(...(await permissions.listPermissions()));
-            }
-
-            return message.token;
-        }
-
-        return mkFailure('#NoSession');
-    }
-
-    deleteSession(session) {
-        if (session.getToken() in this.sessions) {
-            delete this.sessions[session.getToken()];
-        }
-
-        return this;
-    }
-
     async onAuthorize(message) {
         if (message.token in this.sessions) {
             let session = this.sessions[message.token];
@@ -296,6 +277,24 @@ createService(class SessionService extends Service {
         return mkFailure('#NOSESSION');
     }
 
+    async onClearPermissions(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            let permissions = session.getPermissions();
+
+            if (message.permissions.length) {
+                await permissions.deletePermissions(...message.permissions);
+            }
+            else {
+                await permissions.deletePermissions(...(await permissions.listPermissions()));
+            }
+
+            return message.token;
+        }
+
+        return mkFailure('#NoSession');
+    }
+
     async onCreateSession(message) {
         let session = await mkSession().init();
         session.addRemoteHost(message.remoteHost);
@@ -306,10 +305,42 @@ createService(class SessionService extends Service {
         return session.getToken();
     }
 
+    deleteSession(session) {
+        if (session.getToken() in this.sessions) {
+            delete this.sessions[session.getToken()];
+        }
+
+        return this;
+    }
+
     async onGetData(message) {
         if (message.token in this.sessions) {
             let session = this.sessions[message.token];
             return session.getData(message.dataName);
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
+    async onGetDetails(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+
+            let details = {
+                uuid: session.getUUID(),
+                token: session.getToken(),
+                state: session.getState(),
+                permissions: await session.listPermissions(),
+                addr: session.getRemoteHost(),
+                addrs: session.getRemoteHostHistory(),
+                agent: session.getUserAgent(),
+                acceptCookies: session.getAcceptedCookies(),
+                user: session.user.getId(),
+                team: session.team.getId(),
+                initPath: session.getInitialPath(),
+            };
+
+            return details;
         }
 
         return mkFailure('#NOSESSION');
@@ -358,6 +389,17 @@ createService(class SessionService extends Service {
         return mkFailure('#NOSESSION');
     }
 
+    async onPopData(message) {
+        if (message.token in this.sessions) {
+            let session = this.sessions[message.token];
+            let value = session.getData(message.dataName);
+            session.clearData(message.dataName);
+            return value;
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
     async onSetAcceptedCookies(message) {
         if (message.token in this.sessions) {
             let session = this.sessions[message.token];
@@ -401,7 +443,7 @@ createService(class SessionService extends Service {
     async onTouch(message) {
         if (message.token in this.sessions) {
             let session = this.sessions[message.token];
-            session.touch();
+            session.touch(message.remoteHost);
             return message.token;
         }
 
@@ -477,17 +519,6 @@ createService(class SessionService extends Service {
         if (message.token in this.sessions) {
             let session = this.sessions[message.token];
             return await session.getUsername();
-        }
-
-        return mkFailure('#NOSESSION');
-    }
-
-    async onPopData(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            let value = session.getData(message.dataName);
-            session.clearData(message.dataName);
-            return value;
         }
 
         return mkFailure('#NOSESSION');
@@ -809,6 +840,22 @@ define(class SessionHandle extends Handle {
         return mkFailure('#NOSESSION');
     }
 
+    async getDetails() {
+        if (this.token) {
+            let rsp = await this.callService({
+                token: this.token,
+            });
+
+            if (rsp instanceof Failure) {
+                this.token = '';
+            }
+            
+            return rsp;
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
     async getInitialPath() {
         if (this.token) {
             let rsp = await this.callService({
@@ -888,6 +935,24 @@ define(class SessionHandle extends Handle {
         return this;
     }
 
+    async popData(name) {
+        if (this.token) {
+            let rsp = await this.callService({
+                token: this.token,
+                dataName: name,
+            });
+
+            if (rsp instanceof Failure) {
+                this.token = '';
+            }
+            else {
+                return rsp;
+            }
+        }
+
+        return mkFailure('#NOSESSION');
+    }
+
     async setAcceptedCookies(acceptCookiesUUID) {
         if (this.token) {
             this.token = await this.callService({
@@ -944,10 +1009,11 @@ define(class SessionHandle extends Handle {
         return this;
     }
 
-    async touch() {
+    async touch(remoteHost) {
         if (this.token) {
             let rsp = await this.callService({
                 token: this.token,
+                remoteHost: remoteHost,
             });
 
             if (rsp instanceof Failure) {
@@ -1085,24 +1151,6 @@ define(class SessionHandle extends Handle {
             }
             
             return rsp;
-        }
-
-        return mkFailure('#NOSESSION');
-    }
-
-    async popData(name) {
-        if (this.token) {
-            let rsp = await this.callService({
-                token: this.token,
-                dataName: name,
-            });
-
-            if (rsp instanceof Failure) {
-                this.token = '';
-            }
-            else {
-                return rsp;
-            }
         }
 
         return mkFailure('#NOSESSION');

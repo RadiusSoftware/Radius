@@ -352,7 +352,10 @@
                 }
 
                 addMode(mode, clientElement) {
-                    if (!(mode in this.modes)) {
+                    if (mode in this.modes) {
+                        this.replaceClientElement(mode, clientElement);
+                    }
+                    else {
                         this.append(clientElement);
                         this.modes[mode] = clientElement;
 
@@ -362,11 +365,9 @@
                         else {
                             clientElement.setStyle('display', 'none');
                         }
-
-                        return true;
                     }
-
-                    return false;
+                    
+                    return this;
                 }
 
                 clearMode() {
@@ -387,6 +388,8 @@
                 }
 
                 init() {
+                    super.init();
+
                     for (let clientElement of this.getInnerElements()) {
                         if (clientElement instanceof DocElement) {
                             let mode = clientElement.getAttribute('rds-mode');
@@ -396,39 +399,6 @@
                             }
                         }
                     }
-
-                    /*
-                    if (!this.getRdsBindMethod) {
-                        this.getRdsBindMethod = () => 'selectorMode,setMode';
-                    }
-                    */
-
-                    super.init();
-
-                    /*
-                    (async () => {
-                        await pause(1000);
-                        let element = this.getInnerElements()[0];
-                            element.setStyle({
-                                display: '',
-                                opacity: '1.0',
-                            });
-                    })();
-                    */
-
-                    /*
-                    if (this.getRdsChildTransition && this.getRdsChildStyleTrigger) {
-                        this.childTransition = this.getRdsChildTransition();
-                        this.childStyleTrigger = this.getRdsChildStyleTrigger();
-                    }
-
-                    for (let innerElement of this.getInnerElements()) {
-                        if (innerElement.getRdsSelectorMode) {
-                            let mode = innerElement.getRdsSelectorMode();
-                            this.addMode(mode, innerElement);
-                        }
-                    }
-                    */
                 }
 
                 listClientElements() {

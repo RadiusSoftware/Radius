@@ -50,7 +50,7 @@ define(class ApiEndpoint {
             let validation = this.validateArguments(...options.message.args);
 
             if (validation === true) {
-                await trx.session.touch();
+                await trx.session.touch(trx.httpReq.getRemoteHost());
                 let args = [trx].concat(options.message.args);
                 let response = await wait(Reflect.apply(this.method, this.api.container, args));
                 await trx.finalize();

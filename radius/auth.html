@@ -13,41 +13,20 @@
                     super(arg);
                 }
 
-                async init() {
+                init() {
                     super.init();
                     this.selector = this.getChildByTagName('selector-widget');
-
-                    /*
-                    this.getChildElementAt(0).on('DocNodeInitialized', async message => {
-                        await this.handleState(await Api.getAuthState());
-                        let username = await Api.getUsername();
-                        this.setControllerValue('username', username);
-                    });
-                    */
+                    (async () => this.setSessionState(await Api.getSessionState()))();
                 }
 
-                /*
-                async handleState(state) {
-                    if (state instanceof Failure) {
-                        await displayOkDialog({
-                            content: state.getInfo(),
-                        });
-                    }
-                    else if (state == 'live') {
-                        let path = await Api.getTargetPath();
-
-                        if (path == Location.getPathname()) {
-                            Location.assign('/');
-                        }
-                        else {
-                            Location.assign(path);
-                        }
+                async setSessionState(state) {
+                    if (state == 'live') {
+                        Location.assign(await Api.getTargetPath());
                     }
                     else {
-                        this.setControllerValue('selectorMode', state);
+                        this.selector.setMode(state);
                     }
                 }
-                */
 
                 /*
                 async onBack(message) {
@@ -55,49 +34,42 @@
                     await this.handleState(state);
                 }
                 */
-
                 /*
                 async onEulaAccept(message) {
                     let state = await Api.submitAcceptEula();
                     await this.handleState(state);
                 }
                 */
-
                 /*
                 async onEulaDecline(message) {
                     let state = await Api.submitRevert();
                     await this.handleState(state);
                 }
                 */
-
                 /*
                 async onForgotPassword(message) {
                     // TODO ********************************************************
                     console.log(message);
                 }
                 */
-
                 /*
                 async onForgotUsername(message) {
                     // TODO ********************************************************
                     console.log(message);
                 }
                 */
-
                 /*
                 async onSubmitDeviceForget(message) {
                     let state = await Api.submitDeviceRemember(false);
                     await this.handleState(state);
                 }
                 */
-
                 /*
                 async onSubmitDeviceRemember(message) {
                     let state = await Api.submitDeviceRemember(true);
                     await this.handleState(state);
                 }
                 */
-
                 /*
                 async onSubmitPassword(message) {
                     let password = this.getControllerValue('password');
@@ -105,7 +77,6 @@
                     await this.handleState(state);
                 }
                 */
-
                 /*
                 async onSubmitSetPassword(message) {
                     let password = this.getControllerValue('password1');
@@ -113,7 +84,6 @@
                     await this.handleState(state);
                 }
                 */
-
                 /*
                 async onSubmitUsername(message) {
                     let username = this.getControllerValue('username');
@@ -132,7 +102,7 @@
                 <setpassword-widget rds-mode="session:set-password"></setpassword-widget>
                 <submitemailcode-widget rds-mode="session:submit-emailcode"></submitemailcode-widget>
                 <submitphonecode-widget rds-mode="session:submit-phonecode"></submitphonecode-widget>
-                <submitauthappcode-widget rds-mode="session:submit-emailcode"></submitauthappcode-widget>
+                <submitauthappcode-widget rds-mode="session:submit-authappcode"></submitauthappcode-widget>
                 <accepteula-widget rds-mode="session:accept-eula"></accepteula-widget>
             </selector-widget>
         </html>
