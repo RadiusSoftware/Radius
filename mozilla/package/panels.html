@@ -1,5 +1,21 @@
 <!DOCTYPE bundle>
 <bundle>
+    <widget tagname="form-widget" settings="stub:true;">
+        <script>
+            class FormWidget extends Widget {
+                constructor(arg) {
+                    super(arg);
+                }
+
+                init() {
+                    super.init();
+                    let attrs = this.filterAttributes();
+                    this.replacement = createElement('form', attrs);
+                    this.replacement.append(...this.getInnerElements());
+                }
+            }
+        </script>
+    </widget>
     <widget tagname="grid-widget">
         <script>
             class GridWidget extends Widget {
@@ -356,15 +372,19 @@
                         this.replaceClientElement(mode, clientElement);
                     }
                     else {
-                        this.append(clientElement);
+                        if (!this.isSame(clientElement.getParentElement())) {
+                            this.append(clientElement);
+                        }
+
                         this.modes[mode] = clientElement;
 
-                        if (mode == this.mode) {
-                            clientElement.setStyle('display', '');
-                        }
-                        else {
-                            clientElement.setStyle('display', 'none');
-                        }
+                        clientElement.setStyle({
+                            display: 'none',
+                            width: '100%',
+                            height: '100%',
+                            transitionProperty: 'opacity',
+                            transitionDuration: '2s',
+                        });
                     }
                     
                     return this;
@@ -445,7 +465,7 @@
                             prevClientElement.replace(clientElement);
 
                             if (mode == this.mode) {
-                                clientElement.setStyle('display', '');
+                                clientElement.setStyle('display', 'table');
                             }
                             else {
                                 clientElement.setStyle('display', 'none');
@@ -457,23 +477,27 @@
                 }
 
                 setMode(mode) {
-                    if (mode != '#NOMODE#' && mode != this.mode) {
-                        if (this.mode != '#NOMODE#') {
-                            this.modes[this.mode].setStyle('display', 'none');
-                        }
+                    if (mode != this.mode && this.mode != '#NOMODE#') {
+                        let clientElement = this.modes[mode];
+                        clientElement.setStyle({ display: 'none' });
+                    }
 
-                        if (mode in this.modes) {
-                            let clientElement = this.modes[mode];
-                            clientElement.setStyle('display', '');
-                            clientElement.autofocus();
-
-                            if (this.childTransition) {
-                                clientElement.setTransition(this.childTransition);
-                                clientElement.setStyleTrigger(this.childStyleTrigger);
-                            }
-                        }
-
+                    if (mode in this.modes) {
+                        let clientElement = this.modes[mode];
                         this.mode = mode;
+
+                        clientElement.setStyle({
+                            display: 'table',
+                            opacity: 0.1,
+                        });
+
+                        (async () => {
+                            await pause(20);
+                            clientElement.setStyle({ opacity: 1.0 });
+                        })();
+                    }
+                    else {
+                        this.mode = '#NOMODE#';
                     }
 
                     return this;

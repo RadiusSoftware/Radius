@@ -16,7 +16,15 @@
                 init() {
                     super.init();
                     this.selector = this.getChildByTagName('selector-widget');
-                    (async () => this.setSessionState(await Api.getSessionState()))();
+
+                    (async () => {
+                        await pause(1000);
+                        this.setSessionState(await Api.getSessionState());
+                    })();
+                }
+
+                async onSubmit(message) {
+                    console.log(message);
                 }
 
                 async setSessionState(state) {
@@ -27,70 +35,6 @@
                         this.selector.setMode(state);
                     }
                 }
-
-                /*
-                async onBack(message) {
-                    let state = await Api.submitRevert();
-                    await this.handleState(state);
-                }
-                */
-                /*
-                async onEulaAccept(message) {
-                    let state = await Api.submitAcceptEula();
-                    await this.handleState(state);
-                }
-                */
-                /*
-                async onEulaDecline(message) {
-                    let state = await Api.submitRevert();
-                    await this.handleState(state);
-                }
-                */
-                /*
-                async onForgotPassword(message) {
-                    // TODO ********************************************************
-                    console.log(message);
-                }
-                */
-                /*
-                async onForgotUsername(message) {
-                    // TODO ********************************************************
-                    console.log(message);
-                }
-                */
-                /*
-                async onSubmitDeviceForget(message) {
-                    let state = await Api.submitDeviceRemember(false);
-                    await this.handleState(state);
-                }
-                */
-                /*
-                async onSubmitDeviceRemember(message) {
-                    let state = await Api.submitDeviceRemember(true);
-                    await this.handleState(state);
-                }
-                */
-                /*
-                async onSubmitPassword(message) {
-                    let password = this.getControllerValue('password');
-                    let state = await Api.submitPassword(password);
-                    await this.handleState(state);
-                }
-                */
-                /*
-                async onSubmitSetPassword(message) {
-                    let password = this.getControllerValue('password1');
-                    let state = await Api.submitSetPassword(password);
-                    await this.handleState(state);
-                }
-                */
-                /*
-                async onSubmitUsername(message) {
-                    let username = this.getControllerValue('username');
-                    let state = await Api.submitUsername(username);
-                    await this.handleState(state);
-                }
-                */
             }
         </script>
         <html>
@@ -110,11 +54,13 @@
     <!-- ************************************************************************************************************ -->
     <!-- ************************************************************************************************************ -->
     <widget tagname="submitemail-widget">
-        <html class="fill">
-            SUBMIT EMAIL
-            <!--
-            <form evt-submit="submitUsername">
-                <div design="box">
+        <html>
+            <grid-widget class="fill" rds-rows="auto,auto,auto" rds-cols="50px,auto,50px">
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <form-widget>
                     <grid-widget class="fill" rds-rows="auto,28px,48px,18px,28px,48px,60px,auto,auto">
                         <div></div>
                         <div class="label">##emailEnter##</div>
@@ -124,14 +70,17 @@
                         <div></div>
                         <div></div>
                         <div class="space-around">
-                            <input-widget type="button" class="button-wide" value="##forgotUsername##" evt-click="forgotUsername"></input-widget>
-                            <input-widget type="submit" class="button-wide" value="##next##"></input-widget>
+                            <input-widget type="submit" class="input-widget-width-wide" value="##forgotUsername##"></input-widget>
+                            <input-widget type="submit" class="input-widget-width-wide" value="##next##"></input-widget>
                         </div>
                         <div></div>
                     </grid-widget>
-                </div>
-            </form>
-            -->
+                </form-widget>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+            </grid-widget>
         </html>
     </widget>
     <!-- ************************************************************************************************************ -->
@@ -248,13 +197,13 @@
         </html>
     </widget>
     <strings lang="en">
+        emailEnter = Enter Email Address\
         UNUSED = ********** UNUSED **********\
         accept = Accept\
         badEmailAddress = Invalid or undeliverable email address\
         back = Go Back\
         decline = Decline\
         emailAddr = Your Email Address\
-        emailEnter = Enter Email Address\
         forget = Forget\
         forgotUsername = Forgot Username\
         forgotPassword = Forgot Password\
