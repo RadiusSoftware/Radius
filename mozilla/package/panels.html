@@ -9,9 +9,7 @@
 
                 init() {
                     super.init();
-                    let attrs = this.filterAttributes();
-                    this.replacement = createElement('form', attrs);
-                    this.replacement.append(...this.getInnerElements());
+                    this.createReplacement('form', false);
                 }
             }
         </script>
@@ -365,6 +363,7 @@
                     super(arg);
                     this.mode = '#NOMODE#';
                     this.modes = {};
+                    this.duration = .5;
                 }
 
                 addMode(mode, clientElement) {
@@ -383,7 +382,7 @@
                             width: '100%',
                             height: '100%',
                             transitionProperty: 'opacity',
-                            transitionDuration: '2s',
+                            transitionDuration: `${this.duration}s`,
                         });
                     }
                     
@@ -409,6 +408,10 @@
 
                 init() {
                     super.init();
+
+                    if (this.getRdsDuration) {
+                        this.duration = parseFloat(this.getRdsDuration());
+                    }
 
                     for (let clientElement of this.getInnerElements()) {
                         if (clientElement instanceof DocElement) {
@@ -460,15 +463,30 @@
                     if (mode in this.modes) {
                         let prevClientElement = this.modes[mode];
 
-                        if (!Object.is(prevClientElement, clientElement)) {
+                        if (!clientElement.isSame(prevClientElement, clientElement)) {
                             this.modes[mode] = clientElement;
+
+                            clientElement.setStyle({
+                                display: 'none',
+                                width: '100%',
+                                height: '100%',
+                                transitionProperty: 'opacity',
+                                transitionDuration: `${this.duration}s`,
+                            });
+
                             prevClientElement.replace(clientElement);
 
                             if (mode == this.mode) {
-                                clientElement.setStyle('display', 'table');
-                            }
-                            else {
-                                clientElement.setStyle('display', 'none');
+                                clientElement.setStyle({
+                                    display: 'table',
+                                    opacity: 0.1,
+                                });
+
+                                (async () => {
+                                    await pause(20);
+                                    clientElement.setStyle({ opacity: 1.0 });
+                                    clientElement.autofocus();
+                                })();
                             }
                         }
                     }
@@ -477,27 +495,30 @@
                 }
 
                 setMode(mode) {
-                    if (mode != this.mode && this.mode != '#NOMODE#') {
-                        let clientElement = this.modes[mode];
-                        clientElement.setStyle({ display: 'none' });
-                    }
+                    if (mode != this.mode) {
+                        if (this.mode in this.modes) {
+                            let clientElement = this.modes[this.mode];
+                            clientElement.setStyle({ display: 'none' });
+                        }
 
-                    if (mode in this.modes) {
-                        let clientElement = this.modes[mode];
-                        this.mode = mode;
+                        if (mode in this.modes) {
+                            this.mode = mode;
+                            let clientElement = this.modes[this.mode];
 
-                        clientElement.setStyle({
-                            display: 'table',
-                            opacity: 0.1,
-                        });
+                            clientElement.setStyle({
+                                display: 'table',
+                                opacity: 0.1,
+                            });
 
-                        (async () => {
-                            await pause(20);
-                            clientElement.setStyle({ opacity: 1.0 });
-                        })();
-                    }
-                    else {
-                        this.mode = '#NOMODE#';
+                            (async () => {
+                                await pause(20);
+                                clientElement.setStyle({ opacity: 1.0 });
+                                clientElement.autofocus();
+                            })();
+                        }
+                        else {
+                            this.mode = '#NOMODE#';
+                        }
                     }
 
                     return this;

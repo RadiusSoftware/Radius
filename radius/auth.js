@@ -29,171 +29,41 @@ define(class AuthApp extends Webapp {
     }
 
     // ********************
-    // forgotPassword
-    // ********************
-    /*
-    async [Api.define(
-        'forgotPassword',
-        {
-            username: StringType,
-        },
-    )](trx, username) {
-        // TODO **************************************************************
-    }
-    */
-
-    // ********************
-    // forgotUsername
-    // ********************
-    /*
-    async [Api.define(
-        'forgotUsername',
-        {
-            phoneNumber: StringType,
-        },
-    )](trx, phoneNumber) {
-        // TODO **************************************************************
-    }
-    */
-
-    // ********************
     // getSessionState
     // ********************
     async [Api.define(
         'getSessionState',
     )](trx) {
-        return await trx.session.getState();
+        let systemState = await mkSystemHandle().getState();
+
+        if (systemState in { 'systen:cluster':0, 'system:standAlone':0 }) {
+            return await trx.session.getState();
+        }
+        else {
+            return systemState;
+        }
     }
 
     // ********************
-    // getTargetPath
+    // submitEmail
     // ********************
-    /*
     async [Api.define(
-        'getTargetPath',
-    )](trx) {
-        return await trx.session.getInitialPath();
-    }
-    */
-
-    // ********************
-    // getUsername
-    // ********************
-    /*
-    async [Api.define(
-        'getUsername',
-    )](trx) {
-        return await trx.session.getUsername();
-    }
-    */
-
-    // ********************
-    // setPassword
-    // ********************
-    /*
-    async [Api.define(
-        'setPassword',
+        'submitEamil',
         {
-            password: StringType,
+            email: StringType,
         },
-    )](trx, password) {
-        // TODO **************************************************************
-    }
-    */
+    )](trx, email) {
+        let systemHandle = mkSystemHandle();
+        console.log(await systemHandle.hasUsers());
 
-    // ********************
-    // submitAcceptEula
-    // ********************
-    /*
-    async [Api.define(
-        'submitAcceptEula',
-    )](trx) {
-        return await trx.session.submitAcceptEula();
-    }
-    */
-
-    // ********************
-    // submitCode
-    // ********************
-    /*
-    async [Api.define(
-        'submitCode',
-        {
-            code: StringType,
-        },
-    )](trx, code) {
-        // TODO **************************************************************
-    }
-    */
-
-    // ********************
-    // submitDeviceRemember
-    // ********************
-    /*
-    async [Api.define(
-        'submitDeviceRemember',
-        {
-            rememberMe: BooleanType,
-        },
-    )](trx, rememberMe) {
-        if (trx.isHttp) {
-            return trx.session.submitRememberDevice(rememberMe);
+        if (await systemHandle.hasUsers()) {
+            console.log('has users...');
+        }
+        else {
+            console.log('NO USERS......................');
         }
 
-        return  mkFailure('radius.org.httpOnly');
+        return 'nothing-burger';
+        //return await trx.session.submitEmail(username);
     }
-    */
-
-    // ********************
-    // submitPassword
-    // ********************
-    /*
-    async [Api.define(
-        'submitPassword',
-        {
-            password: StringType,
-        },
-    )](trx, password) {
-        return await trx.session.submitPassword(password);
-    }
-    */
-
-    // ********************
-    // submitRevert
-    // ********************
-    /*
-    async [Api.define(
-        'submitRevert',
-    )](trx) {
-        return await trx.session.submitRevert();
-    }
-    */
-
-    // ********************
-    // submitSetPassword
-    // ********************
-    /*
-    async [Api.define(
-        'submitSetPassword',
-        {
-            password: StringType,
-        },
-    )](trx, password) {
-        return await trx.session.submitSetPassword(password);
-    }
-    */
-
-    // ********************
-    // submitUsername
-    // ********************
-    /*
-    async [Api.define(
-        'submitUsername',
-        {
-            username: StringType,
-        },
-    )](trx, username) {
-        return await trx.session.submitUsername(username);
-    }
-    */
 });

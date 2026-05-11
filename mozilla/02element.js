@@ -729,14 +729,22 @@ define(class DocElement extends DocNode {
                         eventName = '*';
                     }
 
+                    let handlerName;
                     let value = attribute.value;
-                    let handlerName = `on${value[0].toUpperCase()}${value.substring(1)}`;
+
+                    if (value) {
+                        handlerName = `on${value[0].toUpperCase()}${value.substring(1)}`;
+                    }
+                    else {
+                        handlerName = `on${eventName[0].toUpperCase()}${eventName.substring(1)}`;
+                    }
                     
                     this.on(eventName, message => {
                         let docElement = this;
 
                         while (docElement) {
                             if (docElement.handleEvent(handlerName, message)) {
+                                message.event.preventDefault();
                                 return;
                             }
 

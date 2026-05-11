@@ -146,6 +146,17 @@ define(class Widget extends HtmlElement {
         }
     }
 
+    createReplacement(tagName, discardInner, ...filteredOut) {
+        let attrs = this.filterAttributes(...filteredOut);
+        this.replacement = createElement(tagName, attrs);
+
+        if (!discardInner) {
+            this.replacement.append(...this.getInnerElements());
+        }
+        
+        return this;
+    }
+
     getInnerElements() {
         return this.innerElements;
     }

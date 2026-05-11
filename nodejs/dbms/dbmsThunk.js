@@ -104,7 +104,7 @@ define(class DbmsThunk extends Thunk {
 
     async exec(sql) {
         return await this.eazy(async dbc => {
-            return await dbc.query(exec);
+            return await dbc.query(sql);
         });
     }
 

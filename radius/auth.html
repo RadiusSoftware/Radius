@@ -16,18 +16,14 @@
                 init() {
                     super.init();
                     this.selector = this.getChildByTagName('selector-widget');
-
-                    (async () => {
-                        await pause(1000);
-                        this.setSessionState(await Api.getSessionState());
-                    })();
+                    (async () => this.setSelectorState(await Api.getSessionState()))();
                 }
 
                 async onSubmit(message) {
-                    console.log(message);
                 }
 
-                async setSessionState(state) {
+                async setSelectorState(state) {
+                    console.log(state);
                     if (state == 'live') {
                         Location.assign(await Api.getTargetPath());
                     }
@@ -48,6 +44,7 @@
                 <submitphonecode-widget rds-mode="session:submit-phonecode"></submitphonecode-widget>
                 <submitauthappcode-widget rds-mode="session:submit-authappcode"></submitauthappcode-widget>
                 <accepteula-widget rds-mode="session:accept-eula"></accepteula-widget>
+                <rawsystem-widget rds-mode="session:raw-system"></rawsystem-widget>
             </selector-widget>
         </html>
     </widget>
@@ -60,7 +57,7 @@
                 <div></div>
                 <div></div>
                 <div></div>
-                <form-widget>
+                <form-widget evt-submit>
                     <grid-widget class="fill" rds-rows="auto,28px,48px,18px,28px,48px,60px,auto,auto">
                         <div></div>
                         <div class="label">##emailEnter##</div>
@@ -70,7 +67,6 @@
                         <div></div>
                         <div></div>
                         <div class="space-around">
-                            <input-widget type="submit" class="input-widget-width-wide" value="##forgotUsername##"></input-widget>
                             <input-widget type="submit" class="input-widget-width-wide" value="##next##"></input-widget>
                         </div>
                         <div></div>
@@ -86,7 +82,7 @@
     <!-- ************************************************************************************************************ -->
     <!-- ************************************************************************************************************ -->
     <widget tagname="submitpassword-widget">
-        <html class="fill">
+        <html>
             SUBMIT PASSWORD
             <!--
             <form evt-submit="submitPassword">
@@ -121,7 +117,7 @@
     <!-- ************************************************************************************************************ -->
     <!-- ************************************************************************************************************ -->
     <widget tagname="setpassword-widget">
-        <html class="fill">
+        <html>
             SET PASSWORD
             <!--
             <form evt-submit="submitSetPassword">
@@ -196,8 +192,16 @@
             -->
         </html>
     </widget>
+    <!-- ************************************************************************************************************ -->
+    <!-- ************************************************************************************************************ -->
+    <widget tagname="rawsystem-widget">
+        <html>
+            RAW SYSTEM WIDGET
+        </html>
+    </widget>
     <strings lang="en">
         emailEnter = Enter Email Address\
+
         UNUSED = ********** UNUSED **********\
         accept = Accept\
         badEmailAddress = Invalid or undeliverable email address\

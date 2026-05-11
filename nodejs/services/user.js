@@ -814,8 +814,6 @@ define(class UserHandle extends Handle {
     }
 
     async setHandle(handle) {
-        // ***************************************************************************
-        // ***************************************************************************
         if (this.id) {
             await this.callService({
                 id: this.id,
