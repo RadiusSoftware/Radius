@@ -11,17 +11,47 @@
             class AuthApp extends Widget {
                 constructor(arg) {
                     super(arg);
+
+                    Controller.defineData(
+                        this,
+                        mkRdsShape({
+                            state: StringType,
+                            substate: StringType,
+                        }),
+                        {
+                            state: '',
+                            substate: '',
+                        }
+                    );
                 }
 
                 init() {
                     super.init();
-                    this.selector = this.getChildByTagName('selector-widget');
-                    (async () => this.setSelectorState(await Api.getSessionState()))();
+                    //this.selector = this.getChildByTagName('selector-widget');
+                    //(async () => this.setSelectorState(await Api.getSessionState()))();
+                    //config-email,config-password,config-verify
+
+                    (async () => {
+                        Controller.setDataValue(this, 'state', await Api.getSessionState());
+
+                        await pause(1000);
+                        Controller.setDataValue(this, 'substate', 'config-email');
+
+                        await pause(1000);
+                        Controller.setDataValue(this, 'substate', 'config-password');
+
+                        await pause(1000);
+                        Controller.setDataValue(this, 'substate', 'config-verify');
+
+                        await pause(2000);
+                        Controller.setDataValue(this, 'substate', '');
+                    })();
                 }
 
                 async onSubmit(message) {
+                    console.log(message);
                 }
-
+                /*
                 async setSelectorState(state) {
                     console.log(state);
                     if (state == 'live') {
@@ -31,10 +61,11 @@
                         this.selector.setMode(state);
                     }
                 }
+                */
             }
         </script>
         <html>
-            <selector-widget class="fill">
+            <selector-widget class="fill" rds-bind-method="setMode,state">
                 <submitemail-widget rds-mode="session:submit-email"></submitemail-widget>
                 <verifyemail-widget rds-mode="session:verify-email"></verifyemail-widget>
                 <submitpassword-widget rds-mode="session:submit-password"></submitpassword-widget>
@@ -43,8 +74,9 @@
                 <submitemailcode-widget rds-mode="session:submit-emailcode"></submitemailcode-widget>
                 <submitphonecode-widget rds-mode="session:submit-phonecode"></submitphonecode-widget>
                 <submitauthappcode-widget rds-mode="session:submit-authappcode"></submitauthappcode-widget>
-                <accepteula-widget rds-mode="session:accept-eula"></accepteula-widget>
-                <rawsystem-widget rds-mode="session:raw-system"></rawsystem-widget>
+                <accepteula-widget rds-mode="session:accept-eula,system:configure-eula"></accepteula-widget>
+                <systemstopped-widget rds-mode="system:stopped"></systemstopped-widget>
+                <systemconfigure-widget rds-mode="system:configure"></systemconfigure-widget>
             </selector-widget>
         </html>
     </widget>
@@ -194,9 +226,12 @@
     </widget>
     <!-- ************************************************************************************************************ -->
     <!-- ************************************************************************************************************ -->
-    <widget tagname="rawsystem-widget">
+    <widget tagname="systemconfigure-widget">
         <html>
-            RAW SYSTEM WIDGET
+            CONFIGURE SYSTEM
+            <div rds-bind-show="substate;config-email,config-password,config-verify">EMAIL</div>
+            <div rds-bind-show="substate;config-password,config-verify">PASSWORD</div>
+            <div rds-bind-show="substate;config-verify">CODE</div>
         </html>
     </widget>
     <strings lang="en">

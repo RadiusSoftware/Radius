@@ -361,21 +361,22 @@
             class SelectorWidget extends Widget {
                 constructor(arg) {
                     super(arg);
-                    this.mode = '#NOMODE#';
+                    this.mode = '';
                     this.modes = {};
+                    this.clients = new WeakMap();
                     this.duration = .5;
                 }
 
-                addMode(mode, clientElement) {
-                    if (mode in this.modes) {
-                        this.replaceClientElement(mode, clientElement);
+                configureMode(modes, clientElement) {
+                    let clientModes;
+
+                    if (this.clients.has(clientElement)) {
+                        clientModes = this.clients.get(clientElement);
                     }
                     else {
-                        if (!this.isSame(clientElement.getParentElement())) {
-                            this.append(clientElement);
-                        }
-
-                        this.modes[mode] = clientElement;
+                        clientModes = {};
+                        this.clients.set(clientElement, clientModes);
+                        this.append(clientElement);
 
                         clientElement.setStyle({
                             display: 'none',
@@ -385,25 +386,47 @@
                             transitionDuration: `${this.duration}s`,
                         });
                     }
+
+                    for (let mode of RdsText.split(modes, ',')) {
+                        if (mode) {
+                            if (mode in this.modes) {
+                                if (!clientElement.isSame(this.modes[mode])) {
+                                    this.replaceModeClient(mode, clientElement);
+                                }
+                            }
+                            else {
+                                this.modes[mode] = clientElement;
+                                clientModes[mode] = clientElement;
+
+                                if (mode == this.mode) {
+                                    this.showClient(clientElement);
+                                }
+                            }
+                        }
+                    }
                     
                     return this;
-                }
-
-                clearMode() {
-                    this.setMode('#NOMODE#');
-                    return this;
-                }
-
-                getClientElement(mode) {
-                    return this.modes[mode];
                 }
 
                 getMode() {
                     return this.mode;
                 }
 
+                getModeClient(mode) {
+                    return mode in this.modes ? this.modes[mode].client : null;
+                }
+
                 hasMode(mode) {
                     return mode in this.modes;
+                }
+
+                hideClient(clientElement) {
+                    clientElement.setStyle({
+                        display: 'none',
+                        opacity: '.1',
+                    });
+
+                    return this;
                 }
 
                 init() {
@@ -417,109 +440,113 @@
                         if (clientElement instanceof DocElement) {
                             let mode = clientElement.getAttribute('rds-mode');
 
-                            if (mode) {
-                                this.addMode(mode, clientElement);
+                            if (typeof clientElement.getRdsMode == 'function') {
+                                this.configureMode(clientElement.getRdsMode(), clientElement);
                             }
                         }
                     }
                 }
 
-                listClientElements() {
-                    return Object.values(this.modes);
+                listClients() {
+                    let clients = [];
+                    let clientMap = new WeakMap();
+
+                    for (let mode in this.modes) {
+                        let client = this.modes[mode];
+
+                        if (!clientMap.has(client)) {
+                            clientMap.set(client, true);
+                            clients.push(client);
+                        }
+                    }
+
+                    return clients;
                 }
 
                 listModes() {
                     return Object.keys(this.modes);
                 }
-                
+
+                removeClient(clientElement) {
+                    // ***********************************************************************
+                    // ***********************************************************************
+                }
+
                 removeMode(mode) {
-                    if (mode in this.modes) {
-                        let clientElement = this.modes[mode];
-                        clientElement.clearStyle('display');
-                        clientElement.remove();
-                        delete this.modes[mode];
-
-                        if (mode = this.mode) {
-                            this.mode = '#NOMODE#';
-                        }
-                    }
-
-                    return this;
+                    // ***********************************************************************
+                    // ***********************************************************************
                 }
 
                 removeModes() {
-                    this.mode = '#NOMODE#'
-                    this.modes = {};
-
-                    for (let clientElement of this.getChildElements()) {
-                        clientElement.clearStyle('display');
-                    }
-
-                    this.clear();
-                    return this;
+                    // ***********************************************************************
+                    // ***********************************************************************
                 }
 
-                replaceClientElement(mode, clientElement) {
-                    if (mode in this.modes) {
-                        let prevClientElement = this.modes[mode];
+                removeModeClient(mode, clientElement) {
+                    // ***********************************************************************
+                    // ***********************************************************************
+                }
 
-                        if (!clientElement.isSame(prevClientElement, clientElement)) {
-                            this.modes[mode] = clientElement;
+                replaceClient(clientElement) {
+                    // ***********************************************************************
+                    // ***********************************************************************
+                }
 
-                            clientElement.setStyle({
-                                display: 'none',
-                                width: '100%',
-                                height: '100%',
-                                transitionProperty: 'opacity',
-                                transitionDuration: `${this.duration}s`,
-                            });
+                replaceModeClient(mode, clientElement) {
+                    // ***********************************************************************
+                    // ***********************************************************************
+                }
 
-                            prevClientElement.replace(clientElement);
-
-                            if (mode == this.mode) {
-                                clientElement.setStyle({
-                                    display: 'table',
-                                    opacity: 0.1,
-                                });
-
-                                (async () => {
-                                    await pause(20);
-                                    clientElement.setStyle({ opacity: 1.0 });
-                                    clientElement.autofocus();
-                                })();
-                            }
-                        }
+                resetMode() {
+                    if (this.mode && this.mode in this.modes) {
+                        this.hideClient(this.modes[this.mode]);
+                        this.mode = '';
                     }
 
                     return this;
                 }
 
                 setMode(mode) {
-                    if (mode != this.mode) {
-                        if (this.mode in this.modes) {
-                            let clientElement = this.modes[this.mode];
-                            clientElement.setStyle({ display: 'none' });
-                        }
+                    if (typeof mode == 'string' && (mode = mode.trim())) {
+                        if (mode != this.mode) {
+                            let prevClient;
+                            let nextClient;
 
-                        if (mode in this.modes) {
+                            if (this.mode in this.modes) {
+                                prevClient = this.modes[this.mode];
+                            }
+
+                            if (mode in this.modes) {
+                                nextClient = this.modes[mode];
+                            }
+
                             this.mode = mode;
-                            let clientElement = this.modes[this.mode];
 
-                            clientElement.setStyle({
-                                display: 'table',
-                                opacity: 0.1,
-                            });
+                            if (prevClient) {
+                                if (nextClient && !nextClient.isSame(prevClient)) {
+                                    this.hideClient(prevClient);
+                                }
+                            }
 
-                            (async () => {
-                                await pause(20);
-                                clientElement.setStyle({ opacity: 1.0 });
-                                clientElement.autofocus();
-                            })();
-                        }
-                        else {
-                            this.mode = '#NOMODE#';
+                            if (nextClient) {
+                                this.showClient(nextClient);
+                            }
                         }
                     }
+
+                    return this;
+                }
+
+                showClient(clientElement) {
+                    clientElement.setStyle({
+                        display: 'table',
+                        opacity: '0.1',
+                    });
+
+                    setTimeout(() => {
+                        clientElement.setStyle({ opacity: '1.0' });
+                        clientElement.autofocus();
+                    }, 20);
 
                     return this;
                 }

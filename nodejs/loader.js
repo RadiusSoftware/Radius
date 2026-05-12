@@ -268,7 +268,7 @@ if (LibCluster.isPrimary) {
                 }
 
                 await this.buildConfiguration();
-                await mkSystemHandle().startup();
+                await mkSystemHandle().initState();
                 let permissionTypes = await mkSettingsHandle().getSetting('permissionTypes');
                 await mkPermissionSetHandle().addPermissionTypes(...permissionTypes);
 

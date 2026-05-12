@@ -75,6 +75,14 @@ define(class ControllerBinding {
                 this.name = name;
             }
         }
+        else if (type == 'show') {
+            if (ArrayType.verify(name)) {
+                this.valid = true;
+                this.type = type;
+                this.values = mkRdsEnum(...name);
+                this.display = docElement.getStyle('display');
+            }
+        }
         else if (type == 'style') {
             if (typeof name == 'string' && name != '') {
                 this.valid = true;
@@ -275,10 +283,22 @@ define(class ControllerBinding {
             }
         }
         else if (this.type == 'method') {
-            this.docElement[this.name]();
+            this.docElement[this.name](this.expr.eval());
         }
         else if (this.type == 'property') {
             this.docElement.setProperty(this.name, this.expr.eval());
+        }
+        else if (this.type == 'show') {
+            let value = this.expr.eval();
+
+            if (value && this.values.has(value)) {
+                if (this.docElement.getStyle('display') == 'none') {
+                    this.docElement.setStyle('display', this.display);
+                }
+            }
+            else if (this.docElement.getStyle('display') != 'none') {
+                this.docElement.setStyle('display', 'none');
+            }
         }
         else if (this.type == 'style') {
             let styleProperty = {};

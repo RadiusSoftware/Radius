@@ -85,36 +85,13 @@ singleton(class Controller extends Emitter {
         return this;
     }
 
+    bindShow(docElement, ref, ...values) {
+        this.setBinding(docElement, ref, 'show', values);
+        return this;
+    }
+
     bindStyle(docElement, styleProperty, ref) {
         this.setBinding(docElement, ref, 'style', styleProperty);
-        return this;
-    }
-
-    deleteBindingsByDocElement(docElement) {
-        let bindingEntry = this.bindingsByDocElement.get(docElement);
-
-        if (bindingEntry) {
-            let array = Data.copy(bindingEntry.bindings);
-
-            for (let binding of array) {
-                binding.delete();
-            }
-        }
-
-        return this;
-    }
-
-    deleteBindingsByDotted(dotted) {
-        let bindingEntry = this.bindingsByDotted[dotted];
-
-        if (bindingEntry) {
-            let array = Data.copy(bindingEntry.bindings);
-
-            for (let binding of array) {
-                binding.delete();
-            }
-        }
-
         return this;
     }
 
@@ -148,6 +125,34 @@ singleton(class Controller extends Emitter {
                 else {
                     throwError('Controller define(): invalid value provided.');
                 }
+            }
+        }
+
+        return this;
+    }
+
+    deleteBindingsByDocElement(docElement) {
+        let bindingEntry = this.bindingsByDocElement.get(docElement);
+
+        if (bindingEntry) {
+            let array = Data.copy(bindingEntry.bindings);
+
+            for (let binding of array) {
+                binding.delete();
+            }
+        }
+
+        return this;
+    }
+
+    deleteBindingsByDotted(dotted) {
+        let bindingEntry = this.bindingsByDotted[dotted];
+
+        if (bindingEntry) {
+            let array = Data.copy(bindingEntry.bindings);
+
+            for (let binding of array) {
+                binding.delete();
             }
         }
 
@@ -226,6 +231,11 @@ singleton(class Controller extends Emitter {
                     if (docNode.getRdsBindProperty) {
                         let [ property, dotted ] = docNode.getRdsBindProperty().split(',');
                         this.bindProperty(docNode, property, dotted);
+                    }
+
+                    if (docNode.getRdsBindShow) {
+                        let [ dotted, values ] = RdsText.split(docNode.getRdsBindShow(), ';');
+                        this.bindShow(docNode, dotted, ...RdsText.split(values, ','));
                     }
 
                     if (docNode.getRdsBindStyle) {

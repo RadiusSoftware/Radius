@@ -27,14 +27,10 @@
  * from a cluster and also tracks a newly installed system to know that it must
  * be either initialized or attached before it can be used:
  * 
- *      system:status
- *      system:installed
- *      system:cluster
- *      system:standalone
- *      system:configureCluster
- *      system:configureEmail
- *      system:configurePassword
- *      system:configureEula
+ *      system:started
+ *      system:configure
+ *      system:running
+ *      system:stopped
  * 
  * When a system is first installed, it must be configured by attaching it to a
  * cluster or configuring it for standalone operation before is can be used.
@@ -42,30 +38,13 @@
 createService(class SystemService extends Service {
     constructor() {
         super();
-        this.state = 'system:startup';
+        this.state = 'system:started';
     }
 
-    async onConfigureCluster(message) {
+    async onConfigure(message) {
         // ********************************************************************
         // ********************************************************************
-        if (this.state == 'system:installed') {
-        }
-
-        return this.state;
-    }
-
-    async onConfigureStandalone(message) {
-        // ********************************************************************
-        // ********************************************************************
-        if (this.state == 'system:installed') {
-        }
-        else if (this.state == 'system:configureEmail') {
-        }
-        else if (this.state == 'system:configurePassword') {
-        }
-        else if (this.state == 'system:configureEula') {
-        }
-
+        console.log(message);
         return this.state;
     }
 
@@ -73,22 +52,22 @@ createService(class SystemService extends Service {
         return this.state;
     }
 
-    async onStartup(message) {
-        if (this.state == 'system:startup') {
+    async onInitState(message) {
+        if (this.state == 'system:started') {
             let thunk = mkDbmsThunk();
             let users = await thunk.selectObj(DboUser);
 
-            if (users.length == 0) {
-                this.state = 'system:standalone';
+            if (users.length > 0) {
+                this.state = 'system:running';
             }
             else if (false) {
                 // ********************************************************************
                 // ********************************************************************
                 // CHECK IF ATTACHED TO CLUSTER.............
-                //this.state = 'system:attached';
+                //this.state = 'system:running';
             }
             else {
-                this.state = 'system:installed';
+                this.state = 'system:configure';
             }
         }
 
@@ -98,21 +77,19 @@ createService(class SystemService extends Service {
 
 
 /*****
+ * The handle object for objtaining services from the system service.  System
+ * services are focused on managing the status of the installed software, how
+ * up to date that software is, how up to date the packages are, and whether
+ * the system is ready for operational execution.
 *****/
 define(class SystemHandle extends Handle {
     static fromJson(value) {
         return mkSystemHandle();
     }
 
-    async configureCluster(clusterName) {
+    async configure(opts) {
         let state = await this.callService({
-        });
-
-        return state;
-    }
-
-    async configureStandalone() {
-        let state = await this.callService({
+            opts: opts,
         });
 
         return state;
@@ -123,10 +100,25 @@ define(class SystemHandle extends Handle {
         });
     }
 
-    async startup() {
+    async initState() {
         await this.callService({
         });
 
         return this;
+    }
+
+    async restart(when) {
+        // ***************************************************************
+        // ***************************************************************
+    }
+
+    async shutdown(when) {
+        // ***************************************************************
+        // ***************************************************************
+    }
+
+    async update(when) {
+        // ***************************************************************
+        // ***************************************************************
     }
 });

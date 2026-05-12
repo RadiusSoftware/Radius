@@ -29,6 +29,27 @@ define(class AuthApp extends Webapp {
     }
 
     // ********************
+    // configure
+    // ********************
+    async [Api.define(
+        'configure',
+        {
+            opts: mkRdsShape({
+                _mode: StringType,
+                _clusterId: StringType,
+                _clusterKey: StringType,
+                _email: StringType,
+                _password1: StringType,
+                _password2: StringType,
+                _code: StringType,
+                _confirmation: BooleanType,
+            }),
+        },
+    )](trx, opts) {
+        return await mkSystemHandle().configure(opts);
+    }
+
+    // ********************
     // getSessionState
     // ********************
     async [Api.define(
@@ -36,7 +57,10 @@ define(class AuthApp extends Webapp {
     )](trx) {
         let systemState = await mkSystemHandle().getState();
 
-        if (systemState in { 'systen:cluster':0, 'system:standAlone':0 }) {
+        if (systemState == 'system:configure') {
+            return systemState;
+        }
+        else if (systemState == 'system:running') {
             return await trx.session.getState();
         }
         else {
@@ -47,23 +71,22 @@ define(class AuthApp extends Webapp {
     // ********************
     // submitEmail
     // ********************
+    /*
     async [Api.define(
-        'submitEamil',
+        'submitEmail',
         {
             email: StringType,
         },
     )](trx, email) {
-        let systemHandle = mkSystemHandle();
-        console.log(await systemHandle.hasUsers());
+        let systemState = await mkSystemHandle().getState();
 
-        if (await systemHandle.hasUsers()) {
-            console.log('has users...');
+        if (systemState == 'operational') {
         }
         else {
-            console.log('NO USERS......................');
         }
 
         return 'nothing-burger';
         //return await trx.session.submitEmail(username);
     }
+    */
 });
