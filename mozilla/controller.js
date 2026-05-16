@@ -100,32 +100,37 @@ singleton(class Controller extends Emitter {
             throwError(`Controller define(): docElement must be a DocElement.`);
         }
 
-        if (shape instanceof RdsShape) {
+        if (this.data.has(docElement)) {
+            throwError(`Controller define(): docElement data already defined.`);
+        }
+
+        if (shape instanceof RdsShape && shape.type == ObjectType) {
             var rdsShape = shape;
         }
-        else if (shape instanceof BaseType) {
+        else if (ObjectType.verify(shape)) {
              var rdsShape = mkRdsShape(shape);
         }
         else {
-            throwError(`Controller define(): shape must be either of type RdsShape or a BaseType.`);
+            throwError(`Controller define(): shape must be either of type RdsShape / Object.`);
         }
 
-        if (!this.data.has(docElement)) {
-            let dataEntry = {
-                docElement: docElement,
-                shape: shape,
-            };
+        let dataEntry = {
+            docElement: docElement,
+            shape: rdsShape,
+        };
 
-            this.data.set(docElement, dataEntry);
+        this.data.set(docElement, dataEntry);
 
-            if (!UndefinedType.verify(value)) {
-                if (shape.verify(value)) {
-                    dataEntry.value = value;
-                }
-                else {
-                    throwError('Controller define(): invalid value provided.');
-                }
+        if (!UndefinedType.verify(value)) {
+            if (rdsShape.verify(value)) {
+                dataEntry.value = value;
             }
+            else {
+                throwError('Controller define(): invalid value provided.');
+            }
+        }
+        else {
+            dataEntry.value = rdsShape.getDefault();
         }
 
         return this;
@@ -174,28 +179,42 @@ singleton(class Controller extends Emitter {
     }
 
     getDataShape(docElement, dotted) {
-        let shape = null;
-
         if (this.data.has(docElement)) {
             let data = this.data.get(docElement);
-            shape = data.shape.get(dotted);
+
+            if (dotted) {
+                return data.shape.get(dotted);
+            }
+            else {
+                return data.shape;
+            }
         }
 
-        return shape;
+        return undefined;
     }
 
     getDataValue(docElement, dotted) {
         let data = this.getData(docElement);
 
         if (data) {
-            return Data.get(data.value, dotted);
+            if (dotted) {
+                return Data.get(data.value, dotted);
+            }
+            else {
+                return data.value;
+            }
         }
 
         return undefined;
     }
 
     hasData(docElement, dotted) {
-        return this.getDataValue() != undefined;
+        if (dotted) {
+            this.getDataShape(docElement, dotted) != undefined;
+        }
+        else {
+            return this.data.has(docElement);
+        }
     }
 
     initNode(docNode) {
@@ -204,6 +223,9 @@ singleton(class Controller extends Emitter {
 
             if (docNode instanceof DocElement) {
                 if (!(docNode instanceof Widget) || docNode.getSetting('stub') != 'true') {
+                    this.initRdsDataDefine(docNode);
+                    this.initRdsDataSet(docNode);
+
                     if (docNode.getRdsBind) {
                         if (docNode.getTagName() in { input:0, select:0, textarea:0 }) {
                             this.bindInput(docNode, docNode.getRdsBind());
@@ -251,6 +273,53 @@ singleton(class Controller extends Emitter {
             if (docNode instanceof Widget && docNode.getSetting('stub') == 'true') {
                 if (docNode.replacement instanceof DocElement) {
                     docNode.replace(docNode.replacement);
+                }
+            }
+        }
+    }
+
+    initRdsDataDefine(docElement) {
+        if (docElement.getRdsDataDefine) {
+            let shape = {};
+            let values = {};
+
+            for (let entry of Object.entries(RdsText.parseAttributeEncoded(docElement.getRdsDataDefine()))) {
+                let [ key, typeName ] = entry;
+                let hash = typeName.indexOf('#');
+                let valueText = '';
+
+                if (hash > 0) {
+                    valueText = typeName.substring(hash + 1);
+                    typeName = typeName.substring(0, hash);
+                }
+                
+                if (globalThis[typeName] instanceof BaseType) {
+                    shape[key] = globalThis[typeName];
+
+                    if (valueText) {
+                        values[key] = shape[key].fromString(valueText);
+                    }
+                    else {
+                        values[key] = shape[key].getDefault();
+                    }
+                }
+            }
+
+            if (Object.keys(shape).length) {
+                this.defineData(docElement, shape, values);
+                console.log(this.getDataValue(docElement));
+            }
+        }
+    }
+
+    initRdsDataSet(docElement) {
+        if (docElement.getRdsDataSet && this.hasData(docElement)) {
+            for (let entry of Object.entries(RdsText.parseAttributeEncoded(docElement.getRdsDataSet()))) {
+                let [ dotted, value ] = entry;
+                let shape = this.getDataShape(docElement, dotted);
+                
+                if (shape) {
+                    this.setDataValue(docElement, dotted, shape.getType().fromString(value));
                 }
             }
         }

@@ -12,77 +12,52 @@
                 constructor(arg) {
                     super(arg);
 
-                    Controller.defineData(
-                        this,
-                        mkRdsShape({
-                            state: StringType,
-                            substate: StringType,
-                        }),
-                        {
-                            state: '',
-                            substate: '',
-                        }
-                    );
+                    Controller.defineData(this, {
+                        systemState: StringType,
+                        /*
+                        systemMode: StringType,
+                        sessionState: StringType,
+                        clusterId: StringType,
+                        clusterKey: StringType,
+                        email1: StringType,
+                        email2: StringType,
+                        password1: StringType,
+                        password2: StringType,
+                        mfaCode: StringType,
+                        */
+                    });
                 }
 
                 init() {
                     super.init();
-                    //this.selector = this.getChildByTagName('selector-widget');
-                    //(async () => this.setSelectorState(await Api.getSessionState()))();
-                    //config-email,config-password,config-verify
+
 
                     (async () => {
-                        Controller.setDataValue(this, 'state', await Api.getSessionState());
-
-                        await pause(1000);
-                        Controller.setDataValue(this, 'substate', 'config-email');
-
-                        await pause(1000);
-                        Controller.setDataValue(this, 'substate', 'config-password');
-
-                        await pause(1000);
-                        Controller.setDataValue(this, 'substate', 'config-verify');
-
-                        await pause(2000);
-                        Controller.setDataValue(this, 'substate', '');
+                        Controller.setDataValue(this, 'systemState', await Api.getSystemState());
                     })();
                 }
 
-                async onSubmit(message) {
+                async onAuthenticate(message) {
+                    console.log('\nAUTHENTICATE...');
                     console.log(message);
                 }
-                /*
-                async setSelectorState(state) {
-                    console.log(state);
-                    if (state == 'live') {
-                        Location.assign(await Api.getTargetPath());
-                    }
-                    else {
-                        this.selector.setMode(state);
-                    }
+
+                async onInitialize(message) {
+                    console.log('\nINITIALIZE...');
+                    console.log(message);
                 }
-                */
             }
         </script>
         <html>
-            <selector-widget class="fill" rds-bind-method="setMode,state">
-                <submitemail-widget rds-mode="session:submit-email"></submitemail-widget>
-                <verifyemail-widget rds-mode="session:verify-email"></verifyemail-widget>
-                <submitpassword-widget rds-mode="session:submit-password"></submitpassword-widget>
-                <forgotpassword-widget rds-mode="session:forgot-password"></forgotpassword-widget>
-                <setpassword-widget rds-mode="session:set-password"></setpassword-widget>
-                <submitemailcode-widget rds-mode="session:submit-emailcode"></submitemailcode-widget>
-                <submitphonecode-widget rds-mode="session:submit-phonecode"></submitphonecode-widget>
-                <submitauthappcode-widget rds-mode="session:submit-authappcode"></submitauthappcode-widget>
-                <accepteula-widget rds-mode="session:accept-eula,system:configure-eula"></accepteula-widget>
-                <systemstopped-widget rds-mode="system:stopped"></systemstopped-widget>
-                <systemconfigure-widget rds-mode="system:configure"></systemconfigure-widget>
+            <selector-widget class="fill" rds-bind-method="setMode,systemState">
+                <authenticate-widget rds-mode="system:running"></authenticate-widget>
+                <initializesystem-widget rds-mode="system:configure"></initializesystem-widget>
             </selector-widget>
         </html>
     </widget>
     <!-- ************************************************************************************************************ -->
     <!-- ************************************************************************************************************ -->
-    <widget tagname="submitemail-widget">
+    <widget tagname="authenticate-widget">
         <html>
             <grid-widget class="fill" rds-rows="auto,auto,auto" rds-cols="50px,auto,50px">
                 <div></div>
@@ -113,125 +88,13 @@
     </widget>
     <!-- ************************************************************************************************************ -->
     <!-- ************************************************************************************************************ -->
-    <widget tagname="submitpassword-widget">
-        <html>
-            SUBMIT PASSWORD
-            <!--
-            <form evt-submit="submitPassword">
-                <div design="box">
-                    <grid-widget class="fill" rds-rows="auto,28px,48px,18px,28px,48px,60px,auto,auto">
-                        <div></div>
-                        <div class="label">##emailAddr##</div>
-                        <input-widget type="email" class="fillhorz" design="input" rds-bind="username" disabled></input-widget>
-                        <div></div>
-                        <div class="label">##password##</div>
-                        <input-widget type="password" class="fillhorz" design="input" rds-bind="password" required autofocus></input-widget>
-                        <div></div>
-                        <div class="space-around">
-                            <input-widget type="button" class="button-wide" value="##forgotPassword##" evt-click="forgotPassword"></input-widget>
-                            <input-widget type="button" class="button-wide" value="##back##" evt-click="back"></input-widget>
-                            <input-widget type="submit" class="button-wide" value="##next##"></input-widget>
-                        </div>
-                        <div></div>
-                    </grid-widget>
-                </div>
-            </form>
-            -->
-        </html>
-    </widget>
-    <!-- ************************************************************************************************************ -->
-    <!-- ************************************************************************************************************ -->
-    <widget tagname="forgotpassword-widget">
-        <html>
-            FORGOT PASSWORD
-        </html>
-    </widget>
-    <!-- ************************************************************************************************************ -->
-    <!-- ************************************************************************************************************ -->
-    <widget tagname="setpassword-widget">
-        <html>
-            SET PASSWORD
-            <!--
-            <form evt-submit="submitSetPassword">
-                <script validitycheck rds-diagnostic="##passwordMatchFailure##" rds-element="password2">
-                    () => this.getControllerValue('password1') == this.getControllerValue('password2');
-                </script>
-                <script validitycheck rds-diagnostic="##passwordRequiredChars##" rds-element="password2">
-                    () => {
-                        let password = this.getControllerValue('password1');
-                        if (!password.match(/[a-zA-Z]/)) return false;
-                        if (!password.match(/[0-9]/)) return false;
-                        if (!password.match(/[-_/?;:'"!@#$%^&*+=(){}[\]]/)) return false;
-                        return true;
-                    }
-                </script>
-                <div design="box">
-                    <grid-widget class="fill" rds-rows="auto,28px,48px,18px,28px,48px,60px,auto,auto">
-                        <div></div>
-                        <div class="label">##newPasswordEnter##</div>
-                        <input-widget type="password" name="password1" class="fillhorz" design="input" rds-bind="password1" required pattern=".{8,20}" evt-input="password" autofocus></input-widget>
-                        <div></div>
-                        <div class="label">##newPasswordRepeat##</div>
-                        <input-widget type="password" name="password2" class="fillhorz" design="input" rds-bind="password2" required pattern=".{8,20}" evt-input="password" rds-validator></input-widget>
-                        <div></div>
-                        <div class="space-around">
-                            <input-widget type="button" class="button-wide" value="##newPasswordCancel##" evt-click="back"></input-widget>
-                            <input-widget type="submit" class="button-wide" value="##newPasswordSet##"></input-widget>
-                        </div>
-                        <div></div>
-                    </grid-widget>
-                </div>
-            </form>
-            -->
-        </html>
-    </widget>
-    <!-- ************************************************************************************************************ -->
-    <!-- ************************************************************************************************************ -->
-    <widget tagname="submitemailcode-widget">
-        <html>
-            SUBMIT EMAIL CODE
-        </html>
-    </widget>
-    <!-- ************************************************************************************************************ -->
-    <!-- ************************************************************************************************************ -->
-    <widget tagname="submitphonecode-widget">
-        <html>
-            SUBMIT PHONE CODE
-        </html>
-    </widget>
-    <!-- ************************************************************************************************************ -->
-    <!-- ************************************************************************************************************ -->
-    <widget tagname="submitauthappcode-widget">
-        <html>
-            SUBMIT AUTHENTICATION APP CODE
-        </html>
-    </widget>
-    <!-- ************************************************************************************************************ -->
-    <!-- ************************************************************************************************************ -->
-    <widget tagname="accepteula-widget">
-        <html>
-            ACCEPT EULA
-            <!--
-            <grid-widget class="fill" rds-rows="auto,20px,80px,60px">
-                <div rds-fragment="radius.org.eula"></div>
-                <div></div>
-                <div class="space-around">
-                    <input-widget type="button" class="button-wide" value="##accept##" evt-click="eulaAccept"></input-widget>
-                    <input-widget type="button" class="button-wide" value="##decline##" evt-click="eulaDecline"></input-widget>
-                </div>
-                <div></div>
-            </grid-widget>
-            -->
-        </html>
-    </widget>
-    <!-- ************************************************************************************************************ -->
-    <!-- ************************************************************************************************************ -->
-    <widget tagname="systemconfigure-widget">
-        <html>
+    <widget tagname="initializesystem-widget">
+        <html rds-data-set="it:44445555;" rds-data-define="mode:StringType; email:StringType; code:StringType; password1:StringType; password2:StringType; it:NumberType#3838;">
             CONFIGURE SYSTEM
-            <div rds-bind-show="substate;config-email,config-password,config-verify">EMAIL</div>
-            <div rds-bind-show="substate;config-password,config-verify">PASSWORD</div>
-            <div rds-bind-show="substate;config-verify">CODE</div>
+            <div rds-bind-show="systemState;config-email,config-password,config-verify">EMAIL</div>
+            <div rds-bind-show="systemState;config-password,config-verify">PASSWORD1</div>
+            <div rds-bind-show="systemState;config-password,config-verify">PASSWORD2</div>
+            <div rds-bind-show="systemState;config-verify">CODE</div>
         </html>
     </widget>
     <strings lang="en">

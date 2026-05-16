@@ -29,24 +29,22 @@ define(class AuthApp extends Webapp {
     }
 
     // ********************
-    // configure
+    // configureSystem
     // ********************
     async [Api.define(
-        'configure',
+        'configureSystem',
         {
-            opts: mkRdsShape({
-                _mode: StringType,
+            configuration: {
+                mode: StringType,
                 _clusterId: StringType,
                 _clusterKey: StringType,
                 _email: StringType,
                 _password1: StringType,
                 _password2: StringType,
-                _code: StringType,
-                _confirmation: BooleanType,
-            }),
+            }
         },
-    )](trx, opts) {
-        return await mkSystemHandle().configure(opts);
+    )](trx, configuration) {
+        return await mkSystemHandle().configure(configuration);
     }
 
     // ********************
@@ -69,24 +67,21 @@ define(class AuthApp extends Webapp {
     }
 
     // ********************
-    // submitEmail
+    // getSystemState
     // ********************
-    /*
     async [Api.define(
-        'submitEmail',
-        {
-            email: StringType,
-        },
-    )](trx, email) {
+        'getSystemState',
+    )](trx) {
         let systemState = await mkSystemHandle().getState();
 
-        if (systemState == 'operational') {
+        if (systemState == 'system:configure') {
+            return systemState;
+        }
+        else if (systemState == 'system:running') {
+            return await trx.session.getState();
         }
         else {
+            return systemState;
         }
-
-        return 'nothing-burger';
-        //return await trx.session.submitEmail(username);
     }
-    */
 });

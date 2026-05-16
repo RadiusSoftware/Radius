@@ -29,6 +29,7 @@
  * 
  *      system:started
  *      system:configure
+ *      system:verify
  *      system:running
  *      system:stopped
  * 
@@ -39,13 +40,6 @@ createService(class SystemService extends Service {
     constructor() {
         super();
         this.state = 'system:started';
-    }
-
-    async onConfigure(message) {
-        // ********************************************************************
-        // ********************************************************************
-        console.log(message);
-        return this.state;
     }
 
     async onGetState(message) {
@@ -60,14 +54,16 @@ createService(class SystemService extends Service {
             if (users.length > 0) {
                 this.state = 'system:running';
             }
-            else if (false) {
-                // ********************************************************************
-                // ********************************************************************
-                // CHECK IF ATTACHED TO CLUSTER.............
-                //this.state = 'system:running';
-            }
             else {
-                this.state = 'system:configure';
+                let settings = mkSettingsHandle();
+                let clusterFlag = await mkSettingsHandle().getSetting('cluster');
+
+                if (clusterFlag) {
+                    this.state = 'system:running';
+                }
+                else {
+                    this.state = 'system:configure';
+                }
             }
         }
 
@@ -85,14 +81,6 @@ createService(class SystemService extends Service {
 define(class SystemHandle extends Handle {
     static fromJson(value) {
         return mkSystemHandle();
-    }
-
-    async configure(opts) {
-        let state = await this.callService({
-            opts: opts,
-        });
-
-        return state;
     }
 
     async getState() {
