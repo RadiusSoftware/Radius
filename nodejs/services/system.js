@@ -27,11 +27,11 @@
  * from a cluster and also tracks a newly installed system to know that it must
  * be either initialized or attached before it can be used:
  * 
- *      system:started
- *      system:configure
- *      system:verify
- *      system:running
- *      system:stopped
+ *      system#started
+ *      system#configure
+ *      system#verify
+ *      system#running
+ *      system#stopped
  * 
  * When a system is first installed, it must be configured by attaching it to a
  * cluster or configuring it for standalone operation before is can be used.
@@ -39,7 +39,7 @@
 createService(class SystemService extends Service {
     constructor() {
         super();
-        this.state = 'system:started';
+        this.state = 'system#started';
     }
 
     async onGetState(message) {
@@ -47,22 +47,22 @@ createService(class SystemService extends Service {
     }
 
     async onInitState(message) {
-        if (this.state == 'system:started') {
+        if (this.state == 'system#started') {
             let thunk = mkDbmsThunk();
             let users = await thunk.selectObj(DboUser);
 
             if (users.length > 0) {
-                this.state = 'system:running';
+                this.state = 'system#running';
             }
             else {
                 let settings = mkSettingsHandle();
                 let clusterFlag = await mkSettingsHandle().getSetting('cluster');
 
                 if (clusterFlag) {
-                    this.state = 'system:running';
+                    this.state = 'system#running';
                 }
                 else {
-                    this.state = 'system:configure';
+                    this.state = 'system#initialize';
                 }
             }
         }

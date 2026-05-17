@@ -9,28 +9,8 @@
     <widget tagname="auth-app">
         <script>
             class AuthApp extends Widget {
-                constructor(arg) {
-                    super(arg);
-
-                    Controller.defineData(this, {
-                        systemState: StringType,
-                        /*
-                        systemMode: StringType,
-                        sessionState: StringType,
-                        clusterId: StringType,
-                        clusterKey: StringType,
-                        email1: StringType,
-                        email2: StringType,
-                        password1: StringType,
-                        password2: StringType,
-                        mfaCode: StringType,
-                        */
-                    });
-                }
-
                 init() {
                     super.init();
-
 
                     (async () => {
                         Controller.setDataValue(this, 'systemState', await Api.getSystemState());
@@ -48,10 +28,10 @@
                 }
             }
         </script>
-        <html>
+        <html rds-data-define="systemState:StringType;">
             <selector-widget class="fill" rds-bind-method="setMode,systemState">
-                <authenticate-widget rds-mode="system:running"></authenticate-widget>
-                <initializesystem-widget rds-mode="system:configure"></initializesystem-widget>
+                <authenticate-widget rds-mode="system#running"></authenticate-widget>
+                <initializesystem-widget rds-mode="system#initialize"></initializesystem-widget>
             </selector-widget>
         </html>
     </widget>
@@ -89,12 +69,19 @@
     <!-- ************************************************************************************************************ -->
     <!-- ************************************************************************************************************ -->
     <widget tagname="initializesystem-widget">
-        <html rds-data-set="it:44445555;" rds-data-define="mode:StringType; email:StringType; code:StringType; password1:StringType; password2:StringType; it:NumberType#3838;">
-            CONFIGURE SYSTEM
-            <div rds-bind-show="systemState;config-email,config-password,config-verify">EMAIL</div>
-            <div rds-bind-show="systemState;config-password,config-verify">PASSWORD1</div>
-            <div rds-bind-show="systemState;config-password,config-verify">PASSWORD2</div>
-            <div rds-bind-show="systemState;config-verify">CODE</div>
+        <!--
+        <script>
+            class InitializeSystemWidget extends Widget {
+                init() {
+                    (async () => {
+                        await pause(2000);
+                        Controller.setDataValue(this, 'systemState', 'system:initialize');
+                    })();
+                }
+            }
+        </script>
+        -->
+        <html rds-data-define="initType:StringType; email:StringType; password1:StringType; password2:StringType" rds-bind="systemState">
         </html>
     </widget>
     <strings lang="en">

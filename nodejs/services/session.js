@@ -40,7 +40,7 @@ define(class Session {
         this.uuid = Crypto.generateUUID();
         this.team = mkTeamHandle();
         this.user = mkUserHandle();
-        this.state = 'session:submit-email';
+        this.state = 'session#submit-email';
         this.userAgent = '';
         this.timeout = null;
     }
@@ -240,16 +240,16 @@ createService(class SessionService extends Service {
         this.stateMap = {};
 
         this.stateArr = [
-            'session:submit-email',
-            'session:verify-email',
-            'session:submit-password',
-            'session:forgot-password',
-            'session:set-password',
-            'session:submit-emailcode',
-            'session:submit-phonecode',
-            'session:submit-authappcode',
-            'session:accept-eula',
-            'session:live',
+            'session#submit-email',
+            'session#verify-email',
+            'session#submit-password',
+            'session#forgot-password',
+            'session#set-password',
+            'session#submit-emailcode',
+            'session#submit-phonecode',
+            'session#submit-authappcode',
+            'session#accept-eula',
+            'session#live',
         ];
 
         for (let i = 0; i < this.stateArr.length; i++) {

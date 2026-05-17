@@ -31,9 +31,9 @@
 singleton(class Controller extends Emitter {
     constructor() {
         super();
-        this.data = new WeakMap();
         this.nodes = new WeakMap();
         this.bindingsByDotted = {};
+        this.data = new WeakMap();
         this.bindingsByDocElement = new WeakMap();
 
         this.on('Set', message => {
@@ -164,29 +164,46 @@ singleton(class Controller extends Emitter {
         return this;
     }
 
-    getData(docElement) {
-        let node = docElement;
+    getDataBin(docElement, dotted) {
+        let dataBins = this.getDataBins(docElement);
 
-        while (node) {
-            if (this.data.has(node)) {
-                return this.data.get(node);
+        if (dataBins.length) {
+            if (StringType.verify(dotted)) {
+                for (let dataBin of dataBins) {
+                    let shape = dataBin.shape.get(dotted);
+                    if (shape) return dataBin;
+                }
             }
-
-            node = node.getParent();
+            else {
+                return dataBins[0];
+            }
         }
-        
-        return null;
+
+        return undefined;
+    }
+
+    getDataBins(docElement) {
+        let dataBins = [];
+        let element = docElement;
+
+        while (element) {
+            let dataBin = this.data.get(element);
+            dataBin ? dataBins.push(dataBin) : null;
+            element = element.getParentElement();
+        }
+
+        return dataBins;
     }
 
     getDataShape(docElement, dotted) {
-        if (this.data.has(docElement)) {
-            let data = this.data.get(docElement);
-
-            if (dotted) {
-                return data.shape.get(dotted);
+        let dataBin = this.getDataBin(docElement, dotted);
+        
+        if (dataBin) {
+            if (StringType.verify(dotted)) {
+                return dataBin.shape.get(dotted);
             }
             else {
-                return data.shape;
+                return dataBin.shape;
             }
         }
 
@@ -194,14 +211,14 @@ singleton(class Controller extends Emitter {
     }
 
     getDataValue(docElement, dotted) {
-        let data = this.getData(docElement);
-
-        if (data) {
-            if (dotted) {
-                return Data.get(data.value, dotted);
+        let dataBin = this.getDataBin(docElement, dotted);
+        
+        if (dataBin) {
+            if (StringType.verify(dotted)) {
+                return Data.get(dataBin.value, dotted);
             }
             else {
-                return data.value;
+                return dataBin.value;
             }
         }
 
@@ -209,12 +226,7 @@ singleton(class Controller extends Emitter {
     }
 
     hasData(docElement, dotted) {
-        if (dotted) {
-            this.getDataShape(docElement, dotted) != undefined;
-        }
-        else {
-            return this.data.has(docElement);
-        }
+        return this.getDataValue(docElement, dotted) != undefined;
     }
 
     initNode(docNode) {
@@ -285,12 +297,12 @@ singleton(class Controller extends Emitter {
 
             for (let entry of Object.entries(RdsText.parseAttributeEncoded(docElement.getRdsDataDefine()))) {
                 let [ key, typeName ] = entry;
-                let hash = typeName.indexOf('#');
+                let tilda = typeName.indexOf('~');
                 let valueText = '';
 
-                if (hash > 0) {
-                    valueText = typeName.substring(hash + 1);
-                    typeName = typeName.substring(0, hash);
+                if (tilda > 0) {
+                    valueText = typeName.substring(tilda + 1);
+                    typeName = typeName.substring(0, tilda);
                 }
                 
                 if (globalThis[typeName] instanceof BaseType) {
@@ -307,13 +319,12 @@ singleton(class Controller extends Emitter {
 
             if (Object.keys(shape).length) {
                 this.defineData(docElement, shape, values);
-                console.log(this.getDataValue(docElement));
             }
         }
     }
 
     initRdsDataSet(docElement) {
-        if (docElement.getRdsDataSet && this.hasData(docElement)) {
+        if (docElement.getRdsDataSet) {
             for (let entry of Object.entries(RdsText.parseAttributeEncoded(docElement.getRdsDataSet()))) {
                 let [ dotted, value ] = entry;
                 let shape = this.getDataShape(docElement, dotted);
@@ -356,49 +367,49 @@ singleton(class Controller extends Emitter {
     }
 
     setBinding(docElement, ref, type, name) {
-        let dataEntry = this.getData(docElement);
+        let expr;
 
-        if (dataEntry) {
-            let expr;
+        if (typeof ref == 'string' && ref.trim() != '') {
+            expr = mkControllerExpr(docElement, ref);
+        }
+        else if (ref instanceof Expr) {
+            expr = ref;
+        }
 
-            if (typeof ref == 'string' && ref.trim() != '') {
-                expr = mkControllerExpr(docElement, ref);
-            }
-            else if (ref instanceof Expr) {
-                expr = ref;
-            }
-
-            if (expr) {
-                for (let dependency of expr.getDependencies()) {
-                    if (dependency.type == 'controller') {
-                        mkControllerBinding(docElement, expr, dependency.dotted, type, name);
-                    }
+        if (expr) {
+            for (let dependency of expr.getDependencies()) {
+                if (dependency.type == 'controller') {
+                    mkControllerBinding(docElement, expr, dependency.dotted, type, name);
                 }
             }
         }
+
+        return this;
     }
 
     setDataValue(docElement, dotted, newValue) {
-        let data = this.getData(docElement);
+        if (StringType.verify(dotted)) {
+            let dataBin = this.getDataBin(docElement, dotted);
 
-        if (data) {
-            let shape = data.shape.get(dotted);
+            if (dataBin) {
+                let shape = dataBin.shape.get(dotted);
 
-            if (shape) {
-                if (shape.verify(newValue)) {
-                    let oldValue = Data.get(data.value, dotted);
+                if (shape) {
+                    if (shape.verify(newValue)) {
+                        let oldValue = Data.get(dataBin.value, dotted);
 
-                    if (Data.ne(oldValue, newValue)) {
-                        Data.set(data.value, dotted, newValue);
+                        if (Data.ne(oldValue, newValue)) {
+                            Data.set(dataBin.value, dotted, newValue);
 
-                        this.emit({
-                            name: 'Set',
-                            dotted: dotted,
-                            oldValue: oldValue,
-                            newValue: newValue,
-                        });
+                            this.emit({
+                                name: 'Set',
+                                dotted: dotted,
+                                oldValue: oldValue,
+                                newValue: newValue,
+                            });
 
-                        return;
+                            return;
+                        }
                     }
                 }
             }
