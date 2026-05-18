@@ -43,9 +43,14 @@ define(class ControllerBinding {
             this.valid = true;
             this.type = type;
 
-            this.docElement.on('input', message => {
-                this.pull();
-            });
+            this.docElement.on(
+                'input',
+                message => {
+                    this.pull();
+                },
+                false,
+                'priority'
+            );
         }
         else if (type == 'attr') {
             if (typeof name == 'string' && name != '') {

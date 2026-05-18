@@ -149,7 +149,6 @@ html {
     width: 100vw;
     height: 100vh;
     padding: 0px;
-    box-sizing: border-box;
 }
 
 body {
@@ -237,16 +236,19 @@ body {
 .icon-small {
     width: 22px;
     height: 22px;
+    box-sizing: border-box;
 }
 
 .icon-std {
     width: 32px;
     height: 32px;
+    box-sizing: border-box;
 }
 
 .icon-big {
     width: 48px;
     height: 48px;
+    box-sizing: border-box;
 }
 
 .input-widget-button {
@@ -346,6 +348,7 @@ body {
     padding-right: 4px;
     padding-top: 6px;
     padding-bottom: 6px;
+    box-sizing: border-box;
     border-color: var(--border-color);
     border-width: 1px;
     border-style: solid;
@@ -384,6 +387,7 @@ body {
     margin-right: 0px;
     padding-top: 4px;
     padding-bottom: 4px;
+    box-sizing: border-box;
     border-style: solid;
     border-color: var(--border-color);
     border-width: 1px;
@@ -482,6 +486,7 @@ body {
 .input-widget-radio-fieldset {
     margin-top: 6px;
     margin-bottom: 6px;
+    box-sizing: border-box;
     border-color: var(--border-color);
     border-width: 1px;
     border-style: solid;
@@ -495,6 +500,7 @@ body {
 .input-widget-select {
     display: flex;
     align-items: center;
+    box-sizing: border-box;
     height: 40px;
     margin-top: 6px;
     margin-bottom: 6px;
@@ -606,6 +612,13 @@ body {
     }
 }
 
+.padded {
+    padding-left: 3px;
+    padding-right: 3px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+}
+
 .scroll {
     overflow: scroll;
 }
@@ -620,6 +633,7 @@ body {
 .toggle-widget-unselected {
     display: inline-block;
     user-select: none;
+    box-sizing: border-box;
     width: 80px;
     height: 24px;
     margin: 0px;
@@ -635,6 +649,7 @@ body {
 .toggle-widget-selected {
     display: inline-block;
     user-select: none;
+    box-sizing: border-box;
     width: 80px;
     height: 24px;
     margin: 0px;
@@ -654,6 +669,7 @@ body {
     margin-bottom: 0px;
     margin-left: 2px;
     margin-right: 0px;
+    box-sizing: border-box;
     fill: var(--knob-fill-color);
     stroke: var(--knob-stroke-color);
 }
@@ -665,6 +681,7 @@ body {
     margin-bottom: 0px;
     margin-left: 58px;
     margin-right: 0px;
+    box-sizing: border-box;
     fill: var(--knob-fill-color);
     stroke: var(--knob-stroke-color);
 }

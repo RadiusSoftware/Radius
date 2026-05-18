@@ -9,6 +9,21 @@
     <widget tagname="auth-app">
         <script>
             class AuthApp extends Widget {
+                constructor(arg) {
+                    super(arg);
+
+                    Controller.defineData(this, {
+                        systemState: StringType,
+                        configType: StringType,
+                        email: StringType,
+                        password1: StringType,
+                        password2: StringType,
+                        verifyCode: StringType,
+                        clusterId: StringType,
+                        clusterSecret: StringType,
+                    });
+                }
+
                 init() {
                     super.init();
 
@@ -22,17 +37,93 @@
                     console.log(message);
                 }
 
-                async onInitialize(message) {
-                    console.log('\nINITIALIZE...');
-                    console.log(message);
+                async onConfigure(message) {
+                    /*
+                    let systemState = Controller.getDataValue(this, 'systemState');
+
+                    if (systemState == 'system#configure') {
+                        let configType = Controller.getDataValue(this, 'configType');
+                        let response = await Api.startSystemConfiguration(configType);
+
+                        if (!(response instanceof Failure)) {
+                            Controller.setDataValue(this, 'systemState', response);
+                        }
+                    }
+                    if (systemState == 'system#setemail') {
+                        console.log(systemState);
+                    }
+                    else if (systemState == 'system#verifyemail') {
+                        console.log(systemState);
+                    }
+                    else if (systemState == 'system#setpassword') {
+                        console.log(systemState);
+                    }
+                    else if (systemState == 'system#setcluster') {
+                        console.log(systemState);
+                    }
+                    */
+                }
+
+                async onSetConfigureType(message) {
+                    let systemState = Controller.getDataValue(this, 'systemState');
+
+                    if (systemState != 'system#configure') {
+                        systemState = await Api.resetSystemConfiguration();
+                    }
+
+                    if (systemState == 'system#configure') {
+                        let configType = Controller.getDataValue(this, 'configType');
+                        let response = await Api.startSystemConfiguration(configType);
+
+                        if (!(response instanceof Failure)) {
+                            Controller.setDataValue(this, 'systemState', response);
+                        }
+                    }
                 }
             }
         </script>
-        <html rds-data-define="systemState:StringType;">
+        <html>
             <selector-widget class="fill" rds-bind-method="setMode,systemState">
+                <gettlscertificate-widget rds-mode="system#tls"></gettlscertificate-widget>
+                <initializesystem-widget rds-mode="system#configure,system#setemail,system#verifyemail,system#setpassword,system#setcluster"></initializesystem-widget>
                 <authenticate-widget rds-mode="system#running"></authenticate-widget>
-                <initializesystem-widget rds-mode="system#initialize"></initializesystem-widget>
             </selector-widget>
+        </html>
+    </widget>
+    <!-- ************************************************************************************************************ -->
+    <!-- ************************************************************************************************************ -->
+    <widget tagname="gettlscertificate-widget">
+        <html>
+            TLS CERTIFICATION
+        </html>
+    </widget>
+    <!-- ************************************************************************************************************ -->
+    <!-- ************************************************************************************************************ -->
+    <widget tagname="initializesystem-widget">
+        <html>
+            <grid-widget rds-rows="auto,20px,auto,20px,auto,auto">
+                <div></div>
+                <div></div>
+                <input-widget type="fieldset" rds-bind="configType" rds-options="cluster:##cluster##; standalone:##standalone##" evt-input="setConfigureType"></input-widget>
+                <div></div>               
+                <div>
+                    <div class="padded" rds-bind-show="systemState;system#setcluster">
+                        CLUSTEROID
+                    </div>
+                    <div class="padded" rds-bind-show="systemState;system#setemail,system#verifyemail,system#setpassword">
+                        <div class="fill padded" rds-bind-show="systemState;system#setemail,system#verifyemail,system#setpassword">
+                            SET EMAIL
+                        </div>
+                        <div class="fill padded" rds-bind-show="systemState;system#verifyemail,system#setpassword">
+                            VERIFY EMAIL
+                        </div>
+                        <div class="fill padded" rds-bind-show="systemState;system#setpassword">
+                            SET PASSWORD
+                        </div>
+                    </div>
+                </div>
+                <div></div>
+            </grid-widget>
         </html>
     </widget>
     <!-- ************************************************************************************************************ -->
@@ -54,7 +145,7 @@
                         <div></div>
                         <div></div>
                         <div class="space-around">
-                            <input-widget type="submit" class="input-widget-width-wide" value="##next##"></input-widget>
+                            <input-widget type="select" class="input-widget-width-wide" value="##next##"></input-widget>
                         </div>
                         <div></div>
                     </grid-widget>
@@ -66,26 +157,9 @@
             </grid-widget>
         </html>
     </widget>
-    <!-- ************************************************************************************************************ -->
-    <!-- ************************************************************************************************************ -->
-    <widget tagname="initializesystem-widget">
-        <!--
-        <script>
-            class InitializeSystemWidget extends Widget {
-                init() {
-                    (async () => {
-                        await pause(2000);
-                        Controller.setDataValue(this, 'systemState', 'system:initialize');
-                    })();
-                }
-            }
-        </script>
-        -->
-        <html rds-data-define="initType:StringType; email:StringType; password1:StringType; password2:StringType" rds-bind="systemState">
-        </html>
-    </widget>
     <strings lang="en">
-        emailEnter = Enter Email Address\
+        cluster = Cluster\
+        standalone = Standalone\
 
         UNUSED = ********** UNUSED **********\
         accept = Accept\
@@ -93,6 +167,7 @@
         back = Go Back\
         decline = Decline\
         emailAddr = Your Email Address\
+        emailEnter = Enter Email Address\
         forget = Forget\
         forgotUsername = Forgot Username\
         forgotPassword = Forgot Password\

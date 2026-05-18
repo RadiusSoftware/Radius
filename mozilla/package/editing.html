@@ -317,7 +317,7 @@
                     super(arg);
                 }
 
-                buildFieldsetOptions() {
+                buildFieldsetOptions(fsAttributes) {
                     let options = this.buildOptions();
 
                     let attributes = {
@@ -326,6 +326,13 @@
                         name: '',
                         class: 'input-widget-radio',
                     };
+
+                    for (let key in fsAttributes) {
+                        if (key.startsWith('evt-')) {
+                            attributes[key] = fsAttributes[key];
+                            this.replacement.clearAttribute(key);
+                        }
+                    }
 
                     if (this.getRdsBind) {
                         attributes.name = this.getRdsBind();
@@ -500,7 +507,7 @@
                             attributes.class = 'input-widget-radio-fieldset';
                             Data.filter(attributes, (key, value) => key.startsWith('rds-bind'));
                             this.replacement = createElement('fieldset', attributes);
-                            this.buildFieldsetOptions();
+                            this.buildFieldsetOptions(attributes);
                             this.buildFieldsetLegend();
                         }
                         else if (type == 'select') {

@@ -186,7 +186,7 @@ define(class Session {
             this.timeout = null;
         }
 
-        this.state = 'session:submit-email';
+        this.state = 'session#submit-email';
         this.teamHandle = mkTeamHandle();
         this.userHandle = mkUserHandle();
 
@@ -213,7 +213,7 @@ define(class Session {
             this.addRemoteHost(remoteHost);
         }
 
-        if (this.state == 'session:live') {
+        if (this.state == 'session#live') {
             this.timeout = setTimeout(async () => {
                 await this.signOut();
             }, this.timeoutMillis);

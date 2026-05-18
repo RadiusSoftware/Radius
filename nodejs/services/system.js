@@ -28,8 +28,12 @@
  * be either initialized or attached before it can be used:
  * 
  *      system#started
+ *      system#tls
  *      system#configure
- *      system#verify
+ *      system#setemail
+ *      system#verifyemail
+ *      system#setpassword
+ *      system#setcluster
  *      system#running
  *      system#stopped
  * 
@@ -48,6 +52,12 @@ createService(class SystemService extends Service {
 
     async onInitState(message) {
         if (this.state == 'system#started') {
+            if (false /* check for TLS certificate */) {
+                // ******************************************************************
+                // ******************************************************************
+                return 'system#tls';
+            }
+
             let thunk = mkDbmsThunk();
             let users = await thunk.selectObj(DboUser);
 
@@ -62,12 +72,41 @@ createService(class SystemService extends Service {
                     this.state = 'system#running';
                 }
                 else {
-                    this.state = 'system#initialize';
+                    this.state = 'system#configure';
                 }
             }
         }
 
         return this.state;
+    }
+
+    async onResetConfiguration(message) {
+        if (this.state in {
+            'system#setemail':0,
+            'system#verifyemail':0,
+            'system#setpassword':0,
+            'system#setcluster':0,
+        }) {
+            this.state = 'system#configure';
+            return this.state;
+        }
+
+        return mkFailure('resetConfiguration: FAILED');
+    }
+
+    async onStartConfiguration(message) {
+        if (this.state == 'system#configure') {
+            if (message.configType == 'standalone') {
+                this.state = 'system#setemail';
+                return this.state;
+            }
+            else if (message.configType == 'cluster') {
+                this.state = 'system#setcluster';
+                return this.state;
+            }
+        }
+
+        return mkFailure('startConfiguration: FAILED');
     }
 });
 
@@ -95,6 +134,11 @@ define(class SystemHandle extends Handle {
         return this;
     }
 
+    async resetConfiguration() {
+        return await this.callService({
+        });
+    }
+
     async restart(when) {
         // ***************************************************************
         // ***************************************************************
@@ -103,6 +147,12 @@ define(class SystemHandle extends Handle {
     async shutdown(when) {
         // ***************************************************************
         // ***************************************************************
+    }
+
+    async startConfiguration(configType) {
+        return await this.callService({
+            configType: configType,
+        });
     }
 
     async update(when) {

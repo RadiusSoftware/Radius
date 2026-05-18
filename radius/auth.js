@@ -29,25 +29,6 @@ define(class AuthApp extends Webapp {
     }
 
     // ********************
-    // configureSystem
-    // ********************
-    async [Api.define(
-        'configureSystem',
-        {
-            configuration: {
-                mode: StringType,
-                _clusterId: StringType,
-                _clusterKey: StringType,
-                _email: StringType,
-                _password1: StringType,
-                _password2: StringType,
-            }
-        },
-    )](trx, configuration) {
-        return await mkSystemHandle().configure(configuration);
-    }
-
-    // ********************
     // getSessionState
     // ********************
     async [Api.define(
@@ -83,5 +64,26 @@ define(class AuthApp extends Webapp {
         else {
             return systemState;
         }
+    }
+
+    // ********************
+    // resetSystemConfiguration
+    // ********************
+    async [Api.define(
+        'resetSystemConfiguration',
+    )](trx) {
+        return await mkSystemHandle().resetConfiguration();
+    }
+
+    // ********************
+    // startSystemConfiguration
+    // ********************
+    async [Api.define(
+        'startSystemConfiguration',
+        {
+            configType: StringType,
+        },
+    )](trx, configType) {
+        return await mkSystemHandle().startConfiguration(configType);
     }
 });
