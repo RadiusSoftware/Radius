@@ -14,12 +14,7 @@
     "auth": {
         "radius:signedin": "-"
     },
-    "sysadmin": {
+    "sys": {
         "radius:system": "+"
-    },
-    "sysadminXYZ": {
-        "radius:cookies": "-",
-        "radius:session": "-",
-        "radius:signedin": "-"
     }
 }

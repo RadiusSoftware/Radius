@@ -21,49 +21,136 @@
 *****/
 "user strict"
 
+LibCrypto       = require('node:crypto');
+LibChildProcess = require('node:child_process');
 LibCluster      = require('node:cluster');
+LibDgrm         = require('node:dgram');
+LibDns          = require('node:dns');
 LibFileSystem   = require('node:fs');
+LibHttp         = require('http');
+LibHttps        = require('https');
+LibNet          = require('net');
 LibOs           = require('node:os');
 LibPath         = require('node:path');
 LibProcess      = require('node:process');
+LibQueryString  = require('node:querystring');
+LibUrl          = require('url');
+LibZlib         = require('node:zlib');
+NpmHtml         = require('node-html-parser');
+NpmPg           = require('pg');
+NpmYauzl        = require('yauzl');
+NpmYazl         = require('yazl');
 
 
 /*****
- * The Loader is part of the Radius project, which is apart from the framework
- * itself.  The framework itself does not have its own load and cannot load
- * itself.  The primary process Loader does the heavy lifting of processing the
- * command line, searching for files, and configuring settings that are needed
- * by the framework.  When the framework is loaded and built (and minified if
- * appropriately not in debug mode), it stores the framework in the settings for
- * the child processes.  Once ready, the launch mode is determined and the proper
- * launch function is called to start the Radius application server.
+ * The loader is like a bootstrapper for the entire framework, client + server.
+ * In fact, there's a division of labor.  The loader is responsible for loading
+ * in the nodejs framework and then transferring bootstrapping the entire system
+ * to the System Service.  This is what happens in the primary cluster process.
+ * The System Service will then load in the Mozilla framework and start the HTTP
+ * server.
 *****/
 if (LibCluster.isPrimary) {
+    (async () => {
+        const sourceFiles = [];
+        const radiusPath = LibPath.join(__dirname, '..');
+
+        async function enumerate(dir) {
+            let stack = [ dir ];
+
+            while (stack.length) {
+                let dir = stack.shift();
+                let dirEntries = await LibFileSystem.promises.readdir(dir);
+
+                dirEntries = dirEntries.filter(dirEntry => {
+                    return !dirEntry.startsWith('.');
+                });
+
+                for (let dirEntry of dirEntries) {
+                    let path = LibPath.join(dir, dirEntry);
+                    let stats = await LibFileSystem.promises.stat(path);
+
+                    if (stats.isFile()) {
+                        sourceFiles.push(path);
+                    }
+                    else if (stats.isDirectory()) {
+                        stack.push(path);
+                    }
+                }
+            }
+        };
+
+        for (let dir of [ 
+            LibPath.join(radiusPath, 'javascript'),
+            LibPath.join(radiusPath, 'nodejs'),
+        ]) {
+            await enumerate(dir);
+        }
+
+        for (let sourceFile of sourceFiles) {
+            if (sourceFile.endsWith('.js')) {
+                require(sourceFile);
+            }
+        }
+
+        mkSystemHandle().boot();
+    })();
+}
+
+
+/*****
+ * When a worker process is started, the loader's job is to import/require the
+ * entire nodejs framework and then to start the server worker, which triggered
+ * the creation of the worker process.  A new server worker is the only action
+ * in the Radius framework that triggers the creation of a new worker process.
+*****/
+else {
+    console.log('\n\n\n******************** WORKER THREAD STARTED ********************\n\n\n');
+    /*
     globalThis.Loader = new (class Loader {
         constructor() {
-            this.argInfo = {
-                '-dbms': {
-                    hasValue: true,
-                    settingName: 'dbmsPath',
-                    default: LibPath.join(__dirname, '../../Radius.json')
-                },
-                '-debug': {
-                    hasValue: false,
-                    settingName: 'debugMode'
-                },
-                '-factory-reset-everything-on-this-host': {
-                    hasValue: false,
-                },
-            };
+            let bootUUID = LibProcess.env.bootUUID;
+            delete LibProcess.env.bootUUID;
+            LibProcess.send(JSON.stringify({ name: bootUUID }));
 
-            this.radiusPath = LibPath.join(__dirname, '..');
-            this.javascriptPath = LibPath.join(__dirname, '..', 'javascript');
-            this.nodejsPath = LibPath.join(__dirname, '..', 'nodejs');
-            this.mozillaPath = LibPath.join(__dirname, '..', 'mozilla');
-            this.serverPath = LibPath.join(__dirname, 'server');
-            this.sourceFiles = {};
-            this.nodejsFramework = [];
-            this.load();
+            LibProcess.on('message', async data => {
+                if (globalThis.Process) {
+                    if (this.bootstrap) {
+                        let func = this.bootstrap;
+                        this.bootstrap = null;
+                        await func(data);
+                    }
+
+                }
+                else {
+                    eval(data);
+                }
+            });
+        }
+
+        async bootstrap(data) {
+            let launcher;
+            let message = fromJson(data);
+            let launcherCode = mkBuffer(message.launcher, 'base64').toString();            
+            await eval(`launcher=${launcherCode}`);
+            await Namespace.init();
+            await launcher();
+        }
+    })();
+    */
+}
+    // *******************************************************************************************************
+    // *******************************************************************************************************
+    // *******************************************************************************************************
+    // *******************************************************************************************************
+    /*
+    globalThis.Loader = new (class Loader {
+        constructor() {
+            //this.sourceFiles = [];
+            //this.radiusPath = LibPath.join(__dirname, '..');
+            //this.javascriptPath = LibPath.join(this.radiusPath, 'javascript');
+            //this.nodejsPath = LibPath.join(this.radiusPath, 'nodejs');
+            //this.load();
         }
 
         async buildConfiguration() {
@@ -90,73 +177,6 @@ if (LibCluster.isPrimary) {
                 StringType,
                 this.nodejsFramework.join('\n'),
             );
-        }
-
-        async enumerateContext(context) {
-            let path = this[`${context}Path`];
-            let stack = [{ context: context, path: path }];
-
-            while (stack.length) {
-                let { context, path } = stack.shift();
-                let dirEntries = await LibFileSystem.promises.readdir(path);
-                dirEntries = dirEntries.filter(dirEntry => !dirEntry.startsWith('.'));
-
-                for (let dirEntry of dirEntries) {
-                    let entryPath = LibPath.join(path, dirEntry);
-                    let entryContext = `${context}.${dirEntry}`;
-                    let stats = await LibFileSystem.promises.stat(entryPath);
-
-                    if (stats.isFile()) {
-                        this.sourceFiles[entryContext] = { path: entryPath };
-                    }
-                    else if (stats.isDirectory()) {
-                        stack.push({ context: entryContext, path: entryPath });
-                    }
-                }
-            }
-        }
-
-        async initializeRadiusDbms() {
-            let path = this.args['-dbms'].value;
-
-            try {
-                let stats = await LibFileSystem.promises.stat(path);
-
-                if (stats.isFile()) {
-                    let content = await LibFileSystem.promises.readFile(path);
-                    let radiusDbms =  JSON.parse(content.toString());
-
-                    if (this.args['-factory-reset-everything-on-this-host'].value) {
-                        if (this.args['-debug'].value) {
-                            if (await Dbms.doesDatabaseExist(radiusDbms)) {
-                                await Dbms.dropDatabase(radiusDbms);
-                            }
-                        }
-                    }
-
-                    if (!(await Dbms.doesDatabaseExist(radiusDbms))) {
-                        await Dbms.createDatabase(radiusDbms);
-                    }
-
-                    let schema1 = await Dbms.getDatabaseSchema(radiusDbms);
-                    let schema2 = mkFrameworkSchema();
-
-                    for (let diff of mkSchemaAnalysis(schema1, schema2)) {
-                        await SchemaUpdater.upgrade(radiusDbms, diff);
-                    }
-
-                    for (let dbTable of schema2) {
-                        if (dbTable.getType() == 'object') {
-                            defineDbo('', dbTable);
-                        }
-                    }
-
-                    await Dbms.setSettings(radiusDbms);
-                    return true;
-                }
-            }
-            catch (e) {}
-            return false;
         }
 
         async initializeSystem() {
@@ -232,19 +252,8 @@ if (LibCluster.isPrimary) {
             });
         }
 
-        async launchServers() {
-            // **********************************************************************************
-            // **********************************************************************************
-            // **********************************************************************************
-            // **********************************************************************************
-            console.log('\n*** LAUNCH REMAINING CONFIGURED SERVERS\n');
-        }
-
         async load() {
-            this.parseCommandLine();
-            let mozillaFramework = [];
-
-            for (let context of [ 'javascript', 'mozilla', 'nodejs' ]) {
+            for (let context of [ 'javascript', 'nodejs' ]) {
                 await this.enumerateContext(context);
             }
 
@@ -262,6 +271,8 @@ if (LibCluster.isPrimary) {
                 }
             }
 
+            mkSystemHandle().boot();
+            /*
             if (await this.initializeRadiusDbms()) {
                 if (!await mkSettingsHandle().isInitialized()) {
                     this.initializeSystem();
@@ -309,95 +320,5 @@ if (LibCluster.isPrimary) {
                 console.log(`\nFailed to initialize Radius DBMS: "${this.args['-dbms']}"`);
             }
         }
-
-        parseCommandLine() {
-            this.args = {};
-
-            for (let argName in this.argInfo) {
-                let argInfo = this.argInfo[argName];
-
-                if (argInfo.hasValue) {
-                    this.args[argName] = {
-                        argName: argName,
-                        settingName: argInfo.settingName,
-                        settingType: 'string',
-                        value: argInfo.default ? argInfo.default : '',
-                    };
-                }
-                else {
-                    this.args[argName] = {
-                        argName: argName,
-                        settingName: argInfo.settingName,
-                        settingType: 'boolean',
-                        value: false,
-                    };
-                }
-            }
-            
-            for (let i = 2; i < LibProcess.argv.length; i++) {
-                let processArg = LibProcess.argv[i];
-
-                if (processArg in this.args) {
-                    let arg = this.args[processArg];
-
-                    if (arg.settingType == 'string') {
-                        if (i + 1 < LibProcess.argv.length) {
-                            if (i + 1 < LibProess.argv.length) {
-                                if (!LibProcess.argv[i + 1].startsWith('-')) {
-                                    arg.value = LibProcess.argv[i + 1];
-                                }
-                            }
-                        }
-                    }
-                    else {
-                        arg.value = true;
-                    }
-                }
-            }
-        }
-    })();
-}
-
-
-/*****
- * The Loader is part of the Radius project, which is apart from the framework
- * itself.  The framework itself does not have its own load and cannot load
- * itself.  The child process Loader was developed to be quick and efficient.
- * Necessary settings are loaded from the well known temporary file and used
- * to launch the Radius server.  The nodejsFramework settng is executed with
- * eval(), which requires all of the parts of the common framework and the nodejs
- * framework.  At this point, call the Process's launch() function to invoke the
- * launcher function, if properly provided.
-*****/
-else {
-    globalThis.Loader = new (class Loader {
-        constructor() {
-            let bootUUID = LibProcess.env.bootUUID;
-            delete LibProcess.env.bootUUID;
-            LibProcess.send(JSON.stringify({ name: bootUUID }));
-
-            LibProcess.on('message', async data => {
-                if (globalThis.Process) {
-                    if (this.bootstrap) {
-                        let func = this.bootstrap;
-                        this.bootstrap = null;
-                        await func(data);
-                    }
-
-                }
-                else {
-                    eval(data);
-                }
-            });
-        }
-
-        async bootstrap(data) {
-            let launcher;
-            let message = fromJson(data);
-            let launcherCode = mkBuffer(message.launcher, 'base64').toString();            
-            await eval(`launcher=${launcherCode}`);
-            await Namespace.init();
-            await launcher();
-        }
-    })();
-}
+    });
+    */

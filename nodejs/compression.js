@@ -19,9 +19,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-const NpmYauzl = require('yauzl');
-const NpmYazl = require('yazl');
-const LibZlib = require('node:zlib');
 
 
 /*****

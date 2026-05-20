@@ -19,10 +19,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-LibCluster      = require('node:cluster');
-LibChildProcess = require('node:child_process');
-LibOs           = require('node:os');
-LibProcess      = require('node:process');
 
 
 /*****

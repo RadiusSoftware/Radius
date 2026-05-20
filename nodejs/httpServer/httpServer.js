@@ -19,10 +19,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-const LibHttp = require('http');
-const LibHttps = require('https');
-const LibQueryString = require('node:querystring');
-const LibUrl = require('url');
 
 
 /*****
@@ -100,15 +96,9 @@ define(class HttpWorker extends Worker {
         }
     }
 
-    async handleLink(handle) {
-        // TODO ****************************************************************
-        // TODO ****************************************************************
-    }
-
     async handleRequest(httpReq, httpRsp) {
         let req = mkHttpRequest(this, httpReq);
         let rsp = mkHttpResponse(this, httpRsp);
-        console.log(`\n${req.getFullRequest()}\n`);
 
         let handle = {
             req: req,
@@ -238,13 +228,9 @@ define(class HttpWorker extends Worker {
         }
     }
 
-    async handleWebService(handle) {
-        // TODO ****************************************************************
-        // TODO ****************************************************************
-    }
-
     async init() {
         await super.init();
+        /*
         let settings = mkSettingsHandle();
         this.sessionCookieName = await settings.getSetting('sessionCookieName');
         this.acceptCookiesName = await settings.getSetting('acceptCookiesName');
@@ -276,9 +262,11 @@ define(class HttpWorker extends Worker {
         this.settings.ipv4 ? this.server.listen(80, this.settings.ipv4) : null;
         this.settings.ipv6 ? this.server.listen(80, this.settings.ipv6) : null;
         this.server.on('upgrade', (...args) => this.onUpgrade(...args));
+        */
         return this;
     }
 
+    /*
     async onUpgrade(httpReq, socket, headData) {
         let req = mkHttpRequest(this, httpReq);
 
@@ -323,6 +311,7 @@ define(class HttpWorker extends Worker {
             await caught(e);
         }
     }
+    */
 
     async respondData(handle) {
         if (handle.req.getMethod() == 'GET') {

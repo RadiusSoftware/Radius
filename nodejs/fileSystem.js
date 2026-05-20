@@ -19,8 +19,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-const LibFiles = require('fs');
-const LibOs    = require('os');
 
 
 /*****
@@ -38,27 +36,27 @@ singleton(class FileSystem extends Emitter {
     }
 
     async appendFile(path, mode) {
-        await LibFiles.promises.appendFile(path, mode);
+        await LibFileSystem.promises.appendFile(path, mode);
         return this;
     }
 
     async chmod(path, mode) {
-        await LibFiles.promises.chmod(path, mode);
+        await LibFileSystem.promises.chmod(path, mode);
         return this;
     }
 
     async chown(path, uid, gid) {
-        await LibFiles.promises.chown(path, uid, gid);
+        await LibFileSystem.promises.chown(path, uid, gid);
         return this;
     }
 
     async deleteDirectory(path, recursive) {
-        await LibFiles.promises.rmdir(path, { recursive: recursive });
+        await LibFileSystem.promises.rmdir(path, { recursive: recursive });
         return this;
     }
 
     async deleteFile(path, force, recursive) {
-        await LibFiles.promises.rm(path, {
+        await LibFileSystem.promises.rm(path, {
             force: force === false,
             recursive: recursive === true,
         });
@@ -72,7 +70,7 @@ singleton(class FileSystem extends Emitter {
             if (await this.isDirectory(path)) {
                 dirs.push(path);
 
-                for (let dirname of await LibFiles.promises.readdir(path)) {
+                for (let dirname of await LibFileSystem.promises.readdir(path)) {
                     if (!dirname.startsWith('.')) {
                         let directory = Path.join(path, dirname);
 
@@ -92,7 +90,7 @@ singleton(class FileSystem extends Emitter {
 
         for (let arg of args) {
             if (await this.isDirectory(arg)) {
-                for (let dirname of await LibFiles.promises.readdir(arg)) {
+                for (let dirname of await LibFileSystem.promises.readdir(arg)) {
                     if (!dirname.startsWith('.')) {
                         let path = Path.join(arg, dirname);
 
@@ -109,7 +107,7 @@ singleton(class FileSystem extends Emitter {
 
     async isDirectory(path) {
         try {
-            let stats = await LibFiles.promises.stat(path);
+            let stats = await LibFileSystem.promises.stat(path);
             return stats.isDirectory();
         }
         catch (e) {
@@ -119,7 +117,7 @@ singleton(class FileSystem extends Emitter {
 
     async isFile(path) {
         try {
-            let stats = await LibFiles.promises.stat(path);
+            let stats = await LibFileSystem.promises.stat(path);
             return stats.isFile();
         }
         catch (e) {
@@ -129,7 +127,7 @@ singleton(class FileSystem extends Emitter {
 
     async isLink(path) {
         try {
-            let stats = await LibFiles.promises.stat(path);
+            let stats = await LibFileSystem.promises.stat(path);
             return stats.isSymbolicLink();
         }
         catch (e) {
@@ -138,16 +136,16 @@ singleton(class FileSystem extends Emitter {
     }
 
     async openDirectory(path, recursive) {
-        return LibFiles.promises.opendir(path, { recursive: recursive });
+        return LibFileSystem.promises.opendir(path, { recursive: recursive });
     }
 
     async openFile(path, mode) {
-        return await LibFiles.promises.open(path, mode);
+        return await LibFileSystem.promises.open(path, mode);
     }
 
     async pathExists(path) {
         try {
-            LibFiles.promises.stat(path);
+            LibFileSystem.promises.stat(path);
             return true;
         }
         catch (e) {
@@ -156,21 +154,21 @@ singleton(class FileSystem extends Emitter {
     }
 
     async readDirectory(path, recursive) {
-        return await LibFiles.promises.readdir(
+        return await LibFileSystem.promises.readdir(
             path,
             { recursive: recursive }
         );
     }
 
     async readFile(path, encoding) {
-        return await LibFiles.promises.readFile(
+        return await LibFileSystem.promises.readFile(
             path,
             encoding ? { encoding: encoding } : undefined,
         );
     }
 
     async readFileAsString(path, encoding) {
-        let buffer = await LibFiles.promises.readFile(
+        let buffer = await LibFileSystem.promises.readFile(
             path,
             encoding ? { encoding: encoding } : undefined,
         );
@@ -179,14 +177,14 @@ singleton(class FileSystem extends Emitter {
     }
 
     async readLink(path, encoding) {
-        return await LibFiles.promises.readFile(
+        return await LibFileSystem.promises.readFile(
             path,
             encoding ? { encoding: encoding } : undefined,
         );
     }
 
     async realPath(path) {
-        return await LibFiles.promises.realpath(
+        return await LibFileSystem.promises.realpath(
             path,
             { encoding: 'utf8' }
         );
@@ -200,7 +198,7 @@ singleton(class FileSystem extends Emitter {
             let path = stack.pop();
 
             if (await this.isDirectory(path)) {
-                for (let fileName of await LibFiles.promises.readdir(path)) {
+                for (let fileName of await LibFileSystem.promises.readdir(path)) {
                     if (!fileName.startsWith('.')) {
                         let abspath = Path.join(path, fileName);
 
@@ -224,7 +222,7 @@ singleton(class FileSystem extends Emitter {
             let path = stack.pop();
 
             if (await this.isDirectory(path)) {
-                for (let fileName of await LibFiles.promises.readdir(path)) {
+                for (let fileName of await LibFileSystem.promises.readdir(path)) {
                     if (!fileName.startsWith('.')) {
                         let abspath = Path.join(path, fileName);
 
@@ -249,7 +247,7 @@ singleton(class FileSystem extends Emitter {
             let path = stack.pop();
   
             if (await this.isDirectory(path)) {
-                for (let fileName of await LibFiles.promises.readdir(path)) {
+                for (let fileName of await LibFileSystem.promises.readdir(path)) {
                     if (!fileName.startsWith('.')) {
                         let abspath = Path.join(path, fileName);
 
@@ -270,7 +268,7 @@ singleton(class FileSystem extends Emitter {
     }
 
     async rename(oldPath, newPath) {
-        await LibFiles.promises.rename(oldPath, newPath);
+        await LibFileSystem.promises.rename(oldPath, newPath);
         return this;
     }
 
@@ -298,26 +296,26 @@ singleton(class FileSystem extends Emitter {
             mtime = mtimeArg.valueOf();
         }
 
-        await LibFiles.promises.utimes(path, atime, mtime);
+        await LibFileSystem.promises.utimes(path, atime, mtime);
         return this;
     }
 
     async stat(path) {
         if (await this.pathExists(path)) {
-            return await LibFiles.promises.stat(path);
+            return await LibFileSystem.promises.stat(path);
         }
 
         return null;
     }
 
     async truncate(path, bytes) {
-        await LibFiles.promises.truncate(path, bytes);
+        await LibFileSystem.promises.truncate(path, bytes);
         return this;
     }
 
     async unlink(path) {
         if (this.isSymbolicLink(path)) {
-            await LibFiles.promises.unlink(path);
+            await LibFileSystem.promises.unlink(path);
         }
 
         return this;
@@ -329,18 +327,18 @@ singleton(class FileSystem extends Emitter {
             encoding: encoding ? encoding : 'utf8',
         };
 
-        await LibFiles.writeFile(path, data, options);
+        await LibFileSystem.writeFile(path, data, options);
         return this;
     }
 
     async writeLink(targetPath, linkPath) {
-        await LibFiles.promises.symlink(targetPath, linkPath);
+        await LibFileSystem.promises.symlink(targetPath, linkPath);
         return this;
     }
 
     async writeTmpFile(content) {
         let path = Path.join(LibOs.tmpdir(), Crypto.generateUUID());
-        await LibFiles.promises.writeFile(path, content);
+        await LibFileSystem.promises.writeFile(path, content);
         return path;
     }
 });

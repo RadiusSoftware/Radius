@@ -138,17 +138,6 @@ createService(class SettingsService extends Service {
         return message.settingName in this.settings;
     }
 
-    async onIsInitialized(message) {
-        let dbms = mkDbmsThunk();
-
-        let dboSetting = await dbms.selectOneObj(
-            DboSetting,
-            { name: 'system#settings-initialized' }
-        );
-
-        return dboSetting && dboSetting.value === true;
-    }
-
     async onListSettings(message) {
         let list = Object.values(this.settings);
 
@@ -264,11 +253,6 @@ define(class SettingsHandle extends Handle {
     async hasSetting(settingName) {
         return await this.callService({
             settingName: settingName,
-        });
-    }
-
-    async isInitialized() {
-        return await this.callService({
         });
     }
 

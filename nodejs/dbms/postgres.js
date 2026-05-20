@@ -19,7 +19,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-const npmPg = require('pg');
 
 
 /*****
@@ -39,12 +38,12 @@ const npmPg = require('pg');
  * User this link to get a list of PostgreSQL types and codes:
  * https://jdbc.postgresql.org/documentation/publicapi/constant-values.html
 *****/
-npmPg.types.setTypeParser(20, function(text) {
+NpmPg.types.setTypeParser(20, function(text) {
     return BigInt(text);
 });
 
-const parser1114 = npmPg.types.getTypeParser(1114);
-npmPg.types.setTypeParser(1114, function(text) {
+const parser1114 = NpmPg.types.getTypeParser(1114);
+NpmPg.types.setTypeParser(1114, function(text) {
     return parser1114(`${text}+0000`);
 });
 
@@ -277,7 +276,7 @@ define(class PostgresConnection {
     }
 
     async connect() {
-        this.pg = new npmPg.Client(this.settings);
+        this.pg = new NpmPg.Client(this.settings);
         await this.pg.connect();
         return this;
     }

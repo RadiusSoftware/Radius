@@ -20,9 +20,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
 *****/
-const LibHttp = require('http');
-const LibHttps = require('https');
-const LibUrl = require('url');
  
  
 /*****
