@@ -99,6 +99,7 @@ define(class HttpWorker extends Worker {
     async handleRequest(httpReq, httpRsp) {
         let req = mkHttpRequest(this, httpReq);
         let rsp = mkHttpResponse(this, httpRsp);
+        console.log(req.getFullRequest());
 
         let handle = {
             req: req,
@@ -230,6 +231,7 @@ define(class HttpWorker extends Worker {
 
     async init() {
         await super.init();
+        console.log(this.settings);
         /*
         let settings = mkSettingsHandle();
         this.sessionCookieName = await settings.getSetting('sessionCookieName');
@@ -263,6 +265,7 @@ define(class HttpWorker extends Worker {
         this.settings.ipv6 ? this.server.listen(80, this.settings.ipv6) : null;
         this.server.on('upgrade', (...args) => this.onUpgrade(...args));
         */
+
         return this;
     }
 

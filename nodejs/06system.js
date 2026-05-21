@@ -38,52 +38,50 @@
 createService(class SystemService extends Service {
     constructor() {
         super();
-        this.mode = '';
-        this.ipv4 = '';
-        this.ipv6 = '';
-        this.hostId = '';
-        this.swarm = null;
-        this.sysdb = null;
-        this.publicKey = '';
-        this.privateKey = '';
-        this.hostCertificate = '';
-        this.caaCertificate = '';
-        this.state = 'system#loaded';
         this.bootTime = mkTime();
-        this.bootPath = LibPath.join(__dirname, '../../../.boot');
-
-        this.bootShape = mkRdsShape({
-            mode: mkRdsEnum('swarm', 'standalone'),
-            ipv4: StringType,
-            ipv6: StringType,
-            hostId: StringType,
-
-            _swarm: {
-                id: StringType,
-                secret: StringType,
-                hosts: [ StringType ],
-            },
-
-            _dbms: {
-                dbmsType: StringType,
-                timeout: Int32Type,
-                host: StringType,
-                port: Int32Type,
-                database: StringType,
-                username: StringType,
-                password: StringType,
-                _certificate: StringType,
-            }
-        });
+        this.bootUUID = Crypto.generateUUID();
+        this.state = 'system#loaded';
     }
 
-    async bootSetup() {
+    async bootSetupMode() {
         this.hostId = Crypto.generateUUID();
-        console.log(this.hostId);
-        console.log();
+
+        let { ipv4, ipv6 } = NetInterfaces.getDefaultNetworkInterfacePair();
+        this.ipv4 = ipv4;
+        this.ipv6 = ipv6;
+
+        let { publicKey, privateKey } = await Crypto.generateKeyPair('rsa');
+        this.publicKey = publicKey.export({ type: 'pkcs1', format: 'pem' });
+        this.privateKey = privateKey.export({ type: 'pkcs1', format: 'pem' });
+
+        await mkSettingsHandle().defineTemporarySetting(
+            'httpServer',
+            'server',
+            mkRdsShape({
+                enabled: BooleanType,
+                workers: UInt16Type,
+                ipv4: StringType,
+                ipv6: StringType,
+                radiusPath: StringType,
+                acceptCookie: StringType,
+                sessionCookie: StringType,
+            }),
+            {
+                enabled: true,
+                workers: 1,
+                ipv4: this.ipv4 ? this.ipv4.address : '',
+                ipv6: this.ipv6 ? this.ipv6.address : '',
+                radiusPath: '/radius',
+                acceptCookie: 'accept',
+                sessionCookie: 'session',
+            }
+        );
+
+        this.httpServer = await createServer(HttpServer);
+        await this.httpServer.start('httpServer');
     }
 
-    async bootSwarm() {
+    async bootSwarmMode() {
         // **************************************************************************
         // **************************************************************************
         try {
@@ -92,7 +90,7 @@ createService(class SystemService extends Service {
         this.state = 'system#setup';
     }
 
-    async bootStandalone() {
+    async bootStandaloneMode() {
         // **************************************************************************
         // **************************************************************************
         try {
@@ -116,82 +114,98 @@ createService(class SystemService extends Service {
 
             await Dbms.setSettings(this.sysdb);
             */
+
+            /*
+            let httpServer = await createServer(HttpServer);
+            await httpServer.start('httpServer');
+            let webServices = await mkWebServiceHandle().load();
+            await webServices.start();
+            await this.launchServers();
+            */
         }
         catch (e) {}
         this.state = 'system#setup';
     }
 
-    async loadMozilla() {
-        const radiusPath = LibPath.join(__dirname, '..');
-        const mozilla = [];
-
-        async function enumerate(dir) {
-            let stack = [ dir ];
-
-            while (stack.length) {
-                let dir = stack.shift();
-                let dirEntries = await LibFileSystem.promises.readdir(dir);
-
-                dirEntries = dirEntries.filter(dirEntry => {
-                    return !dirEntry.startsWith('.') && dirEntry != 'package';
-                });
-
-                for (let dirEntry of dirEntries) {
-                    let path = LibPath.join(dir, dirEntry);
-                    let stats = await LibFileSystem.promises.stat(path);
-
-                    if (stats.isFile()) {
-                        mozilla.push(
-                            (await LibFileSystem.promises.readFile(path)).toString()
-                        );
-                    }
-                    else if (stats.isDirectory()) {
-                        stack.push(path);
-                    }
-                }
-            }
-        };
-
-        for (let dir of [ 
-            LibPath.join(radiusPath, 'javascript'),
-            LibPath.join(radiusPath, 'mozilla'),
-        ]) {
-            await enumerate(dir);
-        }
-
-        this.mozilla = mozilla.join('\n');
-    }
-
     async onBoot(message) {
         if (this.state == 'system#loaded') {
-            await this.loadMozilla();
             let bootData = await this.scanBootFile();
 
             if (this.status == 'system#ready') {
                 if (this.mode == 'swarm') {
-                    await this.bootSwarm();
+                    await this.bootSwarmMode();
                 }
                 else if (this.mode == 'standalone') {
-                    await this.bootStandalone();
+                    await this.bootStandaloneMode();
                 }
             }
 
             if (this.state == 'system#setup') {
-                await this.bootSetup();
+                await this.bootSetupMode();
             }
         }
+    }
+
+    async onGetBootTime(message) {
+        return this.bootTime;
+    }
+
+    async onGetBootUUID(message) {
+        return this.bootUUID;
+    }
+
+    async onGetKeyPair(message) {
+        return { publicKey: this.publicKey, privateKey: this.privateKey };
+    }
+
+    async onGetMode(message) {
+        return this.mode;
+    }
+
+    async onGetMozilla(message) {
+        return radius.mozilla;
     }
 
     async onGetState(message) {
         return this.state;
     }
 
-    async scanBootFile() {
-        if (await FileSystem.isFile(this.bootPath)) {
-            try {
-                let bootSettings = fromJson((await FileSystem.readFile(this.bootpath)).toString());
+    async onGetWebapp(message) {
+        return radius.webapp;
+    }
 
-                if (bootSettings && this.bootShape.verify(bootSettings)) {
+    async scanBootFile() {
+        const bootPath = LibPath.join(__dirname, '../../../.boot');
+
+        if (await FileSystem.isFile(bootPath)) {
+            try {
+                const bootSettings = fromJson((await FileSystem.readFile(bootPath)).toString());
+
+                const bootShape = mkRdsShape({
+                    mode: mkRdsEnum('system#swarm', 'system#standalone'),
+                    ipv4: StringType,
+                    ipv6: StringType,
+                    hostId: StringType,
+
+                    _swarm: {
+                        id: StringType,
+                        secret: StringType,
+                        hosts: [ StringType ],
+                    },
+
+                    _dbms: {
+                        dbmsType: StringType,
+                        timeout: Int32Type,
+                        host: StringType,
+                        port: Int32Type,
+                        database: StringType,
+                        username: StringType,
+                        password: StringType,
+                        _certificate: StringType,
+                    }
+                });
+
+                if (bootSettings && bootShape.verify(bootSettings)) {
                     this.mode = bootSettings.mode;
                     this.ipv4 = bootSettings.ipv4;
                     this.ipv6 = bootSettings.ipv6;
@@ -245,7 +259,37 @@ define(class SystemHandle extends Handle {
         });
     }
 
+    async getBootTime() {
+        return await this.callService({
+        });
+    }
+
+    async getBootUUID() {
+        return await this.callService({
+        });
+    }
+
+    async getKeypair() {
+        return await this.callService({
+        });
+    }
+
+    async getMode() {
+        return await this.callService({
+        });
+    }
+
+    async getMozilla() {
+        return await this.callService({
+        });
+    }
+
     async getState() {
+        return await this.callService({
+        });
+    }
+
+    async getWebapp() {
         return await this.callService({
         });
     }

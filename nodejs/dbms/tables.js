@@ -141,20 +141,6 @@ define(function mkFrameworkSchema() {
                 ]
             },
             {
-                name: 'team',
-                type: 'object',
-                prefix: 'TEAM',
-                columns: [
-                    { name: 'name', type: StringType, size: 100 },
-                    { name: 'parentId', type: StringType, size: 50 },
-                    { name: 'active', type: BooleanType },
-                    { name: 'settings', type: JsonType },
-                ],
-                indexes: [
-                    { columnItems: [ { column: 'name', direction: 'asc' } ]},
-                ]
-            },
-            {
                 name: 'user',
                 type: 'object',
                 prefix: 'USER',
@@ -177,6 +163,20 @@ define(function mkFrameworkSchema() {
                     { columnItems: [ { column: 'emailAddrId', direction: 'asc' } ]},
                     { columnItems: [ { column: 'phoneId', direction: 'asc' } ]},
                     { columnItems: [ { column: 'teamId', direction: 'asc' } ]},
+                ]
+            },
+            {
+                name: 'userGroup',
+                type: 'object',
+                prefix: 'GROUP',
+                columns: [
+                    { name: 'name', type: StringType, size: 100 },
+                    { name: 'parentId', type: StringType, size: 50 },
+                    { name: 'active', type: BooleanType },
+                    { name: 'settings', type: JsonType },
+                ],
+                indexes: [
+                    { columnItems: [ { column: 'name', direction: 'asc' } ]},
                 ]
             },
         ]

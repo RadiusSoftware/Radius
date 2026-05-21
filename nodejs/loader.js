@@ -43,70 +43,112 @@ NpmYazl         = require('yazl');
 
 
 /*****
- * The loader is like a bootstrapper for the entire framework, client + server.
- * In fact, there's a division of labor.  The loader is responsible for loading
- * in the nodejs framework and then transferring bootstrapping the entire system
- * to the System Service.  This is what happens in the primary cluster process.
- * The System Service will then load in the Mozilla framework and start the HTTP
- * server.
+ * When a new process is started, either the primary or a worker, this function
+ * kicks everything off by loading in the Radius framework right from the file
+ * system.  Note that Mozilla code is NOT loaded at this time.  That's the job
+ * of the System Service.  Once the Radius framework is loaded, that's where
+ * they diverge.  The primary process creates a System Service handle to boot
+ * the system, whereas the worker process starts the server worker.  Spawning
+ * a server worker is what triggers this code to be called for a worker.
 *****/
 if (LibCluster.isPrimary) {
+    globalThis.radius = {};
+
     (async () => {
-        const sourceFiles = [];
-        const radiusPath = LibPath.join(__dirname, '..');
+        let radiusPath = LibPath.join(__dirname, '..');
 
-        async function enumerate(dir) {
-            let stack = [ dir ];
+        async function enumerate(...dirs) {
+            let files = [];
 
-            while (stack.length) {
-                let dir = stack.shift();
-                let dirEntries = await LibFileSystem.promises.readdir(dir);
+            for (let dir of dirs) {
+                let stack = [ dir ];
 
-                dirEntries = dirEntries.filter(dirEntry => {
-                    return !dirEntry.startsWith('.');
-                });
+                while (stack.length) {
+                    let dir = stack.shift();
+                    let dirEntries = await LibFileSystem.promises.readdir(dir);
 
-                for (let dirEntry of dirEntries) {
-                    let path = LibPath.join(dir, dirEntry);
-                    let stats = await LibFileSystem.promises.stat(path);
+                    dirEntries = dirEntries.filter(dirEntry => {
+                        if (dirEntry.startsWith('.')) return false;
+                        if (dirEntry == 'package') return false;
+                        if (dirEntry == 'webapp.html') return false;
+                        return true;
+                    });
 
-                    if (stats.isFile()) {
-                        sourceFiles.push(path);
-                    }
-                    else if (stats.isDirectory()) {
-                        stack.push(path);
+                    for (let dirEntry of dirEntries) {
+                        let path = LibPath.join(dir, dirEntry);
+                        let stats = await LibFileSystem.promises.stat(path);
+
+                        if (stats.isFile()) {
+                            files.push(path);
+                        }
+                        else if (stats.isDirectory()) {
+                            stack.push(path);
+                        }
                     }
                 }
             }
+
+            return files;
         };
 
-        for (let dir of [ 
+        let mozillaFiles = [];
+        let nodejsFiles = await enumerate(
             LibPath.join(radiusPath, 'javascript'),
             LibPath.join(radiusPath, 'nodejs'),
-        ]) {
-            await enumerate(dir);
-        }
+        );
 
-        for (let sourceFile of sourceFiles) {
-            if (sourceFile.endsWith('.js')) {
-                require(sourceFile);
+        for (let nodejsFile of nodejsFiles) {
+            if (nodejsFile.endsWith('.js')) {
+                require(nodejsFile);
             }
         }
 
+        for (let mozillaFile of await enumerate(
+            LibPath.join(radiusPath, 'javascript'),
+            LibPath.join(radiusPath, 'mozilla'),
+        )) {
+            if (mozillaFile.endsWith('.js')) {
+                mozillaFiles.push(
+                    (await FileSystem.readFile(mozillaFile)).toString()
+                )
+            }
+        }
+
+        radius.nodejs = toJson(nodejsFiles);
+        radius.webapp = (await FileSystem.readFile(Path.join(radiusPath, 'nodejs/httpServer/webapp.html'))).toString();
+        radius.mozilla = mkBuffer(mozillaFiles.join()).toString('base64');
         mkSystemHandle().boot();
     })();
 }
 
 
 /*****
- * When a worker process is started, the loader's job is to import/require the
- * entire nodejs framework and then to start the server worker, which triggered
- * the creation of the worker process.  A new server worker is the only action
- * in the Radius framework that triggers the creation of a new worker process.
+ * This code is called when a worker is created.  The first thing that needs to
+ * happen is to load the Radius nodejs framework.  It's convenient that the
+ * process environment variable "nodejsFramework" contains an encoded array of
+ * file paths to require.  Once the nodejs framework has been loaded, the next
+ * step is to execute the launcher, which starts the server worker.  Finally,
+ * clean up after everything and notify the primary Process that initializion
+ * has taken place.
 *****/
+if (!LibCluster.isPrimary) {
+    (async () => {
+        for (let file of JSON.parse(LibProcess.env.nodejsFramework)) {
+            require(file);
+        }
+
+        let launcher;
+        eval(`launcher = ${mkBuffer(Process.getEnv('launcher'), 'base64').toString()}`);
+        await launcher();
+
+        Process.sendPrimary({ name: Process.getEnv('oneTimeUUID') });
+        Process.deleteEnv('nodejsFramework');
+        Process.deleteEnv('launcher');
+        Process.deleteEnv('oneTimeUUID');
+    })();
+}
+/*
 else {
-    console.log('\n\n\n******************** WORKER THREAD STARTED ********************\n\n\n');
-    /*
     globalThis.Loader = new (class Loader {
         constructor() {
             let bootUUID = LibProcess.env.bootUUID;
@@ -138,7 +180,6 @@ else {
         }
     })();
     */
-}
     // *******************************************************************************************************
     // *******************************************************************************************************
     // *******************************************************************************************************

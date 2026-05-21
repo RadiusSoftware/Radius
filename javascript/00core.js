@@ -59,7 +59,6 @@
     *****/
     class Namespace {
         static namespaces = {};
-        static initializers = [];
         static emitter = null;
         static implementors = {};
 
@@ -159,12 +158,6 @@
                     }
                 }
 
-                for (let key of Reflect.ownKeys(clss)) {
-                    if (key == 'init' && typeof clss[key] == 'function') {
-                        Namespace.initializers.push(clss);
-                    }
-                }
-
                 if (Namespace.emitter) { 
                     Namespace.emitter.emit({
                         name: 'ClassDefined',
@@ -244,12 +237,6 @@
 
         has(name) {
             return name in this.object;
-        }
-
-        static async init() {
-            for (let clss of Namespace.initializers) {
-                await wait(clss.init());
-            }
         }
 
         interface(clss) {

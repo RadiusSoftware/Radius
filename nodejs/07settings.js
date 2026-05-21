@@ -42,12 +42,12 @@ createService(class SettingsService extends Service {
 
         if (settingShape.verify(value)) {
             if (temporary) {
-                let setting = this.settings[name] = mkDboSetting({
+                let setting = this.settings[name] = {
                     name: name,
                     category: category,
                     shape: settingShape,
                     value: value,
-                });
+                };
 
                 this.temporary[setting.id] = setting;
                 return setting;

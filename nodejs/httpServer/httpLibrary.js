@@ -164,7 +164,7 @@ createService(class HttpLibraryService extends Service {
         let libEntry = message.libEntry;
         this.entries[libEntry.path] = libEntry;
     }
-
+    /*
     async onSetFlag(message) {
         let libEntry = this.entries[message.path];
 
@@ -172,6 +172,7 @@ createService(class HttpLibraryService extends Service {
             libEntry[message.flagName] = true;
         }
     }
+    */
 });
 
 
@@ -214,11 +215,12 @@ define(class HttpLibraryHandle extends Handle {
             path: path,
         });
     }
-
+    /*
     async setFlag(path, flagName) {
         return await this.callService({
             path: path,
             flagName: flagName,
         });
     }
+    */
 });

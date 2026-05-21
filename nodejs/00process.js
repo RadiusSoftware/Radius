@@ -189,15 +189,6 @@ singleton(class Process extends Emitter {
         return this;
     }
 
-    getEnv(name) {
-        if (name) {
-            return LibProcess.env[name];
-        }
-        else {
-            return LibProcess.env;
-        }
-    }
-
     getActiveResourceInfo() {
         return LibProcess.getActiveResourceInfo();
     }
@@ -224,6 +215,15 @@ singleton(class Process extends Emitter {
 
     getEffectiveUid() {
         return LibProcess.geteuid();
+    }
+
+    getEnv(name) {
+        if (name) {
+            return LibProcess.env[name];
+        }
+        else {
+            return LibProcess.env;
+        }
     }
 
     getExecPath() {
@@ -473,17 +473,6 @@ singleton(class Process extends Emitter {
         return promise;
     }
 
-    runRadius(...args) {
-        let command = this.getArg(0);
-        let argv = [ this.getArg(1) ];
-
-        for (let arg of args) {
-            argv.push(arg);
-        }
-
-        return this.runProcess(command, ...argv);
-    }
-
     runScript(script) {
         return new Promise((ok, fail) => {
             LibChildProcess.exec(script, (error, stdout, stderr) => {
@@ -498,6 +487,7 @@ singleton(class Process extends Emitter {
 
     async runWorker(...args) {
         if (this.isPrimary()) {
+            let ready;
             let launcher;
 
             if (args.length == 1) {
@@ -507,21 +497,16 @@ singleton(class Process extends Emitter {
                 launcher = args[1];
             }
 
-            let bootUUID = Crypto.generateUUID();
+            let oneTimeUUID = Crypto.generateUUID();
             typeof launcher == 'function' ? launcher = launcher.toString() : null;
 
-            let ready;
-            let worker = LibCluster.fork({ bootUUID: bootUUID });
+            let worker = LibCluster.fork({
+                oneTimeUUID: oneTimeUUID,
+                nodejsFramework: globalThis.radius.nodejs,
+                launcher: mkBuffer(launcher.toString()).toString('base64'),
+            });
 
-            this.once(bootUUID, async message => {
-                let settingsHandle = mkSettingsHandle();
-                worker.send(await settingsHandle.getSetting('nodejsFramework'));
-                
-                this.sendWorker(worker, {
-                    name: 'StartProcessLauncher',
-                    launcher: mkBuffer(launcher.toString()).toString('base64') 
-                });
-
+            this.once(oneTimeUUID, async message => {
                 ready(worker);
             });
 
