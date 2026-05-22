@@ -55,7 +55,7 @@ if (LibCluster.isPrimary) {
     globalThis.radius = {};
 
     (async () => {
-        let radiusPath = LibPath.join(__dirname, '..');
+        radius.path = LibPath.join(__dirname, '..');
 
         async function enumerate(...dirs) {
             let files = [];
@@ -93,8 +93,8 @@ if (LibCluster.isPrimary) {
 
         let mozillaFiles = [];
         let nodejsFiles = await enumerate(
-            LibPath.join(radiusPath, 'javascript'),
-            LibPath.join(radiusPath, 'nodejs'),
+            LibPath.join(radius.path, 'javascript'),
+            LibPath.join(radius.path, 'nodejs'),
         );
 
         for (let nodejsFile of nodejsFiles) {
@@ -104,8 +104,8 @@ if (LibCluster.isPrimary) {
         }
 
         for (let mozillaFile of await enumerate(
-            LibPath.join(radiusPath, 'javascript'),
-            LibPath.join(radiusPath, 'mozilla'),
+            LibPath.join(radius.path, 'javascript'),
+            LibPath.join(radius.path, 'mozilla'),
         )) {
             if (mozillaFile.endsWith('.js')) {
                 mozillaFiles.push(
@@ -115,7 +115,7 @@ if (LibCluster.isPrimary) {
         }
 
         radius.nodejs = toJson(nodejsFiles);
-        radius.webapp = (await FileSystem.readFile(Path.join(radiusPath, 'nodejs/httpServer/webapp.html'))).toString();
+        radius.webapp = (await FileSystem.readFile(Path.join(radius.path, 'nodejs/httpServer/webapp.html'))).toString();
         radius.mozilla = mkBuffer(mozillaFiles.join()).toString('base64');
         mkSystemHandle().boot();
     })();
@@ -147,219 +147,3 @@ if (!LibCluster.isPrimary) {
         Process.deleteEnv('oneTimeUUID');
     })();
 }
-/*
-else {
-    globalThis.Loader = new (class Loader {
-        constructor() {
-            let bootUUID = LibProcess.env.bootUUID;
-            delete LibProcess.env.bootUUID;
-            LibProcess.send(JSON.stringify({ name: bootUUID }));
-
-            LibProcess.on('message', async data => {
-                if (globalThis.Process) {
-                    if (this.bootstrap) {
-                        let func = this.bootstrap;
-                        this.bootstrap = null;
-                        await func(data);
-                    }
-
-                }
-                else {
-                    eval(data);
-                }
-            });
-        }
-
-        async bootstrap(data) {
-            let launcher;
-            let message = fromJson(data);
-            let launcherCode = mkBuffer(message.launcher, 'base64').toString();            
-            await eval(`launcher=${launcherCode}`);
-            await Namespace.init();
-            await launcher();
-        }
-    })();
-    */
-    // *******************************************************************************************************
-    // *******************************************************************************************************
-    // *******************************************************************************************************
-    // *******************************************************************************************************
-    /*
-    globalThis.Loader = new (class Loader {
-        constructor() {
-            //this.sourceFiles = [];
-            //this.radiusPath = LibPath.join(__dirname, '..');
-            //this.javascriptPath = LibPath.join(this.radiusPath, 'javascript');
-            //this.nodejsPath = LibPath.join(this.radiusPath, 'nodejs');
-            //this.load();
-        }
-
-        async buildConfiguration() {
-            let settings = mkSettingsHandle();
-            await settings.loadSettings();
-
-            for (let arg of Object.values(this.args)) {
-                if (arg.settingName) {
-                    await settings.defineTemporarySetting(
-                        arg.settingName,
-                        'parameters',
-                        arg.settingType == 'boolean' ? BooleanType : StringType,
-                        arg.value
-                    );
-                }
-            }
-
-            await settings.defineTemporarySetting('nodeId', 'system', StringType, Crypto.generateUUID());
-            await settings.defineTemporarySetting('bootTime', 'system', DateType, mkTime());
-
-            await settings.defineTemporarySetting(
-                'nodejsFramework',
-                'system',
-                StringType,
-                this.nodejsFramework.join('\n'),
-            );
-        }
-
-        async initializeSystem() {
-            let dbms = mkDbmsThunk();
-            let settings = mkSettingsHandle()
-
-            await settings.defineSetting(
-                'httpServer',
-                'server',
-                mkRdsShape({
-                    enabled: BooleanType,
-                    workers: UInt16Type,
-                    _ipv4: StringType,
-                    _ipv6: StringType,
-                    _host: StringType,
-                    _cert: StringType,
-                    _auth: StringType,
-                }),
-                {
-                    enabled: true,
-                    workers: 1,
-                    ipv4: '0.0.0.0',
-                    ipv6: '::',
-                }
-            );
-            
-            await settings.defineSetting(
-                'permissionTypes',
-                'security',
-                [ StringType ],
-                [
-                    'radius:cookies',
-                    'radius:session',
-                    'radius:signedin',
-                    'radius:admin',
-                    'radius:system',
-                    'radius:websocket',
-                ]
-            );
-
-            await settings.defineSetting(
-                'cluster',
-                'system',
-                BooleanType,
-                false
-            );
-
-            await settings.defineSetting('radiusPath', 'general', StringType, '/radius');
-            await settings.defineSetting('acceptCookiesName', 'privacy', StringType, 'kibble');
-            await settings.defineSetting('acceptCookiesDays', 'privacy', Int32Type, 180);
-            await settings.defineSetting('sessionTimeoutMillis', 'security', Int32Type, 120*60*60*1000);
-            await settings.defineSetting('sessionShutdowntMillis', 'security', Int32Type, 240*60*60*1000);
-            await settings.defineSetting('sessionCookieName', 'security', StringType, `sxkibble`);
-            await settings.defineSetting('loginMaxFailures', 'security', Int32Type, 4);
-            await settings.defineSetting('loginMaxMfaMinutes', 'security', Int32Type, 5);
-            await settings.defineSetting('passwordMaxDays', 'security', Int32Type, -1);
-            await settings.defineSetting('passwordHistoryMaxDays', 'security', Int32Type, 365);
-            await settings.defineSetting('forgetDeviceDays', 'security', Int32Type, 90);
-            await settings.defineSetting('packages', 'package', ArrayType, []);
-            await settings.defineSetting('webServicesPath', 'server', StringType, '/ws');
-            await settings.defineSetting('system#settings-initialized', 'system', BooleanType, true);
-
-            const { publicKey, privateKey } = await Crypto.generateKeyPair('rsa');
-            let publicPem = publicKey.export({ type: 'pkcs1', format: 'pem' });
-            let privatePem = privateKey.export({ type: 'pkcs1', format: 'pem' });
-            await settings.defineSetting('publicKey', 'security', StringType, publicPem);
-            await settings.defineSetting('privateKey', 'security', StringType, privatePem);
-
-            await dbms.createObj(DboTeam, {
-                name: '',
-                active: true,
-                settings: {},
-            });
-        }
-
-        async load() {
-            for (let context of [ 'javascript', 'nodejs' ]) {
-                await this.enumerateContext(context);
-            }
-
-            for (let context of Object.keys(this.sourceFiles)) {
-                let sourceFile = this.sourceFiles[context];
-                let content = await LibFileSystem.promises.readFile(sourceFile.path);
-
-                if ((context.startsWith('javascript') || context.startsWith('mozilla')) && sourceFile.path.endsWith('.js')) {
-                    mozillaFramework.push(content.toString());
-                }
-
-                if (!context.startsWith('mozilla') && sourceFile.path.endsWith('.js')) {
-                    require(sourceFile.path);
-                    this.nodejsFramework.push(`require('${sourceFile.path}');`);
-                }
-            }
-
-            mkSystemHandle().boot();
-            /*
-            if (await this.initializeRadiusDbms()) {
-                if (!await mkSettingsHandle().isInitialized()) {
-                    this.initializeSystem();
-                }
-
-                await this.buildConfiguration();
-                await mkSystemHandle().initState();
-                let permissionTypes = await mkSettingsHandle().getSetting('permissionTypes');
-                await mkPermissionSetHandle().addPermissionTypes(...permissionTypes);
-
-                let packages = mkPackageHandle();
-                let library = mkHttpLibraryHandle();
-                let settings = mkSettingsHandle();
-
-                await packages.loadDirectory(Path.join(__dirname, '../mozilla/package'), '/');
-                await packages.loadDirectory(Path.join(__dirname, '../radius'), '/');
-
-                for (let { path, url } of await mkSettingsHandle().getSetting('packages')) {
-                    await packages.loadDirectory(path, url);
-                }
-
-                let radiusPath = await settings.getSetting('radiusPath');
-                let acceptCookiesPath = await settings.getSetting('acceptCookiesPath');
-
-                await library.addData({
-                    path: radiusPath,
-                    mime: 'text/javascript',
-                    mode: '',
-                    once: false,
-                    pset: await mkPermissionSetHandle().createPermissionSet(),
-                    data: mozillaFramework.join('\n'),
-                });
-
-                await library.setFlag(radiusPath, 'nocookies');
-                await library.setFlag(acceptCookiesPath, 'nocookies');
-
-                await Namespace.init();
-                let httpServer = await createServer(HttpServer);
-                await httpServer.start('httpServer');
-                let webServices = await mkWebServiceHandle().load();
-                await webServices.start();
-                await this.launchServers();
-            }
-            else {
-                console.log(`\nFailed to initialize Radius DBMS: "${this.args['-dbms']}"`);
-            }
-        }
-    });
-    */

@@ -42,7 +42,7 @@ createService(class HttpLibraryService extends Service {
             return mkFailure(`HttpLibrary.adding to library: INVALID PATH"`);
         }
 
-        if (!(libEntry.mode in { '':0, 'tls':0, 'open':0 })) {
+        if (!(libEntry.mode in { 'plain':0, 'tls':0 })) {
             return mkFailure(`HttpLibrary.adding to library at "${libEntry.path}": INVALID MODE`);
         }
 
@@ -164,15 +164,6 @@ createService(class HttpLibraryService extends Service {
         let libEntry = message.libEntry;
         this.entries[libEntry.path] = libEntry;
     }
-    /*
-    async onSetFlag(message) {
-        let libEntry = this.entries[message.path];
-
-        if (libEntry) {
-            libEntry[message.flagName] = true;
-        }
-    }
-    */
 });
 
 
@@ -215,12 +206,4 @@ define(class HttpLibraryHandle extends Handle {
             path: path,
         });
     }
-    /*
-    async setFlag(path, flagName) {
-        return await this.callService({
-            path: path,
-            flagName: flagName,
-        });
-    }
-    */
 });

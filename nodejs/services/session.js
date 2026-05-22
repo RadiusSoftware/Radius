@@ -35,10 +35,9 @@ define(class Session {
         this.token = '';
         this.data = {};
         this.addrHistory = [];
-        this.initialPath = '';
         this.acceptedCookies = '';
         this.uuid = Crypto.generateUUID();
-        this.team = mkTeamHandle();
+        this.userGroup = mkUserGroupHandle();
         this.user = mkUserHandle();
         this.state = 'session#submit-email';
         this.userAgent = '';
@@ -77,10 +76,6 @@ define(class Session {
         return this.data[key];
     }
 
-    getInitialPath() {
-        return this.initialPath;
-    }
-
     getRemoteHost() {
         if (this.addrHistory.length) {
             return this.addrHistory[this.addrHistory.length - 1].addr;
@@ -91,10 +86,6 @@ define(class Session {
 
     getRemoteHostHistory() {
         return this.addrHistory;
-    }
-
-    getTeam() {
-        return this.teamHandle;
     }
     
     getToken() {
@@ -113,7 +104,11 @@ define(class Session {
         return this.userAgent;
     }
 
-    async getUsername() {
+    getUserGroup() {
+        return this.userGroupHandle;
+    }
+
+    async getUserName() {
         if (this.user.getId()) {
             let emailAddr = await this.user.getEmailAddr();
             let emailAddrObj = await emailAddr.getEmailAddrObj();
@@ -141,7 +136,7 @@ define(class Session {
     }
     
     async init() {
-        this.permissions = await mkPermissionSetHandle().createPermissionSet('radius:session');
+        this.permissions = await mkPermissionSetHandle().createPermissionSet('radius#session');
         this.timeoutMillis = await mkSettingsHandle().getSetting('sessionTimeoutMillis');
         this.shutdownMillis = await mkSettingsHandle().getSetting('sessionShutdowntMillis');
         this.token = await Crypto.generateToken('sha256', this.uuid);
@@ -157,15 +152,13 @@ define(class Session {
         this.acceptedCookies = acceptedCookiesCookie;
 
         if (this.acceptedCookies) {
-            await this.setPermissions('radius:cookies');
+            await this.setPermissions('radius#cookies');
         }
 
         return this;
     }
 
     setData(name, value) {
-        console.log(`\n*** Set Data`);
-        console.log(value);
         this.data[name] = value;
         return this;
     }
@@ -187,11 +180,11 @@ define(class Session {
         }
 
         this.state = 'session#submit-email';
-        this.teamHandle = mkTeamHandle();
         this.userHandle = mkUserHandle();
+        this.userGroupHandle = mkUserGroupHandle();
 
         for (let permission of await this.permissions.listPermissions()) {
-            if (!(permission in { 'radius:cookies':0, 'radius:session':0 })) {
+            if (!(permission in { 'radius#cookies':0, 'radius#session':0 })) {
                 await this.permissions.clearPermissions(permission);
             }
         }
@@ -336,8 +329,7 @@ createService(class SessionService extends Service {
                 agent: session.getUserAgent(),
                 acceptCookies: session.getAcceptedCookies(),
                 user: session.user.getId(),
-                team: session.team.getId(),
-                initPath: session.getInitialPath(),
+                userGroup: session.userGroup.getId(),
             };
 
             return details;
@@ -709,7 +701,7 @@ createService(class SessionService extends Service {
                     lastName: 'Lastname',
                     team: team,
                     emailAddr: username,
-                    permissions: [ 'radius:system' ],
+                    permissions: [ 'radius#system' ],
                 });
 
                 if (user instanceof Failure) {

@@ -107,7 +107,7 @@ define(class Webapp extends HttpX {
         this.radiusPath = await mkSettingsHandle().getSetting('radiusPath');
 
         let htmlPath = __filename.replace('.js', '.html');
-        let htmlCode = (await FileSystem.readFile(htmlPath)).toString();
+        let htmlCode = (await mkSystemHandle().getWebApp());
         this.htmlTemplate = mkRdsTemplate(htmlCode);
 
         this.api = await mkApi(this).init();

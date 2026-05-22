@@ -119,7 +119,6 @@ define(class FilePermissions {
                 }
             }
         }
-
         return filePermissionsObject;
     }
 });

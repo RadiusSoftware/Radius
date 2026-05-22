@@ -1,6 +1,6 @@
 {
     ".": {
-        "radius:cookies": "-",
-        "radius:session": "-"
+        "radius#cookies": "-",
+        "radius#session": "-"
     }
 }

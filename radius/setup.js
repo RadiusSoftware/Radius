@@ -29,41 +29,16 @@
  * have been accepted and (2) a session cookie being added as soon as the
  * uer is forwarded back to the previous page.
 *****/
-define(class AcceptCookies extends Webapp {
+define(class SetupApp extends Webapp {
     constructor() {
         super();
     }
 
     // ********************
-    // acceptCookies
+    // something
     // ********************
     async [Api.define(
-        'acceptCookies',
+        'something',
     )](trx) {
-        let acceptCookiesName = await mkSettingsHandle().getSetting('acceptCookiesName');
-        let cookie = mkCookie(acceptCookiesName, Crypto.generateUUID());
-        cookie.setHttpOnly();
-        trx.httpRsp.setCookie(cookie);
-        await trx.session.setAcceptedCookies(cookie.getValue());
-        let forwardTo = await trx.session.getInitialPath();
-        await trx.session.setPermissions('radius:cookies');
-
-        if (forwardTo) {
-            return forwardTo;
-        }
-        else {
-            return '/';
-        }
-    }
-
-    // ********************
-    // declineCookies
-    // ********************
-    async [Api.define(
-        'declineCookies',
-    )](trx) {
-        let cookies = trx.httpReq.getCookieArray();
-        trx.httpRsp.clearCookie(...cookies);
-        await trx.session.delete();
     }
 });

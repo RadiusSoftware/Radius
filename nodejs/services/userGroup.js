@@ -22,80 +22,80 @@
 
 
 /*****
- * Teams are groups of users whether companies, clubs, divisions, departments,
- * or some such other group, which have user members that can be selected and
- * monitored and managed as an entire group.  For instance, all team users may
- * be deactivated by setting the team to be inactive.  Also note that all users
- * must be assigned to a team and must remain within a team.  For single-user
- * applications, almost all users will be assigned to the '#NOTEAM' team, which
- * is created when the framework is installed.
+ * UserGroups provide a mechanism for managing permissions and other features
+ * for multiple users at a time.  UserGroups may also be used to manage clients,
+ * locations, or other organizations as needed by the application.  UserGroups
+ * for a heirarchy with funnels up to the top level with the empty or root user
+ * group.  UserGroups do NOT inherit permissions its ancestors. UserGroup trees
+ * define the basis for which authorized admins have visiblity.  Note that users
+ * may be inserted into one or more user groups.
 *****/
-createService(class TeamService extends Service {
-    async onCreateTeam(message) {
+createService(class UserGroupService extends Service {
+    async onCreateUserGroup(message) {
         if (!message.name.trim()) {
-            return mkFailure('radius.org.badTeamName');
+            return mkFailure('radius.org.emptyUserGroupName');
         }
 
         let dbms = mkDbmsThunk();
         let dboParent = await dbms.getObj(message.parentId);
         
-        if (!(dboParent instanceof DboTeam)) {
-            return mkFailure('radius.org.badParentTeamId');
+        if (!(dboParent instanceof DboUserGroup)) {
+            return mkFailure('radius.org.badParentUserGroupId');
         }
 
-        let team = await dbms.createObj(DboTeam, {
+        let userGroup = await dbms.createObj(DboUserGroup, {
             name: message.name.trim(),
             parentId: dboParent.id,
             active: message.active === false ? false : true,
         });
 
-        return team.id;
+        return userGroup.id;
     }
 
     async onGetChildren(message) {
-        let childTeams = await mkDbmsThunk().selectObj(
-            DboTeam,
+        let childUserGroups = await mkDbmsThunk().selectObj(
+            DboUserGroup,
             { parentId: message.id },
             { name: 'asc' }
         );
 
-        return childTeams.map(childTeam => childTeam.id);
+        return childUserGroup.map(childUserGroup => childUserGroup.id);
     }
 
     async onGetParent(message) {
-        let dboTeam = await mkDbmsThunk().getObj(message.id);
+        let dboUserGroup = await mkDbmsThunk().getObj(message.id);
 
-        if (dboTeam instanceof DboTeam) {
-            return dboTeam.parentId;
+        if (dboUserGroup instanceof DboUserGroup) {
+            return dboUserGroup.parentId;
         }
         
         return '';
     }
 
     async onGetSetting(message) {
-        let dotted = `settings.${message.settingNam3}`;
+        let dotted = `settings.${message.settingName}`;
         return await mkDbmsThunk().getObjProperty(message.id, dotted);
     }
 
-    async onGetTeamObject(message) {
+    async onGetUserGroupObject(message) {
         return await mkDbmsThunk().getObj(message.id);
     }
 
     async onIsActive(message) {
         let dbms = mkDbmsThunk();
-        let dboTeam = await dbms.getObj(message.id);
+        let dboUserGroup = await dbms.getObj(message.id);
 
-        if (dboTeam instanceof DboTeam) {
-            while (dboTeam) {
-                if (!dboTeam.active) {
+        if (dboUserGroup instanceof DboUserGroup) {
+            while (dboUserGroup) {
+                if (!dboUserGroup.active) {
                     return false;
                 }
 
-                if (dboTeam.parentId) {
-                    dboTeam = await dbms.getObj(dboTeam.parentId);
+                if (dboUserGroup.parentId) {
+                    dboUserGroup = await dbms.getObj(dboUserGroup.parentId);
                 }
                 else {
-                    dboTeam = null;
+                    dboUserGroup = null;
                 }
             }
 
@@ -106,14 +106,14 @@ createService(class TeamService extends Service {
     }
 
     async onOpen(message) {
-        let dboTeam = await mkDbmsThunk().getObj(message.id);
-        return dboTeam instanceof DboTeam ? dboTeam.id : '';
+        let dboUserGroup = await mkDbmsThunk().getObj(message.id);
+        return dboUserGroup instanceof DboUserGroup ? dboUserGroup.id : '';
     }
 
-    async onOpenNoTeam(message) {
+    async onOpenRoot(message) {
         let dbms = mkDbmsThunk();
-        let noTeam = await dbms.selectOneObj(DboTeam, { name: '' });
-        return noTeam.id;
+        let root = await dbms.selectOneObj(DboTeam, { name: 'ROOTUSERGROUP' });
+        return root.id;
     }
 
     async onSetActive(message) {
@@ -141,32 +141,31 @@ createService(class TeamService extends Service {
 
 
 /*****
- * This is the API handle for managing teams and using the features of the team
- * API.  In a single-user application server, users will be assigned to the
- * "#NOTEAM" team, while system managers are assigned to the "#SYSTEM" team.
- * Outside of this very simplified basic structure, users can create and manage
- * hierarchical structures of teams, which can be nested as needed to reflect
- * almost any imaginable organization struct.  Teams do not, however, support
- * employees or individuals that report to multiple supervisors and those that
- * belong to multiple departments.
+ * UserGroups provide a mechanism for managing permissions and other features
+ * for multiple users at a time.  UserGroups may also be used to manage clients,
+ * locations, or other organizations as needed by the application.  UserGroups
+ * for a heirarchy with funnels up to the top level with the empty or root user
+ * group.  UserGroups do NOT inherit permissions its ancestors. UserGroup trees
+ * define the basis for which authorized admins have visiblity.  Note that users
+ * may be inserted into one or more user groups.
 *****/
-define(class TeamHandle extends Handle {
+define(class UserGroupHandle extends Handle {
     constructor(id) {
         super();
         this.id = '';
 
-        if (id && id.startsWith('TEAM:')) {
+        if (id && id.startsWith('USERGROUP:')) {
             this.id = id;
         }
     }
 
-    async createTeam(opts) {
+    async createUserGroup(opts) {
         this.id = await this.callService(opts);
         return this;
     }
 
     static fromJson(value) {
-        return mkTeamHandle(value.id);
+        return mkUserGroupHandle(value.id);
     }
 
     async getChildren() {
@@ -178,7 +177,7 @@ define(class TeamHandle extends Handle {
             });
 
             for (let childId of childIds) {
-                children.push(mkTeam(childId));
+                children.push(mkUserGroupHandle(childId));
             }
         }
 
@@ -198,7 +197,7 @@ define(class TeamHandle extends Handle {
             });
         }
 
-        return mkTeamHandle(parentId);
+        return mkUserGroupHandle(parentId);
     }
 
     async getSetting(settingName) {
@@ -212,7 +211,7 @@ define(class TeamHandle extends Handle {
         return null;
     }
 
-    async getTeamObject() {
+    async getmkUserGroupHandleObject() {
         if (this.id) {
             return await this.callService({
                 id: this.id,
@@ -240,7 +239,7 @@ define(class TeamHandle extends Handle {
         return this;
     }
 
-    async openNoTeam() {
+    async openRoot() {
         this.id = await this.callService({
         });
 
@@ -267,11 +266,11 @@ define(class TeamHandle extends Handle {
         return this;
     }
 
-    async setName(teamName) {
+    async setName(name) {
         if (this.id) {
             await this.callService({
                 id: this.id,
-                teamName: teamName,
+                name: name,
             });
         }
 

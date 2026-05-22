@@ -1,20 +1,19 @@
 {
     ".": {
-        "radius:session": "+",
-        "radius:signedin": "+"
+        "radius#signedin": "+"
     },
     "acceptcookies": {
-        "radius:cookies": "-",
-        "radius:session": "-",
-        "radius:signedin": "-"
+        "radius#cookies": "-",
+        "radius#session": "-",
+        "radius#signedin": "-"
     },
     "admin": {
-        "radius:admin": "+"
+        "radius#admin": "+"
     },
-    "auth": {
-        "radius:signedin": "-"
+    "signin": {
+        "radius#signedin": "-"
     },
-    "sys": {
-        "radius:system": "+"
+    "system": {
+        "radius#system": "+"
     }
 }

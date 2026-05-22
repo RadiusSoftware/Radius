@@ -167,7 +167,7 @@ define(class Package {
             this.type = 'filesystem';
 
             let basicPermissions = mkFilePermissions(await mkPermissionSetHandle().createPermissionSet());
-            await basicPermissions.getDirPermissionSet().setPermissions('radius:cookies', 'radius:session');
+            await (await basicPermissions.getDirPermissionSet()).setPermissions('radius#cookies', 'radius#session');
 
             if (await this.loadPackage(path)) {
                 let stack = [{
@@ -183,8 +183,9 @@ define(class Package {
                         path: node.path,
                         url: node.url,
                         fileNames: {},
-                        filePermissions:  await FilePermissions.load(node.path, node.filePermissions),
+                        filePermissions: await FilePermissions.load(node.path, node.filePermissions),
                     };
+                    conso
 
                     for (let dirEntry of await FileSystem.readDirectory(node.path)) {
                         if (!dirEntry.endsWith('.json')) {
@@ -232,7 +233,7 @@ define(class Package {
 
                 if (doctype.type == 'html') {
                     let info = Path.parse(fileName);
-                    let permissionSet = await handle.filePermissions.getFilePermissionSet(fileName);
+                    let permissionSet = handle.filePermissions.getFilePermissionSet(fileName);
 
                     await this.lib.addFile({
                         pkg: this.name,
@@ -254,7 +255,7 @@ define(class Package {
             }
             else {
                 let info = Path.parse(fileName);
-                let permissionSet = await handle.filePermissions.getFilePermissionSet(fileName);
+                let permissionSet = handle.filePermissions.getFilePermissionSet(fileName);
 
                 if (Mime.isSupported(info.ext)) {
                     await this.lib.addFile({
@@ -298,7 +299,11 @@ define(class Package {
                                         };
 
                                         let opts = this.loadOptions(childElement, context);
-                                        let permissionSet = await handle.filePermissions.getFilePermissionSet(httpXName);
+                                        let permissionSet = handle.filePermissions.getFilePermissionSet(httpXName);
+
+                                        // ***************************************************************************************
+                                        // LOOK AT !
+                                        // ***************************************************************************************
                                         let path = httpXName.startsWith('ROOT') ? handle.url : Path.join(handle.url, httpXName);
 
                                         await this.lib.addHttpX({
@@ -337,6 +342,9 @@ define(class Package {
             if (childElement.getTagName() == 'opt') {
                 let key = childElement.getAttribute('key');
 
+                // ***************************************************************************************
+                // LOOK AT !
+                // ***************************************************************************************
                 if (key === 'setting') {
                     let name = childElement.getAttribute('name');
                     let value = childElement.getAttribute('value');

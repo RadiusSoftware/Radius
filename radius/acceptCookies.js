@@ -46,7 +46,7 @@ define(class AcceptCookies extends Webapp {
         trx.httpRsp.setCookie(cookie);
         await trx.session.setAcceptedCookies(cookie.getValue());
         let forwardTo = await trx.session.getInitialPath();
-        await trx.session.setPermissions('radius:cookies');
+        await trx.session.setPermissions('radius#cookies');
 
         if (forwardTo) {
             return forwardTo;

@@ -31,9 +31,12 @@
  * related to managing and executing watches.
 *****/
 define(class HttpServer extends Server {
-    constructor() {
-        super();
-    }
+    static settingsShape = mkRdsShape({
+        enabled: BooleanType,
+        workers: UInt16Type,
+        acceptCookiesName: StringType,
+        sessionCookieName: StringType,
+    });
 });
 
 
@@ -72,6 +75,104 @@ define(class HttpWorker extends Worker {
         }
     }
 
+    // *******************************************************************************************
+    // *******************************************************************************************
+    // *******************************************************************************************
+    async filterAcceptCookies(handle) {
+        handle.acceptCookies = handle.req.getCookie(this.settings.acceptCookies);
+
+        if (handle.acceptCookies) {
+            if (handle.acceptCookiesCookie.getValue()) {
+                return false;
+            }
+        }
+
+        handle.rsp.setHeader('Location', this.settings.acceptCookiesPath);
+        handle.rsp.respondStatus(307);
+        return true;
+    }
+
+    async filterPermissions(handle) {
+    }
+
+    async filterScheme(handle) {
+        if (this.scheme == 'https') {
+            if (handle.req.getScheme() == 'http') {
+                if (handle.libEntry.mode == 'tls') {
+                    let location = handle.req.getFullRequest().replace('http://', 'https://');
+                    rsp.setHeader('Location', location);
+                    rsp.respondStatus(301);
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    async filterSession(handle) {
+    }
+
+    async filterSignedIn(handle) {
+        return false;
+    }
+    /*
+    async authorize(handle) {
+        handle.permissions = mkPermissionSetHandle();
+        handle.acceptCookies = handle.req.getCookie(this.settings.acceptCookies);
+        handle.sessionCookie = handle.req.getCookie(this.settings.sessionCookie);
+        let token = handle.sessionCookie ? handle.sessionCookie.getValue() : '';
+        handle.session = await mkSessionHandle().open(token);
+        
+        if (!handle.session.getToken()) {
+            let acceptedCookies = '';
+
+            if (handle.acceptCookiesCookie) {
+                acceptedCookies = handle.acceptCookiesCookie.getValue();
+            }
+
+            await handle.session.createSession({
+                remoteHost: handle.req.getRemoteHost(),
+                initialPath: handle.req.getPath(),
+                userAgent: handle.req.getHeader('user-agent'),
+                acceptedCookies: acceptedCookies,
+            });
+
+            handle.sessionCookie = mkCookie(this.sessionCookieName, handle.session.getToken());
+            handle.sessionCookie.setHttpOnly();
+            handle.rsp.setCookie(handle.sessionCookie);
+        }
+        
+        if (!(await handle.session.authorize(handle.libEntry.pset))) {
+            if (this.acceptCookiesPath) {
+                if (!handle.acceptCookiesCookie && handle.req.getPath() != this.acceptCookiesPath) {
+                    handle.rsp.setHeader('Location', this.acceptCookiesPath);
+                    handle.rsp.respondStatus(307);
+                    return;
+                }
+            }
+
+            if (this.authorizePath) {
+                if (!(await handle.session.hasPermission('radius#signedin'))) {
+                    if (await handle.libEntry.pset.hasPermission('radius#signedin')) {
+                        handle.rsp.setHeader('Location', this.authorizePath);
+                        handle.rsp.respondStatus(307);
+                        return;
+                    }
+                }
+            }
+
+            return {
+                ok: false,
+                status: 401,
+            };
+        }
+    }
+    */
+    // *******************************************************************************************
+    // *******************************************************************************************
+    // *******************************************************************************************
+
     async getHttpX(handle) {
         if (handle.libEntry.path in this.httpxs) {
             return this.httpxs[handle.libEntry.path];
@@ -99,7 +200,6 @@ define(class HttpWorker extends Worker {
     async handleRequest(httpReq, httpRsp) {
         let req = mkHttpRequest(this, httpReq);
         let rsp = mkHttpResponse(this, httpRsp);
-        console.log(req.getFullRequest());
 
         let handle = {
             req: req,
@@ -107,15 +207,6 @@ define(class HttpWorker extends Worker {
         };
 
         try {
-            let settings = mkSettingsHandle();
-
-            if ((await settings.getSetting('radiusCluster')) == '#NOTSET#') {
-                let clusterPath = await settings.getSetting('clusterPath');
-                handle.rsp.setHeader('Location', clusterPath);
-                handle.rsp.respondStatus(307);
-                return;
-            }
-
             handle.libEntry = await this.library.get(handle.req.getPath());
 
             if (typeof handle.libEntry == 'number') {
@@ -123,103 +214,48 @@ define(class HttpWorker extends Worker {
                 return;
             }
 
-            if (handle.libEntry.type == 'link') {
+            if (this.filterScheme(handle)) return;
+            if (this.filterAcceptCookies(handle)) return;
+            if (this.filterSession(handle)) return;
+            if (this.filterSignedIn(handle)) return;
+            if (this.filterPermissions(handle)) return;
+
+            if (handle.libEntry.type == 'httpx') {
+                await this.respondHttpx(handle);
+            }
+            else if (handle.libEntry.type == 'file') {
+                await this.respondFile(handle);
+            }
+            else if (handle.libEntry.type == 'data') {
+                await this.respondData(handle);
+            }
+            else if (handle.libEntry.type == 'function') {
+                await this.respondFunction(handle);
+            }
+            else if (handle.libEntry.type == 'link') {
                 this.handleWebService(handle);
             }
             else if (handle.libEntry.type == 'webservice') {
                 this.handleWebService(handle);
             }
-            else {
-                if (this.scheme == 'https') {
-                    if (handle.req.getScheme() == 'http') {
-                        if (handle.libEntry.mode != 'open') {
-                            let location = handle.req.getFullRequest().replace('http://', 'https://');
-                            rsp.setHeader('Location', location);
-                            rsp.respondStatus(301);
-                            return;
-                        }
-                    }
-                }
 
-                handle.permissions = mkPermissionSetHandle();
-                handle.acceptCookiesCookie = handle.req.getCookie(this.acceptCookiesName);
-                handle.sessionCookie = handle.req.getCookie(this.sessionCookieName);
-                let token = handle.sessionCookie ? handle.sessionCookie.getValue() : '';
-                handle.session = await mkSessionHandle().open(token);
+            if (handle.httpFailure) {
+                handle.respondStatus(handle.httpStatusCode);
+                return;
+            }
 
-                if (!handle.session.getToken()) {
-                    let acceptedCookies = '';
+            await this.encodeContent(handle);
+            
+            handle.rsp.respond(
+                200,
+                handle.mime,
+                handle.encoding,
+                handle.content,
+            );
 
-                    if (handle.acceptCookiesCookie) {
-                        acceptedCookies = handle.acceptCookiesCookie.getValue();
-                    }
-
-                    await handle.session.createSession({
-                        remoteHost: handle.req.getRemoteHost(),
-                        initialPath: handle.req.getPath(),
-                        userAgent: handle.req.getHeader('user-agent'),
-                        acceptedCookies: acceptedCookies,
-                    });
-
-                    handle.sessionCookie = mkCookie(this.sessionCookieName, handle.session.getToken());
-                    handle.sessionCookie.setHttpOnly();
-                    handle.rsp.setCookie(handle.sessionCookie);
-                }
-                
-                if (!(await handle.session.authorize(handle.libEntry.pset))) {
-                    if (this.acceptCookiesPath) {
-                        if (!handle.acceptCookiesCookie && handle.req.getPath() != this.acceptCookiesPath) {
-                            handle.rsp.setHeader('Location', this.acceptCookiesPath);
-                            handle.rsp.respondStatus(307);
-                            return;
-                        }
-                    }
-
-                    if (this.authorizePath) {
-                        if (!(await handle.session.hasPermission('radius:signedin'))) {
-                            if (await handle.libEntry.pset.hasPermission('radius:signedin')) {
-                                handle.rsp.setHeader('Location', this.authorizePath);
-                                handle.rsp.respondStatus(307);
-                                return;
-                            }
-                        }
-                    }
-
-                    rsp.respondStatus(401);
-                    return;
-                }
-
+            if (handle.libEntry.once) {
                 if (handle.libEntry.type == 'httpx') {
-                    await this.respondHttpx(handle);
-                }
-                else if (handle.libEntry.type == 'file') {
-                    await this.respondFile(handle);
-                }
-                else if (handle.libEntry.type == 'data') {
-                    await this.respondData(handle);
-                }
-                else if (handle.libEntry.type == 'function') {
-                    await this.respondFunction(handle);
-                }
-
-                if (handle.httpFailure) {
-                    handle.respondStatus(handle.httpStatusCode);
-                    return;
-                }
-
-                await this.encodeContent(handle);
-                
-                handle.rsp.respond(
-                    200,
-                    handle.mime,
-                    handle.encoding,
-                    handle.content,
-                );
-
-                if (handle.libEntry.once) {
-                    if (handle.libEntry.type == 'httpx') {
-                        delete this.httpxs[handle.libEntry.path];
-                    }
+                    delete this.httpxs[handle.libEntry.path];
                 }
             }
         }
@@ -231,38 +267,36 @@ define(class HttpWorker extends Worker {
 
     async init() {
         await super.init();
-        console.log(this.settings);
-        /*
-        let settings = mkSettingsHandle();
-        this.sessionCookieName = await settings.getSetting('sessionCookieName');
-        this.acceptCookiesName = await settings.getSetting('acceptCookiesName');
-        this.acceptCookiesDays = await settings.getSetting('acceptCookiesDays');
-        this.acceptCookiesPath = await settings.getSetting('acceptCookiesPath');
-        this.authorizePath = await settings.getSetting('authorizePath');
+        this.system = mkSystemHandle();
+        this.setupMode = (await this.system.getMode()) == 'system#setup';
+        const { publicKey, privateKey } = await this.system.getKeyPair();
 
-        if (this.settings.cert && this.settings.auth) {
+        if (await this.system.getTlsStatus()) {
             this.scheme = 'https';
-            await mkHttpLibraryHandle().setSecureMode();
-            let publicKey = await mkSettingsHandle.getSetting('publicKey');
-            let privateKey = await mkSettingsHandle.getSetting('privateKey');
+            let { tlsCert, caaCert } = await this.system.getTlsCerts();
 
             this.server = LibHttps.createServer({
                 key: privateKey,
-                cert: this.settings.cert,
-                ca: this.settings.auth,
+                cert: tlsCert,
+                ca: caaCert,
             }, (httpReq, httpRsp) => this.handleRequest(httpReq, httpRsp));
 
-            this.settings.ipv4 ? this.server.listen(443, this.settings.ipv4) : null;
-            this.settings.ipv6 ? this.server.listen(443, this.settings.ipv6) : null;
+            this.server.listen(443, '::');
+            // ***************************************************************************
+            // ***************************************************************************
+            /*
             this.server.on('upgrade', (...args) => this.onUpgrade(...args));
+            */
         }
         else {
             this.scheme = 'http';
         }
 
         this.server = LibHttp.createServer({}, (...args) => this.handleRequest(...args));
-        this.settings.ipv4 ? this.server.listen(80, this.settings.ipv4) : null;
-        this.settings.ipv6 ? this.server.listen(80, this.settings.ipv6) : null;
+        this.server.listen(80, '::');
+        // ***************************************************************************
+        // ***************************************************************************
+        /*
         this.server.on('upgrade', (...args) => this.onUpgrade(...args));
         */
 
@@ -284,7 +318,7 @@ define(class HttpWorker extends Worker {
                     let token = sessionCookie ? sessionCookie.getValue() : '';
                     let session = await mkSessionHandle().open(token);
 
-                    if (await session.hasPermission('radius:websocket')) {
+                    if (await session.hasPermission('radius#websocket')) {
                         let secureKey = req.getHeader('sec-websocket-key');
                         let hash = await Crypto.hash('sha1', `${secureKey}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`);
                         let webSocket = mkWebsocket(socket, req.getHeader('sec-websocket-extensions'), headData);
@@ -315,6 +349,12 @@ define(class HttpWorker extends Worker {
         }
     }
     */
+
+    async redirectToApp(handle, appInfo) {
+        // ****************************************************************************
+        // ****************************************************************************
+        // ****************************************************************************
+    }
 
     async respondData(handle) {
         if (handle.req.getMethod() == 'GET') {

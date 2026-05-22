@@ -145,7 +145,7 @@ define(function mkFrameworkSchema() {
                 type: 'object',
                 prefix: 'USER',
                 columns: [
-                    { name: 'teamId', type: StringType, size: 50 },
+                    { name: 'userGroupId', type: StringType, size: 50 },
                     { name: 'firstName', type: StringType, size: 50 },
                     { name: 'lastName', type: StringType, size: 50 },
                     { name: 'emailAddrId', type: StringType, size: 50 },
@@ -162,13 +162,13 @@ define(function mkFrameworkSchema() {
                 indexes: [
                     { columnItems: [ { column: 'emailAddrId', direction: 'asc' } ]},
                     { columnItems: [ { column: 'phoneId', direction: 'asc' } ]},
-                    { columnItems: [ { column: 'teamId', direction: 'asc' } ]},
+                    { columnItems: [ { column: 'userGroupId', direction: 'asc' } ]},
                 ]
             },
             {
                 name: 'userGroup',
                 type: 'object',
-                prefix: 'GROUP',
+                prefix: 'USERGROUP',
                 columns: [
                     { name: 'name', type: StringType, size: 100 },
                     { name: 'parentId', type: StringType, size: 50 },

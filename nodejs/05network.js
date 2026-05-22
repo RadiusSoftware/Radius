@@ -547,31 +547,6 @@
             return this;
         }
 
-        getDefaultNetworkInterfacePair() {
-            let pair = { ipv4: null, ipv6: null };
-
-            for (let netInterface of this) {
-                let ipv4 = netInterface.IPv4;
-                let ipv6 = netInterface.IPv6;
-
-                if (ipv4.mac != '00:00:00:00:00:00') {
-                    pair.ipv4 = ipv4;
-                }
-
-                if (ipv6.mac != '00:00:00:00:00:00') {
-                    pair.ipv6 = ipv6;
-                }
-
-                if (ipv4 && ipv6) {
-                    if (ipv4.mac != '00:00:00:00:00:00' && ipv6.mac != '00:00:00:00:00:00') {
-                        break;
-                    }
-                }
-            }
-
-            return pair;
-        }
-
         getFromAddr(addr) {
             return this.byAddr[addr];
         }

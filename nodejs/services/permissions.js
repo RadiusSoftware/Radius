@@ -245,7 +245,7 @@ define(class PermissionSetHandle extends Handle {
                 uuid: this.uuid,
             });
 
-            return await mkPermissionSetHandle(uuid);
+            return mkPermissionSetHandle(uuid);
         }
 
         return false;
