@@ -145,7 +145,7 @@ define(function mkFrameworkSchema() {
                 type: 'object',
                 prefix: 'USER',
                 columns: [
-                    { name: 'userGroupId', type: StringType, size: 50 },
+                    { name: 'userGroups', type: JsonType },
                     { name: 'firstName', type: StringType, size: 50 },
                     { name: 'lastName', type: StringType, size: 50 },
                     { name: 'emailAddrId', type: StringType, size: 50 },

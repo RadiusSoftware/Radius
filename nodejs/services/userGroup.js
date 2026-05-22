@@ -112,7 +112,7 @@ createService(class UserGroupService extends Service {
 
     async onOpenRoot(message) {
         let dbms = mkDbmsThunk();
-        let root = await dbms.selectOneObj(DboTeam, { name: 'ROOTUSERGROUP' });
+        let root = await dbms.selectOneObj(DboUserGroup, { name: 'ROOTUSERGROUP' });
         return root.id;
     }
 

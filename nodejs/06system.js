@@ -167,8 +167,8 @@ createService(class SystemService extends Service {
             });
 
             let packages = mkPackageHandle();
-            await packages.loadDirectory(Path.join(radius.path, '../mozilla/package'), '/');
-            await packages.loadDirectory(Path.join(radius.path, '../radius'), '/');
+            await packages.loadDirectory(Path.join(radius.path, '/mozilla/package'), '/');
+            await packages.loadDirectory(Path.join(radius.path, '/radius'), '/');
 
             let bootData = await this.readBootFile();
 

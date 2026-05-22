@@ -23,7 +23,7 @@
 
 /*****
  * Each Radius application server has a "radius" DBMS, with a set of common
- * tables used throughout that server instance.  Users and teams are part of
+ * tables used throughout that server instance.  Users and groups are part of
  * the radius DBMS specified user permissions for all access, both web pages
  * and web applications, that are part of that instance.   User records are
  * associated with credentials records, which are separate from the user, to
@@ -80,8 +80,8 @@ createService(class UserService extends Service {
             return mkFailure('radius.org.NameRequired');
         }
 
-        if (!message.team.getId()) {
-            return 'radius.org.badTeam';
+        if (!message.userGroup.getId()) {
+            return 'radius.org.badUserGroup';
         }
 
         let userPermissions = [];
@@ -99,7 +99,7 @@ createService(class UserService extends Service {
             emailAddrId: emailAddr.getId(),
             firstName: message.firstName.trim(),
             lastName: message.lastName.trim(),
-            teamId: message.team.getId(),
+            UserGroups: [ message.userGroupIds ],
             active: typeof message.active == 'boolean' ? message.active : true,
             settings: typeof message.settings == 'object' ? message.settings : {},
             verifier: {
@@ -164,8 +164,8 @@ createService(class UserService extends Service {
         return await mkDbmsThunk().getObjProperty(message.id, dotted);
     }
 
-    async onGetTeam(message) {
-        return await mkDbmsThunk().getObjProperty(message.id, 'teamId');
+    async onGetUserGroups(message) {
+        return await mkDbmsThunk().getObjProperty(message.id, 'userGroups');
     }
 
     async onGetUserObject(message) {

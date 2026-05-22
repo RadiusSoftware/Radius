@@ -185,7 +185,6 @@ define(class Package {
                         fileNames: {},
                         filePermissions: await FilePermissions.load(node.path, node.filePermissions),
                     };
-                    conso
 
                     for (let dirEntry of await FileSystem.readDirectory(node.path)) {
                         if (!dirEntry.endsWith('.json')) {
@@ -294,17 +293,9 @@ define(class Package {
                             if (htmlElement.getTagName() == 'bundle') {
                                 for (let childElement of htmlElement.getChildElements()) {
                                     if (childElement.getTagName() == 'httpx') {
-                                        let context = {
-                                            url: Path.join(handle.url, httpXName),
-                                        };
-
                                         let opts = this.loadOptions(childElement, context);
                                         let permissionSet = handle.filePermissions.getFilePermissionSet(httpXName);
-
-                                        // ***************************************************************************************
-                                        // LOOK AT !
-                                        // ***************************************************************************************
-                                        let path = httpXName.startsWith('ROOT') ? handle.url : Path.join(handle.url, httpXName);
+                                        let path = Path.join(handle.url, httpXName);
 
                                         await this.lib.addHttpX({
                                             pkg: this.name,
@@ -335,16 +326,13 @@ define(class Package {
         }
     }
 
-    loadOptions(httpxElement, context) {
+    loadOptions(httpxElement) {
         let opts = { settings: {}};
 
         for (let childElement of httpxElement) {
             if (childElement.getTagName() == 'opt') {
                 let key = childElement.getAttribute('key');
 
-                // ***************************************************************************************
-                // LOOK AT !
-                // ***************************************************************************************
                 if (key === 'setting') {
                     let name = childElement.getAttribute('name');
                     let value = childElement.getAttribute('value');
@@ -358,7 +346,7 @@ define(class Package {
                             opts.settings[name] = {
                                 name: name,
                                 type: valueType,
-                                value: eval('`' + value + '`'),
+                                value: value,
                             };
                         }
                     }
