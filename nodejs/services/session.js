@@ -104,15 +104,24 @@ define(class Session {
         return this.userAgent;
     }
 
-    getUserGroup() {
-        return this.userGroupHandle;
-    }
-
-    async getUserName() {
+    async getUserEmail() {
         if (this.user.getId()) {
             let emailAddr = await this.user.getEmailAddr();
             let emailAddrObj = await emailAddr.getEmailAddrObj();
             return emailAddrObj.addr;
+        }
+        else {
+            return '';
+        }
+    }
+
+    getUserGroup() {
+        return this.userGroupHandle;
+    }
+
+    async getUserHandle() {
+        if (this.user.getId()) {
+            return this.user.getHandle();
         }
         else {
             return '';
@@ -310,38 +319,6 @@ createService(class SessionService extends Service {
         if (message.token in this.sessions) {
             let session = this.sessions[message.token];
             return session.getData(message.dataName);
-        }
-
-        return mkFailure('#NOSESSION');
-    }
-
-    async onGetDetails(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-
-            let details = {
-                uuid: session.getUUID(),
-                token: session.getToken(),
-                state: session.getState(),
-                permissions: await session.listPermissions(),
-                addr: session.getRemoteHost(),
-                addrs: session.getRemoteHostHistory(),
-                agent: session.getUserAgent(),
-                acceptCookies: session.getAcceptedCookies(),
-                user: session.user.getId(),
-                userGroup: session.userGroup.getId(),
-            };
-
-            return details;
-        }
-
-        return mkFailure('#NOSESSION');
-    }
-
-    async onGetInitialPath(message) {
-        if (message.token in this.sessions) {
-            let session = this.sessions[message.token];
-            return session.getInitialPath();
         }
 
         return mkFailure('#NOSESSION');
@@ -830,39 +807,6 @@ define(class SessionHandle extends Handle {
         }
 
         return mkFailure('#NOSESSION');
-    }
-
-    async getDetails() {
-        if (this.token) {
-            let rsp = await this.callService({
-                token: this.token,
-            });
-
-            if (rsp instanceof Failure) {
-                this.token = '';
-            }
-            
-            return rsp;
-        }
-
-        return mkFailure('#NOSESSION');
-    }
-
-    async getInitialPath() {
-        if (this.token) {
-            let rsp = await this.callService({
-                token: this.token,
-            });
-
-            if (rsp instanceof Failure) {
-                this.token = '';
-                return '/';
-            }
-            
-            return rsp;
-        }
-
-        return '/';
     }
 
     async getState() {

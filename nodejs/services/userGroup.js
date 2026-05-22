@@ -77,10 +77,6 @@ createService(class UserGroupService extends Service {
         return await mkDbmsThunk().getObjProperty(message.id, dotted);
     }
 
-    async onGetUserGroupObject(message) {
-        return await mkDbmsThunk().getObj(message.id);
-    }
-
     async onIsActive(message) {
         let dbms = mkDbmsThunk();
         let dboUserGroup = await dbms.getObj(message.id);
@@ -205,16 +201,6 @@ define(class UserGroupHandle extends Handle {
             return await this.callService({
                 id: this.id,
                 settingName: settingName,
-            });
-        }
-
-        return null;
-    }
-
-    async getmkUserGroupHandleObject() {
-        if (this.id) {
-            return await this.callService({
-                id: this.id,
             });
         }
 

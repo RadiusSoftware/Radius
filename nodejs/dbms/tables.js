@@ -145,7 +145,8 @@ define(function mkFrameworkSchema() {
                 type: 'object',
                 prefix: 'USER',
                 columns: [
-                    { name: 'userGroups', type: JsonType },
+                    { name: 'userGroupId', type: StringType, size: 50 },
+                    { name: 'userHandleId', type: StringType, size: 50 },
                     { name: 'firstName', type: StringType, size: 50 },
                     { name: 'lastName', type: StringType, size: 50 },
                     { name: 'emailAddrId', type: StringType, size: 50 },
@@ -163,6 +164,7 @@ define(function mkFrameworkSchema() {
                     { columnItems: [ { column: 'emailAddrId', direction: 'asc' } ]},
                     { columnItems: [ { column: 'phoneId', direction: 'asc' } ]},
                     { columnItems: [ { column: 'userGroupId', direction: 'asc' } ]},
+                    { columnItems: [ { column: 'userHandleId', direction: 'asc' } ]},
                 ]
             },
             {
@@ -174,6 +176,18 @@ define(function mkFrameworkSchema() {
                     { name: 'parentId', type: StringType, size: 50 },
                     { name: 'active', type: BooleanType },
                     { name: 'settings', type: JsonType },
+                ],
+                indexes: [
+                    { columnItems: [ { column: 'name', direction: 'asc' } ]},
+                ]
+            },
+            {
+                name: 'userHandle',
+                type: 'object',
+                prefix: 'USERHANDLE',
+                columns: [
+                    { name: 'name', type: StringType, size: 100 },
+                    { name: 'userId', type: StringType, size: 50 },
                 ],
                 indexes: [
                     { columnItems: [ { column: 'name', direction: 'asc' } ]},

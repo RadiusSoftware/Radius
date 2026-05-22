@@ -60,7 +60,7 @@ if (Process.isPrimary()) {
                 path: StringType,
                 enabled: BooleanType,
                 _locked: BooleanType,
-                teamId: StringType,
+                userId: StringType,
                 permissions: [ StringType ],
                 addrs: [ StringType ],
                 _apiKey: StringType,
