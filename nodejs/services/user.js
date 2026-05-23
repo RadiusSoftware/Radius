@@ -30,16 +30,22 @@
  * facilitate authentication.
 *****/
 createService(class UserService extends Service {
-    constructor() {
-        super();
+    async onCheckUserNameAvailability(message) {
+        let dbms = mkDbmsThunk();
+
+        let dboUser = await dbms.selectDboOneObj(DboUser, {
+            userName: message.userName.toLowerCase(),
+        });
+
+        return !(dboUser instanceof DboUser);
     }
 
+    
     async onClearEmail2(message) {
         let dbms = mkDbmsThunk();
         let dboUser = await dbms.getObj(message.id);
 
         if (dboUser instanceof DboUser && dboUser.emailAddr2Id) {
-            await dbms.modifyObj(dboUser.emailAddr2Id, { ownerId: '' });
             await dbms.modifyObj(dboUser.id, { emailAddr2Id: '' });
         }
     }
@@ -49,8 +55,18 @@ createService(class UserService extends Service {
         let dboUser = await dbms.getObj(message.id);
 
         if (dboUser instanceof DboUser && dboUser.otpId) {
-            await dbms.modifyObj(dboUser.otpId, { ownerId: '' });
+            await dbms.deleteObj(dboUser.otpId);
             await dbms.modifyObj(dboUser.id, { otpId: '' });
+        }
+    }
+
+    async onClearOtp2(message) {
+        let dbms = mkDbmsThunk();
+        let dboUser = await dbms.getObj(message.id);
+
+        if (dboUser instanceof DboUser && dboUser.otpId2) {
+            await dbms.deleteObj(dboUser.otpId2);
+            await dbms.modifyObj(dboUser.id, { otpId2: '' });
         }
     }
 
@@ -59,28 +75,49 @@ createService(class UserService extends Service {
         let dboUser = await dbms.getObj(message.id);
 
         if (dboUser instanceof DboUser && dboUser.phoneId) {
-            await dbms.modifyObj(dboUser.phoneId, { ownerId: '' });
             await dbms.modifyObj(dboUser.id, { phoneId: '' });
+        }
+    }
+
+    async onClearPhone2(message) {
+        let dbms = mkDbmsThunk();
+        let dboUser = await dbms.getObj(message.id);
+
+        if (dboUser instanceof DboUser && dboUser.phone2Id) {
+            await dbms.modifyObj(dboUser.id, { phone2Id: '' });
         }
     }
 
     async onCreateUser(message) {
         let dbms = await mkDbmsThunk().startTransaction();
+
+        if (!message.userName.trim()) {
+            return mkFailure('radius.org.userNameRequired');
+        }
+
+        if (!message.userName.trim().match(/^[a-zA-Z0-9-_@]+$/)) {
+            return mkFailure('radius.org.userNameInvalid');
+        }
+
+        let existingDboUser = await dbms.selectDboOneObj(DboUser, {
+            userName: message.userName.trim().toLowerCase(),
+        });
+
+        if (existingDboUser instanceof DboUser) {
+            return mkFailure('radius.org.userNameInUse');
+        }
+
         let emailAddr = await mkEmailAddrHandle().ensureEmailAddr(message.emailAddr);
 
         if (!emailAddr.getId()) {
             return mkFailure('radius.org.badEmailAddr');
         }
 
-        if (await emailAddr.getOwnerId()) {
-            return mkFailure('radius.org.emailInUse');
-        }
-
         if (!message.firstName.trim().length || !message.lastName.trim().length) {
-            return mkFailure('radius.org.NameRequired');
+            return mkFailure('radius.org.namesRequired');
         }
 
-        if (!message.userGroup.getId()) {
+        if (!(message.userGroup instanceof UserGroupHandle) || !message.userGroup.getId()) {
             return 'radius.org.badUserGroup';
         }
 
@@ -95,44 +132,36 @@ createService(class UserService extends Service {
             }
         }
 
+        let userSettings = {
+            emailVerified: false,
+            email2Verified: false,
+            phoneVerified: false,
+            phone2Verified: false,
+            otpVerified: false,
+            otp2Verified: false,
+        };
+
+        if (ObjectType.verify(message.settings)) {
+            for (let key in message.settings) {
+                if (!(key in userSettings)) {
+                    userSettings[key] = message.settings[key];
+                }
+            }
+        }
+
         let dboUser = await dbms.createObj(DboUser, {
             emailAddrId: emailAddr.getId(),
+            userName: message.userName.trim().toLowerCase(),
             firstName: message.firstName.trim(),
             lastName: message.lastName.trim(),
-            UserGroups: [ message.userGroupIds ],
+            UserGroup: message.userGroup.getId(),
             active: typeof message.active == 'boolean' ? message.active : true,
-            settings: typeof message.settings == 'object' ? message.settings : {},
-            verifier: {
-                devices: {},
-                channels: { email: 'unverified', email2: 'unverified', phone: 'unverified', authApp: 'unverified' },
-                auxFactor: false,
-            },
+            settings: userSettings,
             permissions: userPermissions,
         });
 
-        await dbms.modifyObj(emailAddr.getId(), { ownerId: dboUser.id });
         await dbms.commit();
         return dboUser.id;
-    }
-
-    async onForgetDevice(message) {
-        let dbms = mkDbmsThunk();
-        let dboUser = await dbms.getObj(message.id);
-        
-        if (dboUser instanceof DboUser) {
-            await dbms.deleteObjProperty(message.id, `verifier.devices.${message.deviceId}`);
-        }
-    }
-
-    async onGetChannelStatus(message) {
-        let dbms = mkDbmsThunk();
-        let dboUser = await dbms.getObj(message.id);
-
-        if (dboUser instanceof DboUser) {
-            return dboUser.verifier.channels[message.channel] == 'verified';
-        }
-        
-        return false;
     }
 
     async onGetEmailAddr(message) {
@@ -151,6 +180,10 @@ createService(class UserService extends Service {
         return await mkDbmsThunk().getObjProperty(message.id, 'otpId');
     }
 
+    async onGetOtp2(message) {
+        return await mkDbmsThunk().getObjProperty(message.id, 'otp2Id');
+    }
+
     async onGetPermissions(message) {
         return await mkDbmsThunk().getObjProperty(message.id, 'permissions');
     }
@@ -159,27 +192,47 @@ createService(class UserService extends Service {
         return await mkDbmsThunk().getObjProperty(message.id, 'phoneId');
     }
 
+    async onGetPhone2(message) {
+        return await mkDbmsThunk().getObjProperty(message.id, 'phone2Id');
+    }
+
     async onGetSetting(message) {
         let dotted = `settings.${message.settingName}`;
         return await mkDbmsThunk().getObjProperty(message.id, dotted);
     }
 
-    async onGetUserGroups(message) {
-        return await mkDbmsThunk().getObjProperty(message.id, 'userGroups');
+    async onGetUserGroup(message) {
+        return await mkDbmsThunk().getObjProperty(message.id, 'userGroupId');
     }
 
-    async onGetUserObject(message) {
-        return await mkDbmsThunk().getObj(message.id);
+    async onGetUserName(message) {
+        return await mkDbmsThunk().getObjProperty(message.id, 'userName');
     }
 
-    async onHasAuxFactor(message) {
-        return await mkDbmsThunk().getObjProperty(message.id, `verifier.auxFactor`);
+    async onHasEmailAddr2(message) {
+        return (await mkDbmsThunk().getObjProperty(message.id, 'emailAddr2Id')) != '';
     }
 
     async onHasExcessAttempts(message) {
         let failedLogins = await mkDbmsThunk().getObjProperty(message.id, `failedLogins`);
         let loginMaxFailures = await mkSettingsHandle().getSetting('loginMaxFailures');
         return failedLogins > loginMaxFailures;
+    }
+
+    async onHasEmailOtp(message) {
+        return (await mkDbmsThunk().getObjProperty(message.id, 'emailOtpId')) != '';
+    }
+
+    async onHasEmailOtp2(message) {
+        return (await mkDbmsThunk().getObjProperty(message.id, 'emailOtp2Id')) != '';
+    }
+
+    async onHasEmailPhone(message) {
+        return (await mkDbmsThunk().getObjProperty(message.id, 'emailPhoneId')) != '';
+    }
+
+    async onHasEmailPhone2(message) {
+        return (await mkDbmsThunk().getObjProperty(message.id, 'emailPhone2Id')) != '';
     }
 
     async onIncrementAttempts(message) {
@@ -195,26 +248,6 @@ createService(class UserService extends Service {
 
     async onIsActive(message) {
         return await mkDbmsThunk().getObjProperty(message.id, 'active');
-    }
-
-    async onIsDeviceVerified(message) {
-        let dbms = mkDbmsThunk();
-
-        if (message.deviceId) {
-            let dboUser = await dbms.getObj(message.id);
-
-            if (dboUser instanceof DboUser) {
-                let tag = dboUser.verifier.devices[message.deviceId];
-
-                if (tag instanceof Time) {
-                    let rememberDays = await mkSettingsHandle().getSetting('forgetDeviceDays');
-                    tag.addDays(rememberDays);
-                    return tag.isGT(mkTime());
-                }
-            }
-        }
-
-        return false;
     }
 
     async onIsLive(message) {
@@ -233,36 +266,6 @@ createService(class UserService extends Service {
     async onIsZombie(message) {
         let zombie = await mkDbmsThunk().getObjProperty(message.id, 'zombie');
         return zombie != null ? zombie : false;
-    }
-
-    async onListUnverifiedChannels(message) {
-        let channels = [];
-        let dboUser = await mkDbmsThunk().getObj(message.id);
-
-        if (dboUser instanceof DboUser) {
-            for (let key in dboUser.verifier.channels) {
-                if (dboUser.verifier.channels[key] == 'unverified') {
-
-                    if (key in { email:0, email2:0 }) {
-                        if ((await mkEmailerHandle().getStatus()) == 'online') {
-                            channels.push(key);
-                        }
-                    }
-                    else if (key == 'phone') {
-                        if ((await mkSmSHandle().getStatus()) == 'online') {
-                            channels.push(key);
-                        }
-                    }
-                    else if (key == 'authApp') {
-                        if ((await mkAuthAppHandle().getStatus()) == 'online') {
-                            channels.push(key);
-                        }
-                    }
-                }
-            }
-        }
-
-        return channels;
     }
 
     async onOpen(message) {
@@ -301,39 +304,12 @@ createService(class UserService extends Service {
         await mkDbmsThunk().modifyObj(message.id, { failedLogins: 0 });
     }
 
-    async onSetAuthApp(message) {
-        let dbms = mkDbmsThunk();
-        let dboUser = await dbms.getObj(message.id);
-
-        if (dboUser instanceof DboUser) {
-            if (dboUser.authAppId) {
-                let authApp = await dbms.getObj(dboUser.authAppId);
-                authApp.serviceId = message.serviceId;
-                authApp.settings = message.settings;
-                await dbms.updateObj(authApp);
-            }
-            else {
-                let authApp = await dbms.createObj(DboAuthApp, {
-                    ownerId: message.id,
-                    serviceId: message.serviceId,
-                    settings: message.settings,
-                });
-
-                await dbms.modifyObj(dboUser.id, { authAppId: authApp.id });
-            }
-
-            return true;
-        }
-
-        return mkFailure('radius.org.userNotFound');
-    }
-
     async onSetEmail(message) {
         let dbms = mkDbmsThunk();
         let dboUser = await dbms.getObj(message.id);
 
         if (dboUser instanceof DboUser) {
-            let newEmailAddr = await mkEmailAddrHandle().ensureEmailAddr(message.username);
+            let newEmailAddr = await mkEmailAddrHandle().ensureEmailAddr(message.emailAddr);
 
             if (!newEmailAddr.getId()) {
                 return mkFailure('radius.org.badEmailAddr');
@@ -343,19 +319,9 @@ createService(class UserService extends Service {
                 return true;
             }
 
-            if (await newEmailAddr.hasOwner()) {
-                return mkFailure('radius.org.emailInUse');
-            }
-
-            await mkEmailAddrHandle(dboUser.emailAddrId).clearOwner();
-            await newEmailAddr.setOwner(this.dboUser.id);
+            dboUser.settings.emailVerified = false;
             dboUser.emailAddrId = newEmailAddr.getId();
-
-            await dbms.modifyObj(dboUser.id, {
-                emailAddrId: newEmailAddr.getId(),
-                'verification.channels.email': false,
-            });
-
+            await dbms.updateObj(dboUser);
             return true;
         }
 
@@ -367,28 +333,19 @@ createService(class UserService extends Service {
         let dboUser = await dbms.getObj(message.id);
 
         if (dboUser instanceof DboUser) {
-            let newEmailAddr2 = await mkEmailAddrHandle().ensureEmailAddr(message.emailAddr);
+            let newEmailAddr = await mkEmailAddrHandle().ensureEmailAddr(message.emailAddr);
 
-            if (!newEmailAddr2.getId()) {
+            if (!newEmailAddr.getId()) {
                 return mkFailure('radius.org.badEmailAddr');
             }
 
-            if (newEmailAddr2.getId() == dboUser.emailAddr2Id) {
+            if (newEmailAddr.getId() == dboUser.emailAddr2Id) {
                 return true;
             }
 
-            if (await newEmailAddr2.hasOwner()) {
-                return mkFailure('radius.org.emailInUse');
-            }
-
-            await newEmailAddr2.setOwner(this.dboUser.id);
-            dboUser.emailAddr2Id = newEmailAddr2.getId();
-
-            await dbms.modifyObj(dboUser.id, {
-                emailAddrId: newEmailAddr2.getId(),
-                'verification.channels.email': false,
-            });
-
+            dboUser.settings.email2Verified = false;
+            dboUser.emailAddr2Id = newEmailAddr.getId();
+            await dbms.updateObj(dboUser);
             return true;
         }
 
@@ -397,6 +354,38 @@ createService(class UserService extends Service {
 
     async onSetEulaAccepted(message) {
         await mkDbmsThunk().modifyObj(message.id, { eulaAccepted: true});
+    }
+
+    async onSetOtp(message) {
+        let field = message.field;
+        let dbms = mkDbmsThunk();
+        let dboUser = await dbms.getObj(message.id);
+
+        if (dboUser instanceof DboUser) {
+            if (dboUser[field]) {
+                let dboOtp = await dbms.getObj(dboUser[field]);
+                dboOtp.serviceId = message.serviceId;
+                dboOtp.settings = message.settings;
+                await dbms.updateObj(dboOtp);
+            }
+            else {
+                let dboOtp = await dbms.createObj(DboOtp, {
+                    ownerId: message.id,
+                    serviceId: message.serviceId,
+                    settings: message.settings,
+                });
+
+                await dbms.modifyObj(dboUser.id, ({})[field] = dboOtp.id);
+            }
+
+            return true;
+        }
+
+        return mkFailure('radius.org.userNotFound');
+    }
+
+    async onSetOtp2(message) {
+        return await this.onSetOtp(message);
     }
 
     async onSetPermissions(message) {
@@ -419,6 +408,7 @@ createService(class UserService extends Service {
     }
 
     async onSetPhone(message) {
+        let field = message.field;
         let dbms = await mkDbmsThunk().startTransaction();
         let dboUser = await dbms.getObj(message.id);
 
@@ -426,35 +416,18 @@ createService(class UserService extends Service {
             let newPhone = await mkPhoneHandle().ensurePhoneNumber(message.phonenum);
 
             if (newPhone.getId()) {
-                if (newPhone.getId() != dboUser.phoneId) {
-                    if (dboUser.phoneId) {
-                        let oldDboPhone = await dbms.getObj(dboUser.phoneId);
-
-                        if (oldDboPhone instanceof DboPhone) {
-                            await dbms.modifyObj(oldDboPhone, { ownerId: '' });
-                        }
-                        else {
-                            await dbms.rollback();
-                            return mkFailure('radius.org.oldPhoneNotFound');
-                        }
-                    }
-
-                    await dbms.modifyObj(newPhone.getId(), { ownerId: user.id });
-                    await dbms.modifyObj(oldPhone.id, { phoneId: oldDboPhone.id });
+                if (newPhone.getId() != dboUser[field]) {
+                    await dbms.modifyObj(dboUser, ({})[field] = newPhone.getId());
                 }
                 
                 await dbms.commit();
                 return true;
             }
-            else {
-                await dbms.rollback();
-                return mkFailure('radius.org.userNotFound');
-            }
         }
-        else {
-            await dbms.rollback();
-            return mkFailure('radius.org.userNotFound');
-        }
+    }
+
+    async onSetPhone2(message) {
+        return await this.onSetPhone2(message);
     }
 
     async onSetSetting(message) {
@@ -465,6 +438,36 @@ createService(class UserService extends Service {
             dotted,
             message.settingValue
         );
+    }
+
+    async onSetUserGroup(message) {
+        let dbms = await mkDbmsThunk().startTransaction();
+        let userGroup = await dbms.getObj(message.userGroupId);
+
+        if (userGroup instanceof DboUserGroup) {
+            await dbms.setObjProperty(
+                message.id,
+                'userGroupId',
+                userGroup.id,
+            );
+        }
+    }
+
+    async onSetUserName(message) {
+        let dbms = await mkDbmsThunk().startTransaction();
+        let dboUser = await dbms.getObj(message.id);
+
+        if (dboUser instanceof DboUserGroup) {
+            if (message.userName.trim().match(/^[a-zA-Z0-9-_@]+$/)) {
+                return mkFailure('radius.org.userNameInvalid');
+            }
+
+            await dbms.setObjProperty(
+                message.id,
+                'userName',
+                message.userName.trim().toLowerCase(),
+            );
+        }
     }
 });
 
@@ -479,6 +482,12 @@ define(class UserHandle extends Handle {
     constructor(id) {
         super();
         this.id = id ? id : '';
+    }
+
+    async checkUserNameAvailability(userName) {
+        return await this.callService({
+            userName: userName,
+        });
     }
 
     async clearEmail2() {
@@ -501,7 +510,27 @@ define(class UserHandle extends Handle {
         return this;
     }
 
+    async clearOtp2() {
+        if (this.id) {
+            return await this.callService({
+                id: this.id,
+            });
+        }
+
+        return this;
+    }
+
     async clearPhone() {
+        if (this.id) {
+            return await this.callService({
+                id: this.id,
+            });
+        }
+
+        return this;
+    }
+
+    async clearPhone2() {
         if (this.id) {
             return await this.callService({
                 id: this.id,
@@ -522,22 +551,23 @@ define(class UserHandle extends Handle {
         return this;
     }
 
-    async forgetDevice(deviceId) {
-        if (this.id) {
-            await this.callService({
-                id: this.id,
-                deviceId: deviceId,
-            });
-        }
-
-        return this;
-    }
-
     static fromJson(value) {
         return mkUserHandle(value.id);
     }
 
     async getEmailAddr() {
+        let emailAddrId;
+
+        if (this.id) {
+            emailAddrId = await this.callService({
+                id: this.id
+            });
+        }
+
+        return mkEmailAddrHandle(emailAddrId);
+    }
+
+    async getEmailAddr2() {
         let emailAddrId;
 
         if (this.id) {
@@ -575,6 +605,18 @@ define(class UserHandle extends Handle {
         return mkOtpHandle(otpId);
     }
 
+    async getOtp2() {
+        let otpId;
+
+        if (this.id) {
+            otpId = await this.callService({
+                id: this.id
+            });
+        }
+
+        return mkOtpHandle(otpId);
+    }
+
     async getPermissions() {
         if (this.id) {
             if (this.id) {
@@ -599,6 +641,18 @@ define(class UserHandle extends Handle {
         return mkPhoneHandle(phoneId);
     }
 
+    async getPhone2() {
+        let phoneId;
+
+        if (this.id) {
+            phoneId = await this.callService({
+                id: this.id
+            });
+        }
+
+        return mkPhoneHandle(phoneId);
+    }
+
     async getSetting(settingName) {
         if (this.id) {
             return await this.callService({
@@ -610,19 +664,7 @@ define(class UserHandle extends Handle {
         return null;
     }
 
-    async getTeam() {
-        let teamId;
-
-        if (this.id) {
-            teamId = await this.callService({
-                id: this.id,
-            });
-        }
-
-        return mkTeamHandle(teamId);
-    }
-
-    async getUserObject() {
+    async getUserGroup() {
         if (this.id) {
             return await this.callService({
                 id: this.id,
@@ -632,24 +674,14 @@ define(class UserHandle extends Handle {
         return null;
     }
 
-    async hasAcceptedEula() {
+    async getUserName() {
         if (this.id) {
-            return await this.callService({
+            await this.callService({
                 id: this.id,
             });
         }
 
-        return false;
-    }
-
-    async hasAuxFactor() {
-        if (this.id) {
-            return await this.callService({
-                id: this.id,
-            });
-        }
-
-        return false;
+        return this;
     }
 
     async hasEmail2() {
@@ -682,7 +714,27 @@ define(class UserHandle extends Handle {
         return false;
     }
 
+    async hasOtp2() {
+        if (this.id) {
+            return await this.callService({
+                id: this.id,
+            });
+        }
+
+        return false;
+    }
+
     async hasPhone() {
+        if (this.id) {
+            return await this.callService({
+                id: this.id,
+            });
+        }
+
+        return false;
+    }
+
+    async hasPhone2() {
         if (this.id) {
             return await this.callService({
                 id: this.id,
@@ -712,28 +764,6 @@ define(class UserHandle extends Handle {
         return false;
     }
 
-    async isChannelVerified(channel) {
-        if (this.id) {
-            return await this.callService({
-                id: this.id,
-                channel: channel,
-            });
-        }
-
-        return false;
-    }
-
-    async isDeviceVerified(deviceId) {
-        if (this.id) {
-            return await this.callService({
-                id: this.id,
-                deviceId: deviceId,
-            });
-        }
-
-        return false;
-    }
-
     async isLive() {
         if (this.id) {
             return await this.callService({
@@ -754,16 +784,6 @@ define(class UserHandle extends Handle {
         return false;
     }
 
-    async listUnverifiedChannels() {
-        if (this.id) {
-            return await this.callService({
-                id: this.id,
-            });
-        }
-
-        return [];
-    }
-
     async open(id) {
         this.id = await this.callService({
             uuser: id,
@@ -781,17 +801,6 @@ define(class UserHandle extends Handle {
         return this;
     }
 
-    async rememberDevice(deviceId) {
-        if (this.id) {
-            await this.callService({
-                id: this.id,
-                deviceId: deviceId,
-            });
-        }
-
-        return this;
-    }
-
     async resetAttempts() {
         if (this.id) {
             await this.callService({
@@ -802,18 +811,18 @@ define(class UserHandle extends Handle {
         return this;
     }
 
-    async setEmail(username) {
+    async setEmail(emailAddr) {
         if (this.id) {
             await this.callService({
                 id: this.id,
-                username: username,
+                emailAddr: emailAddr,
             });
         }
 
         return this;
     }
 
-    async setHandle(handle) {
+    async setEmail2(emailAddr) {
         if (this.id) {
             await this.callService({
                 id: this.id,
@@ -838,6 +847,20 @@ define(class UserHandle extends Handle {
         if (this.id) {
             await this.callService({
                 id: this.id,
+                field: 'otp',
+                serviceId: serviceId,
+                settings: settings,
+            });
+        }
+
+        return this;
+    }
+
+    async setOtp2(serviceId, settings) {
+        if (this.id) {
+            await this.callService({
+                id: this.id,
+                field: 'otp2',
                 serviceId: serviceId,
                 settings: settings,
             });
@@ -861,6 +884,19 @@ define(class UserHandle extends Handle {
         if (this.id) {
             await this.callService({
                 id: this.id,
+                field: 'phoneId',
+                phonenum: phonenum,
+            });
+        }
+
+        return this;
+    }
+
+    async setPhone2(phonenum) {
+        if (this.id) {
+            await this.callService({
+                id: this.id,
+                field: 'phone2Id',
                 phonenum: phonenum,
             });
         }
@@ -875,6 +911,34 @@ define(class UserHandle extends Handle {
                 settingName: settingName,
                 settingValue: settingValue,
             });
+        }
+
+        return this;
+    }
+
+    async setUserGroup(userGroup) {
+        let ugid = userGroup instanceof UserGroupHandle ? userGroup.getId() : userGroup;
+
+        if (this.id) {
+            await this.callService({
+                id: this.id,
+                userGroupId: ugid,
+            });
+        }
+
+        return this;
+    }
+
+    async setUserName(userName) {
+        if (this.id) {
+            let result = await this.callService({
+                id: this.id,
+                userName: userName,
+            });
+
+            if (result instanceof Failure) {
+                return result;
+            }
         }
 
         return this;

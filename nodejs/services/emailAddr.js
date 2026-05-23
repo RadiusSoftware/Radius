@@ -46,17 +46,6 @@ createService(class EmailAddrService extends Service {
         suspendedUntil: mkRdsShape(DateType),
     };
 
-    async onClearOwner(message) {
-        let dboEmailAddr = await mkDbmsThunk().getObj(message.id);
-
-        if (dboEmailAddr instanceof DboEmailAddr) {
-            await mkDbmsThunk().modifyObj(dboEmailAddr.id, { ownerId: '' });
-            return message.id;
-        }
-        
-        return '';
-    }
-
     async onEnsureEmailAddr(message) {
         let match = message.emailAddr.trim().toLowerCase().match(/^([a-z0-9-_.']+)@((?:[a-z0-9-_]+)(?:\.[a-z0-9-_]+)+)$/);
 
@@ -133,16 +122,6 @@ createService(class EmailAddrService extends Service {
         return null;
     }
 
-    async onGetOwnerId(message) {
-        let dboEmailAddr = await mkDbmsThunk().getObj(message.id);
-
-        if (dboEmailAddr instanceof DboEmailAddr) {
-            return dboEmailAddr.ownerId;
-        }
-        
-        return '';
-    }
-
     async onGetSetting(message) {
         let dotted = `settings.${message.settingName}`;
         return await mkDbmsThunk().getObjProperty(message.id, dotted);
@@ -175,21 +154,6 @@ createService(class EmailAddrService extends Service {
         return false;
     }
 
-    async onHasOwner(message) {
-        let dboEmailAddr = await mkDbmsThunk().getObj(message.id);
-
-        if (dboEmailAddr instanceof DboEmailAddr) {
-            return dboEmailAddr.ownerId != '';
-        }
-        
-        return false;
-    }
-
-    async onIsAssigned(message) {
-        let ownerId = await mkDbmsThunk().getObjProperty(message.id, 'ownerId');
-        return typeof ownerId == string ? ownerId != '' : false;
-    }
-
     async onOpen(message) {
         let dboEmailAddr = await mkDbmsThunk().getObj(message.id);
 
@@ -208,17 +172,6 @@ createService(class EmailAddrService extends Service {
             return dboEmailAddr instanceof DboEmailAddr ? dboEmailAddr.id : '';
         }
 
-        return '';
-    }
-
-    async onSetOwner(message) {
-        let dboEmailAddr = await mkDbmsThunk().getObj(message.id);
-
-        if (dboEmailAddr instanceof DboEmailAddr) {
-            await mkDbmsThunk().modifyObj(dboEmailAddr.id, { ownerId: message.ownerId });
-            return message.id;
-        }
-        
         return '';
     }
 
@@ -270,16 +223,6 @@ define(class EmailAddrHandle extends Handle {
         this.id = id ? id : '';
     }
 
-    async clearOwner() {
-        if (this.id) {
-            this.id = await this.callService({
-                id: this.id,
-            });
-        }
-
-        return this;
-    }
-
     async ensureEmailAddr(emailAddr) {
         this.id = await this.callService({
             emailAddr: emailAddr,
@@ -328,16 +271,6 @@ define(class EmailAddrHandle extends Handle {
         return this.id;
     }
 
-    async getOwnerId() {
-        if (this.id) {
-            return await this.callService({
-                id: this.id,
-            });
-        }
-        
-        return '';
-    }
-
     async getSetting(settingName) {
         if (this.id) {
             return await this.callService({
@@ -367,16 +300,6 @@ define(class EmailAddrHandle extends Handle {
         return this;
     }
 
-    async hasOwner() {
-        if (this.id) {
-            await this.callService({
-                id: this.id,
-            });
-        }
-
-        return this;
-    }
-
     async isAssigned() {
         if (this.id) {
             return await this.callService({
@@ -399,17 +322,6 @@ define(class EmailAddrHandle extends Handle {
         this.id = await this.callService({
             emailAddr: emailAddr,
         });
-
-        return this;
-    }
-
-    async setOwner(ownerId) {
-        if (this.id) {
-            this.id = await this.callService({
-                id: this.id,
-                ownerId: ownerId,
-            });
-        }
 
         return this;
     }

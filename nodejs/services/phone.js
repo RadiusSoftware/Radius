@@ -51,7 +51,6 @@ createService(class PhoneService extends Service {
                     phonenum: phonenum,
                     status: 'none',
                     statusDate: mkTime(),
-                    ownerId: '',
                 });
             }
 
@@ -68,11 +67,6 @@ createService(class PhoneService extends Service {
     async onGetSetting(message) {
         let dotted = `settings.${message.settingName}`;
         return await mkDbmsThunk().getObjProperty(message.id, dotted);
-    }
-
-    async onIsAssigned(message) {
-        let ownerId = await mkDbmsThunk().getObjProperty(message.id, 'ownerId');
-        return typeof ownerId == 'string' ? ownerId != '' : false;
     }
 
     async onOpen(message) {
@@ -186,16 +180,6 @@ define(class PhoneHandle extends Handle {
         }
 
         return mkUserHandle().open(userId);
-    }
-
-    async isAssigned() {
-        if (this.id) {
-            return await this.callService({
-                id: this.id,
-            });
-        }
-
-        return null;
     }
 
     async open(id) {

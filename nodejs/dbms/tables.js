@@ -31,22 +31,6 @@ define(function mkFrameworkSchema() {
         name: 'Radius',
         tables: [
             {
-                name: 'authApp',
-                type: 'object',
-                prefix: 'OTP',
-                columns: [
-                    { name: 'serviceId', type: StringType, size: 50 },
-                    { name: 'ownerId', type: StringType, size: 50 },
-                    { name: 'status', type: StringType },
-                    { name: 'statusDate', type: DateType },
-                    { name: 'settings', type: JsonType },
-                ],
-                indexes: [
-                    { columnItems: [ { column: 'ownerId', direction: 'asc' } ]},
-                    { columnItems: [ { column: 'serviceId', direction: 'asc' } ]},
-                ]
-            },
-            {
                 name: 'dboLock',
                 type: 'object',
                 prefix: 'dbol',
@@ -82,7 +66,6 @@ define(function mkFrameworkSchema() {
                     { name: 'user', type: StringType, size: 200 },
                     { name: 'domain', type: StringType, size: 200 },
                     { name: 'domainId', type: StringType, size: 50 },
-                    { name: 'ownerId', type: StringType, size: 50 },
                     { name: 'status', type: StringType },
                     { name: 'statusDate', type: DateType },
                     { name: 'settings', type: JsonType },
@@ -90,8 +73,23 @@ define(function mkFrameworkSchema() {
                 indexes: [
                     { columnItems: [ { column: 'addr', direction: 'asc' } ]},
                     { columnItems: [ { column: 'domain', direction: 'asc' } ]},
-                    { columnItems: [ { column: 'ownerId', direction: 'asc' } ]},
                     { columnItems: [ { column: 'domainId', direction: 'asc' } ]},
+                ]
+            },
+            {
+                name: 'Otp',
+                type: 'object',
+                prefix: 'OTP',
+                columns: [
+                    { name: 'serviceId', type: StringType, size: 50 },
+                    { name: 'ownerId', type: StringType, size: 50 },
+                    { name: 'status', type: StringType },
+                    { name: 'statusDate', type: DateType },
+                    { name: 'settings', type: JsonType },
+                ],
+                indexes: [
+                    { columnItems: [ { column: 'ownerId', direction: 'asc' } ]},
+                    { columnItems: [ { column: 'serviceId', direction: 'asc' } ]},
                 ]
             },
             {
@@ -117,12 +115,10 @@ define(function mkFrameworkSchema() {
                     { name: 'phonum', type: StringType, size: 20 },
                     { name: 'status', type: StringType },
                     { name: 'statusDate', type: DateType },
-                    { name: 'ownerId', type: StringType, size: 50 },
                     { name: 'settings', type: JsonType },
                 ],
                 indexes: [
                     { columnItems: [ { column: 'phonum', direction: 'asc' } ]},
-                    { columnItems: [ { column: 'ownerId', direction: 'asc' } ]},
                 ]
             },
             {
@@ -145,26 +141,30 @@ define(function mkFrameworkSchema() {
                 type: 'object',
                 prefix: 'USER',
                 columns: [
+                    { name: 'userName', type: StringType, size: 200 },
                     { name: 'userGroupId', type: StringType, size: 50 },
-                    { name: 'userHandleId', type: StringType, size: 50 },
                     { name: 'firstName', type: StringType, size: 50 },
                     { name: 'lastName', type: StringType, size: 50 },
                     { name: 'emailAddrId', type: StringType, size: 50 },
+                    { name: 'emailAddr2Id', type: StringType, size: 50 },
+                    { name: 'otpId', type: StringType, size: 50 },
+                    { name: 'opt2Id', type: StringType, size: 50 },
                     { name: 'phoneId', type: StringType, size: 50 },
-                    { name: 'authAppId', type: StringType, size: 50 },
+                    { name: 'phone2Id', type: StringType, size: 50 },
                     { name: 'active', type: BooleanType },
                     { name: 'zombie', type: BooleanType },
                     { name: 'eulaAccepted', type: BooleanType },
                     { name: 'failedLogins', type: Int32Type },
                     { name: 'permissions', type: JsonType },
                     { name: 'settings', type: JsonType },
-                    { name: 'verified', type: JsonType },
                 ],
                 indexes: [
-                    { columnItems: [ { column: 'emailAddrId', direction: 'asc' } ]},
-                    { columnItems: [ { column: 'phoneId', direction: 'asc' } ]},
+                    { columnItems: [ { column: 'userName', direction: 'asc' } ]},
                     { columnItems: [ { column: 'userGroupId', direction: 'asc' } ]},
-                    { columnItems: [ { column: 'userHandleId', direction: 'asc' } ]},
+                    { columnItems: [ { column: 'emailAddrId', direction: 'asc' } ]},
+                    { columnItems: [ { column: 'emailAddrId2', direction: 'asc' } ]},
+                    { columnItems: [ { column: 'phoneId', direction: 'asc' } ]},
+                    { columnItems: [ { column: 'phoneId2', direction: 'asc' } ]},
                 ]
             },
             {
@@ -176,18 +176,6 @@ define(function mkFrameworkSchema() {
                     { name: 'parentId', type: StringType, size: 50 },
                     { name: 'active', type: BooleanType },
                     { name: 'settings', type: JsonType },
-                ],
-                indexes: [
-                    { columnItems: [ { column: 'name', direction: 'asc' } ]},
-                ]
-            },
-            {
-                name: 'userHandle',
-                type: 'object',
-                prefix: 'USERHANDLE',
-                columns: [
-                    { name: 'name', type: StringType, size: 100 },
-                    { name: 'userId', type: StringType, size: 50 },
                 ],
                 indexes: [
                     { columnItems: [ { column: 'name', direction: 'asc' } ]},
