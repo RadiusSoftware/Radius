@@ -232,15 +232,14 @@ define(class Package {
 
                 if (doctype.type == 'html') {
                     let info = Path.parse(fileName);
-                    let permissionSet = handle.filePermissions.getFilePermissionSet(fileName);
 
                     await this.lib.addFile({
                         pkg: this.name,
                         path: Path.join(handle.url, fileName),
                         mime: Mime.getMimeType(info.ext).getCode(),
-                        mode: '',
+                        mode: 'tls',
                         once: false,
-                        pset: await permissionSet,
+                        pset: handle.filePermissions.getFilePermissionSet(fileName),
                         filePath: filePath,
                     });
                 }
@@ -254,16 +253,15 @@ define(class Package {
             }
             else {
                 let info = Path.parse(fileName);
-                let permissionSet = handle.filePermissions.getFilePermissionSet(fileName);
 
                 if (Mime.isSupported(info.ext)) {
                     await this.lib.addFile({
                         pkg: this.name,
                         path: Path.join(handle.url, fileName),
                         mime: Mime.getMimeType(info.ext).getCode(),
-                        mode: '',
+                        mode: 'tls',
                         once: false,
-                        pset: await permissionSet,
+                        pset: handle.filePermissions.getFilePermissionSet(fileName),
                         filePath: filePath,
                     });
                 }
@@ -293,18 +291,23 @@ define(class Package {
                             if (htmlElement.getTagName() == 'bundle') {
                                 for (let childElement of htmlElement.getChildElements()) {
                                     if (childElement.getTagName() == 'httpx') {
-                                        let opts = this.loadOptions(childElement, context);
-                                        let permissionSet = handle.filePermissions.getFilePermissionSet(httpXName);
-                                        let path = Path.join(handle.url, httpXName);
+                                        let httpXHandle = {
+                                            httpXElement: childElement,
+                                            path: Path.join(handle.url, httpXName),
+                                            permissionSet: handle.filePermissions.getFilePermissionSet(httpXName),
+                                            opts: {},
+                                        }
+                                        
+                                        let opts = await this.loadOptions(httpXHandle);
 
                                         await this.lib.addHttpX({
                                             pkg: this.name,
-                                            path: path,
+                                            path: httpXHandle.path,
                                             mime: 'text/html',
-                                            mode: opts.mode ? opts.mode : '',
-                                            once: opts.once === true,
-                                            pset: permissionSet,
-                                            opts: opts,
+                                            mode: httpXHandle.opts.mode ? httpxHandle.opts.mode : 'tls',
+                                            once: httpXHandle.opts.once === true,
+                                            pset: httpXHandle.permissionSet,
+                                            opts: httpXHandle.opts,
                                             jsPath: jsPath,
                                         });
 
@@ -326,49 +329,56 @@ define(class Package {
         }
     }
 
-    loadOptions(httpxElement) {
-        let opts = { settings: {}};
+    async loadOptions(httpXHandle) {
+        const settings = mkSettingsHandle();
 
-        for (let childElement of httpxElement) {
+        for (let childElement of httpXHandle.httpXElement) {
             if (childElement.getTagName() == 'opt') {
                 let key = childElement.getAttribute('key');
+                let typeName = childElement.getAttribute('type');
 
-                if (key === 'setting') {
-                    let name = childElement.getAttribute('name');
-                    let value = childElement.getAttribute('value');
-                    let type = childElement.getAttribute('type');
-
-                    if (typeof name == 'string' && typeof value == 'string') {
-                        if (typeof type == 'string') {
-                            let valueType;
-                            eval(`valueType=${type}`)
-
-                            opts.settings[name] = {
-                                name: name,
-                                type: valueType,
-                                value: value,
-                            };
-                        }
-                    }
-                }
-                else {
-                    let typeName = childElement.getAttribute('type');
-                    let value = childElement.getAttribute('value');
-
+                if (typeName) {
                     let type;
                     eval(`type=${typeName}`);
+                    let valueText = childElement.getAttribute('value');
 
-                    if (type === StringType) {
-                        opts[key] = this.substituteMarkers(value);
-                    }
-                    else {
-                        opts[key] = type.fromString(value);
+                    if (valueText) {
+                        if (type === StringType) {
+                            var value = this.substituteMarkers(valueText);
+                        }
+                        else {
+                            var value = type.fromString(this.substituteMarkers(valueText));
+                        }
+
+                        if (key == 'setting') {
+                            let name = childElement.getAttribute('name');
+
+                            if (StringType.verify(name) && name.trim()) {
+                                if (!await settings.hasSetting(name.trim())) {
+                                    if (type == StringType && value.startsWith('$$')) {
+                                        let key = value.substring(2);
+
+                                        if (key in httpXHandle) {
+                                            value = httpXHandle[key];
+                                        }
+                                    }
+
+                                    await settings.defineTemporarySetting(
+                                        name.trim(),
+                                        'httpx',
+                                        mkRdsShape(type),
+                                        value,
+                                    );
+                                }
+                            }
+                        }
+                        else {
+                            httpXHandle.opts[key] = value;
+                        }
                     }
                 }
             }
         }
-
-        return opts;
     }
 
     async loadPackage(dirpath) {

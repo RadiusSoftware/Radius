@@ -160,7 +160,7 @@ createService(class SystemService extends Service {
             await mkHttpLibraryHandle().addData({
                 path: this.radiusPath,
                 mime: 'text/javascript',
-                mode: '',
+                mode: 'tls',
                 once: false,
                 pset: await mkPermissionSetHandle().createPermissionSet(),
                 data: radius.mozilla,
@@ -168,7 +168,7 @@ createService(class SystemService extends Service {
 
             let packages = mkPackageHandle();
             await packages.loadDirectory(Path.join(radius.path, '/mozilla/package'), '/');
-            await packages.loadDirectory(Path.join(radius.path, '/radius'), '/');
+            await packages.loadDirectory(Path.join(radius.path, '/radius'), this.radiusPath);
 
             let bootData = await this.readBootFile();
 

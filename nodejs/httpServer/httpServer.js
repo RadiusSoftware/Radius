@@ -79,7 +79,9 @@ define(class HttpWorker extends Worker {
     // *******************************************************************************************
     // *******************************************************************************************
     async filterAcceptCookies(handle) {
-        handle.acceptCookies = handle.req.getCookie(this.settings.acceptCookies);
+        // ****************************************************************************
+        // ****************************************************************************
+        handle.acceptCookiesPath = handle.req.getCookie(this.settings.acceptCookiesPath);
 
         if (handle.acceptCookies) {
             if (handle.acceptCookiesCookie.getValue()) {
@@ -87,12 +89,15 @@ define(class HttpWorker extends Worker {
             }
         }
 
-        handle.rsp.setHeader('Location', this.settings.acceptCookiesPath);
+        handle.rsp.setHeader('Location', handle.acceptCookiesPath);
         handle.rsp.respondStatus(307);
         return true;
     }
 
     async filterPermissions(handle) {
+        // ****************************************************************************
+        // ****************************************************************************
+        return false;
     }
 
     async filterScheme(handle) {
@@ -111,9 +116,25 @@ define(class HttpWorker extends Worker {
     }
 
     async filterSession(handle) {
+        // ****************************************************************************
+        // ****************************************************************************
+        return false;
+    }
+
+    async filterSetupMode(handle) {
+        if (this.setupMode) {
+            handle.setupPath = this.setupPath;
+            handle.rsp.setHeader('Location', handle.setupPath);
+            handle.rsp.respondStatus(307);
+            return true;
+        }
+
+        return false;
     }
 
     async filterSignedIn(handle) {
+        // ****************************************************************************
+        // ****************************************************************************
         return false;
     }
     /*
@@ -214,11 +235,12 @@ define(class HttpWorker extends Worker {
                 return;
             }
 
-            if (this.filterScheme(handle)) return;
-            if (this.filterAcceptCookies(handle)) return;
-            if (this.filterSession(handle)) return;
-            if (this.filterSignedIn(handle)) return;
-            if (this.filterPermissions(handle)) return;
+            if (await this.filterScheme(handle)) return;
+            if (await this.filterSetupMode(handle)) return;
+            if (await this.filterAcceptCookies(handle)) return;
+            if (await this.filterSession(handle)) return;
+            if (await this.filterSignedIn(handle)) return;
+            if (await this.filterPermissions(handle)) return;
 
             if (handle.libEntry.type == 'httpx') {
                 await this.respondHttpx(handle);
@@ -267,8 +289,17 @@ define(class HttpWorker extends Worker {
 
     async init() {
         await super.init();
+        
         this.system = mkSystemHandle();
         this.setupMode = (await this.system.getMode()) == 'system#setup';
+
+        this.settings = mkSettingsHandle();
+        this.acceptCookiesPath = await this.settings.getSetting('acceptCookiesPath');
+        this.profilePath = await this.settings.getSetting('profilePath');
+        this.setupPath = await this.settings.getSetting('setupPath');
+        this.signinPath = await this.settings.getSetting('signinPath');
+        this.systemPath = await this.settings.getSetting('systemPath');
+
         const { publicKey, privateKey } = await this.system.getKeyPair();
 
         if (await this.system.getTlsStatus()) {
@@ -349,12 +380,6 @@ define(class HttpWorker extends Worker {
         }
     }
     */
-
-    async redirectToApp(handle, appInfo) {
-        // ****************************************************************************
-        // ****************************************************************************
-        // ****************************************************************************
-    }
 
     async respondData(handle) {
         if (handle.req.getMethod() == 'GET') {

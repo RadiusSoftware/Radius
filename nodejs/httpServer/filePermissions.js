@@ -41,7 +41,7 @@ define(class FilePermissions {
         return this.dirPermissionSet;
     }
 
-    async getFilePermissionSet(fileName) {
+    getFilePermissionSet(fileName) {
         if (fileName in this.filePermissionSets) {
             return this.filePermissionSets[fileName];
         }
