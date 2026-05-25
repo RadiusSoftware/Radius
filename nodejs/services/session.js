@@ -840,6 +840,10 @@ define(class SessionHandle extends Handle {
         return mkFailure('#NOSESSION');
     }
 
+    isOpen() {
+        return this.token != '';
+    }
+
     async listPermissions() {
         if (this.token) {
             let rsp = await this.callService({

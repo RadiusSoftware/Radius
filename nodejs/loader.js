@@ -34,7 +34,6 @@ LibOs           = require('node:os');
 LibPath         = require('node:path');
 LibProcess      = require('node:process');
 LibQueryString  = require('node:querystring');
-LibUrl          = require('url');
 LibZlib         = require('node:zlib');
 NpmHtml         = require('node-html-parser');
 NpmPg           = require('pg');
@@ -116,7 +115,7 @@ if (LibCluster.isPrimary) {
 
         radius.nodejs = toJson(nodejsFiles);
         radius.webapp = (await FileSystem.readFile(Path.join(radius.path, 'nodejs/httpServer/webapp.html'))).toString();
-        radius.mozilla = mkBuffer(mozillaFiles.join()).toString('base64');
+        radius.mozilla = mozillaFiles.join('\n');
         mkSystemHandle().boot();
     })();
 }

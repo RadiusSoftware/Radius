@@ -39,12 +39,12 @@ Doc.on('DOMContentLoaded', async () => {
     webappSettings = fromJson(mkBuffer(webappSettings, 'hex'));
     
     define(async function callServer(message) {
-        const rsp = await mkHttpRequest().post(Location.getApplicationPath(), message);
+        const rsp = await mkHttpRequest().post(webappSettings.httpPath, message);
         return rsp.getPayload();
     });
 
     define(async function sendServer(message) {
-        mkHttpRequest().post(Location.getApplicationPath(), message);
+        mkHttpRequest().post(webappSettings.httpPath, message);
     });
 
     apiEndpoints = fromJson(mkBuffer(apiEndpoints, 'hex').toString());

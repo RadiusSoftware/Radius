@@ -1,19 +1,12 @@
 {
     ".": {
-        "radius#signedin": "+"
-    },
-    "acceptcookies": {
-        "radius#cookies": "-",
-        "radius#session": "-",
-        "radius#signedin": "-"
     },
     "admin": {
+        "radius#signedin": "+",
         "radius#admin": "+"
     },
-    "signin": {
-        "radius#signedin": "-"
-    },
     "system": {
+        "radius#signedin": "+",
         "radius#system": "+"
     }
 }

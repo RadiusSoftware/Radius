@@ -37,19 +37,11 @@ singleton(class Location {
         this.pathname = location.pathname;
         this.port = location.port;
         this.protocol = location.protocol;
-        this.segments = RdsText.split(this.pathname, '/');
-        this.applicationPath = `/${this.segments[0]}`;
-        this.applicationOrigin = `${this.origin}${this.applicationPath}`;
-        this.applicationWidget = null;
     }
 
     assign(urlString) {
         location.assign(urlString);
         return this;
-    }
-
-    getApplicationPath() {
-        return this.applicationPath;
     }
     
     getHash() {

@@ -112,14 +112,6 @@ singleton(class Packages {
         if (webappSettings.title) {
             Doc.setTitle(this.processText(webappSettings.title));
         }
-
-        if (webappSettings.bodyStyle) {
-            Doc.getBody().setAttribute('style', webappSettings.bodyStyle);
-        }
-
-        if (webappSettings.bodyClass) {
-            Doc.getBody().setAttribute('class', webappSettings.bodyClass);
-        }
         
         Doc.getBody().setInnerHtml(`<${webappSettings.tagName}></${webappSettings.tagName}>`);
     }

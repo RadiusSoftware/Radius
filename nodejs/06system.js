@@ -150,8 +150,6 @@ createService(class SystemService extends Service {
     async onBoot(message) {
         if (this.state == 'system#loaded') {
             await mkPermissionSetHandle().addPermissionTypes(
-                'radius#cookies',
-                'radius#session',
                 'radius#signedin',
                 'radius#admin',
                 'radius#system',

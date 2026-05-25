@@ -158,6 +158,15 @@ createService(class PermissionSetService extends Service {
         return false;
     }
 
+    async onHasPermissions(message) {
+        if (message.uuid in this.permissionSets) {
+            let permissionSet = this.permissionSets[message.uuid];
+            permissionSet.types.getLength() > 0;
+        }
+
+        return false;
+    }
+
     async onHasPermissionType(message) {
         return message.typeName in this.permissionTypesByName;
     }
@@ -293,6 +302,12 @@ define(class PermissionSetHandle extends Handle {
         return await this.callService({
             uuid: this.uuid,
             typeName: typeName,
+        });
+    }
+
+    async hasPermissions() {
+        return await this.callService({
+            uuid: this.uuid,
         });
     }
 

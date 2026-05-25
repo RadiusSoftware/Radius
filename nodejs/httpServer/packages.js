@@ -167,7 +167,7 @@ define(class Package {
             this.type = 'filesystem';
 
             let basicPermissions = mkFilePermissions(await mkPermissionSetHandle().createPermissionSet());
-            await (await basicPermissions.getDirPermissionSet()).setPermissions('radius#cookies', 'radius#session');
+            await basicPermissions.getDirPermissionSet();
 
             if (await this.loadPackage(path)) {
                 let stack = [{

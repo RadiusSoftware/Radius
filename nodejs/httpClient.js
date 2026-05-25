@@ -23,14 +23,10 @@
  
  
 /*****
- * A framework wrapper class for simplifying the implementation of an HTTP
- * or HTTPS client request.  Note that the request is configured/formatted
- * to enable single-line get() and post() and other REST options to the
- * remote server.  There's also a conversions
 *****/
+/*
 define(class HttpClientProtocol {
     constructor(url, port) {
-        this.url = LibUrl.parse(url);
         this.host = this.url.host;
         this.path = this.url.path;
 
@@ -142,8 +138,7 @@ define(class HttpClientProtocol {
         });
     }
 });
-
-
+*/
 /**
  * Built in converts for responses returned by the remote server.  If one of
  * these MIME types are associated with the return value, the registered
@@ -182,24 +177,6 @@ singleton(class HttpClientProtocolConverter {
 /*****
 *****/
 define(class HttpClient {
-    constructor() {
-    }
-});
-
-
-/*****
-*****/
-createService(class HttpClientService extends Service {
-    constructor() {
-        super();
-    }
-});
-
-
-/*****
-*****/
-define(class HttpClientHandle extends Handle {
-    constructor() {
-        super();
+    constructor(url, opts) {
     }
 });

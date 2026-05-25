@@ -41,6 +41,7 @@ define(class Webapp extends HttpX {
 
         let webappSettings = {
             packageName: this.getPackageName(),
+            httpPath: handle.libEntry.path,
         };
 
         for (let key in this.getOptions()) {
@@ -59,8 +60,8 @@ define(class Webapp extends HttpX {
 
         handle.rsp.setHeader('Cache-Control', 'no-cache');
 
-        if (handle.session.getToken()) {
-            await handle.session.setData('parameters', handle.req.getParameters());
+        if (handle.session) {
+            await handle.session.setData('intendedUrl', handle.req.getUrl());
         }
 
         return {
@@ -104,10 +105,10 @@ define(class Webapp extends HttpX {
 
         this.packages = mkPackageHandle();
         this.loadOrder = await this.listLoadOrder();
-        this.radiusPath = await mkSettingsHandle().getSetting('radiusPath');
+        this.radiusPath = await mkSystemHandle().getRadiusPath();
 
         let htmlPath = __filename.replace('.js', '.html');
-        let htmlCode = (await mkSystemHandle().getWebApp());
+        let htmlCode = (await mkSystemHandle().getWebapp());
         this.htmlTemplate = mkRdsTemplate(htmlCode);
 
         this.api = await mkApi(this).init();
