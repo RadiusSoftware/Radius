@@ -119,8 +119,13 @@ define(class Mime {
         });
     })();
 
-    constructor(text) {
-        Object.assign(this, Mime.getMimeType(text));
+    constructor(arg) {
+        if (arg instanceof Mime) {
+            return arg;
+        }
+        else {
+            Object.assign(this, Mime.getMimeType(arg));
+        }
     }
 
     getCode() {

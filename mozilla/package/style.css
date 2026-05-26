@@ -162,6 +162,13 @@ body {
     background-color: var(--background-color);
 }
 
+.bordered {
+    border-color: var(--border-color);
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 15px;
+}
+
 .fill {
     display: table;
     width: 100%;
@@ -612,11 +619,39 @@ body {
     }
 }
 
+.list-unordered {
+    margin-bottom: 4px;
+}
+
+ul.list-unordered > li {
+    margin-bottom: 4px;
+}
+
+.margin-vertical {
+    margin-top: 30px;
+    margin-bottom: 30px;
+}
+
+.margin-vertical-bottom {
+    margin-bottom: 30px;
+}
+
+.margin-vertical-top {
+    margin-top: 30px;
+}
+
 .padded {
     padding-left: 3px;
     padding-right: 3px;
     padding-top: 3px;
     padding-bottom: 3px;
+}
+
+.padded-more {
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 12px;
+    padding-bottom: 12px;
 }
 
 .scroll {

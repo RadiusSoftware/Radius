@@ -8,13 +8,90 @@
     <widget tagname="setup-app">
         <script>
             class SetupApp extends Widget {
+                constructor(arg) {
+                    super(arg);
+
+                    Controller.defineData(this, {
+                        systemState: StringType,
+                    });
+                }
+
+                init() {
+                    (async () => {
+                        Controller.setDataValue(
+                            this,
+                            'systemState',
+                            await Api.getSystemState(),
+                        );
+                    })();
+                }
+
+                onNext(message) {
+                    console.log(message);
+                }
             }
         </script>
         <html class="fill">
-            THE SETUP APP
+            <grid-widget class="fill" rds-rows="50px,auto,50px" rds-cols="50px,auto,50px">
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <selector-widget class="fill" rds-bind-method="setMode,systemState">
+                    <div rds-mode="system#setup" rds-fragment="radius.org.setupIntro"></div>
+                    <div rds-mode="system#setup-acme">CONFIGURE TLS</div>
+                    <div rds-mode="system#setup-mode">SELECT MODE</div>
+                    <div rds-mode="system#setup-swarm">ATTACH TO SWARM</div>
+                    <div rds-mode="system#setup-dbms">CONFIGURE DBMS</div>
+                    <div rds-mode="system#setup-user">SPECIFY USER</div>
+                    <div rds-mode="system#setup-verify">VERIFY EMAIL</div>
+                    <div rds-mode="system#setup-passwprd">SET PASSWORD</div>
+                </selector-widget>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+            </grid-widget>
         </html>
     </widget>
+    <fragment lang="en" name="setupIntro">
+        <h1 class="h1">Radius Server Setup</h1>
+        <div class="bordered padded-more">
+            Welcome to the Radius Software web application client-server framework.
+            You will be able to set your host up as a standalone application server
+            or attach your host to an existing application swarm.  We will guide you
+            through this process step-by-step, after which an encrypted file called
+            "boot" will be created and placed in the radius software parent directory.
+            Here's an overview of the following process:
+            <ul class="list-unordered">
+                <li>Ensure you host is associated with a registered Internet domain: A or AAAA record.</li>
+                <li>Go through the Let's Encrypt process to objtain TLS and CAA certificates and then restart in TLS mode.</li>
+                <li>Decide whether to configure a standalone or a swarm server.</li>
+            </ul>
+            <h2 class="h2">Standalone Mode</h2>
+            <ul class="list-unordered">
+                <li>Create and configure a Mailgun account</li>
+                <li>Enter your Mailgun account credentials</li>
+                <li>Enter a valid email address</li>
+                <li>Verify the entered email address</li>
+                <li>Set your user password</li>
+                <li>Save your boot file</li>
+                <li>Record you startup key</li>
+            </ul>
+            <h2 class="h2">Swarm Mode</h2>
+            <ul class="list-unordered">
+                <li>Enter a Swarm ID</li>
+                <li>Enter a Swarm Host</li>
+                <li>Save your boot file</li>
+                <li>Record you startup key</li>
+            </ul>
+        </div>
+        <div class="space-around margin-vertical-top">
+            <input-widget type="button" class="input-widget-button input-widget-width-wide" value="##radius.org.startSetup##" evt-click="next"></input-widget>
+        </div>
+    </fragment>
     <strings lang="en">
-        setup = System Setup\
+        setup = Setup Server\
+        startSetup = Start Setup\
     </strings>
 </bundle>

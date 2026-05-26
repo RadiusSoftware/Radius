@@ -35,10 +35,11 @@ define(class SetupApp extends Webapp {
     }
 
     // ********************
-    // something
+    // getSystemState
     // ********************
     async [Api.define(
-        'something',
+        'getSystemState',
     )](trx) {
+        return await mkSystemHandle().getState();
     }
 });

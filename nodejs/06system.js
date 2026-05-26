@@ -28,9 +28,10 @@
  * be either initialized or attached before it can be used:
  * 
  *      system#loaded
+ *      system#setup
  *      system#setup-acme
  *      system#setup-mode
- *      system#setup-cluster
+ *      system#setup-swarm
  *      system#setup-dbms
  *      system#setup-user
  *      system#setup-verify

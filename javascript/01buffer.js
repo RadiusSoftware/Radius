@@ -99,6 +99,11 @@
                 return 'ne';
             }
 
+            static concat(...buffers) {
+                // TODO ********
+                throwError('Need to implement Buffer.concat(...buffers) for Mozilla!');
+            }
+
             toString(encoding) {
                 if (encoding == 'base64') {
                     let decoder = new TextDecoder('utf-8');

@@ -526,4 +526,19 @@ singleton(class Data {
 
         return obj;
     }
+
+    /*****
+     * Converts an object into a string blob to www url encoded form.
+    *****/
+    toWwwUrlEncoded(obj) {
+        let values = [];
+
+        if (ObjectType.verify(obj)) {
+            for (let key in obj) {
+                values.push(`${key}=${obj[key]}`);
+            }
+        }
+
+        return values.join('');
+    }
 });

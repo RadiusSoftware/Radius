@@ -296,11 +296,7 @@ define(class HttpWorker extends Worker {
             }, (httpReq, httpRsp) => this.handleRequest(httpReq, httpRsp));
 
             this.server.listen(443, '::');
-            // ***************************************************************************
-            // ***************************************************************************
-            /*
             this.server.on('upgrade', (...args) => this.onUpgrade(...args));
-            */
         }
         else {
             this.scheme = 'http';
@@ -308,61 +304,62 @@ define(class HttpWorker extends Worker {
 
         this.server = LibHttp.createServer({}, (...args) => this.handleRequest(...args));
         this.server.listen(80, '::');
-        // ***************************************************************************
-        // ***************************************************************************
-        /*
         this.server.on('upgrade', (...args) => this.onUpgrade(...args));
-        */
 
         return this;
     }
 
-    /*
     async onUpgrade(httpReq, socket, headData) {
         let req = mkHttpRequest(this, httpReq);
 
-        try {
-            let libEntry = await this.library.get(req.getPath());
+        if (req.isWebSocketAuthorized()) {
+            try {
+                let libEntry = await this.library.get(req.getPath());
 
-            if (libEntry && libEntry.type == 'httpx') {
-                let httpx = await this.getHttpX({ libEntry: libEntry });
+                if (libEntry && libEntry.type == 'httpx') {
+                    let httpx = await this.getHttpX({ libEntry: libEntry });
 
-                if (httpx) {
-                    let sessionCookie = req.getCookie(this.sessionCookieName);
-                    let token = sessionCookie ? sessionCookie.getValue() : '';
-                    let session = await mkSessionHandle().open(token);
+                    if (httpx) {
+                        let sessionCookie = req.getCookie(this.sessionCookieName);
+                        let token = sessionCookie ? sessionCookie.getValue() : '';
+                        let session = await mkSessionHandle().open(token);
 
-                    if (await session.hasPermission('radius#websocket')) {
-                        let secureKey = req.getHeader('sec-websocket-key');
-                        let hash = await Crypto.hash('sha1', `${secureKey}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`);
-                        let webSocket = mkWebsocket(socket, req.getHeader('sec-websocket-extensions'), headData);
-                        
-                        let headers = [
-                            'HTTP/1.1 101 Switching Protocols',
-                            'Upgrade: websocket',
-                            'Connection: upgrade',
-                            `Sec-WebSocket-Accept: ${hash}`,
-                        ];
-                        
-                        if (webSocket.hasExtensions()) {
-                            headers.push(`Sec-WebSocket-Extensions: ${webSocket.getSecWebsocketExtensions()}`);
+                        if (await session.hasPermission('radius#websocket')) {
+                            let secureKey = req.getHeader('sec-websocket-key');
+                            let hash = await Crypto.hash('sha1', `${secureKey}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`);
+                            let webSocket = mkWebsocket(socket, req.getHeader('sec-websocket-extensions'), headData);
+                            
+                            let headers = [
+                                'HTTP/1.1 101 Switching Protocols',
+                                'Upgrade: websocket',
+                                'Connection: upgrade',
+                                `Sec-WebSocket-Accept: ${hash}`,
+                            ];
+                            
+                            if (webSocket.hasExtensions()) {
+                                headers.push(`Sec-WebSocket-Extensions: ${webSocket.getSecWebsocketExtensions()}`);
+                            }
+
+                            headers.push('\r\n');
+                            socket.write(headers.join('\r\n'));
+                            // TODO ********************************************************
+                            /*
+                            webSocket.on('DataReceived', data => {
+                                httpx.handleWebsocket(data);
+                            });
+                            */
                         }
-
-                        headers.push('\r\n');
-                        socket.write(headers.join('\r\n'));
-                        
-                        webSocket.on('DataReceived', data => {
-                            httpx.handleWebsocket(data);
-                        });
                     }
                 }
             }
+            catch (e) {
+                await caught(e);
+            }
         }
-        catch (e) {
-            await caught(e);
+        else {
+            req.respondStatus(401);
         }
     }
-    */
 
     async respondData(handle) {
         if (handle.req.getMethod() == 'GET') {
@@ -749,6 +746,15 @@ define(class HttpRequest {
 
     hasUsername() {
         return this.url.username.length > 0;
+    }
+
+    async isWebSocketAuthorized() {
+        // TODO ********************************************************
+        // TODO ********************************************************
+        // NOTIFY websocket handler on server-side
+        // TODO ********************************************************
+        // TODO ********************************************************
+        return false;
     }
 });
 

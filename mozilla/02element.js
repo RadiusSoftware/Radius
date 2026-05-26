@@ -1167,8 +1167,8 @@ define(class DocElement extends DocNode {
 
         if (this.getRdsFragment) {
             this.clear();
-            let fragment = Packages.getFragment(this.getRdsFragment());
-            this.append(fragment);
+            let fragmentNodes = Packages.getFragment(this.getRdsFragment());
+            this.append(...fragmentNodes);
         }
     }
 

@@ -45,6 +45,14 @@ define(class Url {
         return this.base;
     }
 
+    getCredentials() {
+        if (this.url.username && this.url.password) {
+            return `${this.url.username}:${this.url.password}`;
+        }
+
+        return '';
+    }
+
     getHash() {
         return this.url.hash;
     }
@@ -71,6 +79,10 @@ define(class Url {
 
     getPassword() {
         return this.url.protocol;
+    }
+
+    getPath() {
+        return `${this.url.pathname}${this.url.search}`;
     }
 
     getPathname() {
@@ -103,7 +115,7 @@ define(class Url {
     }
 
     getUsername() {
-        return this.url.protocol;
+        return this.url.username;
     }
 
     isValid() {
@@ -112,6 +124,10 @@ define(class Url {
 
     hasBase() {
         return StringType.verify(this.base);
+    }
+
+    hasCredentials() {
+        return this.url.username && this.url.password;
     }
 
     hasSearchParam(key) {
