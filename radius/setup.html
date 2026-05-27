@@ -12,50 +12,57 @@
                     super(arg);
 
                     Controller.defineData(this, {
-                        systemState: StringType,
+                        setupState: StringType,
                     });
                 }
 
                 init() {
                     (async () => {
-                        Controller.setDataValue(
-                            this,
-                            'systemState',
-                            await Api.getSystemState(),
-                        );
+                        Controller.setDataValue(this, 'setupState', await Api.getSetupState());
                     })();
                 }
 
-                onNext(message) {
-                    console.log(message);
+                async onSetupAcme(message) {
+                    await Api.setupAcme(
+                        'Let\'s Encrypt',
+                        'https://acme-staging-v02.api.letsencrypt.org/directory',
+                    );
+                }
+
+                async onStart(message) {
+                    this.setState(await Api.startSetup());
+                }
+
+                async setState(nextState) {
+                    console.log(nextState);
+                    if (nextState.startsWith('setup')) {
+                        Controller.setDataValue(this, 'setupState', nextState);
+                    }
+                    else {
+                        Location.assign(await Api.getSigninpath());
+                    }
                 }
             }
         </script>
         <html class="fill">
             <grid-widget class="fill" rds-rows="50px,auto,50px" rds-cols="50px,auto,50px">
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
-                <selector-widget class="fill" rds-bind-method="setMode,systemState">
-                    <div rds-mode="system#setup" rds-fragment="radius.org.setupIntro"></div>
-                    <div rds-mode="system#setup-acme">CONFIGURE TLS</div>
-                    <div rds-mode="system#setup-mode">SELECT MODE</div>
-                    <div rds-mode="system#setup-swarm">ATTACH TO SWARM</div>
-                    <div rds-mode="system#setup-dbms">CONFIGURE DBMS</div>
-                    <div rds-mode="system#setup-user">SPECIFY USER</div>
-                    <div rds-mode="system#setup-verify">VERIFY EMAIL</div>
-                    <div rds-mode="system#setup-passwprd">SET PASSWORD</div>
+                <div></div><div></div><div></div><div></div>
+                <selector-widget class="fill" rds-bind-method="setMode,setupState">
+                    <div rds-mode="setup#start" rds-fragment="radius.org.setupIntro"></div>
+                    <div rds-mode="setup#acme" rds-fragment="radius.org.setupAcme"></div>
+                    <div rds-mode="setup#mode">SELECT MODE</div>
+                    <div rds-mode="setup#swarm">ATTACH TO SWARM</div>
+                    <div rds-mode="setup#dbms">CONFIGURE DBMS</div>
+                    <div rds-mode="setup#user">SPECIFY USER</div>
+                    <div rds-mode="setup#verify">VERIFY EMAIL</div>
+                    <div rds-mode="setup#password">SET PASSWORD</div>
                 </selector-widget>
-                <div></div>
-                <div></div>
-                <div></div>
-                <div></div>
+                <div></div><div></div><div></div><div></div>
             </grid-widget>
         </html>
     </widget>
     <fragment lang="en" name="setupIntro">
-        <h1 class="h1">Radius Server Setup</h1>
+        <h1 class="h1">Server Setup</h1>
         <div class="bordered padded-more">
             Welcome to the Radius Software web application client-server framework.
             You will be able to set your host up as a standalone application server
@@ -65,7 +72,7 @@
             Here's an overview of the following process:
             <ul class="list-unordered">
                 <li>Ensure you host is associated with a registered Internet domain: A or AAAA record.</li>
-                <li>Go through the Let's Encrypt process to objtain TLS and CAA certificates and then restart in TLS mode.</li>
+                <li>Contact your ACME certificate authority to obtain TLS and CAA certificates and then restart in TLS mode.</li>
                 <li>Decide whether to configure a standalone or a swarm server.</li>
             </ul>
             <h2 class="h2">Standalone Mode</h2>
@@ -87,11 +94,22 @@
             </ul>
         </div>
         <div class="space-around margin-vertical-top">
-            <input-widget type="button" class="input-widget-button input-widget-width-wide" value="##radius.org.startSetup##" evt-click="next"></input-widget>
+            <input-widget type="button" class="input-widget-button input-widget-width-wide" value="##radius.org.startSetup##" evt-click="start"></input-widget>
         </div>
+    </fragment>
+    <fragment lang="en" name="setupAcme">
+        <h1 class="h1">ACME Certification</h1>
+        <grid-widget rds-rows="auto,100px,auto">
+            <div></div>
+            <div class="space-around margin-vertical-top">
+                <input-widget type="button" class="input-widget-button input-widget-width-wide" value="##radius.org.setupAcme##" evt-click="setupAcme"></input-widget>
+            </div>
+            <div></div>
+        </grid-widget>
     </fragment>
     <strings lang="en">
         setup = Setup Server\
+        setupAcme = Setup ACME\
         startSetup = Start Setup\
     </strings>
 </bundle>

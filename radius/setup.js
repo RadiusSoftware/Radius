@@ -32,14 +32,95 @@
 define(class SetupApp extends Webapp {
     constructor() {
         super();
+        this.state = 'setup#start';
+    }
+
+    async getNextState() {
+        const system = mkSystemHandle();
+
+        if (!await system.getTlsStatus()) {
+            this.state = 'setup#acme';
+            return this.state;
+        }
+
+        /*
+        if (false) {
+            this.state = 'system#setup-mode';
+            return this.state;
+        }
+
+        if (false) {
+            this.state = 'system#setup-swarm';
+            return this.state;
+        }
+
+        if (false) {
+            this.state = 'system#setup-dbms';
+            return this.state;
+        }
+
+        if (false) {
+            this.state = 'system#setup-user';
+            return this.state;
+        }
+
+        if (false) {
+            this.state = 'system#setup-verify';
+            return this.state;
+        }
+
+        if (false) {
+            this.state = 'system#setup-password';
+            return this.state;
+        }
+        */
     }
 
     // ********************
-    // getSystemState
+    // getSigninPath
     // ********************
     async [Api.define(
-        'getSystemState',
+        'getSigninPath',
     )](trx) {
-        return await mkSystemHandle().getState();
+        return await mkSystemHandle().getSigninPath();
+    }
+
+    // ********************
+    // getSetupState
+    // ********************
+    async [Api.define(
+        'getSetupState',
+    )](trx) {
+        return this.state;
+    }
+
+    // ********************
+    // setupAcme
+    // ********************
+    async [Api.define(
+        'setupAcme',
+        {
+            name: StringType,
+            url: StringType,
+        }
+    )](trx, name, url) {
+        if (this.state == 'setup#acme') {
+            console.log('setupAcme');
+            console.log(name);
+            console.log(url);
+        }
+        else {
+            this.state = 'setup#start';
+            return this.state;
+        }
+    }
+
+    // ********************
+    // startSetup
+    // ********************
+    async [Api.define(
+        'startSetup',
+    )](trx) {
+        return await this.getNextState();
     }
 });

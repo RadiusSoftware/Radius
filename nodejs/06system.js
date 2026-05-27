@@ -29,13 +29,6 @@
  * 
  *      system#loaded
  *      system#setup
- *      system#setup-acme
- *      system#setup-mode
- *      system#setup-swarm
- *      system#setup-dbms
- *      system#setup-user
- *      system#setup-verify
- *      system#setup-password
  *      system#ready
  *      system#running
  * 
@@ -44,13 +37,18 @@
 *****/
 createService(class SystemService extends Service {
     static bootShape = mkRdsShape({
-        mode: mkRdsEnum('system#swarm', 'system#standalone'),
+        bootMode: mkRdsEnum('system#swarm', 'system#standalone'),
         hostId: StringType,
         hostName: StringType,
         privateKey: StringType,
         publicKey: StringType,
         tlsCert: StringType,
         caaCert: StringType,
+
+        _acme: {
+            name: StringType,
+            url: StringType,
+        },
 
         _swarm: {
             swarmId: StringType,
@@ -66,7 +64,7 @@ createService(class SystemService extends Service {
             database: StringType,
             username: StringType,
             password: StringType,
-            _certificate: StringType,
+            certificate: StringType,
         }
     });
 
@@ -148,6 +146,35 @@ createService(class SystemService extends Service {
         */
     }
 
+    async initDbms() {
+        // **************************************************************************
+        // **************************************************************************
+        /*
+        try {
+            if (!(await Dbms.doesDatabaseExist(this.sysdb))) {
+                await Dbms.createDatabase(this.sysdb);
+            }
+
+            let schema1 = await Dbms.getDatabaseSchema(this.sysdb);
+            let schema2 = mkFrameworkSchema();
+
+            for (let diff of mkSchemaAnalysis(schema1, schema2)) {
+                await SchemaUpdater.upgrade(this.sysdb, diff);
+            }
+
+            for (let dbTable of schema2) {
+                if (dbTable.getType() == 'object') {
+                    defineDbo('', dbTable);
+                }
+            }
+
+            await Dbms.setSettings(this.sysdb);
+        }
+        catch (e) {}
+        this.state = 'system#setup';
+        */
+    }
+
     async onBoot(message) {
         if (this.state == 'system#loaded') {
             await mkPermissionSetHandle().addPermissionTypes(
@@ -186,6 +213,10 @@ createService(class SystemService extends Service {
         }
     }
 
+    async onGetAcceptCookiesPath(message) {
+        return this.acceptCookiesPath;
+    }
+
     async onGetBootTime(message) {
         return this.bootTime;
     }
@@ -204,6 +235,10 @@ createService(class SystemService extends Service {
 
     async onGetRadiusPath(message) {
         return this.radiusPath;
+    }
+
+    async onGetsigninPath(message) {
+        return this.signinPath;
     }
 
     async onGetState(message) {
@@ -241,7 +276,7 @@ createService(class SystemService extends Service {
                 const bootSettings = fromJson(await FileSystem.readFileAsString(bootPath));
 
                 if (bootSettings && SystemService.bootShape.verify(bootSettings)) {
-                    this.mode = bootSettings.mode;
+                    this.bootMode = bootSettings.bootMode;
                     this.hostId = bootSettings.hostId;
                     this.hostName = bootSettings.hostName;
                     this.privateKey = bootSettings.privateKey;
@@ -279,33 +314,7 @@ createService(class SystemService extends Service {
         this.state = 'system#setup';
     }
 
-    async setupDbms() {
-        // **************************************************************************
-        // **************************************************************************
-        /*
-        try {
-            if (!(await Dbms.doesDatabaseExist(this.sysdb))) {
-                await Dbms.createDatabase(this.sysdb);
-            }
-
-            let schema1 = await Dbms.getDatabaseSchema(this.sysdb);
-            let schema2 = mkFrameworkSchema();
-
-            for (let diff of mkSchemaAnalysis(schema1, schema2)) {
-                await SchemaUpdater.upgrade(this.sysdb, diff);
-            }
-
-            for (let dbTable of schema2) {
-                if (dbTable.getType() == 'object') {
-                    defineDbo('', dbTable);
-                }
-            }
-
-            await Dbms.setSettings(this.sysdb);
-        }
-        catch (e) {}
-        this.state = 'system#setup';
-        */
+    async writeBootFile() {
     }
 });
 /*******************************************************************************************************
@@ -377,6 +386,11 @@ define(class SystemHandle extends Handle {
         return mkSystemHandle();
     }
 
+    async getAcceptCookiesPath() {
+        return await this.callService({
+        });
+    }
+
     async boot() {
         return await this.callService({
         });
@@ -403,6 +417,11 @@ define(class SystemHandle extends Handle {
     }
 
     async getRadiusPath() {
+        return await this.callService({
+        });
+    }
+
+    async getSigninPath() {
         return await this.callService({
         });
     }

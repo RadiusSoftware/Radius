@@ -23,8 +23,7 @@
 
 /*****
 *****/
-define(class ServiceHttpClient extends HttpClient {
+define(class ServiceHttpClient {
     constructor() {
-        super();
     }
 });

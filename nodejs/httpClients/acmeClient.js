@@ -23,7 +23,14 @@
 
 /*****
 *****/
-define(class ThunkHttpClient {
-    constructor() {
+define(class AcmeHttpClient {
+    static acmeSettings = mkRdsShape({
+        name: StringType,
+        host: StringType,
+        url: StringType,
+    });
+
+    constructor(acmeSettings) {
+        this.acmeSettings = acmeSettings;
     }
 });
