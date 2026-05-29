@@ -413,7 +413,7 @@ define(class Package {
             this.mozilla.fragments[lang] = langGroup;
         }
 
-        langGroup[key] = fragmentElement.getInnerHtml();
+        langGroup[key] = this.substituteMarkers(fragmentElement.getInnerHtml());
     }
 
     async processImages(imagesElement) {

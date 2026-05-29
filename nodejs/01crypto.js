@@ -359,7 +359,7 @@ singleton(class Crypto {
             })
         });
     }
-
+    
     sign(keyObj, data) {
         return new Promise((ok, fail) => {
             if (keyObj instanceof LibCrypto.KeyObject) {

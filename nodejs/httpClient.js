@@ -39,6 +39,7 @@ define(class HttpClient {
             protocol: this.url.getProtocol(),
             host: this.url.getHost(),
             path: this.url.getPath(),
+            headers: {},
         };
 
         if (this.url.hasCredentials()) {
@@ -46,11 +47,15 @@ define(class HttpClient {
         }
 
         if (Object.keys(this.headers).length) {
-            this.httpOptions.headers = this.headers;
+            Object.assign(this.httpOptions.headers, this.headers);
+        }
+
+        if (ObjectType.verify(this.options.headers)) {
+            Object.assign(this.httpOptions.headers, this.options.headers);
         }
 
         if (this.options.family == 4 || this.options.family == 6) {
-            this.httpOprtions.family = this.options.family;
+            this.httpOptions.family = this.options.family;
         }
 
         if (this.url.getPort()) {
@@ -128,7 +133,7 @@ define(class HttpClient {
         if (this.payload && this.mime && this.method in { POST:0, PUT:0 }) {
             if (ObjectType.verify(this.payload)) {
                 if (this.mime.getCode() == 'application/json') {
-                    this.data = JSON.toString(this.payload, null, null);
+                    this.data = toStdJson(this.payload);
                     this.headers['Content-Type'] = this.mime.getCode();
                     this.headers['Content-Length'] = `${this.buffer.length}`;
                     return;
@@ -153,7 +158,7 @@ define(class HttpClient {
         return await this.exec();
     }
 
-    async post(url, payload, mime) {
+    async post(url, mime, payload) {
         this.method = 'POST';
         this.url = mkUrl(url);
         this.payload = payload;
@@ -161,7 +166,7 @@ define(class HttpClient {
         return await this.exec();
     }
 
-    async put(url, payload, mime) {
+    async put(url, mime, payload) {
         this.method = 'PUT';
         this.url = mkUrl(url);
         this.payload = payload;
@@ -339,6 +344,7 @@ singleton(class RdsConverter {
         this.supported = {
             'application/jso': this.convertJsObject,
             'application/json': this.convertJson,
+            'application/problem+json': this.convertJson,
             'application/octet-stream': this.convertOctetStream,
             'application/xml': this.convertXml,
             'application/x-www-urlencoded': this.convertWwwUrlEncoded,

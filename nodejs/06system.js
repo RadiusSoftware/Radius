@@ -45,18 +45,18 @@ createService(class SystemService extends Service {
         tlsCert: StringType,
         caaCert: StringType,
 
-        _acme: {
+        acme: {
             name: StringType,
             url: StringType,
         },
 
-        _swarm: {
+        swarm: {
             swarmId: StringType,
             swarmSecret: StringType,
             swarmHosts: [ StringType ],
         },
 
-        _dbms: {
+        dbms: {
             dbmsType: StringType,
             timeout: Int32Type,
             host: StringType,
@@ -77,13 +77,14 @@ createService(class SystemService extends Service {
     }
 
     async bootSetupMode() {
-        const { publicKey, privateKey } = await Crypto.generateKeyPair('rsa');
+        const keyAlgorithm = 'rsa';
+        const { publicKey, privateKey } = await Crypto.generateKeyPair(keyAlgorithm);
 
         this.mode = 'system#setup';
         this.hostId = Crypto.generateUUID();
         this.hostName = this.hostId.replaceAll('-', '_');
-        this.publicKey = publicKey.export({ type: 'pkcs1', format: 'pem' });
-        this.privateKey = privateKey.export({ type: 'pkcs1', format: 'pem' });
+        this.publicKey = Crypto.export(publicKey);
+        this.privateKey = Crypto.export(privateKey);
 
         await mkSettingsHandle().defineTemporarySetting(
             'httpServer',
@@ -195,7 +196,6 @@ createService(class SystemService extends Service {
             let packages = mkPackageHandle();
             await packages.loadDirectory(Path.join(radius.path, '/mozilla/package'), '/');
             await packages.loadDirectory(Path.join(radius.path, '/radius'), this.radiusPath);
-
             let bootData = await this.readBootFile();
 
             if (this.state == 'system#ready') {
@@ -223,6 +223,11 @@ createService(class SystemService extends Service {
 
     async onGetBootUUID(message) {
         return this.bootUUID;
+    }
+
+    async onGetKeyAlg(message) {
+        let keyObj = Crypto.createPrivateKey(this.privateKey);
+        return keyObj.asymmetricKeyType;
     }
 
     async onGetKeyPair(message) {
@@ -402,6 +407,11 @@ define(class SystemHandle extends Handle {
     }
 
     async getBootUUID() {
+        return await this.callService({
+        });
+    }
+
+    async getKeyAlg() {
         return await this.callService({
         });
     }

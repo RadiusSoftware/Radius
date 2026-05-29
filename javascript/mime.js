@@ -60,6 +60,8 @@ define(class Mime {
             { code: 'image/jpeg',                                                                            type: 'binary', extensions: {jpg:0, jpeg:0} },
             { code: 'text/javascript',                                                                       type: 'string', extensions: {js:0} },
             { code: 'application/json',                                                                      type: 'string', extensions: {json:0} },
+            { code: 'application/jose+json',                                                                 type: 'string', extensions: {json:0} },
+            { code: 'application/problem+json',                                                              type: 'string', extensions: {json:0} },
             { code: 'application/jso',                                                                       type: 'string', extensions: {jso:0} },
             { code: 'application/ld+json',                                                                   type: 'string', extensions: {jsonld:0} },
             { code: 'audio/midi',                                                                            type: 'binary', extensions: {mid:0, midi:0} },

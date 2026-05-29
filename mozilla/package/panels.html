@@ -372,9 +372,45 @@
             class ProgressWidget extends Widget {
                 constructor(arg) {
                     super(arg);
+
+                    Controller.defineData(this, {
+                        viewType: mkRdsEnum(
+                            'progress#singleline',
+                            'progress#multiline',
+                        ),
+                        log: [ StringType ],
+                    });
+                }
+
+                clear() {
+                }
+
+                init() {
+                    super.init();
+
+                    if (FunctionType.verify(this.getRdsView)) {
+                        let viewType = this.getRdsView();
+                        Controller.setDataValue(this, 'viewType', viewType);
+                    }
+                }
+
+                listen(webSocketAuthorization) {
+                }
+
+                push(statusText) {
                 }
             }
         </script>
+        <html>
+            <selector-widget rds-bind-method="setMode,">
+                <div rds-view="progress#singleline">
+                    SINGLE LINE
+                </div>
+                <div rds-view="progress#multiline">
+                    MULTILINE LOG
+                </div>
+            </selector-widget>
+        </html>
     </widget>
     <widget tagname="selector-widget">
         <script>

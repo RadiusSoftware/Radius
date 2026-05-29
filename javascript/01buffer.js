@@ -54,6 +54,9 @@
                             array[i] = binaryString.charCodeAt(i);
                         }
                     }
+                    else if (encoding == 'base64url') {
+                        // TODO ********
+                    }
                     else if (encoding == 'hex') {
                         array = new Uint8Array(value.length/2);
     

@@ -35,7 +35,9 @@ LibPath         = require('node:path');
 LibProcess      = require('node:process');
 LibQueryString  = require('node:querystring');
 LibZlib         = require('node:zlib');
+
 NpmHtml         = require('node-html-parser');
+NpmPemJwk       = require('pem-jwk');
 NpmPg           = require('pg');
 NpmYauzl        = require('yauzl');
 NpmYazl         = require('yazl');

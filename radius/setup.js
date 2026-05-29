@@ -102,12 +102,15 @@ define(class SetupApp extends Webapp {
         {
             name: StringType,
             url: StringType,
+            contact: [ StringType ],
         }
-    )](trx, name, url) {
+    )](trx, name, url, contact) {
         if (this.state == 'setup#acme') {
-            console.log('setupAcme');
-            console.log(name);
-            console.log(url);
+            let acmeSettings = AcmeClient.settingsShape.getDefault();
+            acmeSettings.name = name;
+            acmeSettings.url = url;
+            acmeSettings.account.contact = contact,
+            await mkAcmeClient(acmeSettings).certify();
         }
         else {
             this.state = 'setup#start';

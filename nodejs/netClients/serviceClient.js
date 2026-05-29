@@ -23,7 +23,7 @@
 
 /*****
 *****/
-define(class ThunkHttpClient {
+define(class ServiceClient {
     constructor() {
     }
 });

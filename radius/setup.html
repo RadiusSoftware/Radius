@@ -26,6 +26,7 @@
                     await Api.setupAcme(
                         'Let\'s Encrypt',
                         'https://acme-staging-v02.api.letsencrypt.org/directory',
+                        [ 'hypermetabolik@gmail.com' ]
                     );
                 }
 
@@ -49,7 +50,16 @@
                 <div></div><div></div><div></div><div></div>
                 <selector-widget class="fill" rds-bind-method="setMode,setupState">
                     <div rds-mode="setup#start" rds-fragment="radius.org.setupIntro"></div>
-                    <div rds-mode="setup#acme" rds-fragment="radius.org.setupAcme"></div>
+                    <div rds-mode="setup#acme">
+                        <h1 class="h1">ACME Certification</h1>
+                        <grid-widget rds-rows="auto,100px,auto">
+                            <div></div>
+                            <div class="space-around margin-vertical-top">
+                                <input-widget type="button" class="input-widget-button input-widget-width-wide" value="##setupAcme##" evt-click="setupAcme"></input-widget>
+                            </div>
+                            <div></div>
+                        </grid-widget>
+                    </div>
                     <div rds-mode="setup#mode">SELECT MODE</div>
                     <div rds-mode="setup#swarm">ATTACH TO SWARM</div>
                     <div rds-mode="setup#dbms">CONFIGURE DBMS</div>
@@ -94,18 +104,8 @@
             </ul>
         </div>
         <div class="space-around margin-vertical-top">
-            <input-widget type="button" class="input-widget-button input-widget-width-wide" value="##radius.org.startSetup##" evt-click="start"></input-widget>
+            <input-widget type="button" class="input-widget-button input-widget-width-wide" value="##startSetup##" evt-click="start"></input-widget>
         </div>
-    </fragment>
-    <fragment lang="en" name="setupAcme">
-        <h1 class="h1">ACME Certification</h1>
-        <grid-widget rds-rows="auto,100px,auto">
-            <div></div>
-            <div class="space-around margin-vertical-top">
-                <input-widget type="button" class="input-widget-button input-widget-width-wide" value="##radius.org.setupAcme##" evt-click="setupAcme"></input-widget>
-            </div>
-            <div></div>
-        </grid-widget>
     </fragment>
     <strings lang="en">
         setup = Setup Server\
