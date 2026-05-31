@@ -27,7 +27,7 @@
  * 
  * 
 *****/
-define(class AcmeClient {
+define(class AcmeClient extends Emitter {
     static settingsShape = mkRdsShape({
         name: StringType,
         url: StringType,
@@ -50,14 +50,16 @@ define(class AcmeClient {
     });
 
     constructor(settings) {
+        super();
         this.settings = settings;
-
-        if (!AcmeClient.settingsShape.verify(this.settings)) {
-            return mkFailure('ACME settings have failed verification!');
-        }
     }
 
     async authorize(authorizationUrl) {
+        this.emit({
+            name: 'Acme',
+            task: 'radius.org.acmeAuthorizationStarting',
+        });
+
         let httpResp = await this.post(authorizationUrl, 'PostAsGet');
 
         if (httpResp.getStatusCode() == 200) {
@@ -92,13 +94,12 @@ define(class AcmeClient {
             }
 
             if (challenge.methodName) {
-                let challengePath = await this[challenge.methodName](challenge);
+                await this[challenge.methodName](challenge, authorizationUrl);
 
-                if (!await this.confirmChallenge(challenge, authorizationUrl)) {
-                    throwError('radius.org.confirmChallengeFailed');
-                }
-
-                await mkHttpLibraryHandle().delete(challengePath);
+                this.emit({
+                    name: 'Acme',
+                    task: 'radius.org.acmeAuthorizationSuccessful',
+                });
             }
             else {
                 throwError('radius.org.challengeFailed');
@@ -111,6 +112,12 @@ define(class AcmeClient {
 
     async certify() {
         try {
+            this.emit({
+                name: 'Acme',
+                task: 'radius.org.acmeCertifyStarting',
+            });
+
+            this.checkSettings();
             await this.establishSession();
             await this.ensureAccount();
 
@@ -136,69 +143,93 @@ define(class AcmeClient {
             }
         }
         catch (e) {
-            return mkFailure(e);
+            this.emit({
+                name: 'Acme',
+                error: e.code,
+            });
+
+            return e;
         }
     }
 
-    async challengeDnsPersist(challenge) {
+    async challengeDns(challenge, authorizationUrl) {
         // ***** TODO
     }
 
-    challengeHttp(challenge) {
-        return new Promise(async (ok, fail) => {
-            if (challenge.status == 'pending') {
-                let hash = await Crypto.hash('sha256', `{"e":"${this.jwk.e}","kty":"${this.jwk.kty}","n":"${this.jwk.n}"}`);
-                let challengePath = `/.well-known/acme-challenge/${challenge.token}`;
-                let authorizationSecret = `${challenge.token}.${hash.toString('base64url')}`;
-
-                await mkHttpLibraryHandle().addData({
-                    path: challengePath,
-                    mime: 'text/plain',
-                    mode: 'plain',
-                    once: false,
-                    pset: await mkPermissionSetHandle().createPermissionSet(),
-                    data: authorizationSecret,
-                    flags: { disableCompression: true },
-                });
-
-                await mkHttpLibraryHandle().listen(challengePath, false, libEntry => {
-                    ok(challengePath);
-                });
-
-                let httpResp = await this.post(challenge.url, {});
-            }
-        });
-    }
-
-    async challengeTlsAlpn(challenge) {
+    async challengeDnsPersist(challenge, authorizationUrl) {
         // ***** TODO
     }
 
-    async confirmChallenge(challenge, authorizationUrl) {
-        for (let i = 0; i < 10; i++) {
-            let httpResp = await this.post(authorizationUrl, 'PostAsGet');
-            let httpRespData = httpResp.getValue();
-            
-            let httpChallenge = httpRespData.challenges.filter(entry => {
-                return entry.type == challenge.type;
-            })[0];
-            
-            if (httpChallenge.status == 'valid') {
-                return true;
-            }
-            else if (httpChallenge.status == 'invalid') {
-                return false;
-            }
+    async challengeHttp(challenge, authorizationUrl) {
+        if (challenge.status == 'pending') {
+            let hash = await Crypto.hash('sha256', `{"e":"${this.jwk.e}","kty":"${this.jwk.kty}","n":"${this.jwk.n}"}`);
+            let challengePath = `/.well-known/acme-challenge/${challenge.token}`;
+            let authorizationSecret = `${challenge.token}.${hash.toString('base64url')}`;
 
+            await mkHttpLibraryHandle().addData({
+                path: challengePath,
+                mime: 'text/plain',
+                mode: 'plain',
+                once: false,
+                pset: await mkPermissionSetHandle().createPermissionSet(),
+                data: authorizationSecret,
+                flags: { disableCompression: true },
+            });
+
+            // **************************************************************************
+            // **************************************************************************
+            await mkHttpLibraryHandle().watch(challengePath, message => {
+                console.log(message.libEntry.path);
+                await mkHttpLibraryHandle.ignore(challengePath);
+            });
+
+            await this.post(challenge.url, {});
             await pause(2000);
-        }
 
-        return false;
+            for (let i = 0; i < 10; i++) {
+                let httpResp = await this.post(authorizationUrl, 'PostAsGet');
+                let httpRespData = httpResp.getValue();
+                
+                let httpChallenge = httpRespData.challenges.filter(entry => {
+                    return entry.type == challenge.type;
+                })[0];
+                
+                if (httpChallenge.status == 'valid') {
+                    await mkHttpLibraryHandle().delete(challengePath);
+                    break;
+                }
+                else if (httpChallenge.status == 'invalid') {
+                    throwError(`radius.org.httpChallengeFailed`);
+                }
+
+                await pause(2000);
+            }
+        }
+    }
+
+    async challengeTlsAlpn(challenge, authorizationUrl) {
+        // ***** TODO
+    }
+
+    checkSettings() {
+        this.emit({
+            name: 'Acme',
+            task: 'radius.org.acmeSettingsCheck',
+        });
+
+        if (!AcmeClient.settingsShape.verify(this.settings)) {
+            throwError('radius.org.acmeSettingsFailure');
+        }
     }
     
     async ensureAccount() {
         if (this.settings.account.kid) {
             this.jwk = NpmPemJwk.pem2jwk(this.settings.publicKey);
+
+            this.emit({
+                name: 'Acme',
+                task: 'radius.org.acmeAccountFoundInSettings',
+            });
         }
         else {
             const keyAlgMap = {
@@ -227,10 +258,20 @@ define(class AcmeClient {
             else {
                 throwError('radius.org.acmeCreateAccount');
             }
+
+            this.emit({
+                name: 'Acme',
+                task: 'radius.org.acmeAccountCreated',
+            });
         }
     }
 
     async establishSession() {
+        this.emit({
+            name: 'Acme',
+            task: 'radius.org.acmeSessionEstablishing',
+        });
+
         let httpResp = await mkHttpClient().get(this.settings.url);
 
         if (httpResp.getStatusCode() == 200 && httpResp.getMime().getCode() == 'application/json') {
@@ -239,7 +280,7 @@ define(class AcmeClient {
             this.nonce = httpResp.getHeader('replay-nonce');
         }
         else {
-            return throwError('radius.org.acmeEstablishSession');
+            return throwError('radius.org.acmeSessionFailed');
         }
     }
 

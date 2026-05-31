@@ -119,7 +119,10 @@ define(class SetupApp extends Webapp {
                 locale: "Reno",
                 org: "Infosearch International",
             }
-            await mkAcmeClient(acmeSettings).certify();
+
+            let acmeClient = mkAcmeClient(acmeSettings);
+            acmeClient.on('Acme', message => console.log(message));
+            await acmeClient.certify();
         }
         else {
             this.state = 'setup#start';

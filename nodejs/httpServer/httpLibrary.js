@@ -54,7 +54,7 @@ createService(class HttpLibraryService extends Service {
             return mkFailure(`HttpLibrary.adding to library at "${libEntry.path}": INVALID PERMISSION SET`);
         }
 
-        libEntry.listeners = {};
+        libEntry.watchers = {};
         this.entries[libEntry.path] = libEntry;
     }
 
@@ -182,29 +182,11 @@ createService(class HttpLibraryService extends Service {
         console.log();
     }
 
-    async onListen(message) {
-        if (message.path in this.entries) {
-            const libEntry = this.entries[message.path];
-
-            if (message.workerId in libEntry.listeners) {
-                libEntry.listeners[message.workerId]++;
-            }
-            else {
-                libEntry.listeners[message.workerId] = 1;
-            }
-
-            return true;
-        }
-        else {
-            return false;
-        }
-    }
-
     async onTriggerNotify(message) {
         if (message.path in this.entries) {
             const libEntry = this.entries[message.path];
             
-            for (let workerKey in libEntry.listeners) {
+            for (let workerKey in libEntry.watchers) {
                 const workerId = parseInt(workerKey);
                 
                 const notification = {
@@ -222,6 +204,24 @@ createService(class HttpLibraryService extends Service {
             }
         }
     }
+
+    async onWatch(message) {
+        if (message.path in this.entries) {
+            const libEntry = this.entries[message.path];
+
+            if (message.workerId in libEntry.watchers) {
+                libEntry.watchers[message.workerId]++;
+            }
+            else {
+                libEntry.watchers[message.workerId] = 1;
+            }
+
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
 });
 
 
@@ -232,25 +232,13 @@ createService(class HttpLibraryService extends Service {
  * all objects and processes can interact with the library.
 *****/
 define(class HttpLibraryHandle extends Handle {
-    static listeners = {};
+    static watchers = {};
 
     static {
         Process.on('HttpLibraryServed', message => {
-            if (message.path in HttpLibraryHandle.listeners) {
-                const listeners = this.listeners[message.path];
-
-                for (let entry of listeners.funcs) {
-                    entry.func(message.libEntry);
-                }
-
-                for (let i = 0; i < listeners.funcs.length; i++) {
-                    let entry = listeners.funcs[i];
-
-                    if (entry.once) {
-                        // *****************************************************************
-                        // *****************************************************************
-                        console.log('ONCE....');
-                    }
+            if (message.path in HttpLibraryHandle.watchers) {
+                for (let handler of this.watchers[message.path]) {
+                    handler(message);
                 }
             }
         });
@@ -300,33 +288,29 @@ define(class HttpLibraryHandle extends Handle {
         // ***************************************************************
     }
 
-    async listen(path, once, func) {
-        if (path in HttpLibraryHandle.listeners) {
-            var listeners = HttpLibraryHandle.listeners[path];
-        }
-        else {
-            var listeners = {
-                path: path,
-                funcs: [],
-            };
-
-            HttpLibraryHandle.listeners[path] = listeners;
-
-            await this.callService({
-                path: path,
-                workerId: Process.getWorkerId(),
-            });
-        }
-
-        listeners.funcs.push({ func: func, once: once });
-        return this;
-    }
-
     async triggerNotify(path) {
         await this.callService({
             path: path,
         });
 
+        return this;
+    }
+
+    async watch(path, handler) {
+        if (path in HttpLibraryHandle.watchers) {
+            var watchers = HttpLibraryHandle.watchers[path];
+        }
+        else {
+            var watchers = [];
+            HttpLibraryHandle.watchers[path] = watchers;
+        }
+
+        await this.callService({
+            path: path,
+            workerId: Process.getWorkerId(),
+        });
+
+        watchers.push(handler);
         return this;
     }
 });

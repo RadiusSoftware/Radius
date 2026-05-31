@@ -269,7 +269,7 @@ define(class HttpWorker extends Worker {
                 }
             }
 
-            if (Object.keys(handle.libEntry.listeners).length) {
+            if (Object.keys(handle.libEntry.watchers).length) {
                 await this.library.triggerNotify(handle.libEntry.path);
             }
 
