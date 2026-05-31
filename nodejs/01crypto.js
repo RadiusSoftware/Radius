@@ -324,7 +324,7 @@ singleton(class Crypto {
                 let hashed = hash.read();
 
                 if (hashed) {
-                    ok(hashed.toString('base64'));
+                    ok(hashed);
                 }
             });
 

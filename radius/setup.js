@@ -106,10 +106,19 @@ define(class SetupApp extends Webapp {
         }
     )](trx, name, url, contact) {
         if (this.state == 'setup#acme') {
+            await mkSystemHandle().setHost('development.infosearch.cloud');
+
             let acmeSettings = AcmeClient.settingsShape.getDefault();
             acmeSettings.name = name;
             acmeSettings.url = url;
+            acmeSettings.days = 90;
             acmeSettings.account.contact = contact,
+            acmeSettings.operator = {
+                country: "US",
+                state: "Nevada",
+                locale: "Reno",
+                org: "Infosearch International",
+            }
             await mkAcmeClient(acmeSettings).certify();
         }
         else {

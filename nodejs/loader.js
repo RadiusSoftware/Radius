@@ -100,7 +100,13 @@ if (LibCluster.isPrimary) {
 
         for (let nodejsFile of nodejsFiles) {
             if (nodejsFile.endsWith('.js')) {
-                require(nodejsFile);
+                try {
+                    require(nodejsFile);
+                }
+                catch (e) {
+                    console.log(e);
+                    throw e;
+                }
             }
         }
 

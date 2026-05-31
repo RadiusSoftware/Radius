@@ -188,7 +188,6 @@ define(class Handle {
 
         this.handleClassName = this.ctor.name;
         this.serviceName = this.ctor.name.substring(0, this.ctor.name.length - 'Handle'.length);
-        this.returnFailures = false;
     }
 
     async callService(values) {
@@ -216,10 +215,5 @@ define(class Handle {
         message.name = `${this.serviceName}Service#..-..#${request}`;
         message.workerId = Process.getWorkerId();
         Process.sendPrimary(message);
-    }
-
-    setReturnFailures() {
-        this.returnFailures = true;
-        return this;
     }
 });

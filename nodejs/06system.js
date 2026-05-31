@@ -38,8 +38,8 @@
 createService(class SystemService extends Service {
     static bootShape = mkRdsShape({
         bootMode: mkRdsEnum('system#swarm', 'system#standalone'),
+        host: StringType,
         hostId: StringType,
-        hostName: StringType,
         privateKey: StringType,
         publicKey: StringType,
         tlsCert: StringType,
@@ -82,7 +82,6 @@ createService(class SystemService extends Service {
 
         this.mode = 'system#setup';
         this.hostId = Crypto.generateUUID();
-        this.hostName = this.hostId.replaceAll('-', '_');
         this.publicKey = Crypto.export(publicKey);
         this.privateKey = Crypto.export(privateKey);
 
@@ -225,6 +224,10 @@ createService(class SystemService extends Service {
         return this.bootUUID;
     }
 
+    async onGetHost(message) {
+        return this.host;
+    }
+
     async onGetKeyAlg(message) {
         let keyObj = Crypto.createPrivateKey(this.privateKey);
         return keyObj.asymmetricKeyType;
@@ -273,6 +276,10 @@ createService(class SystemService extends Service {
         return radius.webapp;
     }
 
+    async onSetHost(message) {
+        this.host = message.host;
+    }
+
     async readBootFile() {
         const bootPath = LibPath.join(radius.path, '../.boot');
 
@@ -282,8 +289,8 @@ createService(class SystemService extends Service {
 
                 if (bootSettings && SystemService.bootShape.verify(bootSettings)) {
                     this.bootMode = bootSettings.bootMode;
+                    this.host = bootSettings.host;
                     this.hostId = bootSettings.hostId;
-                    this.hostName = bootSettings.hostName;
                     this.privateKey = bootSettings.privateKey;
                     this.publicKey = bootSettings.publiKey;
                     this.tlsCert = bootSettings.tlsCert;
@@ -411,6 +418,11 @@ define(class SystemHandle extends Handle {
         });
     }
 
+    async getHost() {
+        return await this.callService({
+        });
+    }
+
     async getKeyAlg() {
         return await this.callService({
         });
@@ -453,6 +465,12 @@ define(class SystemHandle extends Handle {
 
     async getWebapp() {
         return await this.callService({
+        });
+    }
+
+    async setHost(host) {
+        return await this.callService({
+            host: host,
         });
     }
 });

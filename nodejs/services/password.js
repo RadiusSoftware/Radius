@@ -45,9 +45,9 @@ createService(class PasswordService extends Service {
 
     static passwordDigesters = {
         '001': async (userId, password) => {
-            let prefix = await Crypto.hash('sha512', userId);
-            let part1 = await Crypto.hash('sha512', `${prefix}${password}${userId}`);
-            let part2 = await Crypto.hash('sha512', `${part1}${prefix}${password}`);
+            let prefix = (await Crypto.hash('sha512', userId)).toString('base64');
+            let part1 = (await Crypto.hash('sha512', `${prefix}${password}${userId}`)).toStirng('base64');
+            let part2 = (await Crypto.hash('sha512', `${part1}${prefix}${password}`)).toStirng('base64');
             return `${part1}#${part2}`
         },
     };

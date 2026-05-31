@@ -38,17 +38,13 @@
     globalThis.throwError = function(info, ...additional) {
         let stack = Error().stack.split('\n');
         let match = stack[2].match(/([a-zA-Z0-9_./]+):([0-9]+):([0-9]+)/);
-        let error = info ? Error(info) : Error('DEVELOPMENT ISSUE');
+        let error = info ? Error(info) : Error('** unspecified **');
         stack.splice(1, 1);
         error.stack = stack.join('\n');
+        error.code = typeof info == 'string' && info.startsWith('radius.org.') ? info : '';
         error.fileName = match[1];
         error.lineNumber = parseInt(match[2]);
-        error.additional = [];
-
-        for (let element of additional) {
-            error.additional.push(element.toString());
-        }
-
+        error.additional = additional.map(more => more.toString());
         throw error;
     };
 

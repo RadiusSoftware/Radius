@@ -54,8 +54,13 @@ createService(class HttpLibraryService extends Service {
             return mkFailure(`HttpLibrary.adding to library at "${libEntry.path}": INVALID PERMISSION SET`);
         }
 
+        libEntry.listeners = {};
         this.entries[libEntry.path] = libEntry;
-        return true;
+    }
+
+    async createEtag(libEntry) {
+        let hash = await Crypto.hash('sha256', libEntry.data);
+        libEntry.headers['Etag'] = hash.toString('base64url');
     }
 
     async onAddData(message) {
@@ -68,8 +73,12 @@ createService(class HttpLibraryService extends Service {
             once: message.once,
             pset: message.pset,
             data: message.data,
+            notify: message.notify,
+            headers: ArrayType.verify(message.headers) ? message.headers : {},
+            flags: ObjectType.verify(message.flags) ? message.flags : {},
         };
 
+        await this.createEtag(libEntry);
         return this.addLibraryEntry(libEntry);
     }
 
@@ -89,8 +98,12 @@ createService(class HttpLibraryService extends Service {
             once: message.once,
             pset: message.pset,
             data: buffer,
+            notify: message.notify,
+            headers: ArrayType.verify(message.headers) ? message.headers : {},
+            flags: ObjectType.verify(message.flags) ? message.flags : {},
         };
 
+        await this.createEtag(libEntry);
         return this.addLibraryEntry(libEntry);
     }
 
@@ -109,8 +122,11 @@ createService(class HttpLibraryService extends Service {
             pset: message.pset,
             func: message.func,
             args: message.args,
+            headers: ArrayType.verify(message.headers) ? message.headers : {},
+            flags: ObjectType.verify(message.flags) ? message.flags : {},
         };
 
+        libEntry.headers['Cache-Control'] = 'no-cache';
         return this.addLibraryEntry(libEntry);
     }
 
@@ -125,6 +141,8 @@ createService(class HttpLibraryService extends Service {
             pset: message.pset,
             opts: message.opts,
             jsPath: message.jsPath,
+            headers: ArrayType.verify(message.headers) ? message.headers : {},
+            flags: ObjectType.verify(message.flags) ? message.flags : {},
         };
 
         for (let key in libEntry.opts.settings) {
@@ -133,13 +151,18 @@ createService(class HttpLibraryService extends Service {
             await mkSettingsHandle().defineTemporarySetting(key, 'general', type, value);
         }
 
+        libEntry.headers['Cache-Control'] = 'no-cache';
         return this.addLibraryEntry(libEntry);
     }
 
     async onDelete(message) {
         if (message.path in this.entries) {
-            let libEntry = this.entries[path];
-            delete this.entries[libEntry.path];
+            let libEntry = this.entries[message.path];
+
+            if (libEntry) {
+                delete this.entries[libEntry.path];
+            }
+
             return libEntry;
         }
     }
@@ -147,22 +170,57 @@ createService(class HttpLibraryService extends Service {
     async onGet(message) {
         if (message.path in this.entries) {
             let libEntry = this.entries[message.path];
-
-            if (libEntry.once) {
-                delete this.entries[libEntry.path];
-            }
-
-            if (libEntry) {
-                return libEntry;
-            }
+            return libEntry;
         }
 
         return 404;
     }
 
-    async onRestore(message) {
-        let libEntry = message.libEntry;
-        this.entries[libEntry.path] = libEntry;
+    async onIgnore(message) {
+        console.log('SERVER ** onIgnore()');
+        console.log(message);
+        console.log();
+    }
+
+    async onListen(message) {
+        if (message.path in this.entries) {
+            const libEntry = this.entries[message.path];
+
+            if (message.workerId in libEntry.listeners) {
+                libEntry.listeners[message.workerId]++;
+            }
+            else {
+                libEntry.listeners[message.workerId] = 1;
+            }
+
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    async onTriggerNotify(message) {
+        if (message.path in this.entries) {
+            const libEntry = this.entries[message.path];
+            
+            for (let workerKey in libEntry.listeners) {
+                const workerId = parseInt(workerKey);
+                
+                const notification = {
+                    name: 'HttpLibraryServed',
+                    path: libEntry.path,
+                    libEntry: libEntry,
+                };
+
+                if (workerId == -1) {
+                    Process.sendPrimary(notification);
+                }
+                else {
+                    Process.sendWorker(workerId, notification);
+                }
+            }
+        }
     }
 });
 
@@ -174,25 +232,54 @@ createService(class HttpLibraryService extends Service {
  * all objects and processes can interact with the library.
 *****/
 define(class HttpLibraryHandle extends Handle {
-    constructor() {
-        super();
-        this.setReturnFailures();
+    static listeners = {};
+
+    static {
+        Process.on('HttpLibraryServed', message => {
+            if (message.path in HttpLibraryHandle.listeners) {
+                const listeners = this.listeners[message.path];
+
+                for (let entry of listeners.funcs) {
+                    entry.func(message.libEntry);
+                }
+
+                for (let i = 0; i < listeners.funcs.length; i++) {
+                    let entry = listeners.funcs[i];
+
+                    if (entry.once) {
+                        // *****************************************************************
+                        // *****************************************************************
+                        console.log('ONCE....');
+                    }
+                }
+            }
+        });
     }
 
     async addData(entry) {
-        return await this.callService(entry);
+        await this.callService(entry)
+        return this;
     }
 
     async addFile(entry) {
-        return await this.callService(entry);
+        await this.callService(entry)
+        return this;
     }
 
     async addFunction(entry) {
-        return await this.callService(entry);
+        await this.callService(entry)
+        return this;
     }
 
     async addHttpX(entry) {
-        return await this.callService(entry);
+        await this.callService(entry)
+        return this;
+    }
+
+    async delete(path) {
+        return await this.callService({
+            path: path,
+        });
     }
 
     async get(path) {
@@ -201,9 +288,45 @@ define(class HttpLibraryHandle extends Handle {
         });
     }
 
-    async remove(path) {
+    async has(path) {
         return await this.callService({
             path: path,
         });
+    }
+
+    async ignore(path) {
+        // ***************************************************************
+        // ***************************************************************
+        // ***************************************************************
+    }
+
+    async listen(path, once, func) {
+        if (path in HttpLibraryHandle.listeners) {
+            var listeners = HttpLibraryHandle.listeners[path];
+        }
+        else {
+            var listeners = {
+                path: path,
+                funcs: [],
+            };
+
+            HttpLibraryHandle.listeners[path] = listeners;
+
+            await this.callService({
+                path: path,
+                workerId: Process.getWorkerId(),
+            });
+        }
+
+        listeners.funcs.push({ func: func, once: once });
+        return this;
+    }
+
+    async triggerNotify(path) {
+        await this.callService({
+            path: path,
+        });
+
+        return this;
     }
 });

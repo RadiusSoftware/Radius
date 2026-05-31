@@ -22,77 +22,27 @@
 
 
 /*****
- * Integrated implementation of the ACME protocol!  The network interface is from
- * the primary kode.json configuration file.  Here's a description of the primary
- * methods in this class.  Please keep in min that the AcmeProvider can only be
- * used for a single requested opertion at a time.  Once that request/order has
- * been completed or rejected, the AcmeProvider object can no longer be used.
- * 
- * authorize()
- * After a session has been established, with establishSession(), before much can
- * happen, we need to get authorization from the ACME provider that we have the
- * authorization to control the specified DNS host.
- * 
- * certify()
- * Certifiy the specified network interface and get a certificate chain to be
- * installed into the kode.json configuration file.  Before certify() is called,
- * establishSession() and checkAccount() must be called to ensure we proper
- * preparation to certify: (a) submit a new order, (b) obtain authorization for
- * the certificate, (c) create and submit the CSR, (d) finialize and return the
- * certificate chain.
- * 
- * confirmChallenge()
- * When obtaining authorization for a new serive order, we need to perform an
- * asynchrnous step, which is used to provide that we have control of the host
- * specified in the service order.  Confirming the authorization challenge posed
- * by the remote ACME server is the final step in obtaining authorization/.
- * 
- * confirmOrder()
- * When a servie order for a certificate has been accepted, it may be either
- * immediately processed or it may return with a status of "processing".  If
- * the latter, we need to poll the ACME server until the status has changed
- * from "processing" to "valid".
- * 
- * ensureAccount()
- * Ensures that we have a configured Acme provider account.  If there are no
- * account settings in the configuration, we'll create a new account.  If there
- * is an existing acccount, just load it.
- * 
- * establishSession()
- * The first step performing any actions using ACME is to establish a session
- * with the remote server.  We'll initialize our session with a set or returned
- * links and we'll receive our first nonce string, which is required for our
- * first post.
- * 
- * post()
- * The post method provides the engine for dynamically building JWS HTTP POST
- * requests for the ACME server.  Each JWS post requires a protected header,
- * request content, and a crypto signature.  Note that the "protected" and
- * "payload" properties of the POST's JSON object are encoded using Base 64
- * URL encoding.
- * 
- * revoke()
- * Provides the ability to revoke a TLS certificate.  Due to data management
- * archtiecture, revoke() must be called for the current interface.  It's best
- * if the calling code makes a duplicate of the interface code before revoke()
- * is called.
  * 
  * https://datatracker.ietf.org/doc/html/rfc8555/
+ * 
+ * 
 *****/
 define(class AcmeClient {
     static settingsShape = mkRdsShape({
         name: StringType,
         url: StringType,
+        days: Int32Type,
         account: {
-            key: {
-                kty: StringType,
-                n: StringType,
-                e: StringType,
-            },
             contact: [ StringType ],
             createdAt: StringType,
             status: StringType,
             kid: StringType,
+        },
+        operator: {
+            country: StringType,
+            state: StringType,
+            locale: StringType,
+            org: StringType,
         },
         keyAlg: StringType,
         publicKey: StringType,
@@ -107,28 +57,148 @@ define(class AcmeClient {
         }
     }
 
-    async certify() {
-        try {
-            if (await this.establishSession()) {
-                await this.ensureAccount();
-                this.jwk = NpmPemJwk.pem2jwk(this.settings.publicKey);
+    async authorize(authorizationUrl) {
+        let httpResp = await this.post(authorizationUrl, 'PostAsGet');
+
+        if (httpResp.getStatusCode() == 200) {
+            const challenge = {
+                type: 'http-01',
+            };
+
+            for (let offeredChallenge of httpResp.getValue().challenges) {
+                if (offeredChallenge.type == challenge.type) {
+                    challenge.url = offeredChallenge.url;
+                    challenge.status = offeredChallenge.status;
+                    
+                    if (challenge.type == 'dns-persist-01') {
+                        challenge.methodName = 'challengeDnsPersist';
+                        challenge['issuer-domain-names'] = offeredChallenge['issuer-domain-names'];
+                    }
+                    else if (challenge.type == 'http-01') {
+                        challenge.methodName = 'challengeHttp';
+                        challenge.token = offeredChallenge.token;
+                    }
+                    else if (challenge.type == 'tls-alpn-01') {
+                        challenge.methodName = 'challengeTlsAlpn';
+                        challenge.token = offeredChallenge.token;
+                    }
+                    else if (challenge.type == 'dns-01') {
+                        challenge.methodName = 'challengeDns';
+                        challenge.token = offeredChallenge.token;
+                    }
+
+                    break;
+                }
+            }
+
+            if (challenge.methodName) {
+                let challengePath = await this[challenge.methodName](challenge);
+
+                if (!await this.confirmChallenge(challenge, authorizationUrl)) {
+                    throwError('radius.org.confirmChallengeFailed');
+                }
+
+                await mkHttpLibraryHandle().delete(challengePath);
             }
             else {
-                // *******************************************************
-                // *******************************************************
+                throwError('radius.org.challengeFailed');
+            }
+        }
+        else {
+            throw throwError('radius.org.challengeNotReceived');
+        }
+    }
+
+    async certify() {
+        try {
+            await this.establishSession();
+            await this.ensureAccount();
+
+            let httpResp = await this.post(
+                this.newOrder,
+                {
+                    identifiers: [{
+                        type: 'dns',
+                        value: await mkSystemHandle().getHost(),
+                    }]
+                }
+            );
+
+            if (httpResp.getStatusCode() == 201) {
+                let respValue = httpResp.getValue();
+                await this.authorize(respValue.authorizations[0]);
+                
+                console.log(respValue.finalize);
+                console.log();
+            }
+            else {
+                throwError('radius.org.acmeCreateOrderFailed');
             }
         }
         catch (e) {
-            // *******************************************************
-            // *******************************************************
-            console.log(e);
-            console.log();
+            return mkFailure(e);
         }
+    }
+
+    async challengeDnsPersist(challenge) {
+        // ***** TODO
+    }
+
+    challengeHttp(challenge) {
+        return new Promise(async (ok, fail) => {
+            if (challenge.status == 'pending') {
+                let hash = await Crypto.hash('sha256', `{"e":"${this.jwk.e}","kty":"${this.jwk.kty}","n":"${this.jwk.n}"}`);
+                let challengePath = `/.well-known/acme-challenge/${challenge.token}`;
+                let authorizationSecret = `${challenge.token}.${hash.toString('base64url')}`;
+
+                await mkHttpLibraryHandle().addData({
+                    path: challengePath,
+                    mime: 'text/plain',
+                    mode: 'plain',
+                    once: false,
+                    pset: await mkPermissionSetHandle().createPermissionSet(),
+                    data: authorizationSecret,
+                    flags: { disableCompression: true },
+                });
+
+                await mkHttpLibraryHandle().listen(challengePath, false, libEntry => {
+                    ok(challengePath);
+                });
+
+                let httpResp = await this.post(challenge.url, {});
+            }
+        });
+    }
+
+    async challengeTlsAlpn(challenge) {
+        // ***** TODO
+    }
+
+    async confirmChallenge(challenge, authorizationUrl) {
+        for (let i = 0; i < 10; i++) {
+            let httpResp = await this.post(authorizationUrl, 'PostAsGet');
+            let httpRespData = httpResp.getValue();
+            
+            let httpChallenge = httpRespData.challenges.filter(entry => {
+                return entry.type == challenge.type;
+            })[0];
+            
+            if (httpChallenge.status == 'valid') {
+                return true;
+            }
+            else if (httpChallenge.status == 'invalid') {
+                return false;
+            }
+
+            await pause(2000);
+        }
+
+        return false;
     }
     
     async ensureAccount() {
         if (this.settings.account.kid) {
-            return true;
+            this.jwk = NpmPemJwk.pem2jwk(this.settings.publicKey);
         }
         else {
             const keyAlgMap = {
@@ -140,6 +210,7 @@ define(class AcmeClient {
             this.settings.publicKey = Crypto.export(keyPair.publicKey);
             this.settings.privateKey = Crypto.export(keyPair.privateKey);
             this.settings.keyAlg = keyAlgMap[keyAlg];
+            this.jwk = NpmPemJwk.pem2jwk(this.settings.publicKey);
 
             let httpResp = await this.post(
                 this.newAccount,
@@ -152,10 +223,9 @@ define(class AcmeClient {
             if (httpResp.getStatusCode() == 201) {
                 Object.assign(this.settings.account, httpResp.getValue());
                 this.settings.account.kid = httpResp.getHeader('location');
-                return true;
             }
             else {
-                return false;
+                throwError('radius.org.acmeCreateAccount');
             }
         }
     }
@@ -167,10 +237,10 @@ define(class AcmeClient {
             Object.assign(this, httpResp.getValue());
             httpResp = await mkHttpClient().head(this.newNonce);
             this.nonce = httpResp.getHeader('replay-nonce');
-            return true;
         }
-
-        return false;
+        else {
+            return throwError('radius.org.acmeEstablishSession');
+        }
     }
 
     getNewAccountUrl() {
@@ -187,6 +257,11 @@ define(class AcmeClient {
 
     getNonce() {
         return this.nonce;
+    }
+
+    async getRenewalInfo() {
+        // ***************************************************************************
+        // ***************************************************************************
     }
 
     getRenewelInfoUrl() {
@@ -210,7 +285,7 @@ define(class AcmeClient {
         };
 
         if (url == this.getNewAccountUrl()) {
-            jwsHeader.jwk = NpmPemJwk.pem2jwk(this.settings.publicKey);
+            jwsHeader.jwk = this.jwk;
         }
         else {
             jwsHeader.kid = this.settings.account.kid;
@@ -234,5 +309,10 @@ define(class AcmeClient {
 
         this.nonce = httpResp.getHeader('replay-nonce');
         return httpResp;
+    }
+
+    async revoke() {
+        // ***************************************************************************
+        // ***************************************************************************
     }
 });

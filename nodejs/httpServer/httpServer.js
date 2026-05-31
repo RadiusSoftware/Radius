@@ -204,7 +204,6 @@ define(class HttpWorker extends Worker {
         let req = mkHttpRequest(this, httpReq);
         let rsp = mkHttpResponse(this, httpRsp);
 
-
         let handle = {
             req: req,
             rsp: rsp,
@@ -224,6 +223,10 @@ define(class HttpWorker extends Worker {
             if (await this.filterSession(handle)) return;
             if (await this.filterSignedIn(handle)) return;
             if (await this.filterPermissions(handle)) return;
+
+            for (let headerName in handle.libEntry.headers) {
+                handle.rsp.setHeader(headerName, handle.libEntry.headers[headerName]);
+            }
 
             if (handle.libEntry.type == 'httpx') {
                 await this.respondHttpx(handle);
@@ -249,7 +252,9 @@ define(class HttpWorker extends Worker {
                 return;
             }
 
-            await this.encodeContent(handle);
+            if (!handle.libEntry.flags.disableCompression) {
+                await this.encodeContent(handle);
+            }
             
             handle.rsp.respond(
                 200,
@@ -262,6 +267,14 @@ define(class HttpWorker extends Worker {
                 if (handle.libEntry.type == 'httpx') {
                     delete this.httpxs[handle.libEntry.path];
                 }
+            }
+
+            if (Object.keys(handle.libEntry.listeners).length) {
+                await this.library.triggerNotify(handle.libEntry.path);
+            }
+
+            if (handle.libEntry.once) {
+                await this.library.delete(handle.libEntry.path);
             }
         }
         catch (e) {
@@ -333,7 +346,7 @@ define(class HttpWorker extends Worker {
                                 'HTTP/1.1 101 Switching Protocols',
                                 'Upgrade: websocket',
                                 'Connection: upgrade',
-                                `Sec-WebSocket-Accept: ${hash}`,
+                                `Sec-WebSocket-Accept: ${hash.toString('base64')}`,
                             ];
                             
                             if (webSocket.hasExtensions()) {
@@ -932,7 +945,7 @@ define(class HttpResponse {
     }
 
     setContentEncoding(algorithm) {
-        if (typeof algorithm == 'string') {
+        if (typeof algorithm == 'string' && algorithm) {
             this.httpRsp.setHeader('content-encoding', algorithm);
         }
 
