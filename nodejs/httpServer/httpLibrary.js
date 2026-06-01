@@ -161,6 +161,17 @@ createService(class HttpLibraryService extends Service {
 
             if (libEntry) {
                 delete this.entries[libEntry.path];
+                let httpServer = Server.getServer(HttpServer);
+                
+                for (let worker of httpServer.getWorkers()) {
+                    Process.sendWorker(
+                        worker,
+                        {
+                            name: 'HttpLibraryDelete',
+                            libEntry: libEntry,
+                        }
+                    );
+                }
             }
 
             return libEntry;
@@ -177,9 +188,13 @@ createService(class HttpLibraryService extends Service {
     }
 
     async onIgnore(message) {
-        console.log('SERVER ** onIgnore()');
-        console.log(message);
-        console.log();
+        if (message.path in this.entries) {
+            const libEntry = this.entries[message.path];
+
+            if (message.workerId in libEntry.watchers) {
+                libEntry.watchers[message.workerId]--;
+            }
+        }
     }
 
     async onTriggerNotify(message) {
@@ -237,8 +252,23 @@ define(class HttpLibraryHandle extends Handle {
     static {
         Process.on('HttpLibraryServed', message => {
             if (message.path in HttpLibraryHandle.watchers) {
-                for (let handler of this.watchers[message.path]) {
-                    handler(message);
+                let watchers = HttpLibraryHandle.watchers[message.path];
+
+                for (let key in watchers) {
+                    let handler = watchers[key];
+
+                    try {
+                        handler(key, message.libEntry);
+                    }
+                    catch (e) {}
+                }
+            }
+        });
+
+        Process.on('HttpLibraryDelete', async message => {
+            for (let path in HttpLibraryHandle.watchers) {
+                if (path == message.libEntry.path) {
+                    delete HttpLibraryHandle.watchers[path];
                 }
             }
         });
@@ -282,10 +312,25 @@ define(class HttpLibraryHandle extends Handle {
         });
     }
 
-    async ignore(path) {
-        // ***************************************************************
-        // ***************************************************************
-        // ***************************************************************
+    async ignore(uuid) {
+        for (let path in HttpLibraryHandle.watchers) {
+            let pathWatcher = HttpLibraryHandle.watchers[path];
+
+            for (let uuid in pathWatcher) {
+                if (uuid == uuid) {
+                    await this.callService({ path: path });
+                    delete pathWatcher[uuid];
+
+                    if (Object.keys(pathWatcher).length == 0) {
+                        delete HttpLibraryHandle.watchers[path];
+                    }
+
+                    return this;
+                }
+            }
+        }
+
+        return this;
     }
 
     async triggerNotify(path) {
@@ -298,11 +343,17 @@ define(class HttpLibraryHandle extends Handle {
 
     async watch(path, handler) {
         if (path in HttpLibraryHandle.watchers) {
-            var watchers = HttpLibraryHandle.watchers[path];
+            var pathWatchers = HttpLibraryHandle.watchers[path];
         }
         else {
-            var watchers = [];
-            HttpLibraryHandle.watchers[path] = watchers;
+            var pathWatchers = {};
+            HttpLibraryHandle.watchers[path] = pathWatchers;
+        }
+
+        for (let func of (Object.values(pathWatchers))) {
+            if (Object.is(func, handler)) {
+                return '';
+            }
         }
 
         await this.callService({
@@ -310,7 +361,9 @@ define(class HttpLibraryHandle extends Handle {
             workerId: Process.getWorkerId(),
         });
 
-        watchers.push(handler);
-        return this;
+        let uuid = Crypto.generateUUID();
+        pathWatchers[uuid] = handler;
+
+        return uuid;
     }
 });

@@ -80,7 +80,7 @@ define(class Server extends Emitter {
     static getServer(serverClass) {
         if (Process.isPrimary()) {
             if (typeof serverClass == 'function') {
-                if (Data.classExtends(serverClass, Server)) {
+                if (Data.extends(serverClass, Server)) {
                     return Server.servers[serverClass.name];
                 }
             }
@@ -151,7 +151,7 @@ define(class Server extends Emitter {
     }
 
     sendWorkers(message) {
-        for (let worker of workers) {
+        for (let worker of Object.values(this.workers)) {
             this.sendWorker(worker, message);
         }
 
@@ -263,6 +263,10 @@ define(class Worker {
 
     getServerName() {
         return this.serverName;
+    }
+
+    getWorkerId() {
+        return this.id;
     }
 
     async init() {

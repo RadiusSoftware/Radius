@@ -106,7 +106,7 @@ define(class SetupApp extends Webapp {
         }
     )](trx, name, url, contact) {
         if (this.state == 'setup#acme') {
-            await mkSystemHandle().setHost('development.infosearch.cloud');
+            await mkSystemHandle().setHost('development.radiussoftware.org');
 
             let acmeSettings = AcmeClient.settingsShape.getDefault();
             acmeSettings.name = name;
@@ -117,12 +117,12 @@ define(class SetupApp extends Webapp {
                 country: "US",
                 state: "Nevada",
                 locale: "Reno",
-                org: "Infosearch International",
+                org: "Radius Software",
             }
 
             let acmeClient = mkAcmeClient(acmeSettings);
             acmeClient.on('Acme', message => console.log(message));
-            await acmeClient.certify();
+            await acmeClient.certifyHost();
         }
         else {
             this.state = 'setup#start';

@@ -217,12 +217,15 @@ define(class HttpWorker extends Worker {
                 return;
             }
 
+            console.log(handle.libEntry.headers);
+
             if (await this.filterScheme(handle)) return;
             if (await this.filterSetupMode(handle)) return;
             if (await this.filterAcceptCookies(handle)) return;
             if (await this.filterSession(handle)) return;
             if (await this.filterSignedIn(handle)) return;
             if (await this.filterPermissions(handle)) return;
+            //if (await this.filterEtag(handle)) return;
 
             for (let headerName in handle.libEntry.headers) {
                 handle.rsp.setHeader(headerName, handle.libEntry.headers[headerName]);

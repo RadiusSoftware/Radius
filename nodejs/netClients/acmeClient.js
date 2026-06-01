@@ -110,7 +110,7 @@ define(class AcmeClient extends Emitter {
         }
     }
 
-    async certify() {
+    async certifyHost() {
         try {
             this.emit({
                 name: 'Acme',
@@ -174,13 +174,6 @@ define(class AcmeClient extends Emitter {
                 pset: await mkPermissionSetHandle().createPermissionSet(),
                 data: authorizationSecret,
                 flags: { disableCompression: true },
-            });
-
-            // **************************************************************************
-            // **************************************************************************
-            await mkHttpLibraryHandle().watch(challengePath, message => {
-                console.log(message.libEntry.path);
-                await mkHttpLibraryHandle.ignore(challengePath);
             });
 
             await this.post(challenge.url, {});
@@ -352,7 +345,7 @@ define(class AcmeClient extends Emitter {
         return httpResp;
     }
 
-    async revoke() {
+    async revokeCertificate() {
         // ***************************************************************************
         // ***************************************************************************
     }
