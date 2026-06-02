@@ -337,15 +337,15 @@ singleton(class Crypto {
         
         let certBundle = {
             hostCert: pemChain[0],
-            intermediaCert: pemChain[1],
+            authCert: pemChain[1],
             rootCert: pemChain[2],
         };
 
         let hostCertFile = await FileSystem.writeTempFile(certBundle.hostCert);
         let result = await Process.runScript(`openssl x509 -in ${hostCertFile} -enddate -noout`);
-        certBundle.expires = mkTime(result.stdout.split('=')[1]);
+        certBundle.hostCertExpires = mkTime(result.stdout.split('=')[1]);
         result = await Process.runScript(`openssl x509 -in ${hostCertFile} -subject -noout`);
-        certBundle.subject = result.stdout;
+        certBundle.hostCertSubject = result.stdout;
         await FileSystem.deleteFile(hostCertFile);
         return certBundle;
     }

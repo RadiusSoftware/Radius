@@ -63,30 +63,10 @@
  * 
 *****/
 define(class AcmeClient extends Emitter {
-    static settingsShape = mkRdsShape({
-        name: StringType,
-        url: StringType,
-        days: Int32Type,
-        account: {
-            contact: [ StringType ],
-            createdAt: StringType,
-            status: StringType,
-            kid: StringType,
-        },
-        operator: {
-            country: StringType,
-            state: StringType,
-            locale: StringType,
-            org: StringType,
-        },
-        keyAlg: StringType,
-        publicKey: StringType,
-        privateKey: StringType,
-    });
-
     constructor(settings) {
         super();
         this.settings = settings;
+        this.system = mkSystemHandle();
     }
 
     async authorize(authorizationUrl) {
@@ -152,21 +132,27 @@ define(class AcmeClient extends Emitter {
                 task: 'radius.org.acmeCertifyStarting',
             });
 
-            this.checkSettings();
+            await this.checkSettings();
             await this.establishSession();
             await this.ensureAccount();
+            const host = await this.system.getSetting('host');
 
             let httpResp = await this.post(
                 this.newOrder,
                 {
                     identifiers: [{
                         type: 'dns',
-                        value: await this.system.getHost(),
+                        value: host,
                     }]
                 }
             );
 
             if (httpResp.getStatusCode() == 201) {
+                this.emit({
+                    name: 'Acme',
+                    task: 'radius.org.acmeOrderCreated',
+                });
+
                 const orderUrl = httpResp.getHeader('location');
                 const orderHandle = httpResp.getValue();
                 const authorizeUrl = orderHandle.authorizations[0];
@@ -176,7 +162,7 @@ define(class AcmeClient extends Emitter {
 
                 this.emit({
                     name: 'Acme',
-                    task: 'radius.org.acmeCsrCreating',
+                    task: 'radius.org.acmeOrderFinalizing',
                 });
 
                 let csr = await Crypto.createCsr({
@@ -186,7 +172,7 @@ define(class AcmeClient extends Emitter {
                     state: this.settings.operator.state,
                     locale: this.settings.operator.locale,
                     org: this.settings.operator.org,
-                    hostname: await this.system.getHost(),
+                    hostname: host,
                     days: this.settings.days,
                 });
 
@@ -197,7 +183,7 @@ define(class AcmeClient extends Emitter {
                 if (httpResp.getStatusCode() == 200) {
                     this.emit({
                         name: 'Acme',
-                        task: 'radius.org.acmeOrderFinalizing',
+                        task: 'radius.org.acmeOrderFinalized',
                     });
 
                     httpResp = await this.pollOrder(httpResp);
@@ -209,32 +195,21 @@ define(class AcmeClient extends Emitter {
                         });
 
                         let certBundle = await Crypto.parseAcmeCertificate(httpResp.getValue());
+
+                        this.emit({
+                            name: 'Acme',
+                            task: 'radius.org.acmeCertifyHostSuccess',
+                        });
+
                         return certBundle;
                     }
                 }
                 else {
-                    /*
-                    this.emit({
-                        name: 'Acme',
-                        task: 'radius.org.acmeCsrCreateFailed',
-                    });
-
-                    await this.pause(reply.headers);
-                    await this.confirmOrder(5);
-                    */
+                    throwError('radius.org.acmeOrderFinalizeFailed');
                 }
-                /*
-                if (this.certificateUrl) {
-                    reply = await this.post(this.certificateUrl, 'PostAsGet', {
-                        Accept: 'application/pem-certificate-chain',
-                    });
-
-                    return await Crypto.analyzeCertificateChain(reply.content.toString());
-                }
-                */
             }
             else {
-                throwError('radius.org.acmeCreateOrderFailed');
+                throwError('radius.org.acmeOrderCreateFailed');
             }
         }
         catch (e) {
@@ -243,7 +218,7 @@ define(class AcmeClient extends Emitter {
                 error: e.code ? e.code : e.toString(),
             });
 
-            return e;
+            return mkFailure(e);
         }
     }
 
@@ -288,14 +263,16 @@ define(class AcmeClient extends Emitter {
                 
                 if (httpChallenge.status == 'valid') {
                     await mkHttpLibraryHandle().delete(challengePath);
-                    break;
+                    return;
                 }
                 else if (httpChallenge.status == 'invalid') {
-                    throwError(`radius.org.httpChallengeFailed`);
+                    throwError(`radius.org.acmeHttpChallengeFailed`);
                 }
 
                 await pause(2000);
             }
+
+            throwError('radius.org.acmeHttpChallengeUnconfirmed')
         }
     }
 
@@ -305,21 +282,21 @@ define(class AcmeClient extends Emitter {
         // ***************************************************************************
     }
 
-    checkSettings() {
+    async checkSettings() {
         this.emit({
             name: 'Acme',
             task: 'radius.org.acmeSettingsCheck',
         });
 
-        if (!AcmeClient.settingsShape.verify(this.settings)) {
+        const acmeSettingsShape = await this.system.getAcmeSettingsShape();
+
+        if (!acmeSettingsShape.verify(this.settings)) {
             throwError('radius.org.acmeSettingsFailure');
         }
-
-        this.system = mkSystemHandle();
     }
     
     async ensureAccount() {
-        if (this.settings.account.kid) {
+        if (this.settings.kid) {
             this.jwk = NpmPemJwk.pem2jwk(this.settings.publicKey);
 
             this.emit({
@@ -328,28 +305,24 @@ define(class AcmeClient extends Emitter {
             });
         }
         else {
-            const keyAlgMap = {
-                rsa: 'RS256',
-            };
-
-            const keyAlg = await this.system.getKeyAlg();
-            const keyPair = await Crypto.generateKeyPair(keyAlg);
+            const keyPair = await Crypto.generateKeyPair('rsa');
+            this.settings.keyAlg = 'RS256';
             this.settings.publicKey = Crypto.export(keyPair.publicKey);
             this.settings.privateKey = Crypto.export(keyPair.privateKey);
-            this.settings.keyAlg = keyAlgMap[keyAlg];
             this.jwk = NpmPemJwk.pem2jwk(this.settings.publicKey);
 
             let httpResp = await this.post(
                 this.newAccount,
                 {
                     termsOfServiceAgreed: true,
-                    contact: this.settings.account.contact.map(contact => `mailto:${contact}`),
+                    contact: this.settings.contact.map(contact => `mailto:${contact}`),
                 }
             );
 
             if (httpResp.getStatusCode() == 201) {
-                Object.assign(this.settings.account, httpResp.getValue());
-                this.settings.account.kid = httpResp.getHeader('location');
+                Object.assign(this.settings, httpResp.getValue());
+                delete this.settings.key;
+                this.settings.kid = httpResp.getHeader('location');
             }
             else {
                 throwError('radius.org.acmeCreateAccount');
@@ -378,6 +351,11 @@ define(class AcmeClient extends Emitter {
         else {
             return throwError('radius.org.acmeSessionFailed');
         }
+
+        this.emit({
+            name: 'Acme',
+            task: 'radius.org.acmeSessionEstablished',
+        });
     }
 
     getNewAccountUrl() {
@@ -456,7 +434,7 @@ define(class AcmeClient extends Emitter {
             jwsHeader.jwk = this.jwk;
         }
         else {
-            jwsHeader.kid = this.settings.account.kid;
+            jwsHeader.kid = this.settings.kid;
         }
 
         let jwsHeaderB64 = mkBuffer(toStdJson(jwsHeader)).toString('base64url');

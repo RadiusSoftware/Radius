@@ -167,7 +167,7 @@ define(class HttpWorker extends Worker {
                 return true;
             }
         }
-        else if (handle.libEntry.type == 'httpx' && handle.getPath() == this.setupPath) {
+        else if (handle.libEntry.type == 'httpx' && handle.req.getPath() == this.setupPath) {
             handle.rsp.respondStatus(401);
             return true;
         }
@@ -303,7 +303,7 @@ define(class HttpWorker extends Worker {
         await super.init();
 
         let system = mkSystemHandle();
-        this.setupMode = (await system.getMode()) == 'system#setup';
+        this.setupMode = (await system.getState()) == 'system#setup';
         this.settings = mkSettingsHandle();
         this.acceptCookiesPath = await this.settings.getSetting('acceptCookiesPath');
         this.profilePath = await this.settings.getSetting('profilePath');

@@ -36,18 +36,38 @@
  * swarm or configuring it for standalone operation before is can be used.
 *****/
 createService(class SystemService extends Service {
-    static bootShape = mkRdsShape({
-        bootMode: mkRdsEnum('system#swarm', 'system#standalone'),
+    static acmeSettingsShape = mkRdsShape({
+        name: StringType,
+        url: StringType,
+        days: Int32Type,
+        keyAlg: StringType,
+        publicKey: StringType,
+        privateKey: StringType,
+        contact: [ StringType ],
+        createdAt: StringType,
+        status: StringType,
+        kid: StringType,
+        operator: {
+            country: StringType,
+            state: StringType,
+            locale: StringType,
+            org: StringType,
+        },
+    });
+
+    static settingsShape = mkRdsShape({
+        bootMode: StringType,
         host: StringType,
         hostId: StringType,
         privateKey: StringType,
         publicKey: StringType,
-        tlsCert: StringType,
-        caaCert: StringType,
+        certificate: {
+            hostCert: StringType,
+            authCert: StringType,
+            rootCert: StringType,
+            hostCertExpires: DateTimeType,
+            hostCertSubject: StringType,
 
-        acme: {
-            name: StringType,
-            url: StringType,
         },
 
         swarm: {
@@ -65,7 +85,9 @@ createService(class SystemService extends Service {
             username: StringType,
             password: StringType,
             certificate: StringType,
-        }
+        },
+
+        acme: SystemService.acmeSettingsShape,
     });
 
     constructor() {
@@ -74,16 +96,16 @@ createService(class SystemService extends Service {
         this.bootUUID = Crypto.generateUUID();
         this.state = 'system#loaded';
         this.radiusPath = '/radius';
+        this.settings = SystemService.settingsShape.getDefault();
     }
 
     async bootSetupMode() {
         const keyAlgorithm = 'rsa';
         const { publicKey, privateKey } = await Crypto.generateKeyPair(keyAlgorithm);
 
-        this.mode = 'system#setup';
-        this.hostId = Crypto.generateUUID();
-        this.publicKey = Crypto.export(publicKey);
-        this.privateKey = Crypto.export(privateKey);
+        this.settings.hostId = Crypto.generateUUID();
+        this.settings.publicKey = Crypto.export(publicKey);
+        this.settings.privateKey = Crypto.export(privateKey);
 
         await mkSettingsHandle().defineTemporarySetting(
             'httpServer',
@@ -175,119 +197,15 @@ createService(class SystemService extends Service {
         */
     }
 
-    async onBoot(message) {
-        if (this.state == 'system#loaded') {
-            await mkPermissionSetHandle().addPermissionTypes(
-                'radius#signedin',
-                'radius#admin',
-                'radius#system',
-            );
-
-            await mkHttpLibraryHandle().addData({
-                path: this.radiusPath,
-                mime: 'text/javascript',
-                mode: 'tls',
-                once: false,
-                pset: await mkPermissionSetHandle().createPermissionSet(),
-                data: radius.mozilla,
-            });
-
-            let packages = mkPackageHandle();
-            await packages.loadDirectory(Path.join(radius.path, '/mozilla/package'), '/');
-            await packages.loadDirectory(Path.join(radius.path, '/radius'), this.radiusPath);
-            let bootData = await this.readBootFile();
-
-            if (this.state == 'system#ready') {
-                if (this.mode == 'swarm') {
-                    await this.bootSwarmMode();
-                }
-                else if (this.mode == 'standalone') {
-                    await this.bootStandaloneMode();
-                }
-            }
-
-            if (this.state == 'system#setup') {
-                await this.bootSetupMode();
-            }
-        }
-    }
-
-    async onGetAcceptCookiesPath(message) {
-        return this.acceptCookiesPath;
-    }
-
-    async onGetBootTime(message) {
-        return this.bootTime;
-    }
-
-    async onGetBootUUID(message) {
-        return this.bootUUID;
-    }
-
-    async onGetHost(message) {
-        return this.host;
-    }
-
-    async onGetKeyAlg(message) {
-        let keyObj = Crypto.createPrivateKey(this.privateKey);
-        return keyObj.asymmetricKeyType;
-    }
-
-    async onGetKeyPair(message) {
-        return { publicKey: this.publicKey, privateKey: this.privateKey };
-    }
-
-    async onGetMode(message) {
-        return this.mode;
-    }
-
-    async onGetRadiusPath(message) {
-        return this.radiusPath;
-    }
-
-    async onGetsigninPath(message) {
-        return this.signinPath;
-    }
-
-    async onGetState(message) {
-        return this.state;
-    }
-
-    async onGetTlsCerts(message) {
-        if (this.tlsCert && this.caaCert) {
-            return {
-                tlsCert: this.tlsCert,
-                caaCert: this.caaCert,
-            };
-        }
-
-        return null;
-    }
-
-    async onGetTlsStatus(message) {
-        if (this.tlsCert && this.caaCert) {
-            return true;
-        }
-
-        return false;
-    }
-
-    async onGetWebapp(message) {
-        return radius.webapp;
-    }
-
-    async onSetHost(message) {
-        this.host = message.host;
-    }
-
-    async readBootFile() {
+    async loadSettings() {
+        /*
         const bootPath = LibPath.join(radius.path, '../.boot');
 
         if (await FileSystem.isFile(bootPath)) {
             try {
-                const bootSettings = fromJson(await FileSystem.readFileAsString(bootPath));
+                const settings = fromJson(await FileSystem.readFileAsString(bootPath));
 
-                if (bootSettings && SystemService.bootShape.verify(bootSettings)) {
+                if (bootSettings && SystemService.settingsShape.verify(bootSettings)) {
                     this.bootMode = bootSettings.bootMode;
                     this.host = bootSettings.host;
                     this.hostId = bootSettings.hostId;
@@ -322,11 +240,160 @@ createService(class SystemService extends Service {
             }
             catch (e) {}
         }
+        */
 
         this.state = 'system#setup';
     }
 
-    async writeBootFile() {
+    async onBoot(message) {
+        if (this.state == 'system#loaded') {
+            await mkPermissionSetHandle().addPermissionTypes(
+                'radius#signedin',
+                'radius#admin',
+                'radius#system',
+            );
+
+            await mkHttpLibraryHandle().addData({
+                path: this.radiusPath,
+                mime: 'text/javascript',
+                mode: 'tls',
+                once: false,
+                pset: await mkPermissionSetHandle().createPermissionSet(),
+                data: radius.mozilla,
+            });
+
+            let packages = mkPackageHandle();
+            await packages.loadDirectory(Path.join(radius.path, '/mozilla/package'), '/');
+            await packages.loadDirectory(Path.join(radius.path, '/radius'), this.radiusPath);
+            await this.loadSettings();
+
+            if (this.state == 'system#ready') {
+                if (this.mode == 'swarm') {
+                    await this.bootSwarmMode();
+                }
+                else if (this.mode == 'standalone') {
+                    await this.bootStandaloneMode();
+                }
+            }
+
+            if (this.state == 'system#setup') {
+                await this.bootSetupMode();
+            }
+        }
+    }
+
+    async onGetAcceptCookiesPath(message) {
+        return this.acceptCookiesPath;
+    }
+
+    async onGetAcmeSettings(message) {
+        return SystemService.settings.acme;
+    }
+
+    async onGetAcmeSettingsShape(message) {
+        return SystemService.acmeSettingsShape;
+    }
+
+    async onGetBootTime(message) {
+        return this.bootTime;
+    }
+
+    async onGetBootUUID(message) {
+        return this.bootUUID;
+    }
+
+    async onGetKeyPair(message) {
+        return { publicKey: this.settings.publicKey, privateKey: this.settings.privateKey };
+    }
+
+    async onGetMode(message) {
+        return this.mode;
+    }
+
+    async onGetRadiusPath(message) {
+        return this.radiusPath;
+    }
+
+    async onGetSetting(message) {
+        if (message.dotted == 'all-settings') {
+            return this.settings;
+        }
+        else if (Data.has(this.settings, message.dotted)) {
+            return Data.get(this.settings, message.dotted);
+        }
+    }
+
+    async onGetSigninPath(message) {
+        return this.signinPath;
+    }
+
+    async onGetState(message) {
+        return this.state;
+    }
+
+    async onGetTlsCerts(message) {
+        if (this.tlsCert && this.caaCert) {
+            return {
+                tlsCert: this.tlsCert,
+                caaCert: this.caaCert,
+            };
+        }
+
+        return null;
+    }
+
+    async onGetTlsStatus(message) {
+        if (this.tlsCert && this.caaCert) {
+            return true;
+        }
+
+        return false;
+    }
+
+    async onGetWebapp(message) {
+        return radius.webapp;
+    }
+
+    async onSaveSettings(message) {
+        console.log('************************ SAVE SETTINGS');
+        console.log(this.settings);
+    }
+
+    async onSetSetting(message) {
+        if (Data.has(this.settings, message.dotted)) {
+            let shape = SystemService.settingsShape.get(message.dotted);
+
+            if (shape.verify(message.value)) {
+                Data.set(this.settings, message.dotted, message.value);
+                return true;
+            }
+        }
+
+        return mkFailure('radius.org.systemSetSettingFailed', `setting name: ${message.dotted}`);
+    }
+
+    /*
+    async onSetAcmeSettings(message) {
+        if (SystemService.acmeSettingsShape.verify(message.settings)) {
+            Object.assign(this.settings.acme, message.settings);
+        }
+    }
+
+    async onSetCertificate(message) {
+        this.settings.hostCert = message.certBundle.hostCert;
+        this.settings.authCert = message.certBundle.authCert;
+        this.settings.rootCert = message.certBundle.rootCert;
+        this.settings.hostCertExpires = message.certBundle.expires;
+        this.settings.hostCertSubject = message.certBundle.subject;
+        console.log(this.settings);
+    }
+
+    async onSetHost(message) {
+        this.host = message.host;
+    }
+    */
+
+    async saveSettings() {
     }
 });
 /*******************************************************************************************************
@@ -394,6 +461,11 @@ createService(class SystemService extends Service {
  * the system is ready for operational execution.
 *****/
 define(class SystemHandle extends Handle {
+    async boot() {
+        return await this.callService({
+        });
+    }
+
     static fromJson(value) {
         return mkSystemHandle();
     }
@@ -403,7 +475,12 @@ define(class SystemHandle extends Handle {
         });
     }
 
-    async boot() {
+    async setAcmeSettings() {
+        return await this.callService({
+        });
+    }
+
+    async getAcmeSettingsShape() {
         return await this.callService({
         });
     }
@@ -423,11 +500,6 @@ define(class SystemHandle extends Handle {
         });
     }
 
-    async getKeyAlg() {
-        return await this.callService({
-        });
-    }
-
     async getKeyPair() {
         return await this.callService({
         });
@@ -440,6 +512,12 @@ define(class SystemHandle extends Handle {
 
     async getRadiusPath() {
         return await this.callService({
+        });
+    }
+
+    async getSetting(dotted) {
+        return await this.callService({
+            dotted: dotted,
         });
     }
 
@@ -468,9 +546,15 @@ define(class SystemHandle extends Handle {
         });
     }
 
-    async setHost(host) {
+    async saveSettings() {
         return await this.callService({
-            host: host,
+        });
+    }
+
+    async setSetting(dotted, value) {
+        return await this.callService({
+            dotted: dotted,
+            value: value,
         });
     }
 });

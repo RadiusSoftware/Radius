@@ -106,27 +106,36 @@ define(class SetupApp extends Webapp {
         }
     )](trx, name, url, contact) {
         if (this.state == 'setup#acme') {
-            await mkSystemHandle().setHost('development.radiussoftware.org');
+            let system = mkSystemHandle();
+            const acmeSettingsShape = await system.getAcmeSettingsShape();
+            let acmeSettings = acmeSettingsShape.getDefault();
 
-            let acmeSettings = AcmeClient.settingsShape.getDefault();
+            // *********************************************************************
+            // *********************************************************************
+            await system.setSetting('host', 'development.radiussoftware.org');
+
             acmeSettings.name = name;
             acmeSettings.url = url;
             acmeSettings.days = 90;
-            acmeSettings.account.contact = contact,
+            acmeSettings.contact = contact,
             acmeSettings.operator = {
                 country: "US",
                 state: "Nevada",
                 locale: "Reno",
                 org: "Radius Software",
             }
+            // *********************************************************************
+            // *********************************************************************
 
             let acmeClient = mkAcmeClient(acmeSettings);
             acmeClient.on('Acme', message => console.log(message));
-            await acmeClient.certifyHost();
-        }
-        else {
-            this.state = 'setup#start';
-            return this.state;
+            let certBundle = await acmeClient.certifyHost();
+
+            if (!(certBundle instanceof Failure)) {
+                await system.setSetting('acme', acmeSettings);
+                await system.setSetting('certificate', certBundle);
+                await system.saveSettings();
+            }
         }
     }
 
