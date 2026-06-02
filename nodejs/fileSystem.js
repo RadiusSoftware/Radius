@@ -57,7 +57,7 @@ singleton(class FileSystem extends Emitter {
 
     async deleteFile(path, force, recursive) {
         await LibFileSystem.promises.rm(path, {
-            force: force === false,
+            force: force !== false,
             recursive: recursive === true,
         });
         return this;
@@ -103,6 +103,10 @@ singleton(class FileSystem extends Emitter {
         }
 
         return dirs;
+    }
+
+    generateTempFilePath() {
+        return Path.join(LibOs.tmpdir(), Crypto.generateUUID());
     }
 
     async isDirectory(path) {
@@ -336,7 +340,7 @@ singleton(class FileSystem extends Emitter {
         return this;
     }
 
-    async writeTmpFile(content) {
+    async writeTempFile(content) {
         let path = Path.join(LibOs.tmpdir(), Crypto.generateUUID());
         await LibFileSystem.promises.writeFile(path, content);
         return path;

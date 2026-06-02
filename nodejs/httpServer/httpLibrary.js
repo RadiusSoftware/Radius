@@ -59,8 +59,10 @@ createService(class HttpLibraryService extends Service {
     }
 
     async createEtag(libEntry) {
-        let hash = await Crypto.hash('sha256', libEntry.data);
-        libEntry.headers['Etag'] = hash.toString('base64url');
+        if (!libEntry.flags.noEtag) {
+            let hash = await Crypto.hash('sha256', libEntry.data);
+            libEntry.headers['Etag'] = hash.toString('base64url');
+        }
     }
 
     async onAddData(message) {

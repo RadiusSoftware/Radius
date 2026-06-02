@@ -91,6 +91,21 @@ define(class HttpWorker extends Worker {
         return false;
     }
 
+    async filterEtag(handle) {
+        if (handle.req.hasHeader('if-none-match')) {
+            let ifNoneMatch = handle.req.getHeader('if-none-match');
+
+            if ('Etag' in handle.libEntry.headers) {
+                if (ifNoneMatch == handle.libEntry.headers.Etag) {
+                    handle.rsp.respondStatus(304);
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     async filterPermissions(handle) {
         if (await handle.libEntry.pset.hasPermissions()) {
             if (!await handle.session.authorize(handle.libEntry.pset)) {
@@ -217,15 +232,13 @@ define(class HttpWorker extends Worker {
                 return;
             }
 
-            console.log(handle.libEntry.headers);
-
             if (await this.filterScheme(handle)) return;
             if (await this.filterSetupMode(handle)) return;
             if (await this.filterAcceptCookies(handle)) return;
             if (await this.filterSession(handle)) return;
             if (await this.filterSignedIn(handle)) return;
             if (await this.filterPermissions(handle)) return;
-            //if (await this.filterEtag(handle)) return;
+            if (await this.filterEtag(handle)) return;
 
             for (let headerName in handle.libEntry.headers) {
                 handle.rsp.setHeader(headerName, handle.libEntry.headers[headerName]);

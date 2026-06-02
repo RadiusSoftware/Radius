@@ -38,32 +38,31 @@ singleton(class Crypto {
         return LibCrypto.createSecretKey(base64, 'base64');
     }
 
-    async createCertificateSigningRequest(opts) {
-        let csrTemp;
-        let derTemp;
-        let pkeyTemp;
+    async createCsr(opts) {
+        let csrPath;
+        let derPath;
+        let keyPath;
 
         try {
-            let pem = this.export(opts.privateKey);
-            csrTemp = await ServerUtils.createTempFile();
-            pkeyTemp = await (ServerUtils.createTempFile()).append(pem);
+            csrPath = await FileSystem.generateTempFilePath();
+            keyPath = await FileSystem.writeTempFile(opts.privateKey);
 
             let subj = `/C=${opts.country}/ST=${opts.state}/L=${opts.locale}/O=${opts.org}/CN=${opts.hostname}`;
-            await ServerUtils.execInShell(`openssl req -new -key ${pkeyTemp.getPath()} -out ${csrTemp.getPath()} -days ${opts.days} -subj "${subj}"`);
+            await Process.runScript(`openssl req -new -key ${keyPath} -out ${csrPath} -days ${opts.days} -subj "${subj}"`);
 
             if (opts.der) {
-                derTemp = await createTempFile();
-                await ServerUtils.execInShell(`openssl req -in ${csrTemp.getPath()} -out ${derTemp.getPath()} -outform DER`);
-                return await derTemp.read();
+                derPath = FileSystem.generateTempFilePath();
+                await Process.runScript(`openssl req -in ${csrPath} -out ${derPath} -outform DER`);
+                return await FileSystem.readFile(derPath)
             }
             else {
-                return (await csrTemp.read()).toString();
+                return await FileSystem.readFileAsString(csrPath);
             }
         }
         finally {
-            csrTemp ? await csrTemp.delete() : false;
-            derTemp ? await derTemp.delete() : false;
-            pkeyTemp ? await pkeyTemp.delete() : false;
+            csrPath ? await FileSystem.deleteFile(csrPath) : null;
+            derPath ? await FileSystem.deleteFile(derPath) : null;
+            keyPath ? await FileSystem.deleteFile(keyPath) : null;
         }
     }
 
@@ -278,16 +277,16 @@ singleton(class Crypto {
     }
 
     async generateSshKeyPair() {
-        let pem = ServerUtils.createTempFile('pem');
-        let pub = pem.replica('pem.pub');
+        let pemPath = FileSystem.generateTempFilePath();
+        let pubPath = `${pemPath}.pub`;
 
-        await ServerUtils.execInShell(`ssh-keygen -t rsa -b 4096 -N "" -f ${pem.getPath()}`);
+        await Process.runScript(`ssh-keygen -t rsa -b 4096 -N "" -f ${pemPath}`);
 
-        let publicKey = (await pub.read()).toString();
-        let privateKey = (await pem.read()).toString();
+        let publicKey = await FileSystem.readFileAsString(pubPath);
+        let privateKey = await FileSystem.readFileAsString(pemPath);
 
-        await pub.delete();
-        await pem.delete();
+        await FileSystem.deleteFile(pemPath);
+        await FileSystem.deleteFile(pubPath);
 
         return {
             publicKey: publicKey,
@@ -334,22 +333,21 @@ singleton(class Crypto {
     }
 
     async parseAcmeCertificate(certificateChain) {
-        let pemChain = certificateChain.split('\n\n');
-        let pemChainTemp = await ServerUtils.createTempFile().append(pemChain[0]);
-
-        let result = await ServerUtils.execInShell(`openssl x509 -in ${pemChainTemp.getPath()} -enddate -noout`);
-        let expires = mkTime(result.stdout.split('=')[1]);
-        result = await execShell(`openssl x509 -in ${pemChainTemp.getPath()} -subject -noout`);
-        let subject = result.stdout;
+        let pemChain = certificateChain.toString().split('\n\n');
         
-        await pemChainTemp.rm();
-
-        return {
-            expires: expires,
-            subject: subject,
-            created: mkTime(),
-            certificate: pemChain,
+        let certBundle = {
+            hostCert: pemChain[0],
+            intermediaCert: pemChain[1],
+            rootCert: pemChain[2],
         };
+
+        let hostCertFile = await FileSystem.writeTempFile(certBundle.hostCert);
+        let result = await Process.runScript(`openssl x509 -in ${hostCertFile} -enddate -noout`);
+        certBundle.expires = mkTime(result.stdout.split('=')[1]);
+        result = await Process.runScript(`openssl x509 -in ${hostCertFile} -subject -noout`);
+        certBundle.subject = result.stdout;
+        await FileSystem.deleteFile(hostCertFile);
+        return certBundle;
     }
 
     scrypt(password, salt, keylen) {

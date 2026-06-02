@@ -25,6 +25,41 @@
  * 
  * https://datatracker.ietf.org/doc/html/rfc8555/
  * 
+ * Here's the essential procedure ACME protocol certification provess from the
+ * client's point of view, not the ACME provider, broken down into steps that
+ * occur when calling certifyHost():
+ * 
+ * (1) checkSettings() -- method that takes a look at the AcmeSettings object
+ * to determine whether the settings provided can be verified against the ACME
+ * settings shape. 
+ * 
+ * (2) establishSession() -- contact the ACME provider, e.g., Lets Encrypt, and
+ * received an informational response that includes a nonce in the response
+ * headers.  A new nonce is required for each ACME post / transaction.
+ * 
+ * (3) ensureAccount() -- Either (a) the account is established and the ACME
+ * settings the account kid is used or (b) a key pair is generated and the JWK
+ * of the public key is essentially the ACME account key.  When creating the
+ * account, the ACME server will return the kid, Key ID I believe.
+ * 
+ * (4) post() -- a customized post function used during the rest of the ACME
+ * protocol session.  All posts are sent as mime type "application/jose+json",
+ * meaning that the content is JSON along with a crptographically signed JWS
+ * "header".  It also supports PostAsGet, which essentialy uses a POST method
+ * to get data.  It also fetches the nonce header after each call and saves the
+ * new / next nonce for the next post().
+ * 
+ * (5) authorize() -- this method is called after the new order has been created
+ * successfully.  Internet-based challenges are used to demonstrate proof of
+ * "ownership" and uses one of four different challenge types.  For now, only
+ * the http-01 challenge is supported.  In essence, a secret cryptographic values
+ * is made available on the web server and is challenged by the ACME server
+ * several times until it's satisfied enought to authorize the transaction.
+ * While those challenges are happening, we slowly iterate through a polling
+ * loop to see when the challenges are done.  Once done, we get the yay or nay
+ * on authorization.
+ * 
+ * (6) 
  * 
 *****/
 define(class AcmeClient extends Emitter {
@@ -126,17 +161,77 @@ define(class AcmeClient extends Emitter {
                 {
                     identifiers: [{
                         type: 'dns',
-                        value: await mkSystemHandle().getHost(),
+                        value: await this.system.getHost(),
                     }]
                 }
             );
 
             if (httpResp.getStatusCode() == 201) {
-                let respValue = httpResp.getValue();
-                await this.authorize(respValue.authorizations[0]);
+                const orderUrl = httpResp.getHeader('location');
+                const orderHandle = httpResp.getValue();
+                const authorizeUrl = orderHandle.authorizations[0];
+                const finalizeUrl = orderHandle.finalize;
+                await this.authorize(authorizeUrl);
+                const keyPair = await this.system.getKeyPair();
+
+                this.emit({
+                    name: 'Acme',
+                    task: 'radius.org.acmeCsrCreating',
+                });
+
+                let csr = await Crypto.createCsr({
+                    der: true,
+                    privateKey: keyPair.privateKey,
+                    country: this.settings.operator.country,
+                    state: this.settings.operator.state,
+                    locale: this.settings.operator.locale,
+                    org: this.settings.operator.org,
+                    hostname: await this.system.getHost(),
+                    days: this.settings.days,
+                });
+
+                httpResp = await this.post(finalizeUrl, {
+                    csr: csr.toString('base64url'),
+                });
                 
-                console.log(respValue.finalize);
-                console.log();
+                if (httpResp.getStatusCode() == 200) {
+                    this.emit({
+                        name: 'Acme',
+                        task: 'radius.org.acmeOrderFinalizing',
+                    });
+
+                    httpResp = await this.pollOrder(httpResp);
+                    const certificateUrl = httpResp.getValue().certificate;
+
+                    if (certificateUrl) {
+                        httpResp = await this.post(certificateUrl, 'PostAsGet', {
+                            Accept: 'application/pem-certificate-chain',
+                        });
+
+                        let certBundle = await Crypto.parseAcmeCertificate(httpResp.getValue());
+                        return certBundle;
+                    }
+                }
+                else {
+                    /*
+                    this.emit({
+                        name: 'Acme',
+                        task: 'radius.org.acmeCsrCreateFailed',
+                    });
+
+                    await this.pause(reply.headers);
+                    await this.confirmOrder(5);
+                    */
+                }
+                /*
+                if (this.certificateUrl) {
+                    reply = await this.post(this.certificateUrl, 'PostAsGet', {
+                        Accept: 'application/pem-certificate-chain',
+                    });
+
+                    return await Crypto.analyzeCertificateChain(reply.content.toString());
+                }
+                */
             }
             else {
                 throwError('radius.org.acmeCreateOrderFailed');
@@ -145,7 +240,7 @@ define(class AcmeClient extends Emitter {
         catch (e) {
             this.emit({
                 name: 'Acme',
-                error: e.code,
+                error: e.code ? e.code : e.toString(),
             });
 
             return e;
@@ -154,10 +249,14 @@ define(class AcmeClient extends Emitter {
 
     async challengeDns(challenge, authorizationUrl) {
         // ***** TODO
+        // ***************************************************************************
+        // ***************************************************************************
     }
 
     async challengeDnsPersist(challenge, authorizationUrl) {
         // ***** TODO
+        // ***************************************************************************
+        // ***************************************************************************
     }
 
     async challengeHttp(challenge, authorizationUrl) {
@@ -173,7 +272,7 @@ define(class AcmeClient extends Emitter {
                 once: false,
                 pset: await mkPermissionSetHandle().createPermissionSet(),
                 data: authorizationSecret,
-                flags: { disableCompression: true },
+                flags: { disableCompression: true, noEtag: true },
             });
 
             await this.post(challenge.url, {});
@@ -202,6 +301,8 @@ define(class AcmeClient extends Emitter {
 
     async challengeTlsAlpn(challenge, authorizationUrl) {
         // ***** TODO
+        // ***************************************************************************
+        // ***************************************************************************
     }
 
     checkSettings() {
@@ -213,6 +314,8 @@ define(class AcmeClient extends Emitter {
         if (!AcmeClient.settingsShape.verify(this.settings)) {
             throwError('radius.org.acmeSettingsFailure');
         }
+
+        this.system = mkSystemHandle();
     }
     
     async ensureAccount() {
@@ -229,7 +332,7 @@ define(class AcmeClient extends Emitter {
                 rsa: 'RS256',
             };
 
-            const keyAlg = await mkSystemHandle().getKeyAlg();
+            const keyAlg = await this.system.getKeyAlg();
             const keyPair = await Crypto.generateKeyPair(keyAlg);
             this.settings.publicKey = Crypto.export(keyPair.publicKey);
             this.settings.privateKey = Crypto.export(keyPair.privateKey);
@@ -294,6 +397,7 @@ define(class AcmeClient extends Emitter {
     }
 
     async getRenewalInfo() {
+        // ***** TODO
         // ***************************************************************************
         // ***************************************************************************
     }
@@ -304,6 +408,36 @@ define(class AcmeClient extends Emitter {
 
     getRevokeCertUrl() {
         return this.revokeCert;
+    }
+
+    async pause(httpResp) {
+        if (httpResp.hasHeader('retry-after')) {
+            await pause(parseInt(httpResp.getHeader('retry-after')) * 1000);
+        }
+        else {
+            await pause(3000);
+        }
+    }
+
+    async pollOrder(httpResp) {
+        await this.pause(httpResp);
+        let orderUrl = httpResp.getHeader('location');
+
+        for (let attempts = 0; attempts < 10; attempts++) {
+            let httpResp = await this.post(orderUrl, 'PostAsGet');
+            let resp = httpResp.getValue();
+
+            if (resp.status == 'valid') {
+                return httpResp;
+            }
+            else if (resp.status == 'invalid') {
+                throwError(`radius.org.acmeOrderFailed`);
+            }
+
+            await this.pause(reply.headers);
+        }
+
+        throwError(`radius.org.acmeOrderTimedOut`);
     }
 
     async post(url, payload, headers) {
@@ -346,6 +480,7 @@ define(class AcmeClient extends Emitter {
     }
 
     async revokeCertificate() {
+        // ***** TODO
         // ***************************************************************************
         // ***************************************************************************
     }
