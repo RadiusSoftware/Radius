@@ -63,10 +63,10 @@
  * 
 *****/
 define(class AcmeClient extends Emitter {
-    constructor(settings) {
+    constructor(settings, settingsShape) {
         super();
         this.settings = settings;
-        this.system = mkSystemHandle();
+        this.settingsShape = settingsShape;
     }
 
     async authorize(authorizationUrl) {
@@ -239,8 +239,9 @@ define(class AcmeClient extends Emitter {
             let hash = await Crypto.hash('sha256', `{"e":"${this.jwk.e}","kty":"${this.jwk.kty}","n":"${this.jwk.n}"}`);
             let challengePath = `/.well-known/acme-challenge/${challenge.token}`;
             let authorizationSecret = `${challenge.token}.${hash.toString('base64url')}`;
+            let lib = mkHttpLibraryHandle();
 
-            await mkHttpLibraryHandle().addData({
+            await lib.addData({
                 path: challengePath,
                 mime: 'text/plain',
                 mode: 'plain',
@@ -250,8 +251,7 @@ define(class AcmeClient extends Emitter {
                 flags: { disableCompression: true, noEtag: true },
             });
 
-            await this.post(challenge.url, {});
-            await pause(2000);
+            let response = await this.post(challenge.url, {});
 
             for (let i = 0; i < 10; i++) {
                 let httpResp = await this.post(authorizationUrl, 'PostAsGet');
@@ -262,17 +262,18 @@ define(class AcmeClient extends Emitter {
                 })[0];
                 
                 if (httpChallenge.status == 'valid') {
-                    await mkHttpLibraryHandle().delete(challengePath);
+                    await lib.delete(challengePath);
                     return;
                 }
                 else if (httpChallenge.status == 'invalid') {
+                    await lib.delete(challengePath);
                     throwError(`radius.org.acmeHttpChallengeFailed`);
                 }
 
                 await pause(2000);
             }
 
-            throwError('radius.org.acmeHttpChallengeUnconfirmed')
+            throwError('radius.org.acmeHttpChallengeUnconfirmed');
         }
     }
 
@@ -412,7 +413,7 @@ define(class AcmeClient extends Emitter {
                 throwError(`radius.org.acmeOrderFailed`);
             }
 
-            await this.pause(reply.headers);
+            await this.pause(resp.headers);
         }
 
         throwError(`radius.org.acmeOrderTimedOut`);

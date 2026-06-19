@@ -58,6 +58,9 @@ define(class Time extends Date {
             else if (args[0] === 'min') {
                 super(Time.kodeMin);
             }
+            else if (args[0] instanceof Time) {
+                return args[0];
+            }
             else {
                 super(args[0]);
             }

@@ -54,7 +54,7 @@ define(class Webapp extends HttpX {
         let html = this.htmlTemplate.toString({
             lang: lang,
             apiEndpoints: toJson(this.endpoints),
-            radiusPath: this.radiusPath,
+            radiusPath: this.radiusFrameworkPath,
             webappSettings: mkBuffer(toJson(webappSettings)).toString('hex'),
         });
 
@@ -105,7 +105,7 @@ define(class Webapp extends HttpX {
 
         this.packages = mkPackageHandle();
         this.loadOrder = await this.listLoadOrder();
-        this.radiusPath = await mkSystemHandle().getRadiusPath();
+        this.radiusFrameworkPath = await mkSystemHandle().getRadiusFrameworkPath();
 
         let htmlPath = __filename.replace('.js', '.html');
         let htmlCode = (await mkSystemHandle().getWebapp());

@@ -31,12 +31,6 @@
  * related to managing and executing watches.
 *****/
 define(class HttpServer extends Server {
-    static settingsShape = mkRdsShape({
-        enabled: BooleanType,
-        workers: UInt16Type,
-        acceptCookiesName: StringType,
-        sessionCookieName: StringType,
-    });
 });
 
 
@@ -303,14 +297,12 @@ define(class HttpWorker extends Worker {
         await super.init();
 
         let system = mkSystemHandle();
-        this.setupMode = (await system.getState()) == 'system#setup';
-        this.settings = mkSettingsHandle();
-        this.acceptCookiesPath = await this.settings.getSetting('acceptCookiesPath');
-        this.profilePath = await this.settings.getSetting('profilePath');
-        this.radiusPath = await system.getRadiusPath();
-        this.setupPath = await this.settings.getSetting('setupPath');
-        this.signinPath = await this.settings.getSetting('signinPath');
-        this.systemPath = await this.settings.getSetting('systemPath');
+        this.setupMode = (await system.getMode()) == 'system#setup';
+
+        let settings = mkSettingsHandle();
+        this.acceptCookiesPath = await settings.getSetting('acceptCookiesPath');
+        this.setupPath = await settings.getSetting('setupPath');
+        this.signinPath = await settings.getSetting('signinPath');
 
         const { publicKey, privateKey } = await system.getKeyPair();
 
@@ -339,6 +331,7 @@ define(class HttpWorker extends Worker {
     }
 
     async onUpgrade(httpReq, socket, headData) {
+        /*
         let req = mkHttpRequest(this, httpReq);
 
         if (req.isWebSocketAuthorized()) {
@@ -372,11 +365,9 @@ define(class HttpWorker extends Worker {
                             headers.push('\r\n');
                             socket.write(headers.join('\r\n'));
                             // TODO ********************************************************
-                            /*
                             webSocket.on('DataReceived', data => {
                                 httpx.handleWebsocket(data);
                             });
-                            */
                         }
                     }
                 }
@@ -388,6 +379,7 @@ define(class HttpWorker extends Worker {
         else {
             req.respondStatus(401);
         }
+        */
     }
 
     async respondData(handle) {

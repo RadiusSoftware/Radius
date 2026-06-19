@@ -326,12 +326,10 @@ singleton(class FileSystem extends Emitter {
     }
 
     async writeFile(path, data, mode, encoding) {
-        let options = {
-            mode: mode ? mode : 0o666,
-            encoding: encoding ? encoding : 'utf8',
-        };
-
-        await LibFileSystem.writeFile(path, data, options);
+        let options = {};
+        mode ? options.mode = mode : null;
+        encoding ? options.encoding = encoding : null;
+        await LibFileSystem.promises.writeFile(path, data, options);
         return this;
     }
 

@@ -32,81 +32,23 @@
 define(class SetupApp extends Webapp {
     constructor() {
         super();
-        this.state = 'setup#start';
     }
-
-    async getNextState() {
-        const system = mkSystemHandle();
-
-        if (!await system.getTlsStatus()) {
-            this.state = 'setup#acme';
-            return this.state;
-        }
-
-        /*
-        if (false) {
-            this.state = 'system#setup-mode';
-            return this.state;
-        }
-
-        if (false) {
-            this.state = 'system#setup-swarm';
-            return this.state;
-        }
-
-        if (false) {
-            this.state = 'system#setup-dbms';
-            return this.state;
-        }
-
-        if (false) {
-            this.state = 'system#setup-user';
-            return this.state;
-        }
-
-        if (false) {
-            this.state = 'system#setup-verify';
-            return this.state;
-        }
-
-        if (false) {
-            this.state = 'system#setup-password';
-            return this.state;
-        }
-        */
-    }
-
-    // ********************
-    // getSigninPath
-    // ********************
-    async [Api.define(
-        'getSigninPath',
-    )](trx) {
-        return await mkSystemHandle().getSigninPath();
-    }
-
-    // ********************
-    // getSetupState
-    // ********************
-    async [Api.define(
-        'getSetupState',
-    )](trx) {
-        return this.state;
-    }
-
     // ********************
     // setupAcme
     // ********************
     async [Api.define(
         'setupAcme',
         {
-            name: StringType,
-            url: StringType,
-            contact: [ StringType ],
+            acmeProviderName: StringType,
+            acmeProviderUrl: StringType,
+            operatorKid: StringType,
+            operatorContact: [ StringType ],
         }
     )](trx, name, url, contact) {
         if (this.state == 'setup#acme') {
             let system = mkSystemHandle();
+
+            /*
             const acmeSettingsShape = await system.getAcmeSettingsShape();
             let acmeSettings = acmeSettingsShape.getDefault();
 
@@ -136,15 +78,7 @@ define(class SetupApp extends Webapp {
                 await system.setSetting('certificate', certBundle);
                 await system.saveSettings();
             }
+            */
         }
-    }
-
-    // ********************
-    // startSetup
-    // ********************
-    async [Api.define(
-        'startSetup',
-    )](trx) {
-        return await this.getNextState();
     }
 });

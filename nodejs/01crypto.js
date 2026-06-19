@@ -81,7 +81,21 @@ singleton(class Crypto {
         return LibCrypto.createPublicKey(pem);
     }
 
-    decrypt(keyObj, data, iv, mode) {
+    async decrypt(keyObj, opaque) {
+        if (keyObj.type == 'public') {
+            return await this.decryptData(keyObj, opaque);
+        }
+        else if (keyObj.type == 'private') {
+            return await this.decryptData(keyObj, opaque);
+        }
+        else {
+            let iv = opaque.slice(0, 16);
+            let data = opaque.slice(16);
+            return await this.decryptData(keyObj, data, iv);
+        }
+    }
+
+    decryptData(keyObj, data, iv, mode) {
         return new Promise(async (ok, fail) => {
             if (keyObj.type == 'public') {
                 ok(LibCrypto.publicDecrypt(
@@ -123,7 +137,20 @@ singleton(class Crypto {
         });
     }
 
-    encrypt(keyObj, data, mode) {
+    async encrypt(keyObj, clear) {
+        if (keyObj.type == 'public') {
+            return await this.encryptData(keyObj, clear);
+        }
+        else if (keyObj.type == 'private') {
+            return await this.encryptData(keyObj, clear);
+        }
+        else {
+            let { data, iv } = await this.encryptData(keyObj, clear);
+            return Buffer.concat([mkBuffer(iv), data]);
+        }
+    }
+
+    encryptData(keyObj, data, mode) {
         return new Promise(async (ok, fail) => {
             if (keyObj.type == 'public') {
                 ok(LibCrypto.publicEncrypt(
@@ -139,7 +166,7 @@ singleton(class Crypto {
             }
             else {
                 let chunks = [];
-                mode = typeof mode == 'undefined' ? 'cbc' : mode;
+                mode = mode === undefined ? 'cbc' : mode;
                 let iv = await this.generateRandomArray(16);
     
                 let cipher = LibCrypto.createCipheriv(
@@ -202,6 +229,24 @@ singleton(class Crypto {
             else {
                 fail(`\Symmetric key paremters failed verification: bits=${arg}.`);
             }
+        });
+    }
+
+    generateAesKeyFromPassphrase(password, salt, iterations, keylen, digest) {
+        // **********************************************************************
+        // **********************************************************************
+    }
+
+    generateAesKeyFromSeed(digest, ikm, salt, info, keylen) {
+        return new Promise((ok, fail) => {
+            LibCrypto.hkdf(digest, ikm, salt, info, keylen, (error, arrayBuffer) => {
+                if (error) {
+                    fail(error);
+                }
+                else {
+                    ok(LibCrypto.createSecretKey(arrayBuffer));
+                }
+            });
         });
     }
 

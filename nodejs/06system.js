@@ -23,17 +23,24 @@
 
 /*****
  * The system service is used for managing the initialization and management of
- * the host or system.  The system has calls for attaching, detaching the host
- * from a swarm and also tracks a newly installed system to know that it must
- * be either initialized or attached before it can be used:
+ * the host or system.  The system is accessable through the service handle.
+ * Note that there are two imported system attributes:
  * 
+ *      STATE
+ *      *****
  *      system#loaded
- *      system#setup
  *      system#ready
  *      system#running
  * 
- * When a system is first installed, it must be configured by attaching it to a
- * swarm or configuring it for standalone operation before is can be used.
+ *      MODE
+ *      ****
+ *      system#setup
+ *      system#standalone
+ *      system#swarm
+ * 
+ * Swarm mode is somewhat complex to describe because the DBMS access, user
+ * management, and spooling (email, sms...) are all performed via thunks that
+ * connect webservices within the swarm.
 *****/
 createService(class SystemService extends Service {
     static acmeSettingsShape = mkRdsShape({
@@ -55,19 +62,24 @@ createService(class SystemService extends Service {
         },
     });
 
+    static httpServerSettingsShape = mkRdsShape({
+        enabled: BooleanType,
+        workers: UInt16Type,
+        acceptCookiesName: StringType,
+        sessionCookieName: StringType,
+    });
+
     static settingsShape = mkRdsShape({
-        bootMode: StringType,
-        host: StringType,
+        mode: StringType,
         hostId: StringType,
-        privateKey: StringType,
         publicKey: StringType,
+        privateKey: StringType,
         certificate: {
             hostCert: StringType,
             authCert: StringType,
             rootCert: StringType,
             hostCertExpires: DateTimeType,
             hostCertSubject: StringType,
-
         },
 
         swarm: {
@@ -88,6 +100,7 @@ createService(class SystemService extends Service {
         },
 
         acme: SystemService.acmeSettingsShape,
+        httpServer: SystemService.httpServerSettingsShape,
     });
 
     constructor() {
@@ -95,203 +108,197 @@ createService(class SystemService extends Service {
         this.bootTime = mkTime();
         this.bootUUID = Crypto.generateUUID();
         this.state = 'system#loaded';
-        this.radiusPath = '/radius';
+        this.radiusFrameworkPath = '/radius';
         this.settings = SystemService.settingsShape.getDefault();
+
+        this.componentStatus = {
+            basic : false,
+            acme: false,
+            http: false,
+            mode: false,
+            swarm: false,
+            standalone: {
+                dbms: false,
+                user: false,
+                email: false,
+            },
+        };
     }
 
-    async bootSetupMode() {
-        const keyAlgorithm = 'rsa';
-        const { publicKey, privateKey } = await Crypto.generateKeyPair(keyAlgorithm);
+    analyzeConfiguration() {
+        this.unconfigured = [];
+        const stack = [{ dotted: '', component: this.componentStatus }];
 
-        this.settings.hostId = Crypto.generateUUID();
-        this.settings.publicKey = Crypto.export(publicKey);
-        this.settings.privateKey = Crypto.export(privateKey);
+        while (stack.length) {
+            let unit = stack.pop();
 
-        await mkSettingsHandle().defineTemporarySetting(
-            'httpServer',
-            'server',
-            HttpServer.settingsShape,
-            {
+            if (ObjectType.verify(unit.component)) {
+                for (let key of Object.keys(unit.component).reverse()) {
+                    let dotted;
+
+                    if (unit.dotted) {
+                        dotted = [ unit.dotted, key ].join('.');
+                    }
+                    else {
+                        dotted = key;
+                    }
+
+                    stack.push({ dotted: dotted, component: unit.component[key] });
+                }
+            }
+            else if (!Data.get(this.componentStatus, unit.dotted)) {
+                this.unconfigured.push(unit.dotted);
+            }
+        }
+    }
+
+    analyzeNetworkInterfaces() {
+        for (let netInterface of NetInterfaces) {
+            if (netInterface.IPv6.getMac() != '00:00:00:00:00:00') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    async configureAcme() {
+        if (await this.onGetTlsStatus()) {
+            this.componentStatus.acme = true;
+        }
+        else {
+            // ************************************************************************
+            // ************************************************************************
+            // If we have an account KID, attempt renew
+            // If we don't or the prior step fails, go into setup mode
+            //await this.saveBoot();
+        }
+    }
+
+    async configureBasicSystem() {
+        if (!this.settings.hostId) {
+            this.settings.hostId = Crypto.generateUUID();
+            const keyAlgorithm = 'rsa';
+            const { publicKey, privateKey } = await Crypto.generateKeyPair(keyAlgorithm);
+            this.settings.publicKey = Crypto.export(publicKey);
+            this.settings.privateKey = Crypto.export(privateKey);
+            await this.saveBoot();
+        }
+
+        this.componentStatus.basic = true;
+    }
+
+    async configureHttp() {
+        if (!this.settings.httpServer.enabled) {
+            this.settings.httpServer = {
                 enabled: true,
                 workers: 1,
                 acceptCookiesName: 'cookies',
                 sessionCookieName: 'session',
-            },
+            };
+
+            await this.saveBoot();
+        }
+
+        await mkSettingsHandle().defineTemporarySetting(
+            'httpServer',
+            'server',
+            SystemService.httpServerSettingsShape,
+            this.settings.httpServer,
         );
 
-        this.httpServer = await createServer(HttpServer);
-        await this.httpServer.start('httpServer');
+        this.componentStatus.http = true;
     }
 
-    async bootStandaloneMode() {
-        try {
-            /*
-            if (!(await Dbms.doesDatabaseExist(this.sysdb))) {
-                await Dbms.createDatabase(this.sysdb);
-            }
-
-            let schema1 = await Dbms.getDatabaseSchema(this.sysdb);
-            let schema2 = mkFrameworkSchema();
-
-            for (let diff of mkSchemaAnalysis(schema1, schema2)) {
-                await SchemaUpdater.upgrade(this.sysdb, diff);
-            }
-
-            for (let dbTable of schema2) {
-                if (dbTable.getType() == 'object') {
-                    defineDbo('', dbTable);
-                }
-            }
-
-            await Dbms.setSettings(this.sysdb);
-            */
-            /*
-            let httpServer = await createServer(HttpServer);
-            await httpServer.start('httpServer');
-            let webServices = await mkWebServiceHandle().load();
-            await webServices.start();
-            await this.launchServers();
-            */
+    async configureMode() {
+        if (this.settings.mode == 'standalone') {
+            // ********************************************************************************
+            // ********************************************************************************
         }
-        catch (e) {}
-        this.state = 'system#setup';
-    }
-
-    async bootSwarmMode() {
-        // **************************************************************************
-        // **************************************************************************
-        /*
-        try {
+        else if (this.settings.mode == 'swarm') {
+            // ********************************************************************************
+            // ********************************************************************************
         }
-        catch (e) {}
-        this.state = 'system#setup';
-        */
-    }
-
-    async initDbms() {
-        // **************************************************************************
-        // **************************************************************************
-        /*
-        try {
-            if (!(await Dbms.doesDatabaseExist(this.sysdb))) {
-                await Dbms.createDatabase(this.sysdb);
-            }
-
-            let schema1 = await Dbms.getDatabaseSchema(this.sysdb);
-            let schema2 = mkFrameworkSchema();
-
-            for (let diff of mkSchemaAnalysis(schema1, schema2)) {
-                await SchemaUpdater.upgrade(this.sysdb, diff);
-            }
-
-            for (let dbTable of schema2) {
-                if (dbTable.getType() == 'object') {
-                    defineDbo('', dbTable);
-                }
-            }
-
-            await Dbms.setSettings(this.sysdb);
+        else {
+            this.componentStatus.mode = false;
         }
-        catch (e) {}
-        this.state = 'system#setup';
-        */
     }
 
-    async loadSettings() {
-        /*
-        const bootPath = LibPath.join(radius.path, '../.boot');
+    async createBootKey() {
+        let macs = [];
 
-        if (await FileSystem.isFile(bootPath)) {
+        for (let netInterface of NetInterfaces) {
+            if (netInterface.IPv6.getMac() != '00:00:00:00:00:00') {
+                macs.push(netInterface.IPv6.getMac());
+            }
+        }
+
+        if (macs.length) {
+            const filename = macs[0].replaceAll(':', '_');
+            this.bootPath = Path.join(radius.path, `../${filename}`);
+
+            this.bootKey = await Crypto.generateAesKeyFromSeed(
+                'sha256',
+                this.bootPath,
+                macs.join('-').replaceAll(':', '_'),
+                '',
+                32,
+            );
+        }
+    }
+
+    async loadBoot() {
+        if (await FileSystem.isFile(this.bootPath)) {
             try {
-                const settings = fromJson(await FileSystem.readFileAsString(bootPath));
-
-                if (bootSettings && SystemService.settingsShape.verify(bootSettings)) {
-                    this.bootMode = bootSettings.bootMode;
-                    this.host = bootSettings.host;
-                    this.hostId = bootSettings.hostId;
-                    this.privateKey = bootSettings.privateKey;
-                    this.publicKey = bootSettings.publiKey;
-                    this.tlsCert = bootSettings.tlsCert;
-                    this.caaCert = bootSettings.caaCert;
-
-                    if (bootSettings.bootMode == 'standalone') {
-                        this.sysdb = {
-                            dbms: bootSettings.dbms.dbmsType,
-                            timeout: bootSettings.dbms.timeout,
-                            host: bootSettings.dbms.host,
-                            port: bootSettings.dbms.port,
-                            database: bootSettings.dbms.database,
-                            username: bootSettings.dbms.username,
-                            password: bootSettings.dbms.password,
-                            certificate: bootSettings.dbms.certificate,
-                        };
-                    }
-                    else if (bootSettings.mode == 'swarm') {
-                        this.swarm = {
-                            swarmId: bootSettings.swarm.swarmId,
-                            swarmSecret: bootSettings.swarm.swarmSecret,
-                            swarmHosts: bootSettings.swarm.swarmHosts,
-                        };
-                    }
-
-                    this.state = 'system#ready';
-                    return;
-                }
+                let encrypted = await FileSystem.readFile(this.bootPath);
+                let decrypted = await Crypto.decrypt(this.bootKey, encrypted);
+                this.settings = fromJson(decrypted.toString());
             }
             catch (e) {}
         }
-        */
-
-        this.state = 'system#setup';
     }
 
     async onBoot(message) {
         if (this.state == 'system#loaded') {
-            await mkPermissionSetHandle().addPermissionTypes(
-                'radius#signedin',
-                'radius#admin',
-                'radius#system',
-            );
+            if (this.analyzeNetworkInterfaces()) {
+                await mkPermissionSetHandle().addPermissionTypes(
+                    'radius#signedin',
+                    'radius#admin',
+                    'radius#system',
+                );
 
-            await mkHttpLibraryHandle().addData({
-                path: this.radiusPath,
-                mime: 'text/javascript',
-                mode: 'tls',
-                once: false,
-                pset: await mkPermissionSetHandle().createPermissionSet(),
-                data: radius.mozilla,
-            });
+                await mkHttpLibraryHandle().addData({
+                    path: this.radiusFrameworkPath,
+                    mime: 'text/javascript',
+                    mode: 'tls',
+                    once: false,
+                    pset: await mkPermissionSetHandle().createPermissionSet(),
+                    data: radius.mozilla,
+                });
 
-            let packages = mkPackageHandle();
-            await packages.loadDirectory(Path.join(radius.path, '/mozilla/package'), '/');
-            await packages.loadDirectory(Path.join(radius.path, '/radius'), this.radiusPath);
-            await this.loadSettings();
+                let packages = mkPackageHandle();
+                await packages.loadDirectory(Path.join(radius.path, '/mozilla/package'), '/');
+                await packages.loadDirectory(Path.join(radius.path, '/radius'), this.radiusFrameworkPath);
 
-            if (this.state == 'system#ready') {
-                if (this.mode == 'swarm') {
-                    await this.bootSwarmMode();
+                await this.createBootKey();
+                await this.loadBoot();
+
+                await this.configureBasicSystem();
+                await this.configureHttp();
+                await this.configureAcme();
+                await this.configureMode();
+                this.analyzeConfiguration();
+
+                if (this.unconfigured.length) {
+                    this.mode = 'setup';
                 }
-                else if (this.mode == 'standalone') {
-                    await this.bootStandaloneMode();
-                }
+
+                await this.startHttp();
             }
-
-            if (this.state == 'system#setup') {
-                await this.bootSetupMode();
+            else {
+                throwError('Unable to boot server: no non-virtual network interfaces.');
             }
         }
-    }
-
-    async onGetAcceptCookiesPath(message) {
-        return this.acceptCookiesPath;
-    }
-
-    async onGetAcmeSettings(message) {
-        return SystemService.settings.acme;
-    }
-
-    async onGetAcmeSettingsShape(message) {
-        return SystemService.acmeSettingsShape;
     }
 
     async onGetBootTime(message) {
@@ -310,21 +317,8 @@ createService(class SystemService extends Service {
         return this.mode;
     }
 
-    async onGetRadiusPath(message) {
-        return this.radiusPath;
-    }
-
-    async onGetSetting(message) {
-        if (message.dotted == 'all-settings') {
-            return this.settings;
-        }
-        else if (Data.has(this.settings, message.dotted)) {
-            return Data.get(this.settings, message.dotted);
-        }
-    }
-
-    async onGetSigninPath(message) {
-        return this.signinPath;
+    async onGetRadiusFrameworkPath(message) {
+        return this.radiusFrameworkPath;
     }
 
     async onGetState(message) {
@@ -332,19 +326,28 @@ createService(class SystemService extends Service {
     }
 
     async onGetTlsCerts(message) {
-        if (this.tlsCert && this.caaCert) {
-            return {
-                tlsCert: this.tlsCert,
-                caaCert: this.caaCert,
-            };
+        if (mkTime(this.settings.certificate.hostCertExpires) < mkTime()) {
+            if (this.settings.certificate.hostCert) {
+                if (this.settings.certificate.authCert) {
+                    if (this.settings.certificate.rootCert) {
+                        return this.settings.certificate;
+                    }
+                }
+            }
         }
 
         return null;
     }
 
     async onGetTlsStatus(message) {
-        if (this.tlsCert && this.caaCert) {
-            return true;
+        if (mkTime(this.settings.certificate.hostCertExpires) < mkTime()) {
+            if (this.settings.certificate.hostCert) {
+                if (this.settings.certificate.authCert) {
+                    if (this.settings.certificate.rootCert) {
+                        return true;
+                    }
+                }
+            }
         }
 
         return false;
@@ -354,55 +357,188 @@ createService(class SystemService extends Service {
         return radius.webapp;
     }
 
-    async onSaveSettings(message) {
-        console.log('************************ SAVE SETTINGS');
-        console.log(this.settings);
-    }
-
-    async onSetSetting(message) {
-        if (Data.has(this.settings, message.dotted)) {
-            let shape = SystemService.settingsShape.get(message.dotted);
-
-            if (shape.verify(message.value)) {
-                Data.set(this.settings, message.dotted, message.value);
-                return true;
-            }
+    async saveBoot() {
+        try {
+            let json = toJson(this.settings);
+            let encrypted = await Crypto.encrypt(this.bootKey, json);
+            await FileSystem.writeFile(this.bootPath, encrypted);
         }
-
-        return mkFailure('radius.org.systemSetSettingFailed', `setting name: ${message.dotted}`);
+        catch (e) {}
     }
 
+    async startHttp() {
+        this.httpServer = await createServer(HttpServer);
+        await this.httpServer.start('httpServer');
+    }
+
+    async stoptHttp() {
+        // ************************************************************************
+        // ************************************************************************
+    }
+});
+
+
+/*****
+ * The handle object for objtaining services from the system service.  System
+ * services are focused on managing the status of the installed software, how
+ * up to date that software is, how up to date the packages are, and whether
+ * the system is ready for operational execution.
+*****/
+define(class SystemHandle extends Handle {
+    async boot() {
+        return await this.callService({
+        });
+    }
+
+    static fromJson(value) {
+        return mkSystemHandle();
+    }
+
+    async getBootTime() {
+        return await this.callService({
+        });
+    }
+
+    async getBootUUID() {
+        return await this.callService({
+        });
+    }
+
+    async getKeyPair() {
+        return await this.callService({
+        });
+    }
+
+    async getMode() {
+        return await this.callService({
+        });
+    }
+
+    async getRadiusFrameworkPath() {
+        return await this.callService({
+        });
+    }
+
+    async getState() {
+        return await this.callService({
+        });
+    }
+
+    async getTlsCerts() {
+        return await this.callService({
+        });
+    }
+
+    async getTlsStatus() {
+        return await this.callService({
+        });
+    }
+
+    async getWebapp() {
+        return await this.callService({
+        });
+    }
+
+    async restartHttp() {
+        // ************************************************************************
+        // ************************************************************************
+        return await this.callService({
+        });
+    }
+
+    async startHttp() {
+        // ************************************************************************
+        // ************************************************************************
+        return await this.callService({
+        });
+    }
+
+    async stopHttp() {
+        // ************************************************************************
+        // ************************************************************************
+        return await this.callService({
+        });
+    }
+});
     /*
-    async onSetAcmeSettings(message) {
-        if (SystemService.acmeSettingsShape.verify(message.settings)) {
-            Object.assign(this.settings.acme, message.settings);
+    async bootStandaloneMode() {
+        try {
+            if (!(await Dbms.doesDatabaseExist(this.sysdb))) {
+                await Dbms.createDatabase(this.sysdb);
+            }
+
+            let schema1 = await Dbms.getDatabaseSchema(this.sysdb);
+            let schema2 = mkFrameworkSchema();
+
+            for (let diff of mkSchemaAnalysis(schema1, schema2)) {
+                await SchemaUpdater.upgrade(this.sysdb, diff);
+            }
+
+            for (let dbTable of schema2) {
+                if (dbTable.getType() == 'object') {
+                    defineDbo('', dbTable);
+                }
+            }
+
+            await Dbms.setSettings(this.sysdb);
+            
+            let httpServer = await createServer(HttpServer);
+            await httpServer.start('httpServer');
+            let webServices = await mkWebServiceHandle().load();
+            await webServices.start();
+            await this.launchServers();
         }
-    }
-
-    async onSetCertificate(message) {
-        this.settings.hostCert = message.certBundle.hostCert;
-        this.settings.authCert = message.certBundle.authCert;
-        this.settings.rootCert = message.certBundle.rootCert;
-        this.settings.hostCertExpires = message.certBundle.expires;
-        this.settings.hostCertSubject = message.certBundle.subject;
-        console.log(this.settings);
-    }
-
-    async onSetHost(message) {
-        this.host = message.host;
+        catch (e) {}
+        this.state = 'system#setup';
     }
     */
 
-    async saveSettings() {
+    /*
+    async bootSwarmMode() {
+        // **************************************************************************
+        // **************************************************************************
+        try {
+        }
+        catch (e) {}
+        this.state = 'system#setup';
     }
-});
+    */
+
+    /*
+    async initDbms() {
+        // **************************************************************************
+        // **************************************************************************
+        try {
+            if (!(await Dbms.doesDatabaseExist(this.sysdb))) {
+                await Dbms.createDatabase(this.sysdb);
+            }
+
+            let schema1 = await Dbms.getDatabaseSchema(this.sysdb);
+            let schema2 = mkFrameworkSchema();
+
+            for (let diff of mkSchemaAnalysis(schema1, schema2)) {
+                await SchemaUpdater.upgrade(this.sysdb, diff);
+            }
+
+            for (let dbTable of schema2) {
+                if (dbTable.getType() == 'object') {
+                    defineDbo('', dbTable);
+                }
+            }
+
+            await Dbms.setSettings(this.sysdb);
+        }
+        catch (e) {}
+        this.state = 'system#setup';
+    }
+    */
 /*******************************************************************************************************
 
             await settings.defineSetting('sessionTimeoutMillis', 'security', Int32Type, 120*60*60*1000);
             await settings.defineSetting('sessionShutdowntMillis', 'security', Int32Type, 240*60*60*1000);
 
             await settings.defineSetting('loginMaxFailures', 'security', Int32Type, 4);
-            await settings.defineSetting('loginMaxMfaMinutes', 'security', Int32Type, 5);
+            await settings.defineSPvine$922-blueetting('loginMaxMfaMinutes', 'security', Int32Type, 5);
             await settings.defineSetting('passwordMaxDays', 'security', Int32Type, -1);
             await settings.defineSetting('passwordHistoryMaxDays', 'security', Int32Type, 365);
             
@@ -452,109 +588,3 @@ createService(class SystemService extends Service {
         }
     });
     */
-
-
-/*****
- * The handle object for objtaining services from the system service.  System
- * services are focused on managing the status of the installed software, how
- * up to date that software is, how up to date the packages are, and whether
- * the system is ready for operational execution.
-*****/
-define(class SystemHandle extends Handle {
-    async boot() {
-        return await this.callService({
-        });
-    }
-
-    static fromJson(value) {
-        return mkSystemHandle();
-    }
-
-    async getAcceptCookiesPath() {
-        return await this.callService({
-        });
-    }
-
-    async setAcmeSettings() {
-        return await this.callService({
-        });
-    }
-
-    async getAcmeSettingsShape() {
-        return await this.callService({
-        });
-    }
-
-    async getBootTime() {
-        return await this.callService({
-        });
-    }
-
-    async getBootUUID() {
-        return await this.callService({
-        });
-    }
-
-    async getHost() {
-        return await this.callService({
-        });
-    }
-
-    async getKeyPair() {
-        return await this.callService({
-        });
-    }
-
-    async getMode() {
-        return await this.callService({
-        });
-    }
-
-    async getRadiusPath() {
-        return await this.callService({
-        });
-    }
-
-    async getSetting(dotted) {
-        return await this.callService({
-            dotted: dotted,
-        });
-    }
-
-    async getSigninPath() {
-        return await this.callService({
-        });
-    }
-
-    async getState() {
-        return await this.callService({
-        });
-    }
-
-    async getTlsCerts() {
-        return await this.callService({
-        });
-    }
-
-    async getTlsStatus() {
-        return await this.callService({
-        });
-    }
-
-    async getWebapp() {
-        return await this.callService({
-        });
-    }
-
-    async saveSettings() {
-        return await this.callService({
-        });
-    }
-
-    async setSetting(dotted, value) {
-        return await this.callService({
-            dotted: dotted,
-            value: value,
-        });
-    }
-});
