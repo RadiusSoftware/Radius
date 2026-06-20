@@ -58,7 +58,7 @@ define(class SetupApp extends Webapp {
 
             acmeSettings.name = name;
             acmeSettings.url = url;
-            acmeSettings.days = 90;
+            acmeSettings.days = 75;
             acmeSettings.contact = contact,
             acmeSettings.operator = {
                 country: "US",

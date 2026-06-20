@@ -110,7 +110,7 @@ define(class Server extends Emitter {
     async kill() {
         await this.killWorkers();
         delete Server.servers[this.getClassName()];
-        return;
+        return this;
     }
 
     async killWorker(worker) {

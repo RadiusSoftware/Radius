@@ -162,16 +162,37 @@ createService(class SystemService extends Service {
         return false;
     }
 
+    async certifyHost(notificationHandler) {
+        let acmeClient = mkAcmeClient(
+            this.settings.acme,
+            SystemService.acmeSettingsShape,
+        );
+
+        for (let i = 0; i < 5; i++) {
+            let certificateBundle = await acmeClient.certifyHost();
+
+            if (!(certificateBundle instanceof Failure)) {
+                this.settings.certificate.hostCert = certificateBundle[0];
+                this.settings.certificate.authCert = certificateBundle[1];
+                this.settings.certificate.rootCert = certificateBundle[2];
+                this.settings.acme = acmeClient.getSettings();
+                return true;
+            }
+
+            await pause(2000);
+        }
+
+        return false;
+    }
+
     async configureAcme() {
         if (await this.onGetTlsStatus()) {
             this.componentStatus.acme = true;
         }
-        else {
-            // ************************************************************************
-            // ************************************************************************
-            // If we have an account KID, attempt renew
-            // If we don't or the prior step fails, go into setup mode
-            //await this.saveBoot();
+        else if (this.hasAcmeAccount()) {
+            this.componentStatus = await this.certifyHost(notification => {
+                console.log(notification);
+            });
         }
     }
 
@@ -245,6 +266,73 @@ createService(class SystemService extends Service {
                 32,
             );
         }
+    }
+
+    hasAcmeAccount() {
+        let acme = this.settings.acme;
+
+        if (acme.name && acme.url && acme.kid) {
+            if (acme.publicKey && acme.privateKey) {
+                if (acme.operator.country) {
+                    if (acme.operator.state) {
+                        if (acme.operator.locale) {
+                            if (acme.operator.org) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    async initDbms() {
+        // **************************************************************************
+        // **************************************************************************
+        /*
+        try {
+            if (!(await Dbms.doesDatabaseExist(this.sysdb))) {
+                await Dbms.createDatabase(this.sysdb);
+            }
+
+            let schema1 = await Dbms.getDatabaseSchema(this.sysdb);
+            let schema2 = mkFrameworkSchema();
+
+            for (let diff of mkSchemaAnalysis(schema1, schema2)) {
+                await SchemaUpdater.upgrade(this.sysdb, diff);
+            }
+
+            for (let dbTable of schema2) {
+                if (dbTable.getType() == 'object') {
+                    defineDbo('', dbTable);
+                }
+            }
+
+            await Dbms.setSettings(this.sysdb);
+        }
+        catch (e) {}
+
+        this.state = 'system#setup';
+        await settings.defineSetting('sessionTimeoutMillis', 'security', Int32Type, 120*60*60*1000);
+        await settings.defineSetting('sessionShutdowntMillis', 'security', Int32Type, 240*60*60*1000);
+
+        await settings.defineSetting('loginMaxFailures', 'security', Int32Type, 4);
+        await settings.defineSPvine$922-blueetting('loginMaxMfaMinutes', 'security', Int32Type, 5);
+        await settings.defineSetting('passwordMaxDays', 'security', Int32Type, -1);
+        await settings.defineSetting('passwordHistoryMaxDays', 'security', Int32Type, 365);
+        
+
+        await settings.defineSetting('packages', 'package', ArrayType, []);
+        await settings.defineSetting('webServicesPath', 'server', StringType, '/ws');
+
+        await dbms.createObj(DboUserGroup, {
+            name: '',
+            active: true,
+            settings: {},
+        });
+        */
     }
 
     async loadBoot() {
@@ -357,6 +445,25 @@ createService(class SystemService extends Service {
         return radius.webapp;
     }
 
+    async onRestartHttp(message) {
+        if (this.httpServer) {
+            await this.stopHttp();
+            await this.startHttp();
+        }
+    }
+
+    async onStartHttp(message) {
+        if (!this.httpServer) {
+            await this.startHttp();
+        }
+    }
+
+    async onStopHttp(message) {
+        if (this.httpServer) {
+            await this.stopHttp();
+        }
+    }
+
     async saveBoot() {
         try {
             let json = toJson(this.settings);
@@ -367,13 +474,27 @@ createService(class SystemService extends Service {
     }
 
     async startHttp() {
-        this.httpServer = await createServer(HttpServer);
-        await this.httpServer.start('httpServer');
+        if (!this.httpServer) {
+            this.httpServer = await createServer(HttpServer);
+            await this.httpServer.start('httpServer');
+        }
     }
 
     async stoptHttp() {
-        // ************************************************************************
-        // ************************************************************************
+        if (this.httpServer) {
+            await this.httpServer.kill();
+            delete this.httpServer;
+        }
+    }
+
+    async wipeDbms() {
+        // **************************************************************************
+        // **************************************************************************
+        /*
+        if (await Dbms.doesDatabaseExist(radiusDbms)) {
+            await Dbms.dropDatabase(radiusDbms);
+        }
+        */
     }
 });
 
@@ -440,151 +561,17 @@ define(class SystemHandle extends Handle {
     }
 
     async restartHttp() {
-        // ************************************************************************
-        // ************************************************************************
         return await this.callService({
         });
     }
 
     async startHttp() {
-        // ************************************************************************
-        // ************************************************************************
         return await this.callService({
         });
     }
 
     async stopHttp() {
-        // ************************************************************************
-        // ************************************************************************
         return await this.callService({
         });
     }
 });
-    /*
-    async bootStandaloneMode() {
-        try {
-            if (!(await Dbms.doesDatabaseExist(this.sysdb))) {
-                await Dbms.createDatabase(this.sysdb);
-            }
-
-            let schema1 = await Dbms.getDatabaseSchema(this.sysdb);
-            let schema2 = mkFrameworkSchema();
-
-            for (let diff of mkSchemaAnalysis(schema1, schema2)) {
-                await SchemaUpdater.upgrade(this.sysdb, diff);
-            }
-
-            for (let dbTable of schema2) {
-                if (dbTable.getType() == 'object') {
-                    defineDbo('', dbTable);
-                }
-            }
-
-            await Dbms.setSettings(this.sysdb);
-            
-            let httpServer = await createServer(HttpServer);
-            await httpServer.start('httpServer');
-            let webServices = await mkWebServiceHandle().load();
-            await webServices.start();
-            await this.launchServers();
-        }
-        catch (e) {}
-        this.state = 'system#setup';
-    }
-    */
-
-    /*
-    async bootSwarmMode() {
-        // **************************************************************************
-        // **************************************************************************
-        try {
-        }
-        catch (e) {}
-        this.state = 'system#setup';
-    }
-    */
-
-    /*
-    async initDbms() {
-        // **************************************************************************
-        // **************************************************************************
-        try {
-            if (!(await Dbms.doesDatabaseExist(this.sysdb))) {
-                await Dbms.createDatabase(this.sysdb);
-            }
-
-            let schema1 = await Dbms.getDatabaseSchema(this.sysdb);
-            let schema2 = mkFrameworkSchema();
-
-            for (let diff of mkSchemaAnalysis(schema1, schema2)) {
-                await SchemaUpdater.upgrade(this.sysdb, diff);
-            }
-
-            for (let dbTable of schema2) {
-                if (dbTable.getType() == 'object') {
-                    defineDbo('', dbTable);
-                }
-            }
-
-            await Dbms.setSettings(this.sysdb);
-        }
-        catch (e) {}
-        this.state = 'system#setup';
-    }
-    */
-/*******************************************************************************************************
-
-            await settings.defineSetting('sessionTimeoutMillis', 'security', Int32Type, 120*60*60*1000);
-            await settings.defineSetting('sessionShutdowntMillis', 'security', Int32Type, 240*60*60*1000);
-
-            await settings.defineSetting('loginMaxFailures', 'security', Int32Type, 4);
-            await settings.defineSPvine$922-blueetting('loginMaxMfaMinutes', 'security', Int32Type, 5);
-            await settings.defineSetting('passwordMaxDays', 'security', Int32Type, -1);
-            await settings.defineSetting('passwordHistoryMaxDays', 'security', Int32Type, 365);
-            
-
-            await settings.defineSetting('packages', 'package', ArrayType, []);
-            await settings.defineSetting('webServicesPath', 'server', StringType, '/ws');
-
-            await dbms.createObj(DboUserGroup, {
-                name: '',
-                active: true,
-                settings: {},
-            });
-        }
-
-        async load() {
-            if (await this.initializeRadiusDbms()) {
-                if (!await mkSettingsHandle().isInitialized()) {
-                    this.initializeSystem();
-                }
-
-                await this.buildConfiguration();
-                await mkSystemHandle().initState();
-                let permissionTypes = await mkSettingsHandle().getSetting('permissionTypes');
-                await mkPermissionSetHandle().addPermissionTypes(...permissionTypes);
-
-                let packages = mkPackageHandle();
-                let library = mkHttpLibraryHandle();
-                let settings = mkSettingsHandle();
-
-                for (let { path, url } of await mkSettingsHandle().getSetting('packages')) {
-                    await packages.loadDirectory(path, url);
-                }
-
-                let radiusPath = await settings.getSetting('radiusPath');
-                let acceptCookiesPath = await settings.getSetting('acceptCookiesPath');
-
-                await Namespace.init();
-                let httpServer = await createServer(HttpServer);
-                await httpServer.start('httpServer');
-                let webServices = await mkWebServiceHandle().load();
-                await webServices.start();
-                await this.launchServers();
-            }
-            else {
-                console.log(`\nFailed to initialize Radius DBMS: "${this.args['-dbms']}"`);
-            }
-        }
-    });
-    */

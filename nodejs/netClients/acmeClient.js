@@ -59,7 +59,14 @@
  * loop to see when the challenges are done.  Once done, we get the yay or nay
  * on authorization.
  * 
- * (6) 
+ * (6) The next step is obtaining a certificate is to create an order for the
+ * ACME provider, and then to submit the certificate signing request (CSR) to be
+ * submitted to the ACME provider.
+ * 
+ * (7) pollOrder() -- is a method that waits for the service order completion
+ * by polling the ACME server on a periodic basis awaiting an order valid and
+ * complete response from the ACME provider.  Once the order is ready, the
+ * certificate is downloaded and provided back to the caller.
  * 
 *****/
 define(class AcmeClient extends Emitter {
@@ -387,6 +394,10 @@ define(class AcmeClient extends Emitter {
 
     getRevokeCertUrl() {
         return this.revokeCert;
+    }
+
+    getSettings() {
+        return this.settings;
     }
 
     async pause(httpResp) {
