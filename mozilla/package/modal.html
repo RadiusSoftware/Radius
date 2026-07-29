@@ -6,40 +6,6 @@
             class ModalWidget extends Widget {
                 static _ = (() => Win.modal = null);
 
-                constructor(arg) {
-                    super(arg);
-                    this.anchor = null;
-                    this.location = 'middle-center';
-                    this.size = 'auto';
-                    this.blur = '1px';
-                    this.border = true;
-                    this.buttons = {};
-                    this.content = '';
-                    this.resizeBand = 12;
-                    this.boundingGap = 20;
-                    this.getRdsController = () => {};
-                    
-                    Doc.on('keydown', message => {
-                        if (message.event.getRawEvent().key == 'Escape') {
-                            this.onCancel();
-                        }
-                    });
-
-                    Win.on('resize', message => this.render());
-
-                    this.on('mouseenter', message => {
-                        this.monitorResize(message.event.x, message.event.y);
-                    });
-
-                    this.on('mouseleave', message => {
-                        this.monitorResize(message.event.x, message.event.y);
-                    });
-
-                    this.on('mousemove', message => {
-                        this.monitorResize(message.event.x, message.event.y);
-                    });
-                }
-
                 computeBoundingRectangle() {
                     let left, top, width, height;
                     
@@ -217,6 +183,37 @@
                 }
 
                 init() {
+                    this.anchor = null;
+                    this.location = 'middle-center';
+                    this.size = 'auto';
+                    this.blur = '1px';
+                    this.border = true;
+                    this.buttons = {};
+                    this.content = '';
+                    this.resizeBand = 12;
+                    this.boundingGap = 20;
+                    this.getRdsController = () => {};
+                    
+                    Doc.on('keydown', message => {
+                        if (message.event.getRawEvent().key == 'Escape') {
+                            this.onCancel();
+                        }
+                    });
+
+                    Win.on('resize', message => this.render());
+
+                    this.on('mouseenter', message => {
+                        this.monitorResize(message.event.x, message.event.y);
+                    });
+
+                    this.on('mouseleave', message => {
+                        this.monitorResize(message.event.x, message.event.y);
+                    });
+
+                    this.on('mousemove', message => {
+                        this.monitorResize(message.event.x, message.event.y);
+                    });
+
                     super.init();
 
                     if (this.getRdsButtons) {

@@ -126,6 +126,10 @@ singleton(class Crypto {
                     chunks.push(chunk);
                   }
                 });
+
+                decipher.on('error', error => {
+                    fail(error);
+                });
     
                 decipher.on('end', () => {
                     ok(Buffer.concat(chunks));

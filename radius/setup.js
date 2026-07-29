@@ -33,52 +33,33 @@ define(class SetupApp extends Webapp {
     constructor() {
         super();
     }
+
+    async init() {
+        await super.init();
+        this.controllerData = await mkSystemHandle().getSetupData();
+    }
+
     // ********************
-    // setupAcme
+    // certifyHost
     // ********************
     async [Api.define(
         'setupAcme',
         {
             acmeProviderName: StringType,
             acmeProviderUrl: StringType,
-            operatorKid: StringType,
+            acmeKid: StringType,
             operatorContact: [ StringType ],
         }
-    )](trx, name, url, contact) {
-        if (this.state == 'setup#acme') {
+    )](trx, acmeName, acmeUrl, acmeKid, operatorContact) {
+        let state = await this.getState();
+        
+        if (state == 'system#acme') {
             let system = mkSystemHandle();
 
-            /*
-            const acmeSettingsShape = await system.getAcmeSettingsShape();
-            let acmeSettings = acmeSettingsShape.getDefault();
-
-            // *********************************************************************
-            // *********************************************************************
-            await system.setSetting('host', 'development.radiussoftware.org');
-
-            acmeSettings.name = name;
-            acmeSettings.url = url;
-            acmeSettings.days = 75;
-            acmeSettings.contact = contact,
-            acmeSettings.operator = {
-                country: "US",
-                state: "Nevada",
-                locale: "Reno",
-                org: "Radius Software",
+            if (operatorKid) {
             }
-            // *********************************************************************
-            // *********************************************************************
-
-            let acmeClient = mkAcmeClient(acmeSettings);
-            acmeClient.on('Acme', message => console.log(message));
-            let certBundle = await acmeClient.certifyHost();
-
-            if (!(certBundle instanceof Failure)) {
-                await system.setSetting('acme', acmeSettings);
-                await system.setSetting('certificate', certBundle);
-                await system.saveSettings();
+            else {
             }
-            */
         }
     }
 });

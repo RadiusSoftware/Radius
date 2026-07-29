@@ -108,12 +108,22 @@ singleton(class Packages {
         return stringId in this.strings;
     }
 
-    openApplication() {
+    async openApplication() {
         if (webappSettings.title) {
             Doc.setTitle(this.processText(webappSettings.title));
         }
         
         Doc.getBody().setInnerHtml(`<${webappSettings.tagName}></${webappSettings.tagName}>`);
+        let webappElement = Doc.queryOne(webappSettings.tagName);
+        let controllerData = await Api.getControllerData();
+        
+        if (webappElement && controllerData) {
+            Controller.defineData(
+                webappElement,
+                controllerData.shape,
+                controllerData.value
+            );
+        }
     }
 
     processNode(docNode) {

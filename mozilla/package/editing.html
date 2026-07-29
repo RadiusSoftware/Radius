@@ -4,10 +4,6 @@
     <widget tagname="dataeditor-widget">
         <script>
             class DataEditorWidget extends Widget {
-                constructor(arg) {
-                    super(arg);
-                }
-
                 getMeta(key) {
                     let meta = {
                         key: key,
@@ -313,10 +309,6 @@
                     _key: StringType,
                 }]);
 
-                constructor(arg) {
-                    super(arg);
-                }
-
                 buildFieldsetOptions(fsAttributes) {
                     let options = this.buildOptions();
 
@@ -558,9 +550,6 @@
     <widget tagname="file-widget">
         <script>
             class FileWidget extends Widget {
-                constructor(arg) {
-                    super(arg);
-                }
             }
         </script>
     </widget>
@@ -568,8 +557,7 @@
     <widget tagname="toggle-widget">
         <script>
             class ToggleWidget extends Widget {
-                constructor(arg) {
-                    super(arg);
+                init() {
                     this.checkbox = this.getChildElementAt(0);
                     this.knob = this.getChildElementAt(1);
                     this.disabled = false;
@@ -585,9 +573,7 @@
                         this.clearAttribute('disabled');
                         this.checkbox.setAttriute('disabled');
                     }
-                }
 
-                init() {
                     super.init();
 
                     if (this.dotted) {

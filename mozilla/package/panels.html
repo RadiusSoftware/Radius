@@ -4,9 +4,6 @@
     <widget tagname="busy-widget">
         <script>
             class BusyWidget extends Widget {
-                constructor(arg) {
-                    super(arg);
-                }
             }
         </script>
     </widget>
@@ -14,10 +11,6 @@
     <widget tagname="form-widget" settings="stub:true;">
         <script>
             class FormWidget extends Widget {
-                constructor(arg) {
-                    super(arg);
-                }
-
                 init() {
                     super.init();
                     this.createReplacement('form', false);
@@ -28,15 +21,6 @@
     <widget tagname="grid-widget">
         <script>
             class GridWidget extends Widget {
-                constructor(arg) {
-                    super(arg);
-                    this.rows = [];
-                    this.cols = [];
-                    this.cells = 0;
-                    this.rowGap = '0px';
-                    this.colGap = '0px';
-                }
-
                 computeGeometry() {
                     this.rows.length == 0 ? this.rows.push('100%') : null;
                     this.cols.length == 0 ? this.cols.push('100%') : null;
@@ -77,6 +61,12 @@
                 }
 
                 init() {
+                    this.rows = [];
+                    this.cols = [];
+                    this.cells = 0;
+                    this.rowGap = '0px';
+                    this.colGap = '0px';
+
                     super.init();
 
                     if (this.getRdsColCount) {
@@ -174,14 +164,56 @@
             }
         </script>
     </widget>
+    <widget tagname="monitor-widget">
+        <script>
+            class MonitorWidget extends Widget {
+                constructor(path) {
+                    super();
+                    this.path = StringType.verify(path) ? path : '';
+                }
+
+                async get() {
+                    if (this.path) {
+                        let httpResponse = await mkHttpRequest().get(this.path);
+                    }
+                }
+
+                async delete() {
+                    if (this.path) {
+                        await mkHttpRequest().delete();
+                    }
+
+                    return this;
+                }
+
+                getPath() {
+                    return this.path;
+                }
+
+                init() {
+                    super.init();
+
+                    if (this.getRdsPath) {
+                        this.setPath(this.getRdsPath().trim());
+                    }
+
+                    this.get();
+                }
+
+                setPath(path) {
+                    if (StringType.verify(path)) {
+                        this.path = path;
+                    }
+
+                    return this;
+                }
+            }
+        </script>
+    </widget>
     <!--
     <widget tagname="navigator-widget">
         <script>
             class NavigatorWidget extends Widget {
-                constructor(arg) {
-                    super(arg);
-                }
-
                 addMode(mode, locator, clientElement) {
                     if (this.selector.addMode(mode, clientElement)) {
                         let text = Packages.getString(locator);
@@ -367,64 +399,9 @@
         </style>
     </widget>
     -->
-    <!--
-    <widget tagname="progress-widget">
-        <script>
-            class ProgressWidget extends Widget {
-                constructor(arg) {
-                    super(arg);
-
-                    Controller.defineData(this, {
-                        viewType: mkRdsEnum(
-                            'progress#singleline',
-                            'progress#multiline',
-                        ),
-                        log: [ StringType ],
-                    });
-                }
-
-                clear() {
-                }
-
-                init() {
-                    super.init();
-
-                    if (FunctionType.verify(this.getRdsView)) {
-                        let viewType = this.getRdsView();
-                        Controller.setDataValue(this, 'viewType', viewType);
-                    }
-                }
-
-                listen(webSocketAuthorization) {
-                }
-
-                push(statusText) {
-                }
-            }
-        </script>
-        <html>
-            <selector-widget rds-bind-method="setMode,">
-                <div rds-view="progress#singleline">
-                    SINGLE LINE
-                </div>
-                <div rds-view="progress#multiline">
-                    MULTILINE LOG
-                </div>
-            </selector-widget>
-        </html>
-    </widget>
-    -->
     <widget tagname="selector-widget">
         <script>
             class SelectorWidget extends Widget {
-                constructor(arg) {
-                    super(arg);
-                    this.mode = '';
-                    this.modes = {};
-                    this.clients = new WeakMap();
-                    this.duration = .5;
-                }
-
                 configureClientElement(clientElement) {
                     clientElement.setProperty('prevStyleSettings', clientElement.getStyle());
 
@@ -468,6 +445,11 @@
                 }
 
                 init() {
+                    this.mode = '';
+                    this.modes = {};
+                    this.clients = new WeakMap();
+                    this.duration = .5;
+
                     super.init();
 
                     if (this.getRdsDuration) {
@@ -662,9 +644,6 @@
     <widget tagname="stack-widget">
         <script>
             class StackWidget extends Widget {
-                constructor(arg) {
-                    super(arg);
-                }
             }
         </script>
     </widget>
@@ -673,13 +652,6 @@
     <widget tagname="table-widget">
         <script>
             class TableWidget extends Widget {
-                constructor(arg) {
-                    super(arg);
-                    this.columns = [];
-                    this.setInnerHtml('<table design="table-widget-table"><tbody design="table-widget-tbody"></tbody></table>');
-                    this.table = this.getChildElementAt(0);                    
-                }
-
                 appendColumn(columnName) {
                     let text = Packages.getString(columnName);
                     this.columns.push(text);
@@ -836,6 +808,10 @@
                 }
 
                 init() {
+                    this.columns = [];
+                    this.setInnerHtml('<table design="table-widget-table"><tbody design="table-widget-tbody"></tbody></table>');
+                    this.table = this.getChildElementAt(0); 
+
                     super.init();
 
                     for (let htmlElement of this.getInnerElements()) {

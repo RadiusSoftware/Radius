@@ -304,21 +304,15 @@ define(class AcmeClient extends Emitter {
     }
     
     async ensureAccount() {
-        if (this.settings.kid) {
-            this.jwk = NpmPemJwk.pem2jwk(this.settings.publicKey);
+        this.jwk = NpmPemJwk.pem2jwk(this.settings.publicKey);
 
+        if (this.settings.kid) {
             this.emit({
                 name: 'Acme',
                 task: 'radius.org.acmeAccountFoundInSettings',
             });
         }
         else {
-            const keyPair = await Crypto.generateKeyPair('rsa');
-            this.settings.keyAlg = 'RS256';
-            this.settings.publicKey = Crypto.export(keyPair.publicKey);
-            this.settings.privateKey = Crypto.export(keyPair.privateKey);
-            this.jwk = NpmPemJwk.pem2jwk(this.settings.publicKey);
-
             let httpResp = await this.post(
                 this.newAccount,
                 {

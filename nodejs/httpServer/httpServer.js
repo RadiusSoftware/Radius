@@ -331,10 +331,9 @@ define(class HttpWorker extends Worker {
     }
 
     async onUpgrade(httpReq, socket, headData) {
-        /*
         let req = mkHttpRequest(this, httpReq);
-
-        if (req.isWebSocketAuthorized()) {
+        
+        if (await req.isWebSocketAuthorized()) {
             try {
                 let libEntry = await this.library.get(req.getPath());
 
@@ -364,7 +363,7 @@ define(class HttpWorker extends Worker {
 
                             headers.push('\r\n');
                             socket.write(headers.join('\r\n'));
-                            // TODO ********************************************************
+
                             webSocket.on('DataReceived', data => {
                                 httpx.handleWebsocket(data);
                             });
@@ -379,7 +378,6 @@ define(class HttpWorker extends Worker {
         else {
             req.respondStatus(401);
         }
-        */
     }
 
     async respondData(handle) {
@@ -770,11 +768,12 @@ define(class HttpRequest {
     }
 
     async isWebSocketAuthorized() {
-        // TODO ********************************************************
-        // TODO ********************************************************
-        // NOTIFY websocket handler on server-side
-        // TODO ********************************************************
-        // TODO ********************************************************
+        let authorizationCode = this.getHeader('websocket-authorization');
+
+        if (authorizationCode) {
+            return await mkWebSocketHandle(authorizationCode).authorize();
+        }
+
         return false;
     }
 });

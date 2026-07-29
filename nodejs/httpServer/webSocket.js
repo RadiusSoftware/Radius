@@ -620,3 +620,75 @@ define(class PerMessageDeflator {
         });
     }
 });
+
+
+/*****
+ * Websockets are only used by applications in special circumstances.  Hence,
+ * the HttpServer will only complete upgrade requests when so authorized with
+ * an authorization code.  Generally speaking, the application is responsible
+ * for creating and authorization and then passing the authorizaton code on to
+ * the browers.
+*****/
+createService(class WebSocketService extends Service {
+    constructor() {
+        super();
+        this.authorizations = {};
+    }
+
+    async onAuthorize(message) {
+        if (message.uuid in this.authorizations) {
+            delete this.authorizations[message.uuid];
+            return true;
+        }
+
+        return false;
+    }
+
+    async onCreate(message) {
+        let uuid = Crypto.generateUUID();
+        this.authorizations[uuid] = { uuid: uuid };
+        return uuid;
+    }
+
+    async onRevoke(message) {
+        delete this.authorizations[message.uuid];
+    }
+});
+
+
+/*****
+ * Websockets are only used by applications in special circumstances.  Hence,
+ * the HttpServer will only complete upgrade requests when so authorized with
+ * an authorization code.  Generally speaking, the application is responsible
+ * for creating and authorization and then passing the authorizaton code on to
+ * the browers.
+*****/
+define(class WebSocketHandle extends Handle {
+    constructor(uuid) {
+        super();
+        this.uuid = StringType.verify(uuid) ? uuid : '';
+    }
+
+    async authorize() {
+        return await this.callService({
+            uuid: this.uuid,
+        });
+    }
+
+    async create() {
+        this.uuid = await this.callService({
+        });
+
+        return this;
+    }
+
+    static fromJson(value) {
+        return mkWebSocketHandle(value.uuid);
+    }
+
+    async revoke() {
+        return await this.callService({
+            uuid: this.uuid,
+        });
+    }
+});

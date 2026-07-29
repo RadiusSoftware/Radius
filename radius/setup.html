@@ -8,21 +8,15 @@
     <widget tagname="setup-app">
         <script>
             class SetupApp extends Widget {
-                constructor(arg) {
-                    super(arg);
-
-                    Controller.defineData(this, {
-                        setupState: StringType,
-                    });
-                }
-
+                /*
                 init() {
                     (async () => {
-                        Controller.setDataValue(this, 'setupState', await Api.getState());
+                        this.setState(await Api.getSetupState());
                     })();
                 }
 
                 async onSetupAcme(message) {
+                    console.log('**** ACME');
                     await Api.setupAcme(
                         'Let\'s Encrypt',
                         'https://acme-staging-v02.api.letsencrypt.org/directory',
@@ -30,86 +24,49 @@
                     );
                 }
 
-                async onStart(message) {
-                    this.setState(await Api.startSetup());
-                }
-
-                async setState(nextState) {
-                    console.log(nextState);
-                    if (nextState.startsWith('setup')) {
-                        Controller.setDataValue(this, 'setupState', nextState);
+                async setState(setupState) {
+                    console.log(setupState);
+                    if (setupState) {
+                        Controller.setDataValue(this, 'setupState', setupState);
                     }
                     else {
-                        Location.assign(await Api.getSigninpath());
+                        Location.assign(await Api.getSignInPath());
                     }
                 }
+                */
             }
         </script>
         <html class="fill">
-            <grid-widget class="fill" rds-rows="50px,auto,50px" rds-cols="50px,auto,50px">
-                <div></div><div></div><div></div><div></div>
-                <selector-widget class="fill" rds-bind-method="setMode,setupState">
-                    <div rds-mode="setup#start" rds-fragment="radius.org.setupIntro"></div>
-                    <div rds-mode="setup#acme">
-                        <h1 class="h1">ACME Certification</h1>
-                        <grid-widget rds-rows="auto,100px,auto">
-                            <div></div>
-                            <div class="space-around margin-vertical-top">
-                                <input-widget type="button" class="input-widget-button input-widget-width-wide" value="##setupAcme##" evt-click="setupAcme"></input-widget>
-                            </div>
-                            <div></div>
-                        </grid-widget>
-                    </div>
-                    <div rds-mode="setup#mode">SELECT MODE</div>
-                    <div rds-mode="setup#swarm">ATTACH TO SWARM</div>
-                    <div rds-mode="setup#dbms">CONFIGURE DBMS</div>
-                    <div rds-mode="setup#user">SPECIFY USER</div>
-                    <div rds-mode="setup#verify">VERIFY EMAIL</div>
-                    <div rds-mode="setup#password">SET PASSWORD</div>
-                </selector-widget>
-                <div></div><div></div><div></div><div></div>
-            </grid-widget>
+            <selector-widget class="fill" rds-bind-method="setMode,setupState">
+                <form-widget rds-mode="acme" rds-api="">
+                    ACME WIDGET
+                </form-widget>
+            </selector-widget>
+            <!--
+            <form-widget>
+                <grid-widget class="fill" rds-rows="50px,auto,50px" rds-cols="50px,auto,50px">
+                    <div></div><div></div><div></div><div></div>
+                    <selector-widget class="fill" rds-bind-method="setMode,setupState">
+                        <div rds-mode="acme">
+                            <h1 class="h1">##certifyHost##</h1>
+                            <grid-widget rds-rows="auto,100px,auto">
+                                <div></div>
+                                <div class="space-around margin-vertical-top">
+                                    <input-widget type="submit" class="input-widget-button input-widget-width-wide" value="##setupAcme##" evt-click="setupAcme"></input-widget>
+                                </div>
+                                <div></div>
+                            </grid-widget>
+                        </div>
+                        <div rds-mode="mode">SELECT MODE</div>
+                    </selector-widget>
+                    <div></div><div></div><div></div><div></div>
+                </grid-widget>
+            </form-widget>
+            -->
         </html>
     </widget>
-    <fragment lang="en" name="setupIntro">
-        <h1 class="h1">Server Setup</h1>
-        <div class="bordered padded-more">
-            Welcome to the Radius Software web application client-server framework.
-            You will be able to set your host up as a standalone application server
-            or attach your host to an existing application swarm.  We will guide you
-            through this process step-by-step, after which an encrypted file called
-            "boot" will be created and placed in the radius software parent directory.
-            Here's an overview of the following process:
-            <ul class="list-unordered">
-                <li>Ensure you host is associated with a registered Internet domain: A or AAAA record.</li>
-                <li>Contact your ACME certificate authority to obtain TLS and CAA certificates and then restart in TLS mode.</li>
-                <li>Decide whether to configure a standalone or a swarm server.</li>
-            </ul>
-            <h2 class="h2">Standalone Mode</h2>
-            <ul class="list-unordered">
-                <li>Create and configure a Mailgun account</li>
-                <li>Enter your Mailgun account credentials</li>
-                <li>Enter a valid email address</li>
-                <li>Verify the entered email address</li>
-                <li>Set your user password</li>
-                <li>Save your boot file</li>
-                <li>Record you startup key</li>
-            </ul>
-            <h2 class="h2">Swarm Mode</h2>
-            <ul class="list-unordered">
-                <li>Enter a Swarm ID</li>
-                <li>Enter a Swarm Host</li>
-                <li>Save your boot file</li>
-                <li>Record you startup key</li>
-            </ul>
-        </div>
-        <div class="space-around margin-vertical-top">
-            <input-widget type="button" class="input-widget-button input-widget-width-wide" value="##startSetup##" evt-click="start"></input-widget>
-        </div>
-    </fragment>
     <strings lang="en">
-        setup = Setup Server\
+        certifyHost = ACME Host Certification\
         setupAcme = Setup ACME\
-        startSetup = Start Setup\
     </strings>
 </bundle>

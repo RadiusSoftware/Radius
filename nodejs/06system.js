@@ -119,8 +119,8 @@ createService(class SystemService extends Service {
             swarm: false,
             standalone: {
                 dbms: false,
-                user: false,
                 email: false,
+                user: false,
             },
         };
     }
@@ -168,6 +168,10 @@ createService(class SystemService extends Service {
             SystemService.acmeSettingsShape,
         );
 
+        if (FunctionType.verify(notificationHandle)) {
+            acmeClient.on('Acme', message => notificationHandle(message));
+        }
+
         for (let i = 0; i < 5; i++) {
             let certificateBundle = await acmeClient.certifyHost();
 
@@ -194,6 +198,28 @@ createService(class SystemService extends Service {
                 console.log(notification);
             });
         }
+        else {
+            const keyPair = await Crypto.generateKeyPair('rsa');
+
+            this.settings.acme = {
+                name: 'Let\'s Encrypt',
+                url: 'https://acme-staging-v02.api.letsencrypt.org/directory',
+                days: 75,
+                keyAlg: 'RS256',
+                publicKey: Crypto.export(keyPair.publicKey),
+                privateKey: Crypto.export(keyPair.privateKey),
+                contact: [ 'sys-admin-user@domain' ],
+                createdAt: '',
+                status: '',
+                kid: '',
+                operator: {
+                    country: 'country',
+                    state: 'state or province',
+                    locale: 'town or city',
+                    org: 'organization name',
+                }
+            };
+        }
     }
 
     async configureBasicSystem() {
@@ -203,7 +229,6 @@ createService(class SystemService extends Service {
             const { publicKey, privateKey } = await Crypto.generateKeyPair(keyAlgorithm);
             this.settings.publicKey = Crypto.export(publicKey);
             this.settings.privateKey = Crypto.export(privateKey);
-            await this.saveBoot();
         }
 
         this.componentStatus.basic = true;
@@ -217,8 +242,6 @@ createService(class SystemService extends Service {
                 acceptCookiesName: 'cookies',
                 sessionCookieName: 'session',
             };
-
-            await this.saveBoot();
         }
 
         await mkSettingsHandle().defineTemporarySetting(
@@ -266,6 +289,16 @@ createService(class SystemService extends Service {
                 32,
             );
         }
+    }
+
+    getSetupState() {
+        if (this.settings.mode == 'system#setup') {
+            if (this.unconfigured.length) {
+                return this.unconfigured[0];
+            }
+        }
+        
+        return 'setup#done';
     }
 
     hasAcmeAccount() {
@@ -342,7 +375,9 @@ createService(class SystemService extends Service {
                 let decrypted = await Crypto.decrypt(this.bootKey, encrypted);
                 this.settings = fromJson(decrypted.toString());
             }
-            catch (e) {}
+            catch (e) {
+                await FileSystem.deleteFile(this.bootPath);
+            }
         }
     }
 
@@ -378,13 +413,29 @@ createService(class SystemService extends Service {
                 this.analyzeConfiguration();
 
                 if (this.unconfigured.length) {
-                    this.mode = 'setup';
+                    this.settings.mode = 'system#setup';
+                    await this.saveBoot();
                 }
 
                 await this.startHttp();
             }
             else {
                 throwError('Unable to boot server: no non-virtual network interfaces.');
+            }
+        }
+    }
+
+    async onCertifyHost(message) {
+        let notificationHandler = message.args[0];
+
+        if (message.args.length == 2) {
+
+        }
+        else if (message.args.length == 1) {
+        }
+        else if (message.args.length == 0) {
+            if (this.settings.acme.kid) {
+                let response = this.certifyHost(notification => {});
             }
         }
     }
@@ -402,11 +453,47 @@ createService(class SystemService extends Service {
     }
 
     async onGetMode(message) {
-        return this.mode;
+        return this.settings.mode;
     }
 
     async onGetRadiusFrameworkPath(message) {
         return this.radiusFrameworkPath;
+    }
+
+    async onGetSetupData(message) {
+        return {
+            shape: mkRdsShape({
+                setupState: StringType,
+
+                acme: {
+                    name: StringType,
+                    url: StringType,
+                    contact: [ StringType ],
+                    operator: {
+                        country: StringType,
+                        state: StringType,
+                        locale: StringType,
+                        org: StringType,
+                    }
+                }
+            }),
+
+            value: {
+                setupState: this.getSetupState(),
+
+                acme: {
+                    name: 'Let\'s Encrypt',
+                    url: 'https://acme-staging-v02.api.letsencrypt.org/directory',
+                    contact: [ 'hypermetabolik@gmail.com' ],
+                    operator: {
+                        country: 'this-country',
+                        state: 'the-state',
+                        locale: 'the-locale',
+                        org: 'My Org',
+                    }
+                }
+            }
+        };
     }
 
     async onGetState(message) {
@@ -511,6 +598,12 @@ define(class SystemHandle extends Handle {
         });
     }
 
+    async certifyHost() {
+        return await this.callService({
+            args: arguments,
+        });
+    }
+
     static fromJson(value) {
         return mkSystemHandle();
     }
@@ -521,6 +614,11 @@ define(class SystemHandle extends Handle {
     }
 
     async getBootUUID() {
+        return await this.callService({
+        });
+    }
+
+    async getSetupData() {
         return await this.callService({
         });
     }

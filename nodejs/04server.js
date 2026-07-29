@@ -244,6 +244,11 @@ define(class Worker {
         mkHandlerProxy(Process, this.workerClassName, this);
     }
 
+    static async callServer(serverName, message) {
+        message.name = `${serverName}Server${message.name}`;
+        return await Process.callPrimary(message);
+    }
+
     async callServer(message) {
         message.name = `${this.serverName}Server${message.name}`;
         return await Process.callPrimary(message);
@@ -279,6 +284,11 @@ define(class Worker {
 
     async onKill(message) {
         Process.exit(0);
+    }
+
+    static sendServer(serverName, message) {
+        message.name = `${serverName}Server${message.name}`;
+        Process.sendPrimary(message);
     }
 
     sendServer(message) {

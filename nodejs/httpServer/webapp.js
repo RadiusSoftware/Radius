@@ -118,12 +118,29 @@ define(class Webapp extends HttpX {
     }
 
     // ********************
-    // getLoadorder
+    // getControllerData
+    // ********************
+    async [Api.define(
+        'getControllerData',
+    )](trx) {
+        if (ObjectType.verify(this.controllerData)) {
+            if (this.controllerData.shape instanceof RdsShape) {
+                if (ObjectType.verify(this.controllerData.value)) {
+                    if (this.controllerData.shape.verify(this.controllerData.value)) {
+                        return this.controllerData;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    // ********************
+    // getLoadOrder
     // ********************
     async [Api.define(
         'getLoadOrder',
-        {
-        },
     )](trx) {
         return this.loadOrder;
     }

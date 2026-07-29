@@ -212,13 +212,18 @@ define(class Api {
             endpointArgs[key] = mkRdsShape(args[key]);
         }
 
-        this.endpoints[name] = mkApiEndpoint(
-            this,
-            name,
-            method,
-            endpointArgs,
-            permissionSet,
-        );
+        if (name in this.endpoints) {
+            throwError(`API method "${name}" is a duplicate.`);
+        }
+        else {
+            this.endpoints[name] = mkApiEndpoint(
+                this,
+                name,
+                method,
+                endpointArgs,
+                permissionSet,
+            );
+        }
 
         return this;
     }
