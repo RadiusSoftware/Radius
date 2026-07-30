@@ -70,7 +70,6 @@ singleton(class Win extends Emitter {
             'transitionrun',
             'transitionstart',
             'unhandledrejection',
-            'unload',
         ].forEach(eventName => window.addEventListener(eventName, event => {
             this.emit({
                 name: `${eventName}`,
@@ -96,8 +95,12 @@ singleton(class Win extends Emitter {
         });
     }
 
-    awaitEngineIdle(func) {
-        window.requestAnimationFrame(func);
+    async awaitIdle() {
+        return new Promise(async (ok, fail) => {
+            //window.requestAnimationFrame(ok);
+            await pause(50);
+            ok();
+        });
     }
 
     blur() {

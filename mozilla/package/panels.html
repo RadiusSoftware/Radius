@@ -13,7 +13,7 @@
             class FormWidget extends Widget {
                 init() {
                     super.init();
-                    this.createReplacement('form', false);
+                    //this.createReplacement('form', false);
                 }
             }
         </script>
@@ -167,17 +167,6 @@
     <widget tagname="monitor-widget">
         <script>
             class MonitorWidget extends Widget {
-                constructor(path) {
-                    super();
-                    this.path = StringType.verify(path) ? path : '';
-                }
-
-                async get() {
-                    if (this.path) {
-                        let httpResponse = await mkHttpRequest().get(this.path);
-                    }
-                }
-
                 async delete() {
                     if (this.path) {
                         await mkHttpRequest().delete();
@@ -186,11 +175,18 @@
                     return this;
                 }
 
+                async get() {
+                    if (this.path) {
+                        let httpResponse = await mkHttpRequest().get(this.path);
+                    }
+                }
+
                 getPath() {
                     return this.path;
                 }
 
                 init() {
+                    this.path = StringType.verify(path) ? path : '';
                     super.init();
 
                     if (this.getRdsPath) {

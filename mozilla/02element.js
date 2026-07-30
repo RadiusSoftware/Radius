@@ -951,6 +951,20 @@ define(class DocElement extends DocNode {
         return this;
     }
 
+    getAppWidget() {
+        let element = this;
+
+        while (element) {
+            if (element instanceof AppWidget) {
+                return element;
+            }
+
+            element = element.getParent();
+        }
+
+        return element;
+    }
+
     getAttribute(name) {
         return this.node.getAttribute(name);
     }

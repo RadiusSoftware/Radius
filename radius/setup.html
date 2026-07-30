@@ -7,38 +7,12 @@
     </httpx>
     <widget tagname="setup-app">
         <script>
-            class SetupApp extends Widget {
-                /*
-                init() {
-                    (async () => {
-                        this.setState(await Api.getSetupState());
-                    })();
-                }
-
-                async onSetupAcme(message) {
-                    console.log('**** ACME');
-                    await Api.setupAcme(
-                        'Let\'s Encrypt',
-                        'https://acme-staging-v02.api.letsencrypt.org/directory',
-                        [ 'hypermetabolik@gmail.com' ]
-                    );
-                }
-
-                async setState(setupState) {
-                    console.log(setupState);
-                    if (setupState) {
-                        Controller.setDataValue(this, 'setupState', setupState);
-                    }
-                    else {
-                        Location.assign(await Api.getSignInPath());
-                    }
-                }
-                */
+            class SetupApp extends AppWidget {
             }
         </script>
         <html class="fill">
             <selector-widget class="fill" rds-bind-method="setMode,setupState">
-                <form-widget rds-mode="acme" rds-api="">
+                <form-widget rds-mode="acme" rds-api="setupAcme">
                     ACME WIDGET
                 </form-widget>
             </selector-widget>

@@ -116,6 +116,10 @@ singleton(class Packages {
         Doc.getBody().setInnerHtml(`<${webappSettings.tagName}></${webappSettings.tagName}>`);
         let webappElement = Doc.queryOne(webappSettings.tagName);
         let controllerData = await Api.getControllerData();
+
+        if (!(webappElement instanceof AppWidget)) {
+            throwError(`Invalid application widget object: "${webappSettings.tagName}"`);
+        }
         
         if (webappElement && controllerData) {
             Controller.defineData(

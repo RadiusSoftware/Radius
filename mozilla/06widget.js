@@ -185,3 +185,12 @@ define(class Widget extends HtmlElement {
         return key in this.widgetData.settings;
     }
 });
+
+
+/*****
+ * The AppWidget class is what MUST be used for defining the main web app
+ * element object.  When the web application is opened, if the element does
+ * not extend AppWidget, and error will be thrown.
+*****/
+define(class AppWidget extends Widget {
+});

@@ -53,46 +53,41 @@ singleton(class Controller extends Emitter {
     }
 
     bindAttr(docElement, attrName, ref) {
-        this.setBinding(docElement, ref, 'attr', attrName);
-        return this;
+        return this.setBinding(docElement, ref, 'attr', attrName);
     }
 
     bindAttrToggle(docElement, attrName, ref) {
-        this.setBinding(docElement, ref, 'attrToggle', attrName);
-        return this;
+        return this.setBinding(docElement, ref, 'attrToggle', attrName);
     }
 
     bindInner(docElement, ref) {
-        this.setBinding(docElement, ref, 'inner');
-        return this;
+        return this.setBinding(docElement, ref, 'inner');
     }
 
     bindInput(docElement, ref) {
-        this.setBinding(docElement, ref, 'input');
-        return this;
+        return this.setBinding(docElement, ref, 'input');
     }
 
     bindMethod(docElement, methodName, ...args) {
+        let bindings = [];
+
         for (let dotted of args) {
-            this.setBinding(docElement, dotted, 'method', methodName);
+            bindings = bindings.concat(this.setBinding(docElement, dotted, 'method', methodName));
         }
 
-        return this;
+        return bindings;
     }
 
     bindProperty(docElement, property, ref) {
-        this.setBinding(docElement, ref, 'property', property);
-        return this;
+        return this.setBinding(docElement, ref, 'property', property);
     }
 
     bindShow(docElement, ref, ...values) {
-        this.setBinding(docElement, ref, 'show', values);
-        return this;
+        return this.setBinding(docElement, ref, 'show', values);
     }
 
     bindStyle(docElement, styleProperty, ref) {
-        this.setBinding(docElement, ref, 'style', styleProperty);
-        return this;
+        return this.setBinding(docElement, ref, 'style', styleProperty);
     }
 
     defineData(docElement, shape, value) {
@@ -231,106 +226,67 @@ singleton(class Controller extends Emitter {
 
     initNode(docNode) {
         if (!this.nodes.has(docNode)) {
+            let bindings = [];
             Packages.processNode(docNode);
+            
+            docNode.init();
+            this.nodes.set(docNode, {});
 
             if (docNode instanceof DocElement) {
                 if (!(docNode instanceof Widget) || docNode.getSetting('stub') != 'true') {
-                    this.initRdsDataDefine(docNode);
-                    this.initRdsDataSet(docNode);
-
+                    
                     if (docNode.getRdsBind) {
                         if (docNode.getTagName() in { input:0, select:0, textarea:0 }) {
-                            this.bindInput(docNode, docNode.getRdsBind());
+                            bindings = bindings.concat(this.bindInput(docNode, docNode.getRdsBind()));
                         }
                         else {
-                            this.bindInner(docNode, docNode.getRdsBind());
+                            bindings = bindings.concat(this.bindInner(docNode, docNode.getRdsBind()));
                         }
                     }
 
                     if (docNode.getRdsBindAttr) {
                         let [ attrName, dotted ] = docNode.getRdsBindAttr().split(',');
-                        this.bindAttr(docNode, attrName, dotted);
+                        bindings = bindings.concat(this.bindAttr(docNode, attrName, dotted));
                     }
 
                     if (docNode.getRdsBindAttrToggle) {
                         let [ attrName, dotted ] = docNode.getRdsBindAttrToggle().split(',');
-                        this.bindAttrToggle(docNode, attrName, dotted);
+                        bindings = bindings.concat(this.bindAttrToggle(docNode, attrName, dotted));
                     }
 
                     if (docNode.getRdsBindMethod) {
                         let args = docNode.getRdsBindMethod().split(',');
-                        this.bindMethod(docNode, args[0], ...args.slice(1));
+                        bindings = bindings.concat(this.bindMethod(docNode, args[0], ...args.slice(1)));
                     }
 
                     if (docNode.getRdsBindProperty) {
                         let [ property, dotted ] = docNode.getRdsBindProperty().split(',');
-                        this.bindProperty(docNode, property, dotted);
+                        bindings = bindings.concat(this.bindProperty(docNode, property, dotted));
                     }
 
                     if (docNode.getRdsBindShow) {
                         let [ dotted, values ] = RdsText.split(docNode.getRdsBindShow(), ';');
-                        this.bindShow(docNode, dotted, ...RdsText.split(values, ','));
+                        bindings = bindings.concat(this.bindShow(docNode, dotted, ...RdsText.split(values, ',')));
                     }
 
                     if (docNode.getRdsBindStyle) {
                         let [ styleProperty, dotted ] = docNode.getRdsBindStyle().split(',');
-                        this.bindStyle(docNode, styleProperty, dotted);
+                        bindings = bindings.concat(this.bindStyle(docNode, styleProperty, dotted));
                     }
                 }
             }
 
-            docNode.init();
-            this.nodes.set(docNode, {});
+            (async () => {
+                await Win.awaitIdle();
+
+                for (let binding of bindings) {
+                    binding.push();
+                }
+            })();
             
             if (docNode instanceof Widget && docNode.getSetting('stub') == 'true') {
                 if (docNode.replacement instanceof DocElement) {
                     docNode.replace(docNode.replacement);
-                }
-            }
-        }
-    }
-
-    initRdsDataDefine(docElement) {
-        if (docElement.getRdsDataDefine) {
-            let shape = {};
-            let values = {};
-
-            for (let entry of Object.entries(RdsText.parseAttributeEncoded(docElement.getRdsDataDefine()))) {
-                let [ key, typeName ] = entry;
-                let tilda = typeName.indexOf('~');
-                let valueText = '';
-
-                if (tilda > 0) {
-                    valueText = typeName.substring(tilda + 1);
-                    typeName = typeName.substring(0, tilda);
-                }
-                
-                if (globalThis[typeName] instanceof BaseType) {
-                    shape[key] = globalThis[typeName];
-
-                    if (valueText) {
-                        values[key] = shape[key].fromString(valueText);
-                    }
-                    else {
-                        values[key] = shape[key].getDefault();
-                    }
-                }
-            }
-
-            if (Object.keys(shape).length) {
-                this.defineData(docElement, shape, values);
-            }
-        }
-    }
-
-    initRdsDataSet(docElement) {
-        if (docElement.getRdsDataSet) {
-            for (let entry of Object.entries(RdsText.parseAttributeEncoded(docElement.getRdsDataSet()))) {
-                let [ dotted, value ] = entry;
-                let shape = this.getDataShape(docElement, dotted);
-                
-                if (shape) {
-                    this.setDataValue(docElement, dotted, shape.getType().fromString(value));
                 }
             }
         }
@@ -368,6 +324,7 @@ singleton(class Controller extends Emitter {
 
     setBinding(docElement, ref, type, name) {
         let expr;
+        let bindings = [];
 
         if (typeof ref == 'string' && ref.trim() != '') {
             expr = mkControllerExpr(docElement, ref);
@@ -379,12 +336,12 @@ singleton(class Controller extends Emitter {
         if (expr) {
             for (let dependency of expr.getDependencies()) {
                 if (dependency.type == 'controller') {
-                    mkControllerBinding(docElement, expr, dependency.dotted, type, name);
+                    bindings.push(mkControllerBinding(docElement, expr, dependency.dotted, type, name));
                 }
             }
         }
 
-        return this;
+        return bindings;
     }
 
     setDataValue(docElement, dotted, newValue) {

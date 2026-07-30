@@ -48,18 +48,13 @@ define(class SetupApp extends Webapp {
             acmeProviderName: StringType,
             acmeProviderUrl: StringType,
             acmeKid: StringType,
-            operatorContact: [ StringType ],
+            contact: [ StringType ],
         }
     )](trx, acmeName, acmeUrl, acmeKid, operatorContact) {
-        let state = await this.getState();
-        
-        if (state == 'system#acme') {
-            let system = mkSystemHandle();
-
-            if (operatorKid) {
-            }
-            else {
-            }
-        }
+        console.log('*** ACME TIME ***');
+        console.log(acmeProviderName);
+        console.log(acmeProfiderUrl);
+        console.log(acmeKid);
+        console.log(operatorContact);
     }
 });
