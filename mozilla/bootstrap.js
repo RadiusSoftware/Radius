@@ -51,8 +51,12 @@ Doc.on('DOMContentLoaded', async () => {
     wrapTree(document.documentElement);
     Api['#ImportEndpoints'](apiEndpoints);
 
-    for (let packageName of await Api.getLoadOrder()) {
+    for (let packageName of await Api.getPackageLoadOrder()) {
         await Packages.require(packageName);
+
+        if (packageName == webappSettings.packageName) {
+            break;
+        }
     }
     
     Packages.openApplication();

@@ -149,7 +149,7 @@ define(class Api {
         }
     }
 
-    static define(name, args, permissions) {
+    static defineEndpoint(name, args, permissions) {
         !ObjectType.verify(args) ? args = {} : args;
         Array.isArray(permissions) ? permissions : permissions = [];
         return `ApiEndPoint##${name}##${toJson(args)}##${toJson(permissions)}`;
@@ -207,9 +207,15 @@ define(class Api {
 
     async setEndpoint(method, name, args, permissionSet) {
         let endpointArgs = {};
+        let sync = name.startsWith('..');
 
         for (let key in args) {
-            endpointArgs[key] = mkRdsShape(args[key]);
+            if (sync) {
+                endpointArgs[key] = args[key];
+            }
+            else {
+                endpointArgs[key] = mkRdsShape(args[key]);
+            }
         }
 
         if (name in this.endpoints) {

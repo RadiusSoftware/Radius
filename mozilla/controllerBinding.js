@@ -30,7 +30,7 @@
 define(class ControllerBinding {
     constructor(docElement, expr, dotted, type, name) {
         this.docElement = docElement;
-        this.appWidget = docElement.getAppWidget();
+        this.appWidget = Controller.getAppWidget();
         this.expr = expr;
         this.dotted = dotted;
         this.valid = false;

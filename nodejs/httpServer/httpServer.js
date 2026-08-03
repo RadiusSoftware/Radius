@@ -197,7 +197,7 @@ define(class HttpWorker extends Worker {
                         httpx.filepath = handle.libEntry.jsPath;
                         httpx.httppath = handle.libEntry.path;
                         httpx.pkgName = handle.libEntry.pkg;
-                        httpx.options = handle.libEntry.opts;
+                        httpx.settings = handle.libEntry.settings;
                         await httpx.init();
                         this.httpxs[handle.libEntry.path] = httpx;
                         ok(httpx);

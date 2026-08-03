@@ -270,8 +270,6 @@ define(class Package {
     }
 
     async loadHttpXs(handle) {
-        let spentFiles = [];
-
         for (let fileName in handle.fileNames) {
             if (fileName.endsWith('.js')) {
                 let jsPath = handle.fileNames[fileName];
@@ -287,93 +285,60 @@ define(class Package {
 
                         if (doctype.type == 'httpx') {
                             let htmlElement = createDocElementFromOuterHtml(html.substring(doctype.length));
-
+                            
                             if (htmlElement.getTagName() == 'bundle') {
-                                for (let childElement of htmlElement.getChildElements()) {
-                                    if (childElement.getTagName() == 'httpx') {
-                                        let httpXHandle = {
-                                            httpXElement: childElement,
-                                            path: Path.join(handle.url, httpXName),
-                                            permissionSet: handle.filePermissions.getFilePermissionSet(httpXName),
-                                            opts: {},
+                                let appWidgetTagName;
+                                let appWidgetElement;
+
+                                for (let childElement of htmlElement) {
+                                    if (childElement.getTagName() == 'widget') {
+                                        if (appWidgetElement) {
+                                            throwError(`Invalid httpx DOCTYPE: ${htmlPath}`);
                                         }
-                                        
-                                        let opts = await this.loadOptions(httpXHandle);
-
-                                        await this.lib.addHttpX({
-                                            pkg: this.name,
-                                            path: httpXHandle.path,
-                                            mime: 'text/html',
-                                            mode: httpXHandle.opts.mode ? httpxHandle.opts.mode : 'tls',
-                                            once: httpXHandle.opts.once === true,
-                                            pset: httpXHandle.permissionSet,
-                                            opts: httpXHandle.opts,
-                                            jsPath: jsPath,
-                                        });
-
-                                        spentFiles.push(fileName);
-                                        spentFiles.push(htmlFileName);
-                                        await this.loadBundle(htmlElement);
-                                        continue;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        for (let fileName of spentFiles) {
-            delete handle.fileNames[fileName];
-        }
-    }
-
-    async loadOptions(httpXHandle) {
-        const settings = mkSettingsHandle();
-
-        for (let childElement of httpXHandle.httpXElement) {
-            if (childElement.getTagName() == 'opt') {
-                let key = childElement.getAttribute('key');
-                let typeName = childElement.getAttribute('type');
-
-                if (typeName) {
-                    let type;
-                    eval(`type=${typeName}`);
-                    let valueText = childElement.getAttribute('value');
-
-                    if (valueText) {
-                        if (type === StringType) {
-                            var value = this.substituteMarkers(valueText);
-                        }
-                        else {
-                            var value = type.fromString(this.substituteMarkers(valueText));
-                        }
-
-                        if (key == 'setting') {
-                            let name = childElement.getAttribute('name');
-
-                            if (StringType.verify(name) && name.trim()) {
-                                if (!await settings.hasSetting(name.trim())) {
-                                    if (type == StringType && value.startsWith('$$')) {
-                                        let key = value.substring(2);
-
-                                        if (key in httpXHandle) {
-                                            value = httpXHandle[key];
+                                        else {
+                                            appWidgetElement = childElement;
+                                            appWidgetTagName = childElement.getAttribute('tagname');
                                         }
                                     }
+                                }
 
-                                    await settings.defineTemporarySetting(
-                                        name.trim(),
-                                        'httpx',
-                                        mkRdsShape(type),
-                                        value,
-                                    );
+                                if (appWidgetElement) {
+                                    await this.loadBundle(htmlElement);
+                                    let widgetData = this.mozilla.widgets[appWidgetTagName];
+
+                                    let httpXHandle = {
+                                        httpXElement: appWidgetElement,
+                                        path: Path.join(handle.url, httpXName),
+                                        permissionSet: handle.filePermissions.getFilePermissionSet(httpXName),
+                                        settings: widgetData.settings,
+                                    }
+
+                                    httpXHandle.settings.tagName = appWidgetTagName;
+
+                                    await this.lib.addHttpX({
+                                        pkg: this.name,
+                                        path: httpXHandle.path,
+                                        mime: 'text/html',
+                                        mode: httpXHandle.settings.mode ? httpxHandle.settings.mode : 'tls',
+                                        once: httpXHandle.settings.once === true,
+                                        pset: httpXHandle.permissionSet,
+                                        settings: httpXHandle.settings,
+                                        jsPath: jsPath,
+                                    });
+
+                                    if (widgetData.settings.path) {
+                                        await mkSettingsHandle().defineTemporarySetting(
+                                            widgetData.settings.path,
+                                            'httpx',
+                                            StringType,
+                                            httpXHandle.path,
+                                        );
+                                    }
+
+                                    delete handle.fileNames[jsPath];
+                                    delete handle.fileNames[htmlPath];
                                 }
                             }
-                        }
-                        else {
-                            httpXHandle.opts[key] = value;
                         }
                     }
                 }
@@ -552,9 +517,11 @@ define(class Package {
 
     async processWidget(widgetElement) {
         let tagName = widgetElement.getAttribute('tagname');
+        let rdsTagName = widgetElement.getAttribute('rds-tagname');
 
         if (tagName) {
             tagName = tagName.trim().toLowerCase();
+            rdsTagName = StringType.verify(rdsTagName) ? rdsTagName.trim().toLowerCase() : '';
 
             let widget = {
                 attributes: {},
@@ -566,11 +533,8 @@ define(class Package {
                 settings: {},
                 style: '',
                 tagName: tagName,
+                rdsTagName: rdsTagName,
             };
-
-            if (widgetElement.hasAttribute('settings')) {
-                widget.settings = RdsText.parseAttributeEncoded(widgetElement.getAttribute('settings'));
-            }
 
             let tagNameParts = RdsText.split(widget.tagName.trim().toLowerCase(), '-');
 
@@ -595,27 +559,26 @@ define(class Package {
                 let tagName = childElement.getTagName();
 
                 if (tagName == 'script') {
-                    let script = childElement.getInnerHtml().trim();
-                    widget.script = this.substituteMarkers(script);
-                    let match = widget.script.match(/class[\t ]+([a-zA-Z0-9_]+)/);
-
-                    if (match) {
-                        widget.className = match[1];
+                    if (childElement.getAttribute('type') == 'settings') {
+                        widget.settings = fromJson(childElement.getInnerHtml());
                     }
                     else {
-                        mkFailure(`Unable to find widget class name: "${widget.tagName}"`);
+                        let script = childElement.getInnerHtml().trim();
+                        widget.script = this.substituteMarkers(script);
+                        let match = widget.script.match(/class[\t ]+([a-zA-Z0-9_]+)/);
+
+                        if (match) {
+                            widget.className = match[1];
+                        }
+                        else {
+                            mkFailure(`Unable to find widget class name: "${widget.tagName}"`);
+                        }
                     }
                 }
                 else if (tagName == 'html') {
                     for (let attribute of childElement.getAttributes()) {
-                        if (attribute.name == 'design') {
-                            let value = `${widget.tagName}-${attribute.value}`;
-                            widget.attributes[attribute.name] = value;
-                        }
-                        else {
-                            let attributeValue = this.substituteMarkers(attribute.value);
-                            widget.attributes[attribute.name] = attributeValue;
-                        }
+                        let attributeValue = this.substituteMarkers(attribute.value);
+                        widget.attributes[attribute.name] = attributeValue;
                     }
 
                     let stack = childElement.getChildren();
@@ -671,8 +634,6 @@ define(class Package {
         if (workers) {
             this.nodejs.workers.push(filePath);
         }
-
-        return types;
     }
     
     scrubStyleText(styleText) {
@@ -817,14 +778,8 @@ createService(class PackageService extends Service {
     async onListLoadOrder(message) {
         let loadOrder = [];
 
-        if (message.packageName in this.packagesByName) {
-            for (let pkg of this.packages) {
-                loadOrder.push(pkg.getName());
-
-                if (pkg.getName() == message.packageName) {
-                    break;
-                }
-            }
+        for (let pkg of this.packages) {
+            loadOrder.push(pkg.getName());
         }
 
         return loadOrder;
@@ -932,9 +887,8 @@ define(class PackageHandle extends Handle {
         });
     }
 
-    async listLoadOrder(packageName) {
+    async listLoadOrder() {
         return await this.callService({
-            packageName: packageName,
         });
     }
 

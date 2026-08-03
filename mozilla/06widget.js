@@ -22,15 +22,6 @@
 
 
 /*****
- * The widgetDataKey is what's used in globalThis to keep track of the widget
- * that's currently being constructed and initialized.  One of the features for
- * Widgets is that they have reference to their WidgetLibrary data available
- * immediately after the super() function is called.
-*****/
-const widgetDataKey = Symbol('WidgetData');
-
-
-/*****
  * The library of all widgets that are registered on the browser.  This library
  * not only maintains all relevant data for the widgets that were provided via
  * the packaging mechanism, it registers those widgets and defines the script
@@ -88,8 +79,12 @@ singleton(class WidgetLibrary {
                     }
                 }
 
-                globalThis[widgetDataKey] = WidgetLibrary.widgetClasses['${widget.tagName}'];
-                new globalThis[widgetDataKey].clss(this);
+                const widget = new widgetData.clss(this);
+                widget.settings = widgetData.settings;
+
+                if (widgetData.innerHtml.trim()) {
+                    widget.setInnerHtml(widgetData.innerHtml);
+                }
             }
         })`);
 
@@ -117,12 +112,60 @@ singleton(class WidgetLibrary {
  * data during initialization if needed.
 *****/
 define(class Widget extends HtmlElement {
-    constructor(arg) {
-        super(arg);
-        this.innerSettings = null;
-        this.innerElements = [];
-        this.widgetData = globalThis[widgetDataKey];
-        delete globalThis[widgetDataKey];
+    getPackage() {
+        return this.widgetData.package;
+    }
+
+    getSetting(key) {
+        if (key) {
+            return this.widgetData.settings[key];
+        }
+        else {
+            return this.widgetData.settings;
+        }
+    }
+
+    hasSetting(key) {
+        return key in this.widgetData.settings;
+    }
+    /*
+    createReplacement(tagName, discardInner, ...filteredOut) {
+        let attrs = this.filterAttributes(...filteredOut);
+        this.replacement = createElement(tagName, attrs);
+
+        if (!discardInner) {
+            this.replacement.append(...this.getInnerElements());
+        }
+        
+        return this.replacement;
+    }
+
+    getInnerSettings() {
+        return this.innerSettings;
+    }
+    
+    getReplacement() {
+        return this.replacement;
+    }
+
+    hasReplacement() {
+        return this.replacement instanceof DocElement;
+    }
+
+    hasInnerElements() {
+        return this.innerElements.length > 0;
+    }
+
+    hasInnerSettings() {
+        return this.innerSettings != null;
+    }
+
+    hasSetting(key) {
+        return key in this.widgetData.settings;
+    }
+
+    init() {
+        super.init();
         let innerHtml = this.getInnerHtml().trim();
 
         if (innerHtml) {
@@ -145,52 +188,5 @@ define(class Widget extends HtmlElement {
             this.setInnerHtml(this.widgetData.innerHtml);
         }
     }
-
-    createReplacement(tagName, discardInner, ...filteredOut) {
-        let attrs = this.filterAttributes(...filteredOut);
-        this.replacement = createElement(tagName, attrs);
-
-        if (!discardInner) {
-            this.replacement.append(...this.getInnerElements());
-        }
-        
-        return this;
-    }
-
-    getInnerElements() {
-        return this.innerElements;
-    }
-
-    getInnerSettings() {
-        return this.innerSettings;
-    }
-
-    getPackage() {
-        return this.widgetData.package;
-    }
-
-    getSetting(key) {
-        return this.widgetData.settings[key];
-    }
-
-    hasInnerElements() {
-        return this.innerElements.length > 0;
-    }
-
-    hasInnerSettings() {
-        return this.innerSettings != null;
-    }
-
-    hasSetting(key) {
-        return key in this.widgetData.settings;
-    }
-});
-
-
-/*****
- * The AppWidget class is what MUST be used for defining the main web app
- * element object.  When the web application is opened, if the element does
- * not extend AppWidget, and error will be thrown.
-*****/
-define(class AppWidget extends Widget {
+    */
 });

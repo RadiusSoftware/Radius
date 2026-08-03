@@ -108,18 +108,27 @@ singleton(class Packages {
         return stringId in this.strings;
     }
 
-    async openApplication() {
+    async openApplication(docElement) {
+        console.log(webappSettings);
         if (webappSettings.title) {
             Doc.setTitle(this.processText(webappSettings.title));
         }
         
-        Doc.getBody().setInnerHtml(`<${webappSettings.tagName}></${webappSettings.tagName}>`);
-        let webappElement = Doc.queryOne(webappSettings.tagName);
-        let controllerData = await Api.getControllerData();
+        Controller.appWidget = createElementFromOuterHtml(`<${webappSettings.tagName}></${webappSettings.tagName}>`);
 
-        if (!(webappElement instanceof AppWidget)) {
-            throwError(`Invalid application widget object: "${webappSettings.tagName}"`);
+        if (webappSettings.controllerShape && webappSettings.controllerValue) {
+            let dataShape = fromJson(webappSettings.controllerShape);
+            let dataValue = webappSettings.controllerValue;
+            Controller.defineData(dataShape, dataValue);
+            delete webappSettings.controllerShape;
+            delete webappSettings.controllerValue;
         }
+
+        Doc.getBody().append(Controller.getAppWidget());
+        //Doc.getBody().setInnerHtml(`<${webappSettings.tagName}></${webappSettings.tagName}>`);
+        //globalThis.webappWidget = Doc.queryOne(webappSettings.tagName);
+        /*
+        let controllerData = await Api.getControllerData();
         
         if (webappElement && controllerData) {
             Controller.defineData(
@@ -128,6 +137,7 @@ singleton(class Packages {
                 controllerData.value
             );
         }
+        */
     }
 
     processNode(docNode) {

@@ -52,7 +52,7 @@ define(class HttpX extends Emitter {
         this.filepath = '';
         this.httppath = '';
         this.pkgName = '';
-        this.options = {};
+        this.settings = {};
         this.ctor = Reflect.getPrototypeOf(this).constructor;
         this.className = this.ctor.name;
         this.namespace = this.ctor['#namespace'];
@@ -87,34 +87,20 @@ define(class HttpX extends Emitter {
         return this.namespace;
     }
 
-    getOption(name) {
-        if (name != 'settings') {
-            if (name in this.options) {
-                return this.options[name];
-            }
-        }
-
-        return type.getDefault();
+    getSetting(dotted) {
+        return Data.get(this.settings, dotted);
     }
 
-    getOptions() {
-        return this.options;
+    getSettings() {
+        return this.settings;
     }
 
     getPackageName() {
         return this.pkgName;
     }
 
-    getSetting(name) {
-        if (name in this.options.settings) {
-            return this.options.settings[name];
-        }
-
-        return type.getDefault();
-    }
-
     async listLoadOrder() {
-        return mkPackageHandle().listLoadOrder(this.pkgName);
+        return await mkPackageHandle().listLoadOrder();
     }
 
     async handleDELETE(handle) {

@@ -141,17 +141,11 @@ createService(class HttpLibraryService extends Service {
             mode: message.mode,
             once: message.once,
             pset: message.pset,
-            opts: message.opts,
             jsPath: message.jsPath,
+            settings: message.settings,
             headers: ArrayType.verify(message.headers) ? message.headers : {},
             flags: ObjectType.verify(message.flags) ? message.flags : {},
         };
-
-        for (let key in libEntry.opts.settings) {
-            let type = libEntry.opts.settings[key].type;
-            let value = type.fromString(libEntry.opts.settings[key].value);
-            await mkSettingsHandle().defineTemporarySetting(key, 'general', type, value);
-        }
 
         libEntry.headers['Cache-Control'] = 'no-cache';
         return this.addLibraryEntry(libEntry);

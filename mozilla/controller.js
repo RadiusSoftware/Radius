@@ -232,50 +232,49 @@ singleton(class Controller extends Emitter {
             docNode.init();
             this.nodes.set(docNode, {});
 
+            /*
             if (docNode instanceof DocElement) {
-                if (!(docNode instanceof Widget) || docNode.getSetting('stub') != 'true') {
-                    
-                    if (docNode.getRdsBind) {
-                        if (docNode.getTagName() in { input:0, select:0, textarea:0 }) {
-                            bindings = bindings.concat(this.bindInput(docNode, docNode.getRdsBind()));
-                        }
-                        else {
-                            bindings = bindings.concat(this.bindInner(docNode, docNode.getRdsBind()));
-                        }
+                if (docNode.getRdsBind) {
+                    if (docNode.getTagName() in { input:0, select:0, textarea:0 }) {
+                        bindings = bindings.concat(this.bindInput(docNode, docNode.getRdsBind()));
                     }
-
-                    if (docNode.getRdsBindAttr) {
-                        let [ attrName, dotted ] = docNode.getRdsBindAttr().split(',');
-                        bindings = bindings.concat(this.bindAttr(docNode, attrName, dotted));
-                    }
-
-                    if (docNode.getRdsBindAttrToggle) {
-                        let [ attrName, dotted ] = docNode.getRdsBindAttrToggle().split(',');
-                        bindings = bindings.concat(this.bindAttrToggle(docNode, attrName, dotted));
-                    }
-
-                    if (docNode.getRdsBindMethod) {
-                        let args = docNode.getRdsBindMethod().split(',');
-                        bindings = bindings.concat(this.bindMethod(docNode, args[0], ...args.slice(1)));
-                    }
-
-                    if (docNode.getRdsBindProperty) {
-                        let [ property, dotted ] = docNode.getRdsBindProperty().split(',');
-                        bindings = bindings.concat(this.bindProperty(docNode, property, dotted));
-                    }
-
-                    if (docNode.getRdsBindShow) {
-                        let [ dotted, values ] = RdsText.split(docNode.getRdsBindShow(), ';');
-                        bindings = bindings.concat(this.bindShow(docNode, dotted, ...RdsText.split(values, ',')));
-                    }
-
-                    if (docNode.getRdsBindStyle) {
-                        let [ styleProperty, dotted ] = docNode.getRdsBindStyle().split(',');
-                        bindings = bindings.concat(this.bindStyle(docNode, styleProperty, dotted));
+                    else {
+                        bindings = bindings.concat(this.bindInner(docNode, docNode.getRdsBind()));
                     }
                 }
-            }
 
+                if (docNode.getRdsBindAttr) {
+                    let [ attrName, dotted ] = docNode.getRdsBindAttr().split(',');
+                    bindings = bindings.concat(this.bindAttr(docNode, attrName, dotted));
+                }
+
+                if (docNode.getRdsBindAttrToggle) {
+                    let [ attrName, dotted ] = docNode.getRdsBindAttrToggle().split(',');
+                    bindings = bindings.concat(this.bindAttrToggle(docNode, attrName, dotted));
+                }
+
+                if (docNode.getRdsBindMethod) {
+                    let args = docNode.getRdsBindMethod().split(',');
+                    bindings = bindings.concat(this.bindMethod(docNode, args[0], ...args.slice(1)));
+                }
+
+                if (docNode.getRdsBindProperty) {
+                    let [ property, dotted ] = docNode.getRdsBindProperty().split(',');
+                    bindings = bindings.concat(this.bindProperty(docNode, property, dotted));
+                }
+
+                if (docNode.getRdsBindShow) {
+                    let [ dotted, values ] = RdsText.split(docNode.getRdsBindShow(), ';');
+                    bindings = bindings.concat(this.bindShow(docNode, dotted, ...RdsText.split(values, ',')));
+                }
+
+                if (docNode.getRdsBindStyle) {
+                    let [ styleProperty, dotted ] = docNode.getRdsBindStyle().split(',');
+                    bindings = bindings.concat(this.bindStyle(docNode, styleProperty, dotted));
+                }
+            }
+            */
+            /*
             (async () => {
                 await Win.awaitIdle();
 
@@ -285,10 +284,12 @@ singleton(class Controller extends Emitter {
             })();
             
             if (docNode instanceof Widget && docNode.getSetting('stub') == 'true') {
-                if (docNode.replacement instanceof DocElement) {
-                    docNode.replace(docNode.replacement);
+                if (docNode.hasReplacement()) {
+                    let replacement = docNode.getReplacement();
+                    docNode.replace(replacement);
                 }
             }
+            */
         }
     }
 

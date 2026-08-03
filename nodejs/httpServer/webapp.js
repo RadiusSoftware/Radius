@@ -31,31 +31,29 @@
  * the webapp objects.
 *****/
 define(class Webapp extends HttpX {
-    constructor() {
-        super();
+    async getControllerData() {
+        return null;
     }
 
     async handleGET(handle) {
         let acceptLanguage = Object.keys(handle.req.getAcceptLanguage()).sort();
         let lang = await this.packages.getLanguage(this.getPackageName(), acceptLanguage);
+        let controllerData = await this.getControllerData();
 
-        let webappSettings = {
-            packageName: this.getPackageName(),
-            httpPath: handle.libEntry.path,
-        };
-
-        for (let key in this.getOptions()) {
-            if (key != 'settings') {
-                let option = this.getOption(key);
-                webappSettings[key] = option;
-            }
+        if (controllerData) {
+            this.webappSettings.controllerShape = toJson(controllerData.shape);
+            this.webappSettings.controllerValue = controllerData.value;
+        }
+        else {
+            delete this.webappSettings.controllerShape;
+            delete this.webappSettings.controllerValue;
         }
 
         let html = this.htmlTemplate.toString({
             lang: lang,
             apiEndpoints: toJson(this.endpoints),
             radiusPath: this.radiusFrameworkPath,
-            webappSettings: mkBuffer(toJson(webappSettings)).toString('hex'),
+            webappSettings: mkBuffer(toJson(this.webappSettings)).toString('hex'),
         });
 
         handle.rsp.setHeader('Cache-Control', 'no-cache');
@@ -103,6 +101,7 @@ define(class Webapp extends HttpX {
     async init() {
         await super.init();
 
+        this.controllerData = null;
         this.packages = mkPackageHandle();
         this.loadOrder = await this.listLoadOrder();
         this.radiusFrameworkPath = await mkSystemHandle().getRadiusFrameworkPath();
@@ -114,41 +113,33 @@ define(class Webapp extends HttpX {
         this.api = await mkApi(this).init();
         this.endpoints = mkBuffer(toJson(this.api.listEndpoints())).toString('hex');
 
+        this.webappSettings = {
+            packageName: this.getPackageName(),
+            httpPath: this.httppath,
+            title: this.getSetting('title'),
+            tagName: this.getSetting('tagName'),
+        };
+
         return this;
     }
 
     // ********************
     // getControllerData
     // ********************
-    async [Api.define(
+    async [Api.defineEndpoint(
         'getControllerData',
     )](trx) {
-        if (ObjectType.verify(this.controllerData)) {
-            if (this.controllerData.shape instanceof RdsShape) {
-                if (ObjectType.verify(this.controllerData.value)) {
-                    if (this.controllerData.shape.verify(this.controllerData.value)) {
-                        return this.controllerData;
-                    }
-                }
-            }
+        if (this.hasControllerData()) {
+            return this.getControllerData();
         }
 
         return false;
     }
 
     // ********************
-    // getLoadOrder
-    // ********************
-    async [Api.define(
-        'getLoadOrder',
-    )](trx) {
-        return this.loadOrder;
-    }
-
-    // ********************
     // getPackage
     // ********************
-    async [Api.define(
+    async [Api.defineEndpoint(
         'getPackage',
         {
             name: StringType,
@@ -157,5 +148,14 @@ define(class Webapp extends HttpX {
     )](trx, name, lang) {
         let packages = mkPackageHandle();
         return await packages.getMozillaPackage(name, lang);
+    }
+
+    // ********************
+    // getPackageLoadOrder
+    // ********************
+    async [Api.defineEndpoint(
+        'getPackageLoadOrder',
+    )](trx) {
+        return this.loadOrder;
     }
 });

@@ -8,13 +8,16 @@
         </script>
     </widget>
     -->
-    <widget tagname="form-widget" settings="stub:true;">
+    <widget tagname="form-widget" rds-tagname="form">
         <script>
             class FormWidget extends Widget {
+                /*
                 init() {
                     super.init();
-                    //this.createReplacement('form', false);
+                    let formElement = this.createReplacement('form', false);
+                    formElement.setInnerHtml('*** HTML FORM ****');
                 }
+                */
             }
         </script>
     </widget>
@@ -445,13 +448,12 @@
                     this.modes = {};
                     this.clients = new WeakMap();
                     this.duration = .5;
-
                     super.init();
 
                     if (this.getRdsDuration) {
                         this.duration = parseFloat(this.getRdsDuration());
                     }
-
+                    /*
                     for (let clientElement of this.getInnerElements()) {
                         if (clientElement instanceof DocElement) {
                             if (typeof clientElement.getRdsMode == 'function') {
@@ -459,6 +461,7 @@
                             }
                         }
                     }
+                    */
                 }
 
                 listClients() {

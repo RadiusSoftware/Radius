@@ -30,31 +30,24 @@
  * uer is forwarded back to the previous page.
 *****/
 define(class SetupApp extends Webapp {
-    constructor() {
-        super();
+    async getControllerData() {
+        return await mkSystemHandle().getSetupData();
     }
 
     async init() {
         await super.init();
-        this.controllerData = await mkSystemHandle().getSetupData();
     }
 
     // ********************
     // certifyHost
     // ********************
-    async [Api.define(
-        'setupAcme',
+    async [Api.defineEndpoint(
+        '..setupAcme',
         {
-            acmeProviderName: StringType,
-            acmeProviderUrl: StringType,
-            acmeKid: StringType,
-            contact: [ StringType ],
+            acmeSettings: 'acme',
         }
-    )](trx, acmeName, acmeUrl, acmeKid, operatorContact) {
+    )](trx, acme) {
         console.log('*** ACME TIME ***');
-        console.log(acmeProviderName);
-        console.log(acmeProfiderUrl);
-        console.log(acmeKid);
-        console.log(operatorContact);
+        console.log(acmeSettings);
     }
 });

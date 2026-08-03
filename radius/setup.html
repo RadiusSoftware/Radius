@@ -1,21 +1,28 @@
 <!DOCTYPE httpx>
 <bundle>
+    <!--
     <httpx>
         <opt key="title" type="StringType" value="##setup##"></opt>
         <opt key="tagName" type="StringType" value="setup-app"></opt>
         <opt key="setting" type="StringType" name="setupPath" value="$$path"></opt>
     </httpx>
+    -->
     <widget tagname="setup-app">
-        <script>
-            class SetupApp extends AppWidget {
+        <script type="settings">
+            {
+                "type": "app",
+                "title": "##setup##",
+                "path": "setupPath"
             }
         </script>
         <html class="fill">
-            <selector-widget class="fill" rds-bind-method="setMode,setupState">
-                <form-widget rds-mode="acme" rds-api="setupAcme">
-                    ACME WIDGET
-                </form-widget>
-            </selector-widget>
+            <form>
+                <selector-widget class="fill" rds-bind-method="setMode,setupState">
+                    <form-widget rds-mode="acme" rds-submit="setupAcme">
+                        ** HELLO FORM **
+                    </form-widget>
+                </selector-widget>
+            </form>
             <!--
             <form-widget>
                 <grid-widget class="fill" rds-rows="50px,auto,50px" rds-cols="50px,auto,50px">
@@ -41,6 +48,7 @@
     </widget>
     <strings lang="en">
         certifyHost = ACME Host Certification\
+        setup = Radius Server Setup\
         setupAcme = Setup ACME\
     </strings>
 </bundle>
