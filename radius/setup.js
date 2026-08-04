@@ -30,7 +30,7 @@
  * uer is forwarded back to the previous page.
 *****/
 define(class SetupApp extends Webapp {
-    async getControllerData() {
+    async getControllerData(handle) {
         return await mkSystemHandle().getSetupData();
     }
 

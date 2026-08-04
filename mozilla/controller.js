@@ -31,9 +31,10 @@
 singleton(class Controller extends Emitter {
     constructor() {
         super();
+        this.shape = {};
+        this.value = {};
         this.nodes = new WeakMap();
         this.bindingsByDotted = {};
-        this.data = new WeakMap();
         this.bindingsByDocElement = new WeakMap();
 
         this.on('Set', message => {
@@ -90,42 +91,22 @@ singleton(class Controller extends Emitter {
         return this.setBinding(docElement, ref, 'style', styleProperty);
     }
 
-    defineData(docElement, shape, value) {
-        if (!(docElement instanceof DocElement)) {
-            throwError(`Controller define(): docElement must be a DocElement.`);
-        }
-
-        if (this.data.has(docElement)) {
-            throwError(`Controller define(): docElement data already defined.`);
-        }
-
+    defineData(shape, value) {
         if (shape instanceof RdsShape && shape.type == ObjectType) {
-            var rdsShape = shape;
+            this.shape = shape;
         }
         else if (ObjectType.verify(shape)) {
-             var rdsShape = mkRdsShape(shape);
+             this.hape = mkRdsShape(shape);
         }
         else {
             throwError(`Controller define(): shape must be either of type RdsShape / Object.`);
         }
 
-        let dataEntry = {
-            docElement: docElement,
-            shape: rdsShape,
-        };
-
-        this.data.set(docElement, dataEntry);
-
-        if (!UndefinedType.verify(value)) {
-            if (rdsShape.verify(value)) {
-                dataEntry.value = value;
-            }
-            else {
-                throwError('Controller define(): invalid value provided.');
-            }
+        if (this.shape.verify(value)) {
+            this.value = value;
         }
         else {
-            dataEntry.value = rdsShape.getDefault();
+            throwError('Controller define(): invalid value provided.');
         }
 
         return this;
@@ -159,69 +140,30 @@ singleton(class Controller extends Emitter {
         return this;
     }
 
-    getDataBin(docElement, dotted) {
-        let dataBins = this.getDataBins(docElement);
-
-        if (dataBins.length) {
-            if (StringType.verify(dotted)) {
-                for (let dataBin of dataBins) {
-                    let shape = dataBin.shape.get(dotted);
-                    if (shape) return dataBin;
-                }
-            }
-            else {
-                return dataBins[0];
-            }
-        }
-
-        return undefined;
+    getAppWidget() {
+        return this.appWidget;
     }
 
-    getDataBins(docElement) {
-        let dataBins = [];
-        let element = docElement;
-
-        while (element) {
-            let dataBin = this.data.get(element);
-            dataBin ? dataBins.push(dataBin) : null;
-            element = element.getParentElement();
+    getShape(dotted) {
+        if (StringType.verify(dotted) && dotted) {
+            return this.shape.get(dotted);
         }
-
-        return dataBins;
+        else {
+            return this.shape;
+        }
     }
 
-    getDataShape(docElement, dotted) {
-        let dataBin = this.getDataBin(docElement, dotted);
-        
-        if (dataBin) {
-            if (StringType.verify(dotted)) {
-                return dataBin.shape.get(dotted);
-            }
-            else {
-                return dataBin.shape;
-            }
+    getValue(dotted) {
+        if (StringType.verify(dotted)) {
+            return Data.get(this.value, dotted);
         }
-
-        return undefined;
+        else {
+            return this.value;
+        }
     }
 
-    getDataValue(docElement, dotted) {
-        let dataBin = this.getDataBin(docElement, dotted);
-        
-        if (dataBin) {
-            if (StringType.verify(dotted)) {
-                return Data.get(dataBin.value, dotted);
-            }
-            else {
-                return dataBin.value;
-            }
-        }
-
-        return undefined;
-    }
-
-    hasData(docElement, dotted) {
-        return this.getDataValue(docElement, dotted) != undefined;
+    hasData(dotted) {
+        return Data.has(this.value, dotted);
     }
 
     initNode(docNode) {
@@ -345,39 +287,30 @@ singleton(class Controller extends Emitter {
         return bindings;
     }
 
-    setDataValue(docElement, dotted, newValue) {
-        if (StringType.verify(dotted)) {
-            let dataBin = this.getDataBin(docElement, dotted);
+    setValue(dotted, newValue) {
+        let shape = this.shape.get(dotted);
 
-            if (dataBin) {
-                let shape = dataBin.shape.get(dotted);
-
-                if (shape) {
-                    if (shape.verify(newValue)) {
-                        let oldValue = Data.get(dataBin.value, dotted);
-
-                        if (Data.ne(oldValue, newValue)) {
-                            Data.set(dataBin.value, dotted, newValue);
-
-                            this.emit({
-                                name: 'Set',
-                                dotted: dotted,
-                                oldValue: oldValue,
-                                newValue: newValue,
-                            });
-
-                            return;
-                        }
-                    }
-                }
+        if (shape) {
+            if (shape.verify(newValue)) {
+                Data.set(this.value, dotted);
+            }
+            else {
+                this.emit({
+                    name: 'SetFailed',
+                    details: 'value failed verification',
+                    dotted: dotted,
+                    value: newValue,
+                });
             }
         }
-
-        this.emit({
-            name: 'SetFailed',
-            dotted: dotted,
-            value: newValue,
-        });
+        else {
+            this.emit({
+                name: 'SetFailed',
+                details: 'dotted not found',
+                dotted: dotted,
+                value: newValue,
+            });
+        }
 
         return this;
     }
@@ -410,25 +343,23 @@ Doc.on('Mutation-Add', message => {
  * the controller and it returns the controller value when evaluated.
 *****/
 define(class ControllerExpr extends Expr {
-    constructor(docElement, dotted) {
+    constructor(dotted) {
         super();
         this.dotted = dotted;
-        this.docElement = docElement;
     }
 
     eval() {
-        return Controller.getDataValue(this.docElement, this.dotted);
+        return Controller.getValue(this.dotted);
     }
 
     static fromJson(obj) {
-        return mkControllerExpr(obj.docElement, obj.dotted);
+        return mkControllerExpr(obj.dotted);
     }
 
     getDependencies() {
         return [{
             type: 'controller',
             expr: this,
-            docElement: this.docElement,
             dotted: this.dotted,
         }];
     }

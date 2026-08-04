@@ -38,7 +38,7 @@ define(class Webapp extends HttpX {
     async handleGET(handle) {
         let acceptLanguage = Object.keys(handle.req.getAcceptLanguage()).sort();
         let lang = await this.packages.getLanguage(this.getPackageName(), acceptLanguage);
-        let controllerData = await this.getControllerData();
+        let controllerData = await this.getControllerData(handle);
 
         if (controllerData) {
             this.webappSettings.controllerShape = toJson(controllerData.shape);

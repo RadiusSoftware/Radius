@@ -109,7 +109,6 @@ singleton(class Packages {
     }
 
     async openApplication(docElement) {
-        console.log(webappSettings);
         if (webappSettings.title) {
             Doc.setTitle(this.processText(webappSettings.title));
         }
@@ -124,20 +123,8 @@ singleton(class Packages {
             delete webappSettings.controllerValue;
         }
 
+        Doc.getBody().clear();
         Doc.getBody().append(Controller.getAppWidget());
-        //Doc.getBody().setInnerHtml(`<${webappSettings.tagName}></${webappSettings.tagName}>`);
-        //globalThis.webappWidget = Doc.queryOne(webappSettings.tagName);
-        /*
-        let controllerData = await Api.getControllerData();
-        
-        if (webappElement && controllerData) {
-            Controller.defineData(
-                webappElement,
-                controllerData.shape,
-                controllerData.value
-            );
-        }
-        */
     }
 
     processNode(docNode) {

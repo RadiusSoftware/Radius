@@ -30,7 +30,6 @@
 define(class ControllerBinding {
     constructor(docElement, expr, dotted, type, name) {
         this.docElement = docElement;
-        this.appWidget = Controller.getAppWidget();
         this.expr = expr;
         this.dotted = dotted;
         this.valid = false;
@@ -128,7 +127,7 @@ define(class ControllerBinding {
 
             byDocElement.bindings.push(this);
             byDotted.bindings.push(this);
-            this.push(undefined, Controller.getDataValue(this.appWidget, this.dotted));
+            this.push(undefined, Controller.getValue(this.dotted));
             return this;
         }
         
@@ -198,10 +197,6 @@ define(class ControllerBinding {
         return null;
     }
 
-    getAppWidget() {
-        return this.appWidget;
-    }
-
     getElement() {
         return this.docElement;
     }
@@ -223,43 +218,43 @@ define(class ControllerBinding {
 
         if (this.type == 'inner') {
             let newValue = this.docElement.getInnerHtml();
-            Controller.setDataValue(this.appWidget, this.dotted, newValue);
+            Controller.setValue(this.dotted, newValue);
         }
         else if (this.type == 'input') {
             switch (this.docElement.getAttribute('type')) {
                 case 'number':
-                    Controller.setDataValue(this.appWidget, this.dotted, this.docElement.getProperty('valueAsNumber'));
+                    Controller.setValue(this.dotted, this.docElement.getProperty('valueAsNumber'));
                     break;
 
                 case 'date':
                 case 'datetime-local':
-                    Controller.setDataValue(this.appWidget, this.dotted, this.docElement.getProperty('valueAsDate'));
+                    Controller.setValue(this.dotted, this.docElement.getProperty('valueAsDate'));
                     break;
 
                 case 'radio':
-                    Controller.setDataValue(this.appWidget, this.dotted, this.docElement.getAttribute('value'));
+                    Controller.setValue(this.dotted, this.docElement.getAttribute('value'));
                     break;
 
                 case 'checkbox':
-                    Controller.setDataValue(this.appWidget, this.dotted, this.docElement.getProperty('checked'));
+                    Controller.setValue(this.dotted, this.docElement.getProperty('checked'));
                     break;
 
                 default:
-                    Controller.setDataValue(this.appWidget, this.dotted, this.docElement.getProperty('value'));
+                    Controller.setValue(this.dotted, this.docElement.getProperty('value'));
                     break;
             }
         }
         else if (this.type == 'attr') {
             let newValue = this.docElement.getAttribute(this.name);
-            Controller.setDataValue(this.appWidget, this.dotted, newValue);
+            Controller.setValue(this.dotted, newValue);
         }
         else if (this.type == 'attrToggle') {
             let bool = this.docElement.hasAttribute(this.name);
-            Controller.setDataValue(this.appWidget, this.dotted, bool);
+            Controller.setValue(this.dotted, bool);
         }
         else if (this.type == 'style') {
             let stylePropertyValue = this.docElement.getStyle(this.name);
-            Controller.setDataValue(this.appWidget, this.dotted, stylePropertyValue);
+            Controller.setValue(this.dotted, stylePropertyValue);
         }
 
         this.enable();
