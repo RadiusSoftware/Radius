@@ -80,7 +80,7 @@ singleton(class WidgetLibrary {
                 }
 
                 const widget = new widgetData.clss(this);
-                widget.settings = widgetData.settings;
+                widget.widgetData = widgetData;
 
                 if (widgetData.innerHtml.trim()) {
                     widget.setInnerHtml(widgetData.innerHtml);
@@ -125,68 +125,15 @@ define(class Widget extends HtmlElement {
         }
     }
 
-    hasSetting(key) {
-        return key in this.widgetData.settings;
-    }
-    /*
-    createReplacement(tagName, discardInner, ...filteredOut) {
-        let attrs = this.filterAttributes(...filteredOut);
-        this.replacement = createElement(tagName, attrs);
-
-        if (!discardInner) {
-            this.replacement.append(...this.getInnerElements());
-        }
-        
-        return this.replacement;
-    }
-
-    getInnerSettings() {
-        return this.innerSettings;
-    }
-    
-    getReplacement() {
-        return this.replacement;
-    }
-
-    hasReplacement() {
-        return this.replacement instanceof DocElement;
-    }
-
-    hasInnerElements() {
-        return this.innerElements.length > 0;
-    }
-
-    hasInnerSettings() {
-        return this.innerSettings != null;
+    getSubstitute() {
+        return this.widgetData.settings.substitute;
     }
 
     hasSetting(key) {
         return key in this.widgetData.settings;
     }
 
-    init() {
-        super.init();
-        let innerHtml = this.getInnerHtml().trim();
-
-        if (innerHtml) {
-            let innerElements = this.getChildElements();
-
-            if (innerElements.length) {
-                this.innerElements = innerElements;
-            }
-            else if (innerHtml) {
-                try {
-                    if (this.getInnerHtml().trim()) {
-                        this.innerSettings = fromJson(this.getInnerHtml());
-                    }
-                }
-                catch (e) {}
-            }
-        }
-
-        if (this.widgetData.innerHtml) {
-            this.setInnerHtml(this.widgetData.innerHtml);
-        }
+    hasSubstitute() {
+        return StringType.verify(this.widgetData.settings.substitute);
     }
-    */
 });

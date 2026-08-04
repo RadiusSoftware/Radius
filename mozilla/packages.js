@@ -109,11 +109,11 @@ singleton(class Packages {
     }
 
     async openApplication(docElement) {
+        Controller.appWidget = createElementFromOuterHtml(`<${webappSettings.tagName}></${webappSettings.tagName}>`);
+        
         if (webappSettings.title) {
             Doc.setTitle(this.processText(webappSettings.title));
         }
-        
-        Controller.appWidget = createElementFromOuterHtml(`<${webappSettings.tagName}></${webappSettings.tagName}>`);
 
         if (webappSettings.controllerShape && webappSettings.controllerValue) {
             let dataShape = fromJson(webappSettings.controllerShape);

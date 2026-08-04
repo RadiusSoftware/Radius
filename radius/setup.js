@@ -22,12 +22,11 @@
 
 
 /*****
- * A very simple appliation with one purpose: to provide the user with the
- * opportunity to either accept or decline/block cookies from this website.
- * Accepting cookies will immediately result in two successive cookies being
- * placed on the browser: (1) a "kibble" cookie demonstrating that cookies
- * have been accepted and (2) a session cookie being added as soon as the
- * uer is forwarded back to the previous page.
+ * The SetupApp is run only when a server intallation does NOT have a valid,
+ * encrypted boot configuration file.  The purpose of this application is to
+ * secure a TLS certificate via ACME, determine the operational mode, and then
+ * to cofigure the operational settings for the specified mode: swarm or in
+ * standalone.
 *****/
 define(class SetupApp extends Webapp {
     async getControllerData(handle) {

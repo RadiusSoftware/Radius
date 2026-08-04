@@ -1413,6 +1413,25 @@ define(class DocElement extends DocNode {
         return this;
     }
 
+    substitute(tagName) {
+        let oldNode = this.node;
+        let newNode = createElement(tagName).node;
+
+        for (const attr of oldNode.attributes) {
+            newNode.setAttribute(attr.name, attr.value);
+        }
+
+        while (oldNode.firstChild) {
+            newNode.appendChild(oldNode.firstChild);
+        }
+
+        oldNode.parentNode.replaceChild(newNode, oldNode);
+        this.node = newNode;
+        newNode[nodeKey] = this;
+        delete oldNode[nodeKey];
+        return this;
+    }
+
     [Symbol.iterator]() {
         return this.getChildElements()[Symbol.iterator]();
     }

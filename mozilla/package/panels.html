@@ -22,7 +22,12 @@
         </script>
     </widget>
     -->
-    <widget tagname="form-widget" rds-tagname="form">
+    <widget tagname="form-widget">
+        <script type="settings">
+            {
+                "substitute": "form"
+            }
+        </script>
         <script>
             class FormWidget extends Widget {
                 /*
@@ -467,15 +472,17 @@
                     if (this.getRdsDuration) {
                         this.duration = parseFloat(this.getRdsDuration());
                     }
-                    /*
-                    for (let clientElement of this.getInnerElements()) {
+                    
+                    for (let clientElement of this.getChildElements()) {
                         if (clientElement instanceof DocElement) {
                             if (typeof clientElement.getRdsMode == 'function') {
                                 this.setClientElement(clientElement.getRdsMode(), clientElement);
                             }
+                            else {
+                                clientElement.remove();
+                            }
                         }
                     }
-                    */
                 }
 
                 listClients() {

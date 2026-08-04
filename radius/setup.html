@@ -8,6 +8,18 @@
     </httpx>
     -->
     <widget tagname="setup-app">
+        <script>
+            class SetupApp extends Widget {
+                init() {
+                    super.init();
+
+                    (async () => {
+                        await pause(3000);
+                        Controller.setValue('setupState', 'setup#mode');
+                    })();
+                }
+            }
+        </script>
         <script type="settings">
             {
                 "type": "app",
@@ -16,16 +28,14 @@
             }
         </script>
         <html class="fill">
-            <form>
-                <selector-widget class="fill" rds-bind-method="setMode,setupState">
-                    <form-widget rds-mode="setup#acme" rds-submit="certify">
-                        ** ACME SETUP **
-                    </form-widget>
-                    <form-widget rds-mode="setup#mode" rds-submit="setMode">
-                        ** MODE SETUP **
-                    </form-widget>
-                </selector-widget>
-            </form>
+            <selector-widget class="fill" rds-bind-method="setMode,setupState">
+                <form-widget rds-mode="setup#acme" rds-submit="certify">
+                    ** ACME SETUP **
+                </form-widget>
+                <form-widget rds-mode="setup#mode" rds-submit="setMode">
+                    ** MODE SETUP **
+                </form-widget>
+            </selector-widget>
             <!--
             <form-widget>
                 <grid-widget class="fill" rds-rows="50px,auto,50px" rds-cols="50px,auto,50px">

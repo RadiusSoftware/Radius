@@ -174,8 +174,13 @@ singleton(class Controller extends Emitter {
             docNode.init();
             this.nodes.set(docNode, {});
 
-            /*
             if (docNode instanceof DocElement) {
+                if (docNode instanceof Widget) {
+                    if (docNode.hasSubstitute()) {
+                        docNode.substitute(docNode.getSubstitute());
+                    }
+                }
+
                 if (docNode.getRdsBind) {
                     if (docNode.getTagName() in { input:0, select:0, textarea:0 }) {
                         bindings = bindings.concat(this.bindInput(docNode, docNode.getRdsBind()));
@@ -215,23 +220,6 @@ singleton(class Controller extends Emitter {
                     bindings = bindings.concat(this.bindStyle(docNode, styleProperty, dotted));
                 }
             }
-            */
-            /*
-            (async () => {
-                await Win.awaitIdle();
-
-                for (let binding of bindings) {
-                    binding.push();
-                }
-            })();
-            
-            if (docNode instanceof Widget && docNode.getSetting('stub') == 'true') {
-                if (docNode.hasReplacement()) {
-                    let replacement = docNode.getReplacement();
-                    docNode.replace(replacement);
-                }
-            }
-            */
         }
     }
 
@@ -270,7 +258,7 @@ singleton(class Controller extends Emitter {
         let bindings = [];
 
         if (typeof ref == 'string' && ref.trim() != '') {
-            expr = mkControllerExpr(docElement, ref);
+            expr = mkControllerExpr(ref);
         }
         else if (ref instanceof Expr) {
             expr = ref;
@@ -292,7 +280,14 @@ singleton(class Controller extends Emitter {
 
         if (shape) {
             if (shape.verify(newValue)) {
-                Data.set(this.value, dotted);
+                Data.set(this.value, dotted, newValue);
+                let bindingsByDotted = this.bindingsByDotted[dotted];
+
+                if (bindingsByDotted) {
+                    for (let binding of bindingsByDotted.bindings) {
+                        binding.push();
+                    }
+                }
             }
             else {
                 this.emit({

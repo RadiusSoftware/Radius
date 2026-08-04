@@ -127,7 +127,7 @@ define(class ControllerBinding {
 
             byDocElement.bindings.push(this);
             byDotted.bindings.push(this);
-            this.push(undefined, Controller.getValue(this.dotted));
+            this.push(); 
             return this;
         }
         
