@@ -224,7 +224,7 @@ define(class Package {
                 this.mozilla.styleSheets.push(cssText);
             }
             else if (fileName.endsWith('.js')) {
-                await this.registerCode(filePath);
+                this.registerCode(filePath);
             }
             else if (fileName.endsWith('.html')) {
                 let html = await FileSystem.readFileAsString(filePath);
@@ -270,6 +270,8 @@ define(class Package {
     }
 
     async loadHttpXs(handle) {
+        let spentFiles = [];
+
         for (let fileName in handle.fileNames) {
             if (fileName.endsWith('.js')) {
                 let jsPath = handle.fileNames[fileName];
@@ -277,6 +279,7 @@ define(class Package {
                 let htmlFileName = `${parsed.name}.html`;
                 let htmlPath = `${Path.join(parsed.dir, parsed.name)}.html`;
                 let httpXName = parsed.name.toLowerCase();
+                let jsFileName = `${httpXName}.js`;
 
                 if (htmlFileName in handle.fileNames) {
                     if (await FileSystem.isFile(htmlPath)) {
@@ -335,14 +338,18 @@ define(class Package {
                                         );
                                     }
 
-                                    delete handle.fileNames[jsPath];
-                                    delete handle.fileNames[htmlPath];
+                                    spentFiles.push(jsFileName);
+                                    spentFiles.push(htmlFileName);
                                 }
                             }
                         }
                     }
                 }
             }
+        }
+
+        for (let fileName of spentFiles) {
+            delete handle.fileNames[fileName];
         }
     }
 
@@ -605,34 +612,18 @@ define(class Package {
         }
     }
 
-    async registerCode(filePath) {
-        let primary = true;
-        let workers = true;
-        let jscode = await FileSystem.readFileAsString(filePath);
-
-        if (jscode.search(/`#primary`/gm)) {
-            workers = false;
-        }
-        else if (jscode.search(/`#workers`/gm)) {
-            primary = false;
-        }
-
-        if (primary) {
-            try {
-                require(filePath);
-            }
-            catch (e) {
-                this.nodejs.errors.push({
-                    error: e,
-                    stack: e.stack,
-                    filePath: filePath,
-                    fileName: fileName,
-                });
-            }
-        }
-
-        if (workers) {
+    registerCode(filePath) {
+        try {
+            require(filePath);
             this.nodejs.workers.push(filePath);
+        }
+        catch (e) {
+            this.nodejs.errors.push({
+                error: e,
+                stack: e.stack,
+                filePath: filePath,
+                fileName: fileName,
+            });
         }
     }
     
@@ -816,6 +807,23 @@ createService(class PackageService extends Service {
         catch (e) {}
         return false;
     }
+
+    async onRegisterWorkerCode(message) {
+        let packages = [];
+
+        for (let pkg of this.packages) {
+            let pkgData = {
+                pkgName: pkg.name,
+                nodejs: [],
+            };
+
+            for (let codePath of pkg.nodejs.workers) {
+                pkgData.nodejs.push(codePath);
+            }
+        }
+
+        return packages;
+    }
 });
 
 
@@ -912,5 +920,21 @@ define(class PackageHandle extends Handle {
             path: path,
             url: url,
         });
+    }
+
+    async registerWorkerCode() {
+        let files = await this.callService({
+        });
+
+        for (let file of files) {
+            try {
+                require(file);
+            }
+            catch (e) {
+                await caught(e)
+            }
+        }
+
+        return this;
     }
 });

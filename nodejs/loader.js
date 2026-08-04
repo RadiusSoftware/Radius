@@ -152,5 +152,6 @@ if (!LibCluster.isPrimary) {
         Process.deleteEnv('nodejsFramework');
         Process.deleteEnv('launcher');
         Process.deleteEnv('oneTimeUUID');
+        await mkPackageHandle().registerWorkerCode();
     })();
 }

@@ -18,8 +18,11 @@
         <html class="fill">
             <form>
                 <selector-widget class="fill" rds-bind-method="setMode,setupState">
-                    <form-widget rds-mode="acme" rds-submit="setupAcme">
-                        ** HELLO FORM **
+                    <form-widget rds-mode="setup#acme" rds-submit="certify">
+                        ** ACME SETUP **
+                    </form-widget>
+                    <form-widget rds-mode="setup#mode" rds-submit="setMode">
+                        ** MODE SETUP **
                     </form-widget>
                 </selector-widget>
             </form>

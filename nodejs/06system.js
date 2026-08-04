@@ -38,6 +38,16 @@
  *      system#standalone
  *      system#swarm
  * 
+ *      SETUP
+ *      *****
+ *      setup#acme
+ *      setup#mode
+ *      setup#swarm
+ *      setup#standalone.dbms
+ *      setup#standalone.email
+ *      setup#standalone.user
+ *      setup#done
+ * 
  * Swarm mode is somewhat complex to describe because the DBMS access, user
  * management, and spooling (email, sms...) are all performed via thunks that
  * connect webservices within the swarm.
@@ -294,7 +304,7 @@ createService(class SystemService extends Service {
     getSetupState() {
         if (this.settings.mode == 'system#setup') {
             if (this.unconfigured.length) {
-                return this.unconfigured[0];
+                return `setup#${this.unconfigured[0]}`;
             }
         }
         
