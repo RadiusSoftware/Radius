@@ -309,6 +309,10 @@ define(class Package {
                                     await this.loadBundle(htmlElement);
                                     let widgetData = this.mozilla.widgets[appWidgetTagName];
 
+                                    if (widgetData.settings.title) {
+                                        widgetData.settings.title = this.substituteMarkers(widgetData.settings.title);
+                                    }
+
                                     let httpXHandle = {
                                         httpXElement: appWidgetElement,
                                         path: Path.join(handle.url, httpXName),

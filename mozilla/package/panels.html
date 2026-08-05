@@ -31,7 +31,14 @@
                 */
 
                 async onEventSubmit(message) {
-                    console.log(message);
+                    if (this.getRdsAction) {
+                        let rdsAction = `..${this.getRdsAction()}`;
+
+                        if (FunctionType.verify(Api[rdsAction])) {
+                            let apiMethod = Api[rdsAction];
+                            console.log(apiMethod);
+                        }
+                    }
                 }
             }
         </script>

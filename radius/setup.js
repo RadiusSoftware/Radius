@@ -41,7 +41,7 @@ define(class SetupApp extends Webapp {
     // certifyHost
     // ********************
     async [Api.defineEndpoint(
-        '..setupAcme',
+        '..certifyHost',
         {
             acmeSettings: 'acme',
         }

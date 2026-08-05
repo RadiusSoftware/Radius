@@ -10,25 +10,34 @@
     <widget tagname="setup-app">
         <script>
             class SetupApp extends Widget {
+                init() {
+                    super.init();
+                    /*
+                    (async () => {
+                        await pause(2000);
+                        Controller.setValue('setupState', 'setup#mode')
+                    })();
+                    */
+                }
             }
         </script>
         <script type="settings">
             {
                 "type": "app",
-                "title": "##radius.org.setup##",
+                "title": "##setup##",
                 "path": "setupPath"
             }
         </script>
         <html class="fill">
             <selector-widget class="fill" rds-bind-method="setMode,setupState">
-                <form-widget class="fill" rds-mode="setup#acme" rds-action="certify">
+                <form-widget class="fill" rds-mode="setup#acme" rds-action="certifyHost">
                     <grid-widget class="fill" rds-rows="50px,auto,50px" rds-cols="50px,auto,50px">
                         <div></div>
                         <div></div>
                         <div></div>
                         <div></div>
                         <div>
-                            <button-widget type="submit" value="Click Here"></button-widget>
+                            <button-widget type="submit">##setupAcme##</button-widget>
                         </div>
                         <div></div>
                         <div></div>

@@ -168,9 +168,6 @@ singleton(class Controller extends Emitter {
 
     initNode(docNode) {
         if (!this.nodes.has(docNode)) {
-            // *** deprecated **********************************
-            let bindings = [];
-            // *** deprecated **********************************
             if (docNode instanceof Widget) {
                 if (docNode.hasSubstitute()) {
                     docNode.substituteNode();
@@ -195,41 +192,41 @@ singleton(class Controller extends Emitter {
             if (docNode instanceof DocElement) {
                 if (docNode.getRdsBind) {
                     if (docNode.getTagName() in { input:0, select:0, textarea:0 }) {
-                        bindings = bindings.concat(this.bindInput(docNode, docNode.getRdsBind()));
+                        this.bindInput(docNode, docNode.getRdsBind());
                     }
                     else {
-                        bindings = bindings.concat(this.bindInner(docNode, docNode.getRdsBind()));
+                        this.bindInner(docNode, docNode.getRdsBind());
                     }
                 }
 
                 if (docNode.getRdsBindAttr) {
                     let [ attrName, dotted ] = docNode.getRdsBindAttr().split(',');
-                    bindings = bindings.concat(this.bindAttr(docNode, attrName, dotted));
+                    this.bindAttr(docNode, attrName, dotted);
                 }
 
                 if (docNode.getRdsBindAttrToggle) {
                     let [ attrName, dotted ] = docNode.getRdsBindAttrToggle().split(',');
-                    bindings = bindings.concat(this.bindAttrToggle(docNode, attrName, dotted));
+                    this.bindAttrToggle(docNode, attrName, dotted);
                 }
 
                 if (docNode.getRdsBindMethod) {
                     let args = docNode.getRdsBindMethod().split(',');
-                    bindings = bindings.concat(this.bindMethod(docNode, args[0], ...args.slice(1)));
+                    this.bindMethod(docNode, args[0], ...args.slice(1));
                 }
 
                 if (docNode.getRdsBindProperty) {
                     let [ property, dotted ] = docNode.getRdsBindProperty().split(',');
-                    bindings = bindings.concat(this.bindProperty(docNode, property, dotted));
+                    this.bindProperty(docNode, property, dotted);
                 }
 
                 if (docNode.getRdsBindShow) {
                     let [ dotted, values ] = RdsText.split(docNode.getRdsBindShow(), ';');
-                    bindings = bindings.concat(this.bindShow(docNode, dotted, ...RdsText.split(values, ',')));
+                    this.bindShow(docNode, dotted, ...RdsText.split(values, ','));
                 }
 
                 if (docNode.getRdsBindStyle) {
                     let [ styleProperty, dotted ] = docNode.getRdsBindStyle().split(',');
-                    bindings = bindings.concat(this.bindStyle(docNode, styleProperty, dotted));
+                    this.bindStyle(docNode, styleProperty, dotted);
                 }
             }
 
@@ -269,7 +266,6 @@ singleton(class Controller extends Emitter {
 
     setBinding(docElement, ref, type, name) {
         let expr;
-        let bindings = [];
 
         if (typeof ref == 'string' && ref.trim() != '') {
             expr = mkControllerExpr(ref);
@@ -281,12 +277,12 @@ singleton(class Controller extends Emitter {
         if (expr) {
             for (let dependency of expr.getDependencies()) {
                 if (dependency.type == 'controller') {
-                    bindings.push(mkControllerBinding(docElement, expr, dependency.dotted, type, name));
+                    mkControllerBinding(docElement, expr, dependency.dotted, type, name);
                 }
             }
         }
 
-        return bindings;
+        return this;
     }
 
     setValue(dotted, newValue) {
