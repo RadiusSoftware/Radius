@@ -125,7 +125,7 @@ define(class Widget extends HtmlElement {
         }
     }
 
-    getSubstitute() {
+    getSubstituteTagName() {
         return this.widgetData.settings.substitute;
     }
 
@@ -135,5 +135,24 @@ define(class Widget extends HtmlElement {
 
     hasSubstitute() {
         return StringType.verify(this.widgetData.settings.substitute);
+    }
+
+    substituteNode() {
+        let oldNode = this.node;
+        let newNode = createElement(this.getSubstituteTagName()).node;
+
+        for (const attr of oldNode.attributes) {
+            newNode.setAttribute(attr.name, attr.value);
+        }
+
+        while (oldNode.firstChild) {
+            newNode.appendChild(oldNode.firstChild);
+        }
+
+        oldNode.parentNode.replaceChild(newNode, oldNode);
+        this.node = newNode;
+        newNode[nodeKey] = this;
+        delete oldNode[nodeKey];
+        return this;
     }
 });

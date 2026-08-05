@@ -173,7 +173,7 @@ singleton(class Controller extends Emitter {
             // *** deprecated **********************************
             if (docNode instanceof Widget) {
                 if (docNode.hasSubstitute()) {
-                    docNode.substitute(docNode.getSubstitute());
+                    docNode.substituteNode();
                 }
             
                 for (let key of Reflect.ownKeys(Reflect.getPrototypeOf(docNode))) {
