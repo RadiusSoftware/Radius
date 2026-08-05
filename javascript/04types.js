@@ -687,7 +687,7 @@ singleton(class ObjectType extends BaseType {
                 }
             }
             else {
-                let comp = Data.compare(a, b);
+                let comp = RdsData.compare(a, b);
 
                 if (comp != 'eq') {
                     return comp;

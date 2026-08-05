@@ -76,7 +76,7 @@ define(class Dbo {
         
         if (segments.length > 1) {
             if (dboObj) {
-                Data.deleteDotted(dboObj, dotted);
+                RdsData.deleteDotted(dboObj, dotted);
 
                 await dbc.update({
                     dbTable: dboObj.getTable(),
@@ -121,7 +121,7 @@ define(class Dbo {
         let dboObj = await Dbo.get(dbc, id);
 
         if (dboObj) {
-            return Data.getDotted(dboObj, dotted);
+            return RdsData.getDotted(dboObj, dotted);
         }
 
         return undefined;
@@ -152,7 +152,7 @@ define(class Dbo {
         let dboObj = await Dbo.get(dbc, id);
 
         if (dboObj) {
-            return Data.hasDotted(dboObj, dotted);
+            return RdsData.hasDotted(dboObj, dotted);
         }
 
         return false;
@@ -173,7 +173,7 @@ define(class Dbo {
 
         if (dboObj instanceof Dbo) {
             for (let dotted in values) {
-                Data.setDotted(dboObj, dotted, values[dotted]);
+                RdsData.setDotted(dboObj, dotted, values[dotted]);
             }
 
             await dboObj.save(dbc)
@@ -212,7 +212,7 @@ define(class Dbo {
         let dboObj = await Dbo.get(dbc, id);
 
         if (dboObj) {
-            Data.setDotted(dboObj, dotted, value);
+            RdsData.setDotted(dboObj, dotted, value);
 
             await dbc.update({
                 dbTable: dboObj.getTable(),

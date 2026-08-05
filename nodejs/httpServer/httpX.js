@@ -88,7 +88,7 @@ define(class HttpX extends Emitter {
     }
 
     getSetting(dotted) {
-        return Data.get(this.settings, dotted);
+        return RdsData.get(this.settings, dotted);
     }
 
     getSettings() {

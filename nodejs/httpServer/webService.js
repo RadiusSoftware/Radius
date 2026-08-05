@@ -38,7 +38,7 @@ if (Process.isPrimary()) {
             this.webServicesByPath = {};
 
             Namespace.emitter.on('ClassDefined', message => {
-                if (Data.extends(message.clss, WebService)) {
+                if (RdsData.extends(message.clss, WebService)) {
                     if (message.clss != WebService) {
                         let entry = {
                             name: message.clss.name,
@@ -131,7 +131,7 @@ if (Process.isPrimary()) {
 
         getFromFqn(fqn) {
             if (fqn in WebService.webServices) {
-                let ws = Data.clone(this.webServicesByFqn[fqn]);
+                let ws = RdsData.clone(this.webServicesByFqn[fqn]);
                 delete ws.apiKey;
                 delete ws.clientId;
                 delete ws.clientSecret;
@@ -143,7 +143,7 @@ if (Process.isPrimary()) {
 
         getFromId(id) {
             if (id in WebService.webServicesById) {
-                let webService = Data.clone(this.webServicesById[path].value);
+                let webService = RdsData.clone(this.webServicesById[path].value);
                 delete webService.apiKey;
                 delete webService.clientId;
                 delete webService.clientSecret;
@@ -155,7 +155,7 @@ if (Process.isPrimary()) {
 
         getFromPath(path) {
             if (id in WebService.webServicesByPath) {
-                let webService = Data.clone(this.webServicesByPath[path].value);
+                let webService = RdsData.clone(this.webServicesByPath[path].value);
                 delete webService.apiKey;
                 delete webService.clientId;
                 delete webService.clientSecret;
@@ -175,7 +175,7 @@ if (Process.isPrimary()) {
 
         list() {
             return Object.values(this.webServicesById).map(setting => {
-                let webService = Data.clone(setting.value);
+                let webService = RdsData.clone(setting.value);
                 delete webService.apiKey;
                 delete webService.clientId;
                 delete webService.clientSecret;
@@ -184,7 +184,7 @@ if (Process.isPrimary()) {
         }
 
         listTypes() {
-            return Data.clone(Object.values(this.webServiceTypes));
+            return RdsData.clone(Object.values(this.webServiceTypes));
         }
 
         async load() {

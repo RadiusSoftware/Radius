@@ -112,7 +112,7 @@ define(class WebServiceHandle extends Handle {
     }
 
     async create(options) {
-        if (FunctionType.verify(options.clss) && Data.classExtends(options.clss, WebService)) {
+        if (FunctionType.verify(options.clss) && RdsData.classExtends(options.clss, WebService)) {
             options.fqn = options.clss['#fqn'];
         }
         else if (!StringType.verify(options.fqn)) {

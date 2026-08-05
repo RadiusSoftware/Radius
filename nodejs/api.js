@@ -164,7 +164,7 @@ define(class Api {
     }
 
     async init() {
-        for (let prototype of Data.enumeratePrototypes(this.container)) {
+        for (let prototype of RdsData.enumeratePrototypes(this.container)) {
             for (let propertyName of Object.getOwnPropertyNames(prototype.prototype)) {
                 if (propertyName.startsWith('ApiEndPoint##')) {
                     if (typeof prototype.prototype[propertyName] == 'function') {

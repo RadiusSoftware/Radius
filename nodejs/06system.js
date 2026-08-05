@@ -156,7 +156,7 @@ createService(class SystemService extends Service {
                     stack.push({ dotted: dotted, component: unit.component[key] });
                 }
             }
-            else if (!Data.get(this.componentStatus, unit.dotted)) {
+            else if (!RdsData.get(this.componentStatus, unit.dotted)) {
                 this.unconfigured.push(unit.dotted);
             }
         }

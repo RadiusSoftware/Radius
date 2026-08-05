@@ -116,7 +116,7 @@ define(class Service {
     static getService(serviceClass) {
         if (Process.isPrimary()) {
             if (typeof serviceClass == 'function') {
-                if (Data.classExtends(serviceClass, Service)) {
+                if (RdsData.classExtends(serviceClass, Service)) {
                     return Service.services[serviceClass.name];
                 }
             }
@@ -161,7 +161,7 @@ define(async function createService(...args) {
             clss = args[1];
         }
 
-        if (Data.extends(clss, Service)) {
+        if (RdsData.extends(clss, Service)) {
             if (!(clss.name in Service.services)) {
                 let service = new clss();
                 await service.init();

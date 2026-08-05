@@ -116,7 +116,7 @@ singleton(class Controller extends Emitter {
         let bindingEntry = this.bindingsByDocElement.get(docElement);
 
         if (bindingEntry) {
-            let array = Data.copy(bindingEntry.bindings);
+            let array = RdsData.copy(bindingEntry.bindings);
 
             for (let binding of array) {
                 binding.delete();
@@ -130,7 +130,7 @@ singleton(class Controller extends Emitter {
         let bindingEntry = this.bindingsByDotted[dotted];
 
         if (bindingEntry) {
-            let array = Data.copy(bindingEntry.bindings);
+            let array = RdsData.copy(bindingEntry.bindings);
 
             for (let binding of array) {
                 binding.delete();
@@ -155,7 +155,7 @@ singleton(class Controller extends Emitter {
 
     getValue(dotted) {
         if (StringType.verify(dotted)) {
-            return Data.get(this.value, dotted);
+            return RdsData.get(this.value, dotted);
         }
         else {
             return this.value;
@@ -163,7 +163,7 @@ singleton(class Controller extends Emitter {
     }
 
     hasData(dotted) {
-        return Data.has(this.value, dotted);
+        return RdsData.has(this.value, dotted);
     }
 
     initNode(docNode) {
@@ -280,7 +280,7 @@ singleton(class Controller extends Emitter {
 
         if (shape) {
             if (shape.verify(newValue)) {
-                Data.set(this.value, dotted, newValue);
+                RdsData.set(this.value, dotted, newValue);
                 let bindingsByDotted = this.bindingsByDotted[dotted];
 
                 if (bindingsByDotted) {

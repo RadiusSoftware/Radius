@@ -347,7 +347,7 @@ define(function implementorof(object, ...interfaces) {
         if (typeof interface == 'function' && interface['#interface']) {
             let implemented = false;
 
-            for (let ctor of Data.enumerateClassHierarchy(object)) {
+            for (let ctor of RdsData.enumerateClassHierarchy(object)) {
                 let fqn = ctor['#fqn'];
 
                 if (fqn) {

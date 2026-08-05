@@ -21,7 +21,7 @@
 *****/
 
 
-singleton(class Data {
+singleton(class RdsData {
     /*****
      * Performs a binary search and returns the index, at which to insert the value
      * into the given array.  If the array contains one or more values (in a sequence)

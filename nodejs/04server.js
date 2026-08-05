@@ -80,7 +80,7 @@ define(class Server extends Emitter {
     static getServer(serverClass) {
         if (Process.isPrimary()) {
             if (typeof serverClass == 'function') {
-                if (Data.extends(serverClass, Server)) {
+                if (RdsData.extends(serverClass, Server)) {
                     return Server.servers[serverClass.name];
                 }
             }
@@ -88,7 +88,7 @@ define(class Server extends Emitter {
     }
 
     getSettings() {
-        return Data.clone(this.settings);
+        return RdsData.clone(this.settings);
     }
 
     getWorkerCount() {
@@ -211,7 +211,7 @@ define(async function createServer(...args) {
             clss = args[1];
         }
 
-        if (Data.extends(clss, Server)) {
+        if (RdsData.extends(clss, Server)) {
             if (!(clss.name in Server.servers)) {
                 let server = new clss();
                 await server.init();

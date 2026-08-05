@@ -139,7 +139,7 @@ define(class HttpClient {
                     return;
                 }
                 else if (this.mime.getCode() == 'application/x-www-form-urlencoded') {
-                    this.data = Data.toWwwUrlEncoded(this.payload);
+                    this.data = RdsData.toWwwUrlEncoded(this.payload);
                     this.headers['Content-Type'] = this.mime.getCode();
                     this.headers['Content-Length'] = `${this.buffer.length}`;
                     return;

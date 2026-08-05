@@ -33,7 +33,7 @@ define (class Expr {
 
     static {
         Namespace.on('ClassDefined', message => {
-            if (Data.extends(message.clss, Expr)) {
+            if (RdsData.extends(message.clss, Expr)) {
                 if (message.clss !== Expr) {
                     Expr.types[message.clss['#fqn']] = {
                         ns: message.namespace,
@@ -250,7 +250,7 @@ define(class EqExpr extends Expr {
 
     eval() {
         let [ lh, rh ] = this.evalOperands();
-        return Data.eq(lh, rh);
+        return RdsData.eq(lh, rh);
     }
 
     static fromJson(obj) {
@@ -307,7 +307,7 @@ define(class GeExpr extends Expr {
 
     eval() {
         let [ lh, rh ] = this.evalOperands();
-        return Data.ge(lh, rh);
+        return RdsData.ge(lh, rh);
     }
 
     static fromJson(obj) {
@@ -326,7 +326,7 @@ define(class GtExpr extends Expr {
 
     eval() {
         let [ lh, rh ] = this.evalOperands();
-        return Data.gt(lh, rh);
+        return RdsData.gt(lh, rh);
     }
 
     static fromJson(obj) {
@@ -554,7 +554,7 @@ define(class LeExpr extends Expr {
 
     eval() {
         let [ lh, rh ] = this.evalOperands();
-        return Data.le(lh, rh);
+        return RdsData.le(lh, rh);
     }
 
     static fromJson(obj) {
@@ -591,7 +591,7 @@ define(class LtExpr extends Expr {
 
     eval() {
         let [ lh, rh ] = this.evalOperands();
-        return Data.lt(lh, rh);
+        return RdsData.lt(lh, rh);
     }
 
     static fromJson(obj) {
@@ -637,7 +637,7 @@ define(class NeExpr extends Expr {
 
     eval() {
         let [ lh, rh ] = this.evalOperands();
-        return !Data.eq(lh, rh);
+        return !RdsData.eq(lh, rh);
     }
 
     static fromJson(obj) {

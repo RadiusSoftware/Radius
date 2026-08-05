@@ -378,7 +378,7 @@
             this.netMask = arrayToString(this.netMaskArray);
             this.hostMask = arrayToString(this.hostMaskArray);
 
-            let bcastAddrArray = Data.copy(this.netAddrArray);
+            let bcastAddrArray = RdsData.copy(this.netAddrArray);
 
             for (let i = this.netBits; i < this.bits; i++) {
                 bcastAddrArray[i] = 1;

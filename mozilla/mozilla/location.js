@@ -77,7 +77,7 @@ singleton(class Location {
     }
 
     getSegments() {
-        return Data.copy(this.segments);
+        return RdsData.copy(this.segments);
     }
 
     reload() {

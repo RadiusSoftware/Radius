@@ -110,7 +110,7 @@ singleton(class PostgresDbms {
 
     async createDatabase(settings) {
         let dbName = settings.database;
-        let pgSettings = Data.clone(settings);
+        let pgSettings = RdsData.clone(settings);
         pgSettings.database = 'postgres';
         let pg = await mkPostgresConnection(pgSettings).connect();
         await pg.query(`CREATE DATABASE ${dbName};`);
@@ -178,7 +178,7 @@ singleton(class PostgresDbms {
 
     async doesDatabaseExist(settings) {
         let dbName = settings.database;
-        let pgSettings = Data.clone(settings);
+        let pgSettings = RdsData.clone(settings);
         pgSettings.database = 'postgres';
         let pg = await mkPostgresConnection(pgSettings).connect();
         let result = await pg.query(`SELECT datname FROM pg_catalog.pg_database WHERE datname='${dbName}'`);
@@ -205,7 +205,7 @@ singleton(class PostgresDbms {
 
     async dropDatabase(settings) {
         let dbName = settings.database;
-        let pgSettings = Data.clone(settings);
+        let pgSettings = RdsData.clone(settings);
         pgSettings.database = 'postgres';
         let pg = await mkPostgresConnection(pgSettings).connect();
         await pg.query(`DROP DATABASE ${dbName};`);

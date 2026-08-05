@@ -305,7 +305,7 @@ define(class DbTable {
     }
 
     getPrimaryKey() {
-        return Data.copy(this.primaryKey);
+        return RdsData.copy(this.primaryKey);
     }
 
     getType() {

@@ -1,5 +1,22 @@
 <!DOCTYPE bundle>
 <bundle>
+    <widget tagname="button-widget">
+        <script type="settings">
+            {
+                "substitute": "input"
+            }
+        </script>
+        <script>
+            class ButtonWidget extends Widget {
+                init() {
+                    super.init();
+
+                    if (this.getRdsType()) {
+                    }
+                }
+            }
+        </script>
+    </widget>
     <!--
     <widget tagname="dataeditor-widget">
         <script>
@@ -283,7 +300,7 @@
         </style>
     </widget>
     -->
-    <widget tagname="input-widget" settings="stub:true;">
+    <widget tagname="input-widget">
         <script>
             class InputWidget extends Widget {
                 static stdInputTypes = mkRdsEnum(
@@ -497,7 +514,7 @@
                         }
                         else if (type == 'fieldset') {
                             attributes.class = 'input-widget-radio-fieldset';
-                            Data.filter(attributes, (key, value) => key.startsWith('rds-bind'));
+                            RdsData.filter(attributes, (key, value) => key.startsWith('rds-bind'));
                             this.replacement = createElement('fieldset', attributes);
                             this.buildFieldsetOptions(attributes);
                             this.buildFieldsetLegend();
@@ -546,14 +563,6 @@
             }
         </script>
     </widget>
-    <!--
-    <widget tagname="file-widget">
-        <script>
-            class FileWidget extends Widget {
-            }
-        </script>
-    </widget>
-    -->
     <widget tagname="toggle-widget">
         <script>
             class ToggleWidget extends Widget {

@@ -227,7 +227,7 @@ singleton(class Process extends Emitter {
     }
 
     getExecPath() {
-        return Data.copy(LibProcess.execPath);
+        return RdsData.copy(LibProcess.execPath);
     }
 
     getGid() {
