@@ -89,7 +89,12 @@ define(class Webapp extends HttpX {
                 };
             }
             catch (e) {
-                await caught(e, req.getFullRequest(), req.getBody());
+                await caught({
+                    error: e,
+                    fullRequest: req.getFullRequest(),
+                    body: req.getBody(),
+                });
+                
                 return 500;
             }
         }

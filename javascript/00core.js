@@ -436,17 +436,50 @@ define(async function wait(value) {
 /*****
  * caught is a ubiquitous global function that's used for reporting on thrown
  * errors.  There are many creative ways that an implementation may report them.
- * Hence, the real work is done by the caught.handler property, which shoudl be
+ * Hence, the real work is done by the caught.handler property, which should be
  * set by server implementation to do more than simply do a console.log().
 *****/
-define(async function caught(error, ...args) {
-    await wait(caught.handler(error, ...args));
+define(async function caught(info) {
+    if (ObjectType.verify(info)) {
+        if ('error' in info && !('stack' in info)) {
+            info.stack = info.error.stack;
+        }
+
+        await wait(caught.handler(info));
+    }
+    else if (info instanceof Error) {
+        await wait(caught.handler({
+            error: info,
+            stack: info.stack,
+        }));
+    }
+    else {
+        await wait(caught.handler({
+            diagnostic: info.toString(),
+        }));
+    }
+
+    let message = [];
+
+    if (info.error instanceof error) {
+        message.push(info.error.toString());
+    }
+
+    if (info.stack) {
+        message.push(info.stack);
+    }
+
+    for (let key in info) {
+        if (!(key in { error:0, stack:0 })) {
+            message.push(`${key}: ${info[key].toString()}`);
+        }
+    }
+
+    await wait(caught.handler(info, message));
 });
 
-caught.handler = (error, ...args) => {
-    console.log('\n');
-    console.log(error);
-    args.forEach(arg => console.log(arg));
+caught.handler = (info, message) => {
+    console.log(message.joion('\n'));
 };
 
 
