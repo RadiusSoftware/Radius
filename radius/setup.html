@@ -10,14 +10,6 @@
     <widget tagname="setup-app">
         <script>
             class SetupApp extends Widget {
-                init() {
-                    super.init();
-
-                    (async () => {
-                        await pause(3000);
-                        Controller.setValue('setupState', 'setup#mode');
-                    })();
-                }
             }
         </script>
         <script type="settings">
@@ -29,34 +21,25 @@
         </script>
         <html class="fill">
             <selector-widget class="fill" rds-bind-method="setMode,setupState">
-                <form-widget rds-mode="setup#acme" rds-submit="certify">
-                    ** ACME SETUP **
+                <form-widget class="fill" rds-mode="setup#acme" rds-action="certify">
+                    <grid-widget class="fill" rds-rows="50px,auto,50px" rds-cols="50px,auto,50px">
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div>
+                            <button-widget type="button" value="Click Here"></button-widget>
+                        </div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                        <div></div>
+                    </grid-widget>
                 </form-widget>
                 <form-widget rds-mode="setup#mode" rds-submit="setMode">
                     ** MODE SETUP **
                 </form-widget>
             </selector-widget>
-            <!--
-            <form-widget>
-                <grid-widget class="fill" rds-rows="50px,auto,50px" rds-cols="50px,auto,50px">
-                    <div></div><div></div><div></div><div></div>
-                    <selector-widget class="fill" rds-bind-method="setMode,setupState">
-                        <div rds-mode="acme">
-                            <h1 class="h1">##certifyHost##</h1>
-                            <grid-widget rds-rows="auto,100px,auto">
-                                <div></div>
-                                <div class="space-around margin-vertical-top">
-                                    <input-widget type="submit" class="input-widget-button input-widget-width-wide" value="##setupAcme##" evt-click="setupAcme"></input-widget>
-                                </div>
-                                <div></div>
-                            </grid-widget>
-                        </div>
-                        <div rds-mode="mode">SELECT MODE</div>
-                    </selector-widget>
-                    <div></div><div></div><div></div><div></div>
-                </grid-widget>
-            </form-widget>
-            -->
         </html>
     </widget>
     <strings lang="en">

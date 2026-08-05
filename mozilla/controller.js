@@ -168,19 +168,31 @@ singleton(class Controller extends Emitter {
 
     initNode(docNode) {
         if (!this.nodes.has(docNode)) {
+            // *** deprecated **********************************
             let bindings = [];
-            Packages.processNode(docNode);
+            // *** deprecated **********************************
+            if (docNode instanceof Widget) {
+                if (docNode.hasSubstitute()) {
+                    docNode.substitute(docNode.getSubstitute());
+                }
             
-            docNode.init();
-            this.nodes.set(docNode, {});
-
-            if (docNode instanceof DocElement) {
-                if (docNode instanceof Widget) {
-                    if (docNode.hasSubstitute()) {
-                        docNode.substitute(docNode.getSubstitute());
+                for (let key of Reflect.ownKeys(Reflect.getPrototypeOf(docNode))) {
+                    if (StringType.verify(key) && key.startsWith('onEvent')) {
+                        if (FunctionType.verify(docNode[key])) {
+                            let eventName = key.substring(7).toLowerCase();
+                            docNode.on(eventName, message => {
+                                message.event.preventDefault();
+                                docNode[key](message);
+                            });
+                        }
                     }
                 }
+            }
+            
+            Packages.processNode(docNode);
+            docNode.init();
 
+            if (docNode instanceof DocElement) {
                 if (docNode.getRdsBind) {
                     if (docNode.getTagName() in { input:0, select:0, textarea:0 }) {
                         bindings = bindings.concat(this.bindInput(docNode, docNode.getRdsBind()));
@@ -220,6 +232,8 @@ singleton(class Controller extends Emitter {
                     bindings = bindings.concat(this.bindStyle(docNode, styleProperty, dotted));
                 }
             }
+
+            this.nodes.set(docNode, {});
         }
     }
 

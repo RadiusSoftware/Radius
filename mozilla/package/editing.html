@@ -11,8 +11,13 @@
                 init() {
                     super.init();
 
-                    if (this.getRdsType()) {
+                    if (!(this.getAttribute('type') in { submit:0, reset:0, button:0 } )) {
+                        this.setAttribute('type', 'button');
                     }
+
+                    this.setAttribute('evt-submit');
+                    this.setClassName('input-widget-button');
+                    this.clear();
                 }
             }
         </script>
@@ -498,11 +503,13 @@
                             attributes.class = RdsText.concat('input-widget-input', attributes.class);
                             this.replacement = createElement('input', attributes);
                         }
+                        /*
                         else if (type in { button:0, submit:0 }) {
                             attributes.type = type;
                             attributes.class = RdsText.concat('input-widget-button', attributes.class);
                             this.replacement = createElement('input', attributes);
                         }
+                        */
                         else if (type == 'checkbox') {
                             attributes.type = type;
                             attributes.class = RdsText.concat('input-widget-checkbox', attributes.class);
@@ -530,7 +537,7 @@
                         }
                     }
 
-                    this.replacement.setAttribute('id', Crypto.generateUUID());
+                    //this.replacement.setAttribute('id', Crypto.generateUUID());
                 }
 
                 layoutSelect() {

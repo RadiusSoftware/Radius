@@ -17,12 +17,22 @@
         <script>
             class FormWidget extends Widget {
                 /*
-                init() {
-                    super.init();
-                    let formElement = this.createReplacement('form', false);
-                    formElement.setInnerHtml('*** HTML FORM ****');
+                async onClick(message) {
+                    message.event.preventDefault();
+                    console.log('click');
+                    console.log(message);
+                }
+
+                async onReset(message) {
+                    message.event.preventDefault();
+                    console.log('reset');
+                    console.log(message);
                 }
                 */
+
+                async onEventSubmit(message) {
+                    console.log(message);
+                }
             }
         </script>
     </widget>

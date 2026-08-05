@@ -722,37 +722,7 @@ define(class DocElement extends DocNode {
 
         for (let attribute of this.getAttributes()) {
             try {
-                if (attribute.name.startsWith('evt-')) {
-                    let eventName = attribute.name.substring(4);
-
-                    if (eventName == 'all') {
-                        eventName = '*';
-                    }
-
-                    let handlerName;
-                    let value = attribute.value;
-
-                    if (value) {
-                        handlerName = `on${value[0].toUpperCase()}${value.substring(1)}`;
-                    }
-                    else {
-                        handlerName = `on${eventName[0].toUpperCase()}${eventName.substring(1)}`;
-                    }
-                    
-                    this.on(eventName, message => {
-                        let docElement = this;
-
-                        while (docElement) {
-                            if (docElement.handleEvent(handlerName, message)) {
-                                message.event.preventDefault();
-                                return;
-                            }
-
-                            docElement = docElement.getParent();
-                        }
-                    });
-                }
-                else if (attribute.name.startsWith('rds-')) {
+                if (attribute.name.startsWith('rds-')) {
                     let rdsName = attribute.name.substring(4);
                     let snakeCase = rdsName.replaceAll('-', '_');
                     let pascalCase = RdsText.toPascalCase(snakeCase);
@@ -1133,15 +1103,6 @@ define(class DocElement extends DocNode {
         return this.node.tagName.toLowerCase();
     }
 
-    handleEvent(handlerName, message) {
-        if (typeof this[handlerName] == 'function') {
-            this[handlerName](message);
-            return true;
-        }
-
-        return false;
-    }
-
     hasAttribute(name) {
         return mkRdsEnum(...this.node.getAttributeNames()).has(name);
     }
@@ -1413,9 +1374,19 @@ define(class DocElement extends DocNode {
         return this;
     }
 
-    substitute(tagName) {
+    substitute(arg) {
+        let newNode;
         let oldNode = this.node;
-        let newNode = createElement(tagName).node;
+
+        if (arg instanceof Element) {
+            newNode = arg;
+        }
+        else if (StringType.verify(arg)) {
+            newNode = createElement(arg).node;
+        }
+        else {
+            return this;
+        }
 
         for (const attr of oldNode.attributes) {
             newNode.setAttribute(attr.name, attr.value);
@@ -1428,11 +1399,62 @@ define(class DocElement extends DocNode {
         oldNode.parentNode.replaceChild(newNode, oldNode);
         this.node = newNode;
         newNode[nodeKey] = this;
-        delete oldNode[nodeKey];
+        DocElementSubstitutions.register(oldNode, newNode);
         return this;
     }
 
     [Symbol.iterator]() {
         return this.getChildElements()[Symbol.iterator]();
+    }
+});
+
+
+/*****
+ * This singleton is used for tracking element substitions for DocElements.
+ * This code supports multiple substitutions for a single DocElement, but I
+ * don't think that user case will ever arise in practise.
+*****/
+singleton(class DocElementSubstitutions {
+    constructor() {
+        this.nodes = new WeakMap();
+        this.docElements = new WeakMap();
+    }
+
+    hasDocElement(docElement) {
+        return this.docElements.has(docElement);
+    }
+
+    hasNode(node) {
+        return this.nodes.has(node);
+    }
+
+    register(oldNode, newNode) {
+        let docElement = oldNode[nodeKey];
+
+        if (this.docElements.has(docElement)) {
+            let array = this.docElements.get(docElement);
+            array.push(newNode);
+            this.nodes[newNode] = docElement;
+        }
+        else {
+            this.docElements.set(docElement, [ oldNode, newNode ]);
+            this.nodes[oldNode] = docElement;
+            this.nodes[newNode] = docElement;
+        }
+
+        return docElement;
+    }
+
+    searchDocElement(docElement) {
+        if (this.docElements.has(docElement)) {
+            return this.docElements.gget(docElement);
+        }
+        else {
+            return [];
+        }
+    }
+
+    searchNode(node) {
+        return this.nodes.get(node);
     }
 });
