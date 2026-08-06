@@ -10,13 +10,11 @@
             class ButtonWidget extends Widget {
                 init() {
                     super.init();
+                    this.setClassName('input-widget-button');
 
                     if (!(this.getAttribute('type') in { submit:0, reset:0, button:0 } )) {
                         this.setAttribute('type', 'button');
                     }
-
-                    this.setClassName('input-widget-button');
-                    this.clear();
                 }
             }
         </script>
@@ -304,9 +302,64 @@
         </style>
     </widget>
     -->
+    <widget tagname="essay-widget">
+        <script type="settings">
+            {
+                "substitute": "textarea"
+            }
+        </script>
+        <script>
+            class EssayWidget extends Widget {
+                init() {
+                    super.init();
+                    this.setClassName('input-widget-essay');
+                }
+            }
+        </script>
+    </widget>
     <widget tagname="input-widget">
+        <script type="settings">
+            {
+                "substitute": "input"
+            }
+        </script>
         <script>
             class InputWidget extends Widget {
+                static styles = {
+                    color: 'input-widget-input',
+                    date: 'input-widget-input',
+                    'datetime-local': 'input-widget-input',
+                    email: 'input-widget-input',
+                    image: 'input-widget-input',
+                    month: 'input-widget-input',
+                    number: 'input-widget-input',
+                    password: 'input-widget-input',
+                    range: 'input-widget-input',
+                    tel: 'input-widget-input',
+                    text: 'input-widget-input',
+                    time: 'input-widget-input',
+                    url: 'input-widget-input',
+                    week: 'input-widget-input',
+                };
+
+                init() {
+                    super.init();
+                    let type = this.getAttribute('type');
+
+                    if (type in InputWidget.styles) {
+                        this.setClassName(InputWidget.styles[type]);
+                    }
+                    else {
+                        this.setAttribute('type', 'text');
+                        this.setClassName(InputWidget.styles.text);
+                    }
+                }
+            }
+        </script>
+    </widget>
+    <widget tagname="inputx-widget">
+        <script>
+            class InputXWidget extends Widget {
                 static stdInputTypes = mkRdsEnum(
                     'color',
                     'date',
@@ -633,6 +686,4 @@
             <svg rds-shape="circle"></svg>
         </html>
     </widget>
-    <strings lang="en">
-    </strings>
 </bundle>

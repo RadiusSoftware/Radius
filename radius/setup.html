@@ -1,31 +1,26 @@
 <!DOCTYPE httpx>
 <bundle>
-    <!--
-    <httpx>
-        <opt key="title" type="StringType" value="##setup##"></opt>
-        <opt key="tagName" type="StringType" value="setup-app"></opt>
-        <opt key="setting" type="StringType" name="setupPath" value="$$path"></opt>
-    </httpx>
-    -->
     <widget tagname="setup-app">
-        <script>
-            class SetupApp extends Widget {
-                init() {
-                    super.init();
-                    /*
-                    (async () => {
-                        await pause(2000);
-                        Controller.setValue('setupState', 'setup#mode')
-                    })();
-                    */
-                }
-            }
-        </script>
         <script type="settings">
             {
                 "type": "app",
                 "title": "##setup##",
                 "path": "setupPath"
+            }
+        </script>
+        <script useage="class">
+            class SetupApp extends Widget {
+                init() {
+                    super.init();
+                    
+                    /*
+                    console.log(Controller.getValue());
+                    (async () => {
+                        await pause(2000);
+                        Controller.setValue('acme.operator.org', 'Radius Software')
+                    })();
+                    */
+                }
             }
         </script>
         <html class="fill">

@@ -48,8 +48,8 @@ Doc.on('DOMContentLoaded', async () => {
     });
 
     apiEndpoints = fromJson(mkBuffer(apiEndpoints, 'hex').toString());
-    wrapTree(document.documentElement);
     Api['#ImportEndpoints'](apiEndpoints);
+    wrapTree(document.documentElement);
 
     for (let packageName of await Api.getPackageLoadOrder()) {
         await Packages.require(packageName);

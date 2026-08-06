@@ -45,8 +45,9 @@ define(class SetupApp extends Webapp {
         {
             acmeSettings: 'acme',
         }
-    )](trx, acme) {
+    )](trx, acmeSettings) {
         console.log('*** ACME TIME ***');
         console.log(acmeSettings);
+        return '** RESPONSE SENT **';
     }
 });

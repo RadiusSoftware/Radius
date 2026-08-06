@@ -31,13 +31,10 @@
  * function and no more than the webapp requires.
 *****/
 singleton(class Api {
-    ['#DefineEndpoint'](name, args) {
-        this[name] = async (...args) => {
-            return this['#ExecuteEndpoint'](name, endpoint.args, args);
-        };
-        return this;
+    constructor() {
+        this.args = {};
     }
-
+    
     async ['#ExecuteEndpoint'](name, definedArgs, callingArgs) {
         if (callingArgs.length != definedArgs.length) {
             return mkFailure(`Invalid number of args provided for API call "${name}"`);
@@ -47,8 +44,20 @@ singleton(class Api {
             let definedArg = definedArgs[i];
             let callingArg = callingArgs[i];
 
-            if (definedArg.shape.verify(callingArg) !== true) {
-                return mkFailure(`Invalid argument "${definedArg.name}" provided for API call "${name}"`);
+            if (definedArg.shape instanceof RdsShape) {
+                if (definedArg.shape.verify(callingArg) !== true) {
+                    return mkFailure(`Invalid argument "${definedArg.name}" provided for API call "${name}"`);
+                }
+            }
+            else if (StringType.verify(definedArg.shape)) {
+                let shape = Controller.getShape(definedArg.shape);
+
+                if (shape.verify(callingArg) !== true) {
+                    return mkFailure(`Invalid argument "${definedArg.name}" provided for API call "${name}"`);
+                }
+            }
+            else {
+                return mkFailure(`Invalid argument shape "${definedArg.name}" provided for API call "${name}"`);
             }
         }
         
@@ -62,11 +71,25 @@ singleton(class Api {
 
     ['#ImportEndpoints']() {
         for (let endpoint of apiEndpoints) {
+            this.args[endpoint.name] = endpoint.args;
+
             this[endpoint.name] = async (...args) => {
                 return this['#ExecuteEndpoint'](endpoint.name, endpoint.args, args);
             };
         }
 
         return this;
+    }
+
+    ['#PrepareArgs'](name) {
+        let args = [];
+
+        if (name in this.args) {
+            for (let arg of this.args[name]) {
+                args.push(Controller.getValue(arg.shape));
+            }
+        }
+
+        return args;
     }
 });

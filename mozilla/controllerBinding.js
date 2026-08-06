@@ -127,7 +127,7 @@ define(class ControllerBinding {
 
             byDocElement.bindings.push(this);
             byDotted.bindings.push(this);
-            this.push(); 
+            this.push();
             return this;
         }
         
@@ -216,11 +216,7 @@ define(class ControllerBinding {
     pull() {
         this.disable();
 
-        if (this.type == 'inner') {
-            let newValue = this.docElement.getInnerHtml();
-            Controller.setValue(this.dotted, newValue);
-        }
-        else if (this.type == 'input') {
+        if (this.type == 'input') {
             switch (this.docElement.getAttribute('type')) {
                 case 'number':
                     Controller.setValue(this.dotted, this.docElement.getProperty('valueAsNumber'));
