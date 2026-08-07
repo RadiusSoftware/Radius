@@ -19,6 +19,22 @@
             }
         </script>
     </widget>
+    <widget tagname="checkbox-widget">
+        <script type="settings">
+            {
+                "substitute": "input"
+            }
+        </script>
+        <script>
+            class CheckBoxWidget extends Widget {
+                init() {
+                    super.init();
+                    this.setAttribute('type', 'checkbox');
+                    this.setClassName('input-widget-checkbox');
+                }
+            }
+        </script>
+    </widget>
     <!--
     <widget tagname="dataeditor-widget">
         <script>
@@ -357,6 +373,10 @@
             }
         </script>
     </widget>
+    <!-- ***************************************************************************************************************** -->
+    <!-- ***************************************************************************************************************** -->
+    <!-- ***************************************************************************************************************** -->
+    <!-- ***************************************************************************************************************** -->
     <widget tagname="inputx-widget">
         <script>
             class InputXWidget extends Widget {
@@ -563,7 +583,6 @@
                             attributes.class = RdsText.concat('input-widget-button', attributes.class);
                             this.replacement = createElement('input', attributes);
                         }
-                        */
                         else if (type == 'checkbox') {
                             attributes.type = type;
                             attributes.class = RdsText.concat('input-widget-checkbox', attributes.class);
@@ -628,6 +647,10 @@
             }
         </script>
     </widget>
+    <!-- ***************************************************************************************************************** -->
+    <!-- ***************************************************************************************************************** -->
+    <!-- ***************************************************************************************************************** -->
+    <!-- ***************************************************************************************************************** -->
     <widget tagname="toggle-widget">
         <script>
             class ToggleWidget extends Widget {

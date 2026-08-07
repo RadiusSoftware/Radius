@@ -18,7 +18,7 @@
                     (async () => {
                         await pause(2000);
                         Controller.setValue('test', false);
-                    })//()
+                    })()
                     // **********************************************************************************
                     // **********************************************************************************
                 }
@@ -33,7 +33,7 @@
                         <div></div>
                         <div></div>
                         <div>
-                            <toggle-widget rds-bind="test" rds-bind-attr-toggle="disabled,test"></toggle-widget><br>
+                            <checkbox-widget rds-bind="test" rds-bind-attr-toggle="disabled,test"></checkbox-widget><br>
                             <span rds-bind="test"></span><br>
                             <button-widget type="submit">##setupAcme##</button-widget>
                         </div>
