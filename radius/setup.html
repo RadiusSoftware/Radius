@@ -12,14 +12,15 @@
             class SetupApp extends Widget {
                 init() {
                     super.init();
-                    
-                    /*
-                    console.log(Controller.getValue());
+
+                    // **********************************************************************************
+                    // **********************************************************************************
                     (async () => {
                         await pause(2000);
-                        Controller.setValue('acme.operator.org', 'Radius Software')
-                    })();
-                    */
+                        Controller.setValue('test', false);
+                    })//()
+                    // **********************************************************************************
+                    // **********************************************************************************
                 }
             }
         </script>
@@ -32,6 +33,8 @@
                         <div></div>
                         <div></div>
                         <div>
+                            <toggle-widget rds-bind="test" rds-bind-attr-toggle="disabled,test"></toggle-widget><br>
+                            <span rds-bind="test"></span><br>
                             <button-widget type="submit">##setupAcme##</button-widget>
                         </div>
                         <div></div>
@@ -40,7 +43,7 @@
                         <div></div>
                     </grid-widget>
                 </form-widget>
-                <form-widget rds-mode="setup#mode" rds-submit="setMode">
+                <form-widget class="fill" rds-mode="setup#mode" rds-submit="setMode">
                     ** MODE SETUP **
                 </form-widget>
             </selector-widget>

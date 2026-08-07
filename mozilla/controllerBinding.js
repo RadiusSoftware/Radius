@@ -33,7 +33,7 @@ define(class ControllerBinding {
         this.expr = expr;
         this.dotted = dotted;
         this.valid = false;
-        this.enabled = true;
+        this.blockingFeedback = false;
         
         if (type == 'inner') {
             this.valid = true;
@@ -160,16 +160,6 @@ define(class ControllerBinding {
         return this;
     }
 
-    disable() {
-        this.enabled = false;
-        return this;
-    }
-
-    enable() {
-        this.enabled = true;
-        return this;
-    }
-
     static get(controllerBinding) {
         if (controllerBinding.valid) {
             if (controllerBinding.dotted in Controller.bindingsByDotted) {
@@ -205,110 +195,110 @@ define(class ControllerBinding {
         return ControllerBinding.get(controllerBinding) != null;
     }
 
-    isDisabled() {
-        return !this.enabled;
-    }
-
-    isEnabled() {
-        return this.enabled;
-    }
-
     pull() {
-        this.disable();
+        if (!this.blockingFeedback) {
+            this.blockingFeedback = true;
 
-        if (this.type == 'input') {
-            switch (this.docElement.getAttribute('type')) {
-                case 'number':
-                    Controller.setValue(this.dotted, this.docElement.getProperty('valueAsNumber'));
-                    break;
+            if (this.type == 'input') {
+                switch (this.docElement.getAttribute('type')) {
+                    case 'number':
+                        Controller.setValue(this.dotted, this.docElement.getProperty('valueAsNumber'));
+                        break;
 
-                case 'date':
-                case 'datetime-local':
-                    Controller.setValue(this.dotted, this.docElement.getProperty('valueAsDate'));
-                    break;
+                    case 'date':
+                    case 'datetime-local':
+                        Controller.setValue(this.dotted, this.docElement.getProperty('valueAsDate'));
+                        break;
 
-                case 'radio':
-                    Controller.setValue(this.dotted, this.docElement.getAttribute('value'));
-                    break;
+                    case 'radio':
+                        Controller.setValue(this.dotted, this.docElement.getAttribute('value'));
+                        break;
 
-                case 'checkbox':
-                    Controller.setValue(this.dotted, this.docElement.getProperty('checked'));
-                    break;
+                    case 'checkbox':
+                        Controller.setValue(this.dotted, this.docElement.getProperty('checked'));
+                        break;
 
-                default:
-                    Controller.setValue(this.dotted, this.docElement.getProperty('value'));
-                    break;
+                    default:
+                        Controller.setValue(this.dotted, this.docElement.getProperty('value'));
+                        break;
+                }
             }
-        }
-        else if (this.type == 'attr') {
-            let newValue = this.docElement.getAttribute(this.name);
-            Controller.setValue(this.dotted, newValue);
-        }
-        else if (this.type == 'attrToggle') {
-            let bool = this.docElement.hasAttribute(this.name);
-            Controller.setValue(this.dotted, bool);
-        }
-        else if (this.type == 'style') {
-            let stylePropertyValue = this.docElement.getStyle(this.name);
-            Controller.setValue(this.dotted, stylePropertyValue);
-        }
+            else if (this.type == 'attr') {
+                let newValue = this.docElement.getAttribute(this.name);
+                Controller.setValue(this.dotted, newValue);
+            }
+            else if (this.type == 'attrToggle') {
+                let bool = this.docElement.hasAttribute(this.name);
+                Controller.setValue(this.dotted, bool);
+            }
+            else if (this.type == 'style') {
+                let stylePropertyValue = this.docElement.getStyle(this.name);
+                Controller.setValue(this.dotted, stylePropertyValue);
+            }
 
-        this.enable();
+            this.blockingFeedback = false;
+        }
     }
 
     push() {
-        if (this.type == 'inner') {
-            this.docElement.setInnerHtml(this.expr.eval());
-        }
-        else if (this.type == 'input') {
-            if (this.docElement.getAttribute('type') == 'checkbox') {
-                this.docElement.setProperty('checked', this.expr.eval());
+        if (!this.blockingFeedback) {
+            this.blockingFeedback = true;
+
+            if (this.type == 'inner') {
+                this.docElement.setInnerHtml(this.expr.eval());
             }
-            else if (this.docElement.getAttribute('type') == 'radio') {
-                if (this.docElement.getAttribute('value') == this.expr.eval()) {
-                    this.docElement.setProperty('checked', true);
+            else if (this.type == 'input') {
+                if (this.docElement.getAttribute('type') == 'checkbox') {
+                    this.docElement.setProperty('checked', this.expr.eval());
+                }
+                else if (this.docElement.getAttribute('type') == 'radio') {
+                    if (this.docElement.getAttribute('value') == this.expr.eval()) {
+                        this.docElement.setProperty('checked', true);
+                    }
+                    else {
+                        this.docElement.setProperty('checked', false);
+                    }
                 }
                 else {
-                    this.docElement.setProperty('checked', false);
+                    this.docElement.setProperty('value', this.expr.eval());
                 }
             }
-            else {
-                this.docElement.setProperty('value', this.expr.eval());
+            else if (this.type == 'attr') {
+                this.docElement.setAttribute(this.name, this.expr.eval());
             }
-        }
-        else if (this.type == 'attr') {
-            this.docElement.setAttribute(this.name, this.expr.eval());
-        }
-        else if (this.type == 'attrToggle') {
-            if (this.expr.eval() == true) {
-                this.docElement.setAttribute(this.name);
+            else if (this.type == 'attrToggle') {
+                if (this.expr.eval() == true) {
+                    this.docElement.setAttribute(this.name);
+                }
+                else {
+                    this.docElement.clearAttribute(this.name);
+                }
             }
-            else {
-                this.docElement.clearAttribute(this.name);
+            else if (this.type == 'method') {
+                this.docElement[this.name](this.expr.eval());
             }
-        }
-        else if (this.type == 'method') {
-            this.docElement[this.name](this.expr.eval());
-        }
-        else if (this.type == 'property') {
-            this.docElement.setProperty(this.name, this.expr.eval());
-        }
-        else if (this.type == 'show') {
-            let value = this.expr.eval();
+            else if (this.type == 'property') {
+                this.docElement.setProperty(this.name, this.expr.eval());
+            }
+            else if (this.type == 'show') {
+                let value = this.expr.eval();
 
-            if (value && this.values.has(value)) {
-                if (this.docElement.getStyle('display') == 'none') {
-                    this.docElement.setStyle('display', this.display);
+                if (value && this.values.has(value)) {
+                    if (this.docElement.getStyle('display') == 'none') {
+                        this.docElement.setStyle('display', this.display);
+                    }
+                }
+                else if (this.docElement.getStyle('display') != 'none') {
+                    this.docElement.setStyle('display', 'none');
                 }
             }
-            else if (this.docElement.getStyle('display') != 'none') {
-                this.docElement.setStyle('display', 'none');
+            else if (this.type == 'style') {
+                let styleProperty = {};
+                styleProperty[this.name] = this.expr.eval();
+                this.docElement.setStyle(styleProperty);
             }
-        }
-        else if (this.type == 'style') {
-            let styleProperty = {};
-            styleProperty[this.name] = this.expr.eval();
-            this.docElement.setStyle(styleProperty);
+
+            this.blockingFeedback = false;
         }
     }
 });

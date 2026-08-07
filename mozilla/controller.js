@@ -54,29 +54,31 @@ singleton(class Controller extends Emitter {
     }
 
     bindAttr(docElement, attrName, ref) {
-        return this.setBinding(docElement, ref, 'attr', attrName);
+        this.setBinding(docElement, ref, 'attr', attrName);
+        return this;
     }
 
     bindAttrToggle(docElement, attrName, ref) {
-        return this.setBinding(docElement, ref, 'attrToggle', attrName);
+        this.setBinding(docElement, ref, 'attrToggle', attrName);
+        return this;
     }
 
     bindInner(docElement, ref) {
-        return this.setBinding(docElement, ref, 'inner');
+        this.setBinding(docElement, ref, 'inner');
+        return this;
     }
 
     bindInput(docElement, ref) {
-        return this.setBinding(docElement, ref, 'input');
+        this.setBinding(docElement, ref, 'input');
+        return this;
     }
 
     bindMethod(docElement, methodName, ...args) {
-        let bindings = [];
-
         for (let dotted of args) {
-            bindings = bindings.concat(this.setBinding(docElement, dotted, 'method', methodName));
+            this.setBinding(docElement, dotted, 'method', methodName);
         }
 
-        return bindings;
+        return this;
     }
 
     bindProperty(docElement, property, ref) {
@@ -84,11 +86,13 @@ singleton(class Controller extends Emitter {
     }
 
     bindShow(docElement, ref, ...values) {
-        return this.setBinding(docElement, ref, 'show', values);
+        this.setBinding(docElement, ref, 'show', values);
+        return this;
     }
 
     bindStyle(docElement, styleProperty, ref) {
-        return this.setBinding(docElement, ref, 'style', styleProperty);
+        this.setBinding(docElement, ref, 'style', styleProperty);
+        return this;
     }
 
     defineData(shape, value) {

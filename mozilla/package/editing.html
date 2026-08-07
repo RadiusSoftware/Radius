@@ -550,12 +550,14 @@
                     if (this.hasAttribute('type')) {
                         let type = this.getAttribute('type');
 
+                        if (false) {
+                        }
+                        /*
                         if (InputWidget.stdInputTypes.has(type)) {
                             attributes.type = type;
                             attributes.class = RdsText.concat('input-widget-input', attributes.class);
                             this.replacement = createElement('input', attributes);
                         }
-                        /*
                         else if (type in { button:0, submit:0 }) {
                             attributes.type = type;
                             attributes.class = RdsText.concat('input-widget-button', attributes.class);
@@ -567,10 +569,12 @@
                             attributes.class = RdsText.concat('input-widget-checkbox', attributes.class);
                             this.replacement = createElement('input', attributes);
                         }
+                        /*
                         else if (type == 'essay') {
                             attributes.class = RdsText.concat('input-widget-essay', attributes.class);
                             this.replacement = createElement('textarea', attributes);
                         }
+                        */
                         else if (type == 'fieldset') {
                             attributes.class = 'input-widget-radio-fieldset';
                             RdsData.filter(attributes, (key, value) => key.startsWith('rds-bind'));
@@ -584,9 +588,11 @@
                             this.buildSelectOptions();
                             this.replacement.once('focusin', message => this.layoutSelect());
                         }
+                        /*
                         else if (type == 'toggle') {
                             this.replacement = createElement('toggle-widget', attributes);
                         }
+                        */
                     }
 
                     //this.replacement.setAttribute('id', Crypto.generateUUID());
@@ -625,24 +631,19 @@
     <widget tagname="toggle-widget">
         <script>
             class ToggleWidget extends Widget {
+                getChecked() {
+                    return this.checkbox.getProperty('checked');
+                }
+
                 init() {
                     this.checkbox = this.getChildElementAt(0);
                     this.knob = this.getChildElementAt(1);
-                    this.disabled = false;
-                    this.dotted = '';
 
                     if (this.getRdsBind) {
                         this.dotted = this.getRdsBind();
                         delete this.getRdsBind;
+                        Controller.bindMethod(this, 'setChecked', this.dotted);
                     }
-
-                    if (this.hasAttribute('disabled')) {
-                        this.disabled = true;
-                        this.clearAttribute('disabled');
-                        this.checkbox.setAttriute('disabled');
-                    }
-
-                    super.init();
 
                     if (this.dotted) {
                         Controller.bindInput(this.checkbox, this.dotted);
@@ -654,15 +655,35 @@
                         });
                     }
 
-                    this.update();
                     this.setStyle('transition-delay', '.45s');
                     this.knob.setStyle('transition-duration', '.45s');
+                    this.update();
                     
                     this.on('click', message => {
-                        if (!this.disabled) {
-                            this.checkbox.node.click();
+                        if (!this.hasAttribute('disabled')) {
+                            let checked = !this.getChecked();
+                            Controller.setValue(this.dotted, checked);
                         }
                     });
+                    
+                    Doc.on('Attr-Mutation', message => {
+                        if (this.isSame(message.target)) {
+                            if (message.attributeName == 'disabled') {
+                                this.update();
+                            }
+                        }
+                    });
+
+                    super.init();
+                }
+
+                setChecked(checked) {
+                    if (checked != this.getChecked()) {
+                        this.checkbox.setProperty('checked', checked);
+                        this.update();
+                    }
+
+                    return this;
                 }
 
                 update() {
@@ -677,6 +698,13 @@
                         this.knob.clearClassName('toggle-widget-knob-selected');
                         this.setClassName('toggle-widget-unselected');
                         this.knob.setClassName('toggle-widget-knob-unselected');
+                    }
+
+                    if (this.hasAttribute('disabled')) {
+                        this.setClassName('disabled');
+                    }
+                    else {
+                        this.clearClassName('disabled');
                     }
                 }
             }

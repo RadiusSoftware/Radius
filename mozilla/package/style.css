@@ -169,10 +169,11 @@ body {
     border-radius: 15px;
 }
 
-.container {
-    margin: 0px;
-    padding: 0px;
-    border: none;
+.disabled {
+    opacity: .4;
+    color: var(--disabled-button-color);
+    cursor: default!important;
+
 }
 
 .fill {
@@ -676,7 +677,7 @@ ul.list-unordered > li {
     user-select: none;
     box-sizing: border-box;
     width: 80px;
-    height: 24px;
+    height: 25px;
     margin: 0px;
     padding: 0px;
     background-color: var(--toggle-unselected-background-color);
@@ -692,7 +693,7 @@ ul.list-unordered > li {
     user-select: none;
     box-sizing: border-box;
     width: 80px;
-    height: 24px;
+    height: 25px;
     margin: 0px;
     padding: 0px;
     background-color: var(--toggle-selected-background-color);
@@ -707,7 +708,7 @@ ul.list-unordered > li {
     width: 20px;
     height: 20px;
     margin-top: 2px;
-    margin-bottom: 0px;
+    margin-bottom: 2px;
     margin-left: 2px;
     margin-right: 0px;
     box-sizing: border-box;
@@ -719,7 +720,7 @@ ul.list-unordered > li {
     width: 20px;
     height: 20px;
     margin-top: 2px;
-    margin-bottom: 0px;
+    margin-bottom: 2px;
     margin-left: 58px;
     margin-right: 0px;
     box-sizing: border-box;
