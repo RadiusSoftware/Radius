@@ -81,8 +81,14 @@ singleton(class Controller extends Emitter {
         return this;
     }
 
+    bindOptions(docElement, ref) {
+        this.setBinding(docElement, 'options', ref);
+        return this;
+    }
+
     bindProperty(docElement, property, ref) {
-        return this.setBinding(docElement, ref, 'property', property);
+        this.setBinding(docElement, ref, 'property', property);
+        return this;
     }
 
     bindShow(docElement, ref, ...values) {
@@ -95,22 +101,24 @@ singleton(class Controller extends Emitter {
         return this;
     }
 
-    defineData(shape, value) {
-        if (shape instanceof RdsShape && shape.type == ObjectType) {
-            this.shape = shape;
-        }
-        else if (ObjectType.verify(shape)) {
-             this.hape = mkRdsShape(shape);
-        }
-        else {
-            throwError(`Controller define(): shape must be either of type RdsShape / Object.`);
-        }
+    defineData(shape, value, dotted) {
+        if (dotted) {
+            if (this.shape instanceof RdsShape) {
+                let rdsShape = shape instanceof RdsShape ? shape : mkRdsShape(shape);
 
-        if (this.shape.verify(value)) {
-            this.value = value;
+                if (rdsShape.verify(value)) {
+                    this.shape.set(dotted, shape);
+                    RdsData.set(this.value, dotted, value);
+                }
+            }
         }
         else {
-            throwError('Controller define(): invalid value provided.');
+            if (shape instanceof RdsShape && shape.getType() == ObjectType) {
+                if (shape.verify(value)) {
+                    this.shape = shape;
+                    this.value = value;
+                }
+            }
         }
 
         return this;
@@ -142,10 +150,6 @@ singleton(class Controller extends Emitter {
         }
 
         return this;
-    }
-
-    getAppWidget() {
-        return this.appWidget;
     }
 
     getShape(dotted) {
@@ -189,7 +193,7 @@ singleton(class Controller extends Emitter {
                     }
                 }
             }
-            
+
             Packages.processNode(docNode);
             docNode.init();
 
@@ -218,6 +222,17 @@ singleton(class Controller extends Emitter {
                     this.bindMethod(docNode, args[0], ...args.slice(1));
                 }
 
+                if (docNode.getRdsBindOptions) {
+                    let dotted = docNode.getRdsBindOptions();
+                    let shape = this.getShape(dotted);
+
+                    if (shape && shape.getType() == ArrayType) {
+                        if (FunctionType.verify(docNode['setOptions'])) {
+                            this.bindOptions(docNode, dotted);
+                        }
+                    }
+                }
+
                 if (docNode.getRdsBindProperty) {
                     let [ property, dotted ] = docNode.getRdsBindProperty().split(',');
                     this.bindProperty(docNode, property, dotted);
@@ -236,6 +251,11 @@ singleton(class Controller extends Emitter {
 
             this.nodes.set(docNode, {});
         }
+    }
+
+    isArray(ref) {
+        let shape = this.shape.get(ref);
+        return shape && shape.type === ArrayType;
     }
 
     onMutationAttr(message) {
@@ -266,6 +286,17 @@ singleton(class Controller extends Emitter {
                 }
             }
         }
+    }
+
+    revokeData(dotted) {
+        let shape = this.shape.get(dotted);
+
+        if (shape) {
+            this.shape.delete(dotted);
+            RdsData.delete(this.value, dotted);
+        }
+
+        return this;
     }
 
     setBinding(docElement, ref, type, name) {

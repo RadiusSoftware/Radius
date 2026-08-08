@@ -73,6 +73,10 @@ define(class ControllerBinding {
                 this.name = name;
             }
         }
+        else if (type == 'options') {
+            this.valid = true;
+            this.type = type;
+        }
         else if (type == 'property') {
             if (typeof name == 'string' && name != '') {
                 this.valid = true;
@@ -276,6 +280,9 @@ define(class ControllerBinding {
             }
             else if (this.type == 'method') {
                 this.docElement[this.name](this.expr.eval());
+            }
+            else if (this.type == 'options') {
+                this.docElement.setOptions(this.expr.eval());
             }
             else if (this.type == 'property') {
                 this.docElement.setProperty(this.name, this.expr.eval());

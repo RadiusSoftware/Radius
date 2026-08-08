@@ -109,7 +109,7 @@ singleton(class Packages {
     }
 
     async openApplication(docElement) {
-        Controller.appWidget = createElementFromOuterHtml(`<${webappSettings.tagName}></${webappSettings.tagName}>`);
+        const appWidget = createElementFromOuterHtml(`<${webappSettings.tagName}></${webappSettings.tagName}>`);
         
         if (webappSettings.title) {
             Doc.setTitle(this.processText(webappSettings.title));
@@ -124,7 +124,7 @@ singleton(class Packages {
         }
 
         Doc.getBody().clear();
-        Doc.getBody().append(Controller.getAppWidget());
+        Doc.getBody().append(appWidget);
     }
 
     processNode(docNode) {

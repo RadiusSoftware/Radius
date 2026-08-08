@@ -74,6 +74,28 @@ define(class RdsShape {
         }
     }
 
+    delete(dotted) {
+        let rdsShape = this;
+        let segments = RdsText.split(dotted, '.');
+
+        while (segments.length > 1) {
+            if (Object.is(rdsShape.type, ObjectType)) {
+                if (segments[0] in rdsShape.keys) {
+                    rdsShape = rdsShape.keys[segments.shift()];
+                }
+            }
+            else {
+                return this;
+            }
+        }
+
+        if (Object.is(rdsShape.type, ObjectType)) {
+            delete rdsShape.keys[segments[0]];
+        }
+
+        return this;
+    }
+
     static fromJson(obj) {
         let shape = mkRdsShape();
         shape.type = obj.type;
@@ -161,6 +183,29 @@ define(class RdsShape {
 
     isScalar() {
         return !this.isArray();
+    }
+
+    set(dotted, shape) {
+        let rdsShape = this;
+        let segments = RdsText.split(dotted, '.');
+
+        while (segments.length > 1) {
+            if (Object.is(rdsShape.type, ObjectType)) {
+                if (segments[0] in rdsShape.keys) {
+                    rdsShape = rdsShape.keys[segments.shift()];
+                }
+            }
+            else {
+                return this;
+            }
+        }
+
+        if (Object.is(rdsShape.type, ObjectType)) {
+            !(shape instanceof RdsShape) ? shape = mkRdsShape(shape) : null;
+            rdsShape.keys[segments[0]] = shape;
+        }
+
+        return this;
     }
 
     verify(value) {

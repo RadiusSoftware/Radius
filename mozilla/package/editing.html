@@ -380,6 +380,7 @@
     <widget tagname="inputx-widget">
         <script>
             class InputXWidget extends Widget {
+                /*
                 static stdInputTypes = mkRdsEnum(
                     'color',
                     'date',
@@ -402,6 +403,7 @@
                     value: StringType,
                     _key: StringType,
                 }]);
+                */
 
                 buildFieldsetOptions(fsAttributes) {
                     let options = this.buildOptions();
@@ -479,6 +481,7 @@
                     }
                 }
 
+                /*
                 buildOptions() {
                     let options = [];
 
@@ -532,6 +535,7 @@
 
                     return options;
                 }
+                */
 
                 buildSelectOptions() {
                     let options = this.buildOptions();
@@ -601,13 +605,13 @@
                             this.buildFieldsetOptions(attributes);
                             this.buildFieldsetLegend();
                         }
+                        /*
                         else if (type == 'select') {
                             attributes.class = 'input-widget-select';
                             this.replacement = createElement('select', attributes);
                             this.buildSelectOptions();
                             this.replacement.once('focusin', message => this.layoutSelect());
                         }
-                        /*
                         else if (type == 'toggle') {
                             this.replacement = createElement('toggle-widget', attributes);
                         }
@@ -651,6 +655,98 @@
     <!-- ***************************************************************************************************************** -->
     <!-- ***************************************************************************************************************** -->
     <!-- ***************************************************************************************************************** -->
+    <widget tagname="select-widget">
+        <script type="settings">
+            {
+                "substitute": "select"
+            }
+        </script>
+        <script>
+            class SelectWidget extends Widget {
+                createOptionElement(option) {
+                    let optionElement = createElement('option', {
+                        value: option.value,
+                        class: 'input-widget-select-option',
+                    });
+
+                    let innerElements;
+
+                    if (option.shape) {
+                        innerElements = createElementFromOuterHtml(
+                            `<span>${option.text.trim()}</span>` +
+                            `<span class="input-widget-select-option-svg"><svg class="icon icon-small" rds-shape="${option.shape}"></svg></span>`
+                        );
+                    }
+                    else if (option.icon) {
+                        /*
+                        innerElements = createElementFromOuterHtml(
+                            `<span>${option.text.trim()}</span>` +
+                            `<span class="input-widget-select-option-svg"><svg class="icon icon-small" rds-shape="${opt.shape}"></svg></span>`
+                        );
+                        */
+                    }
+                    else {
+                        innerElements = createElementFromOuterHtml(
+                            `<span>${option.text.trim()}</span>` +
+                            `<span class="input-widget-select-option-svg"></span>`
+                        );
+                    }
+                    
+                    return optionElement.append(...innerElements);
+                }
+
+                init() {
+                    // *******************************************************************
+                    // *******************************************************************
+                    Controller.defineData(StringType, 'ONE', 'test');
+
+                    Controller.defineData(
+                        [ { value: StringType, text: StringType } ],
+                        [
+                            { value: 'ONE', text: '##radius.org.ONE##' },
+                            { value: 'TWO', text: '##radius.org.TWO##' },
+                            { value: 'THREE', text: '##radius.org.THREE##' },
+                            { value: 'FOUR', text: '##radius.org.FOUR##' },
+                        ],
+                        'options'
+                    );
+
+                    (async () => {
+                        await pause(2000);
+                        Controller.setValue('options', [
+                            { value: 'ONE', text: '##radius.org.ONE##' },
+                            { value: 'TWO', text: '##radius.org.TWO##' },
+                            { value: 'THREE', text: '##radius.org.THREE##' },
+                            { value: 'FOUR', text: '##radius.org.FOUR##' },
+                            { value: 'FIVE', text: '##radius.org.FIVE##' },
+                        ]);
+                    })();
+                    // *******************************************************************
+                    // *******************************************************************
+                    this.setClassName('input-widget-select');
+
+                    try {
+                        if (!this.getRdsBindOptions) {
+                            let options = fromJson(this.getInnerHtml().trim());
+                            this.setOptions(options);
+                        }
+                    }
+                    catch (e) {}
+                    super.init();
+                }
+
+                setOptions(options) {
+                    this.clear();
+
+                    for (let option of options) {
+                        this.append(this.createOptionElement(option));
+                    }
+
+                    return this;
+                }
+            }
+        </script>
+    </widget>
     <widget tagname="toggle-widget">
         <script>
             class ToggleWidget extends Widget {

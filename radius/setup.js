@@ -30,18 +30,7 @@
 *****/
 define(class SetupApp extends Webapp {
     async getControllerData(handle) {
-        /*
         return await mkSystemHandle().getSetupData();
-        */
-        let { shape, value } = await mkSystemHandle().getSetupData();
-        let testShape = mkRdsShape(BooleanType);
-        shape.keys.test = testShape;
-        value.test = true;
-        /*
-        console.log(shape.verify(value));
-        console.log();
-        */
-       return { shape: shape, value: value };
     }
 
     async init() {
