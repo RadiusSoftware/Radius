@@ -288,6 +288,34 @@ singleton(class Controller extends Emitter {
         }
     }
 
+    popValue(dotted) {
+        if (StringType.verify(dotted)) {
+            let shape = this.shape.get(dotted);
+            
+            if (shape && shape.getType() == ArrayType) {
+                RdsData.delete(this.value, `${dotted}.pop`);
+                this.signalBindings(dotted);
+            }
+        }
+
+        return this;
+    }
+
+    pushValue(dotted, value) {
+        if (StringType.verify(dotted)) {
+            let shape = this.shape.get(dotted);
+            
+            if (shape && shape.getType() == ArrayType) {
+                if (shape.verify([ value ])) {
+                    RdsData.set(this.value, `${dotted}.push`, value);
+                    this.signalBindings(dotted);
+                }
+            }
+        }
+
+        return this;
+    }
+
     revokeData(dotted) {
         let shape = this.shape.get(dotted);
 
@@ -326,13 +354,7 @@ singleton(class Controller extends Emitter {
         if (shape) {
             if (shape.verify(newValue)) {
                 RdsData.set(this.value, dotted, newValue);
-                let bindingsByDotted = this.bindingsByDotted[dotted];
-
-                if (bindingsByDotted) {
-                    for (let binding of bindingsByDotted.bindings) {
-                        binding.push();
-                    }
-                }
+                this.signalBindings(dotted);
             }
             else {
                 this.emit({
@@ -350,6 +372,52 @@ singleton(class Controller extends Emitter {
                 dotted: dotted,
                 value: newValue,
             });
+        }
+
+        return this;
+    }
+
+    shiftValue(dotted) {
+        if (StringType.verify(dotted)) {
+            let shape = this.shape.get(dotted);
+            
+            if (shape && shape.getType() == ArrayType) {
+                RdsData.delete(this.value, `${dotted}.shift`);
+                this.signalBindings(dotted);
+            }
+        }
+
+        return this;
+    }
+
+    signalBindings(dotted) {
+        let chain;
+        let segments = RdsText.split(dotted, '.');
+
+        while (segments.length) {
+            chain = chain ? `${chain}.${segments.shift()}` : segments.shift();
+            let bindingsByDotted = this.bindingsByDotted[chain];
+
+            if (bindingsByDotted) {
+                for (let binding of bindingsByDotted.bindings) {
+                    binding.push();
+                }
+            }
+        }
+
+        return this;
+    }
+
+    unshiftValue(dotted, value) {
+        if (StringType.verify(dotted)) {
+            let shape = this.shape.get(dotted);
+            
+            if (shape && shape.getType() == ArrayType) {
+                if (shape.verify([ value ])) {
+                    RdsData.set(this.value, `${dotted}.unshift`, value);
+                    this.signalBindings(dotted);
+                }
+            }
         }
 
         return this;

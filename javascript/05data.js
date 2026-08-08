@@ -196,26 +196,59 @@ singleton(class RdsData {
     *****/
     delete(obj, dotted) {
         if (StringType.verify(dotted)) {
-            let object = obj;
+            let item = obj;
             let segments = RdsText.split(dotted, '.');
 
             for (let i = 0; i < segments.length; i++) {
                 let segment = segments[i];
 
                 if (i == segments.length - 1) {
-                    delete object[segment];
+                    if (ArrayType.verify(item)) {
+                        if (segment == 'pop') {
+                            item.pop();
+                        }
+                        else if (segment == 'shift') {
+                            item.shift();
+                        }
+                        else {
+                            let index = parseInt(segment);
+
+                            if (index.toString() == segment) {
+                                item.splice(index, 1);
+                            }
+                        }
+                    }
+                    else if (ObjectType.verify(item)) {
+                        delete item[segment];
+                    }
                 }
-                else {
-                    if (!ObjectType.verify(object[segment])) {
-                        break;
+                else if (ArrayType.verify(item)) {
+                    let index = parseInt(segment);
+
+                    if (index.toString() == segment) {
+                        if (index >= 0 && index < item.length) {
+                            item = item[index];
+                            continue;
+                        }
+                    }
+                    
+                    break;
+                }
+                else if (ObjectType.verify(item)) {
+                    if (segment in item) {
+                        item = item[segment];
+                        continue;
                     }
 
-                    object = object[segment];
+                    break;
+                }
+                else {
+                    break;
                 }
             }
         }
 
-        return obj;
+        return this;
     }
 
     /*****
@@ -482,49 +515,65 @@ singleton(class RdsData {
     }
 
     /*****
-     * Given a dotted path, an object, and a value, ensure the entire path in
-     * dotted exists and set the value.  Note that conflicting values along the
-     * way will be overwritten to accompated the provided dotted path.
+     * Given a valid dotted path, this method finds that value and assigns a
+     * new value to it based on provided value.  If the path is invalid, nothing
+     * is assigned and the call is abandoned.
     *****/
     set(obj, dotted, value) {
         if (StringType.verify(dotted)) {
-            let object = obj;
+            let item = obj;
             let segments = RdsText.split(dotted, '.');
 
             for (let i = 0; i < segments.length; i++) {
                 let segment = segments[i];
 
                 if (i == segments.length - 1) {
-                    if (ArrayType.verify(object)) {
-                        object[parseInt(segment)] = value;
-                    }
-                    else if (ObjectType.verify(object)) {
-                        object[segment] = value;
-                    }
-                }
-                else {
-                    let index = parseInt(segment);
-                    
-                    if (!ObjectType.verify(object)) {
-                        if (index.toString() == segment) {
-                            object[index] = new Object();
+                    if (ArrayType.verify(item)) {
+                        if (segment == 'push') {
+                            item.push(value);
+                        }
+                        else if (segment == 'unshift') {
+                            item.unshift(value);
                         }
                         else {
-                            object[segment] = new Object();
+                            let index = parseInt(segment);
+
+                            if (index.toString() == segment) {
+                                item[index] = value;
+                            }
                         }
                     }
+                    else if (ObjectType.verify(item)) {
+                        item[segment] = value;
+                    }
+                }
+                else if (ArrayType.verify(item)) {
+                    let index = parseInt(segment);
 
                     if (index.toString() == segment) {
-                        object = object[index];
+                        if (index >= 0 && index < item.length) {
+                            item = item[index];
+                            continue;
+                        }
                     }
-                    else {
-                        object = object[segment];
+                    
+                    break;
+                }
+                else if (ObjectType.verify(item)) {
+                    if (segment in item) {
+                        item = item[segment];
+                        continue;
                     }
+
+                    break;
+                }
+                else {
+                    break;
                 }
             }
         }
 
-        return obj;
+        return this;
     }
 
     /*****

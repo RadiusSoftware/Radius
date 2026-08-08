@@ -710,16 +710,21 @@
                         ],
                         'options'
                     );
-
+                    
                     (async () => {
                         await pause(2000);
-                        Controller.setValue('options', [
-                            { value: 'ONE', text: '##radius.org.ONE##' },
-                            { value: 'TWO', text: '##radius.org.TWO##' },
-                            { value: 'THREE', text: '##radius.org.THREE##' },
-                            { value: 'FOUR', text: '##radius.org.FOUR##' },
-                            { value: 'FIVE', text: '##radius.org.FIVE##' },
-                        ]);
+                        Controller.setValue('options.0', { value: 'ONE', text: 'Horseraddish' });
+
+                        /*
+                        await pause(2000);
+                        Controller.pushValue('options', { value: 'FIVE', text: '##radius.org.FIVE##' });
+
+                        await pause(2000);
+                        Controller.shiftValue('options');
+
+                        await pause(2000);
+                        Controller.unshiftValue('options', { value: 'ONE', text: '##radius.org.ONE##' });
+                        */
                     })();
                     // *******************************************************************
                     // *******************************************************************
