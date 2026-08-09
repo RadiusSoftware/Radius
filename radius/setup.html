@@ -8,20 +8,8 @@
                 "path": "setupPath"
             }
         </script>
-        <script useage="class">
+        <script>
             class SetupApp extends Widget {
-                init() {
-                    super.init();
-
-                    // **********************************************************************************
-                    // **********************************************************************************
-                    (async () => {
-                        await pause(2000);
-                        Controller.setValue('test', false);
-                    })()
-                    // **********************************************************************************
-                    // **********************************************************************************
-                }
             }
         </script>
         <html class="fill">
@@ -33,7 +21,7 @@
                         <div></div>
                         <div></div>
                         <div>
-                            <select-widget rds-bind="test" rds-bind-options="options"></select-widget><br>
+                            <fieldset-widget rds-bind="test" rds-bind-options="options" rds-bind-legend="legend"></fieldset-widget><br>
                             <span rds-bind="test"></span><br>
                             <button-widget type="submit">##setupAcme##</button-widget>
                         </div>

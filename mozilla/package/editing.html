@@ -1,5 +1,7 @@
 <!DOCTYPE bundle>
 <bundle>
+    <!-- ***************************************************************************************************************** -->
+    <!-- ***************************************************************************************************************** -->
     <widget tagname="button-widget">
         <script type="settings">
             {
@@ -19,6 +21,8 @@
             }
         </script>
     </widget>
+    <!-- ***************************************************************************************************************** -->
+    <!-- ***************************************************************************************************************** -->
     <widget tagname="checkbox-widget">
         <script type="settings">
             {
@@ -35,6 +39,8 @@
             }
         </script>
     </widget>
+    <!-- ***************************************************************************************************************** -->
+    <!-- ***************************************************************************************************************** -->
     <!--
     <widget tagname="dataeditor-widget">
         <script>
@@ -318,6 +324,8 @@
         </style>
     </widget>
     -->
+    <!-- ***************************************************************************************************************** -->
+    <!-- ***************************************************************************************************************** -->
     <widget tagname="essay-widget">
         <script type="settings">
             {
@@ -333,6 +341,131 @@
             }
         </script>
     </widget>
+    <!-- ***************************************************************************************************************** -->
+    <!-- ***************************************************************************************************************** -->
+    <widget tagname="fieldset-widget">
+        <script type="settings">
+            {
+                "substitute": "fieldset"
+            }
+        </script>
+        <script>
+            class FieldsetWidget extends Widget {
+                init() {
+                    // *******************************************************************
+                    // *******************************************************************
+                    Controller.defineData(StringType, 'ONE', 'test');
+                    Controller.defineData(StringType, 'The best legend ever', 'legend');
+
+                    Controller.defineData(
+                        [ { value: StringType, text: StringType } ],
+                        [
+                            { value: 'ONE', text: 'Eins' },
+                            { value: 'TWO', text: 'Zwei' },
+                            { value: 'THREE', text: 'Drei' },
+                            { value: 'FOUR', text: 'Vier' },
+                        ],
+                        'options'
+                    );
+                    // *******************************************************************
+                    // *******************************************************************
+                    this.setClassName('input-widget-radio-fieldset');
+                    let options;
+
+                    try {
+                        if (!this.getRdsBindOptions) {
+                            options = fromJson(this.getInnerHtml().trim());
+                        }
+                    }
+                    catch (e) {}
+
+                    if (this.getRdsBind) {
+                        this.boundTo = this.getRdsBind();
+                        delete this.getRdsBind;
+                    }
+
+                    if (this.getRdsLegend || this.getRdsBindLegend) {
+                        this.legend = createElement('legend', {
+                            class: 'input-widget-radio-legend',
+                        });
+
+                        if (this.getRdsLegend) {
+                            this.legend.setInnerHtml(this.getRdsLegend());
+                        }
+                        else {
+                            Controller.bindInner(this.legend, this.getRdsBindLegend())
+                        }
+                    }
+
+                    if (options) {
+                        this.setOptions(options);
+                    }
+
+                    super.init();
+                }
+
+                resetValue() {
+                    if (this.boundTo) {
+                        let value = Controller.getValue(this.boundTo);
+
+                        for (let child of this.getChildElements()) {
+                            if (!this.legend || !Object.is(child, this.legend)) {
+                                if (child.getChildElementAt(0).getAttribute('value') == value) {
+                                    return;
+                                }
+                            }
+                        }
+
+                        Controller.setValue(this.boundTo, '');
+                    }
+                }
+
+                setOptions(options) {
+                    this.clear();
+
+                    if (this.legend) {
+                        this.append(this.legend);
+                    }
+
+                    let attributes = {
+                        id: '',
+                        type: 'radio',
+                        name: '',
+                        class: 'input-widget-radio',
+                    };
+
+                    if (this.boundTo) {
+                        attributes.name = this.boundTo;
+                        attributes['rds-bind'] = this.boundTo;
+                    }
+
+                    for (let option of options) {
+                        attributes.id = Crypto.generateUUID();
+                        attributes.value = option.value;
+
+                        this.append(
+                            createElement('div', {
+                                class: 'input-widget-radio-div',
+                            })
+                            .append(
+                                createElement('input', attributes),
+                                mkHtmlElement('label', {
+                                    for: attributes.id,
+                                    class: 'input-widget-radio-label',
+                                })
+                                .setInnerHtml(option.text),
+                            )
+                        );
+                    }
+
+                    this.resetValue();
+                    return this;
+                }
+            }
+        </script>
+    </widget>
+    <!-- ***************************************************************************************************************** -->
+    <!-- ***************************************************************************************************************** -->
     <widget tagname="input-widget">
         <script type="settings">
             {
@@ -375,8 +508,6 @@
     </widget>
     <!-- ***************************************************************************************************************** -->
     <!-- ***************************************************************************************************************** -->
-    <!-- ***************************************************************************************************************** -->
-    <!-- ***************************************************************************************************************** -->
     <widget tagname="inputx-widget">
         <script>
             class InputXWidget extends Widget {
@@ -404,82 +535,6 @@
                     _key: StringType,
                 }]);
                 */
-
-                buildFieldsetOptions(fsAttributes) {
-                    let options = this.buildOptions();
-
-                    let attributes = {
-                        id: '',
-                        type: 'radio',
-                        name: '',
-                        class: 'input-widget-radio',
-                    };
-
-                    for (let key in fsAttributes) {
-                        if (key.startsWith('evt-')) {
-                            attributes[key] = fsAttributes[key];
-                            this.replacement.clearAttribute(key);
-                        }
-                    }
-
-                    if (this.getRdsBind) {
-                        attributes.name = this.getRdsBind();
-                        attributes['rds-bind'] = this.getRdsBind();
-                    }
-
-                    for (let option of options) {
-                        attributes.id = Crypto.generateUUID();
-                        attributes.value = option.value;
-
-                        this.replacement.append(
-                            createElement('div', {
-                                class: 'input-widget-radio-div',
-                            })
-                            .append(
-                                createElement('input', attributes),
-                                mkHtmlElement('label', {
-                                    for: attributes.id,
-                                    class: 'input-widget-radio-label',
-                                })
-                                .setInnerHtml(option.text),
-                            )
-                        );
-                    }
-                }
-
-                buildFieldsetLegend() {
-                    if (this.getRdsLegend) {
-                        let legend = createElement('legend', {
-                            class: 'input-widget-radio-legend',
-                        });
-
-                        legend.setInnerHtml(this.getRdsLegend().trim());
-                        this.replacement.prepend(legend);
-                        return;
-                    }
-
-                    if (this.hasInnerElements()) {
-                        for (let innerElement of this.getInnerElements()) {
-                            if (innerElement.getTagName() == 'legend') {
-                                this.replacement.prepend(innerElement);
-                                return;
-                            }
-                        }
-                    }
-                    else if (this.hasInnerSettings()) {
-                        let text = this.getInnerSettings().legend;
-
-                        if (StringType.verify(text)) {
-                            let legend = createElement('legend', {
-                                class: 'input-widget-radio-legend',
-                            });
-
-                            legend.setInnerHtml(text.trim());
-                            this.replacement.prepend(legend);
-                            return;
-                        }
-                    }
-                }
 
                 /*
                 buildOptions() {
@@ -535,7 +590,6 @@
 
                     return options;
                 }
-                */
 
                 buildSelectOptions() {
                     let options = this.buildOptions();
@@ -567,6 +621,7 @@
 
                     this.replacement.append(...optionElements);
                 }
+                */
  
                 init() {
                     let attributes = this.filterAttributes('type');
@@ -597,7 +652,6 @@
                             attributes.class = RdsText.concat('input-widget-essay', attributes.class);
                             this.replacement = createElement('textarea', attributes);
                         }
-                        */
                         else if (type == 'fieldset') {
                             attributes.class = 'input-widget-radio-fieldset';
                             RdsData.filter(attributes, (key, value) => key.startsWith('rds-bind'));
@@ -620,39 +674,9 @@
 
                     //this.replacement.setAttribute('id', Crypto.generateUUID());
                 }
-
-                layoutSelect() {
-                    let maxWidth = 0;
-                    let hasSvg = false;
-
-                    for (let option of this.replacement.getChildElements()) {
-                        let text = option.getChildElementAt(0);
-                        let svg = option.getChildElementAt(1);
-                        
-                        if (text.getClientWidth() > maxWidth) {
-                            maxWidth = text.getClientWidth();
-                        }
-
-                        if (svg.getChildElements().length) {
-                            hasSvg = true;
-                        }
-                    }
-
-                    for (let option of this.replacement.getChildElements()) {
-                        option.getChildElementAt(0).setStyle({ width: `${maxWidth+10}px` });
-                    }
-
-                    if (!hasSvg) {
-                        for (let option of this.replacement.getChildElements()) {
-                            option.getChildElementAt(1).setStyle({ width: '0px' });
-                        }
-                    }
-                }
             }
         </script>
     </widget>
-    <!-- ***************************************************************************************************************** -->
-    <!-- ***************************************************************************************************************** -->
     <!-- ***************************************************************************************************************** -->
     <!-- ***************************************************************************************************************** -->
     <widget tagname="select-widget">
@@ -698,6 +722,8 @@
                 init() {
                     // *******************************************************************
                     // *******************************************************************
+                    // *******************************************************************
+                    // *******************************************************************
                     Controller.defineData(StringType, 'ONE', 'test');
 
                     Controller.defineData(
@@ -712,6 +738,7 @@
                     );
                     
                     (async () => {
+                        /*
                         await pause(2000);
                         Controller.setValue('options.0', { value: 'ONE', text: 'Horseraddish' });
 
@@ -728,6 +755,8 @@
                     })();
                     // *******************************************************************
                     // *******************************************************************
+                    // *******************************************************************
+                    // *******************************************************************
                     this.setClassName('input-widget-select');
 
                     try {
@@ -739,6 +768,36 @@
                     catch (e) {}
                     super.init();
                 }
+
+                /*
+                layoutSelect() {
+                    let maxWidth = 0;
+                    let hasSvg = false;
+
+                    for (let option of this.replacement.getChildElements()) {
+                        let text = option.getChildElementAt(0);
+                        let svg = option.getChildElementAt(1);
+                        
+                        if (text.getClientWidth() > maxWidth) {
+                            maxWidth = text.getClientWidth();
+                        }
+
+                        if (svg.getChildElements().length) {
+                            hasSvg = true;
+                        }
+                    }
+
+                    for (let option of this.replacement.getChildElements()) {
+                        option.getChildElementAt(0).setStyle({ width: `${maxWidth+10}px` });
+                    }
+
+                    if (!hasSvg) {
+                        for (let option of this.replacement.getChildElements()) {
+                            option.getChildElementAt(1).setStyle({ width: '0px' });
+                        }
+                    }
+                }
+                */
 
                 setOptions(options) {
                     this.clear();
@@ -752,6 +811,8 @@
             }
         </script>
     </widget>
+    <!-- ***************************************************************************************************************** -->
+    <!-- ***************************************************************************************************************** -->
     <widget tagname="toggle-widget">
         <script>
             class ToggleWidget extends Widget {
