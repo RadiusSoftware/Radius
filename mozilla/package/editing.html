@@ -352,23 +352,6 @@
         <script>
             class FieldsetWidget extends Widget {
                 init() {
-                    // *******************************************************************
-                    // *******************************************************************
-                    Controller.defineData(StringType, 'ONE', 'test');
-                    Controller.defineData(StringType, 'The best legend ever', 'legend');
-
-                    Controller.defineData(
-                        [ { value: StringType, text: StringType } ],
-                        [
-                            { value: 'ONE', text: 'Eins' },
-                            { value: 'TWO', text: 'Zwei' },
-                            { value: 'THREE', text: 'Drei' },
-                            { value: 'FOUR', text: 'Vier' },
-                        ],
-                        'options'
-                    );
-                    // *******************************************************************
-                    // *******************************************************************
                     this.setClassName('input-widget-radio-fieldset');
                     let options;
 
@@ -508,177 +491,6 @@
     </widget>
     <!-- ***************************************************************************************************************** -->
     <!-- ***************************************************************************************************************** -->
-    <widget tagname="inputx-widget">
-        <script>
-            class InputXWidget extends Widget {
-                /*
-                static stdInputTypes = mkRdsEnum(
-                    'color',
-                    'date',
-                    'datetime-local',
-                    'email',
-                    'image',
-                    'month',
-                    'number',
-                    'password',
-                    'range',
-                    'tel',
-                    'text',
-                    'time',
-                    'url',
-                    'week',
-                );
-
-                static optsShape = mkRdsShape([{
-                    text: StringType,
-                    value: StringType,
-                    _key: StringType,
-                }]);
-                */
-
-                /*
-                buildOptions() {
-                    let options = [];
-
-                    if (this.getRdsOptions) {
-                        let opts = RdsText.parseAttributeEncoded(this.getRdsOptions());
-                        
-                        for (let value in opts) {
-                            options.push({ text: opts[value], value: value });
-                        }
-                        
-                        if (!InputWidget.optsShape.verify(options)) {
-                            options = [];
-                        }
-                    }
-
-                    if (!options.length && this.getRdsOptionsKey) {
-                        let optsKey = this.getRdsOptionsKey();
-                        let opts = Controller.getDataValue(this, optsKey);
-                        
-                        if (InputWidget.optsShape.verify(opts)) {
-                            options = opts;
-                        }
-                    }
-
-                    if (!options.length) {
-                        if (this.getInnerElements().length) {
-                            for (let innerElement of this.getInnerElements()) {
-                                if (innerElement.getTagName() == 'option') {
-                                    options.push({
-                                        text: innerElement.getInnerHtml().trim(),
-                                        value: innerElement.getAttribute('value'),
-                                    });
-                                }
-                            }
-                        
-                            if (!InputWidget.optsShape.verify(options)) {
-                                options = [];
-                            }
-                        }
-                    }
-
-                    if (!options.length) {
-                        if (this.hasInnerSettings() && ArrayType.verify(this.getInnerSettings().options)) {
-                            let opts = this.getInnerSettings().options;
-
-                            if (InputWidget.optsShape.verify(opts)) {
-                                options = opts;
-                            }
-                        }
-                    }
-
-                    return options;
-                }
-
-                buildSelectOptions() {
-                    let options = this.buildOptions();
-
-                    let optionElements = options.map(opt => {
-                        let optionElement = createElement('option', {
-                            value: opt.value,
-                            class: 'input-widget-select-option',
-                        });
-
-                        let innerOption;
-
-                        if (opt.shape) {
-                            innerOption = createElementFromOuterHtml(
-                                `<span>${opt.text.trim()}</span>` +
-                                `<span class="input-widget-select-option-svg"><svg class="icon icon-small" rds-shape="${opt.shape}"></svg></span>`
-                            );
-                        }
-                        else {
-                            innerOption = createElementFromOuterHtml(
-                                `<span>${opt.text.trim()}</span>` +
-                                `<span class="input-widget-select-option-svg"></span>`
-                            );
-                        }
-
-                        optionElement.append(...innerOption);
-                        return optionElement;
-                    });
-
-                    this.replacement.append(...optionElements);
-                }
-                */
- 
-                init() {
-                    let attributes = this.filterAttributes('type');
-
-                    if (this.hasAttribute('type')) {
-                        let type = this.getAttribute('type');
-
-                        if (false) {
-                        }
-                        /*
-                        if (InputWidget.stdInputTypes.has(type)) {
-                            attributes.type = type;
-                            attributes.class = RdsText.concat('input-widget-input', attributes.class);
-                            this.replacement = createElement('input', attributes);
-                        }
-                        else if (type in { button:0, submit:0 }) {
-                            attributes.type = type;
-                            attributes.class = RdsText.concat('input-widget-button', attributes.class);
-                            this.replacement = createElement('input', attributes);
-                        }
-                        else if (type == 'checkbox') {
-                            attributes.type = type;
-                            attributes.class = RdsText.concat('input-widget-checkbox', attributes.class);
-                            this.replacement = createElement('input', attributes);
-                        }
-                        /*
-                        else if (type == 'essay') {
-                            attributes.class = RdsText.concat('input-widget-essay', attributes.class);
-                            this.replacement = createElement('textarea', attributes);
-                        }
-                        else if (type == 'fieldset') {
-                            attributes.class = 'input-widget-radio-fieldset';
-                            RdsData.filter(attributes, (key, value) => key.startsWith('rds-bind'));
-                            this.replacement = createElement('fieldset', attributes);
-                            this.buildFieldsetOptions(attributes);
-                            this.buildFieldsetLegend();
-                        }
-                        /*
-                        else if (type == 'select') {
-                            attributes.class = 'input-widget-select';
-                            this.replacement = createElement('select', attributes);
-                            this.buildSelectOptions();
-                            this.replacement.once('focusin', message => this.layoutSelect());
-                        }
-                        else if (type == 'toggle') {
-                            this.replacement = createElement('toggle-widget', attributes);
-                        }
-                        */
-                    }
-
-                    //this.replacement.setAttribute('id', Crypto.generateUUID());
-                }
-            }
-        </script>
-    </widget>
-    <!-- ***************************************************************************************************************** -->
-    <!-- ***************************************************************************************************************** -->
     <widget tagname="select-widget">
         <script type="settings">
             {
@@ -729,30 +541,13 @@
                     Controller.defineData(
                         [ { value: StringType, text: StringType } ],
                         [
-                            { value: 'ONE', text: '##radius.org.ONE##' },
-                            { value: 'TWO', text: '##radius.org.TWO##' },
-                            { value: 'THREE', text: '##radius.org.THREE##' },
-                            { value: 'FOUR', text: '##radius.org.FOUR##' },
+                            { value: 'ONE', text: 'Hello what do you want?' },
+                            { value: 'TWO', text: 'Zwei' },
+                            { value: 'THREE', text: 'Drei' },
+                            { value: 'FOUR', text: 'Vier' },
                         ],
                         'options'
                     );
-                    
-                    (async () => {
-                        /*
-                        await pause(2000);
-                        Controller.setValue('options.0', { value: 'ONE', text: 'Horseraddish' });
-
-                        /*
-                        await pause(2000);
-                        Controller.pushValue('options', { value: 'FIVE', text: '##radius.org.FIVE##' });
-
-                        await pause(2000);
-                        Controller.shiftValue('options');
-
-                        await pause(2000);
-                        Controller.unshiftValue('options', { value: 'ONE', text: '##radius.org.ONE##' });
-                        */
-                    })();
                     // *******************************************************************
                     // *******************************************************************
                     // *******************************************************************
@@ -767,14 +562,14 @@
                     }
                     catch (e) {}
                     super.init();
+                    this.once('focusin', message => SelectWidget.layoutSelect(this));
                 }
 
-                /*
-                layoutSelect() {
+                static layoutSelect(selectWidget) {
                     let maxWidth = 0;
                     let hasSvg = false;
 
-                    for (let option of this.replacement.getChildElements()) {
+                    for (let option of selectWidget.getChildElements()) {
                         let text = option.getChildElementAt(0);
                         let svg = option.getChildElementAt(1);
                         
@@ -787,23 +582,40 @@
                         }
                     }
 
-                    for (let option of this.replacement.getChildElements()) {
+                    for (let option of selectWidget.getChildElements()) {
                         option.getChildElementAt(0).setStyle({ width: `${maxWidth+10}px` });
                     }
 
                     if (!hasSvg) {
-                        for (let option of this.replacement.getChildElements()) {
+                        for (let option of selectWidget.getChildElements()) {
                             option.getChildElementAt(1).setStyle({ width: '0px' });
                         }
                     }
                 }
-                */
 
                 setOptions(options) {
                     this.clear();
+                    let value;
+                    let boundTo = this.getRdsBind();
+                    let reset = true;
+
+                    if (this.getRdsBind) {
+                        value = Controller.getValue(boundTo);
+                    }
+                    else {
+                        reset = false;
+                    }
 
                     for (let option of options) {
                         this.append(this.createOptionElement(option));
+
+                        if (value && option.value == value) {
+                            reset = false;
+                        }
+                    }
+
+                    if (reset) {
+                        Controller.setValue(boundTo, '');
                     }
 
                     return this;
