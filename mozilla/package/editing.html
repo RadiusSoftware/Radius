@@ -41,289 +41,225 @@
     </widget>
     <!-- ***************************************************************************************************************** -->
     <!-- ***************************************************************************************************************** -->
-    <!--
-    <widget tagname="dataeditor-widget">
+    <widget tagname="data-widget">
         <script>
-            class DataEditorWidget extends Widget {
-                getMeta(key) {
-                    let meta = {
-                        key: key,
-                        value: this.getControllerValue(key),
-                    };
-
-                    if (this.fields) {
-                        if (Objekt.isObjekt(meta.value)) {
-                            if (meta.value.isArray()) {
-                                meta.type = ArrayType;
-                            }
-                            else {
-                                meta.type = ObjectType;
-                                meta.fields = [];
-
-                                for (let field of this.fields) {
-                                    for (let key in meta.value) {
-                                        let subkey = `${meta.key}.${key}`;
-
-                                        if (subkey.match(field.regex)) {
-                                            if (field.hidden !== true) {
-                                                meta.fields.push({
-                                                    type: getJsType(meta.value[subkey]),
-                                                    property: key,
-                                                    key: subkey,
-                                                    label: field.label ? field.label : key,
-                                                });
-
-                                                break;
-                                            }
-                                        }
-                                    }
-                                }
-
-                                if (meta.fields.length) {
-                                    return meta;
-                                }
-                            }
-                        }
-                        else {
-                            meta.type = getJsType(meta.value);
-
-                            for (let field of this.fields) {
-                                if (key.match(field.regex)) {
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                    
-                    meta.readonly = true;
-
-                    if (Objekt.isObjekt(meta.value)) {
-                        if (meta.value.isArray()) {
-                            meta.type = ArrayType;
-                        }
-                        else {
-                            meta.type = ObjectType;
-
-                            meta.fields = Object.keys(meta.value).map(property => {
-                                return {
-                                    type: getJsType(meta.value[property]),
-                                    property: property,
-                                    key: `${key}.${property}`,
-                                    label: property,
-                                }
-                            });
-                        }
-                    }
-                    else {
-                        meta.type = getJsType(meta.value);
-                    }
-
-                    return meta;
-                }
+            class DataWidget extends Widget {
+                static categories = mkRdsEnum(
+                    '#ARRAY',
+                    '#PROPERTY',
+                    '#SCALAR',
+                );
 
                 init() {
-                    if (this.getRdsBind) {
-                        this.key = this.getRdsBind();
-                        delete this.getRdsBind;
-                    }
-                    else {
-                        return;
-                    }
-
                     super.init();
-                    this.fields = this.getPinned('fields');
 
-                    if (this.fields) {
-                        for (let field of this.fields) {
-                            field.regex = new RegExp(`${field.tail}$`);
-                        }
-                    }
+                    this.editingArray = null;
+                    this.editingScalar = null;
+                    this.readonly = this.getRdsReadOnly ? true : false;
 
-                    let surface = this.renderValue(this.key, false);
+                    if (!this.getRdsBind) return;
+                    this.dotted = this.getRdsBind();
+                    delete this.getRdsBind;
 
-                    if (surface) {
-                        this.append(surface);
-                    }
+                    this.setClassName('data-widget-tile');
+                    this.render();
                 }
 
-                onEdit(message) {
+                static editArray(tile) {
+                    // ***************************************************
+                    // ***************************************************
+                }
+
+                static editScalar(tile) {
+                    // ***************************************************
+                    // ***************************************************
+                }
+
+                getReadOnly() {
+                    return this.readonly;
+                }
+
+                onEventClick(message) {
+                    console.log('** Click');
+                    console.log(message);
+                }
+                
+                onEventScalar(message) {
+                    console.log('** Scalar');
                     console.log(message);
                 }
 
-                renderArray(meta, readonly) {
-                    let div = createElement('div');
+                pushToRendered(opts, tile, category) {
+                    if (DataWidget.categories.has(category)) {
+                        let rendered = {
+                            dotted: opts.dotted,
+                            shape: opts.shape,
+                            tile: tile,
+                            category: category,
+                        };
 
-                    for (let i in meta.value) {
-                        let subkey = `${meta.key}.${i}`;
-                        let surface = this.renderValue(subkey, readonly || meta.readonly);
+                        this.rendered.push(rendered);
+                    }
 
-                        if (surface) {
-                            div.append(surface);
+                    return this;
+                }
+
+                render() {
+                    this.clear();
+                    this.rendered = [];
+
+                    this.renderValue({
+                        tile: this,
+                        dotted: this.dotted,
+                        shape: Controller.getShape(this.dotted),
+                    });
+
+                    this.updateEditability();
+                }
+
+                renderArray(opts) {
+                    // ***************************************************
+                    // ***************************************************
+                    console.log('render ArrayType');
+                }
+
+                renderBoolean(opts) {
+                    // ***************************************************
+                    // ***************************************************
+                    console.log('render BooleanType');
+                }
+
+                renderDate(opts) {
+                    // ***************************************************
+                    // ***************************************************
+                    console.log('render DateType');
+                }
+
+                renderNumber(opts) {
+                    opts.tile.setClassName('data-widget-number');
+                    Controller.bindInner(opts.tile, opts.dotted);
+                    this.pushToRendered(opts, opts.tile, '#SCALAR');
+                }
+
+                renderObject(opts) {
+                    let table = createElementFromOuterHtml(
+                        `<table class="data-widget-object">
+                            <tbody class="data-widget-object-body"></tbody>
+                        </table>`
+                    );
+
+                    opts.tile.append(table);
+                    let tbody = table.getChildElementAt(0);
+
+                    for (let property of opts.shape) {
+                        let row;
+
+                        if (opts.shape.isOptional(property)) {
+                            row = createElementFromOuterHtml(
+                                `<tr>
+                                    <td class="data-widget-object-property-optional">${property}</td>
+                                    <td></td>
+                                </tr>`
+                            );
+                        }
+                        else {
+                            row = createElementFromOuterHtml(
+                                `<tr>
+                                    <td class="data-widget-object-property">${property}</td>
+                                    <td></td>
+                                </tr>`
+                            );
+                        }
+
+                        if (Controller.getValue(opts.dotted)) {
+                            this.renderValue({
+                                tile: row.getChildElementAt(1),
+                                dotted: `${opts.dotted}.${property}`,
+                                shape: opts.shape.get(property),
+                            });
+                        }
+
+                        this.pushToRendered(opts, row.getChildElementAt(0), '#PROPERTY');
+                        tbody.append(row);
+                    }
+                }
+
+                renderRegex(opts) {
+                    // ***************************************************
+                    // ***************************************************
+                    console.log('render RegexType');
+                }
+
+                renderString(opts) {
+                    opts.tile.setClassName('data-widget-string');
+                    Controller.bindInner(opts.tile, opts.dotted);
+                    this.pushToRendered(opts, opts.tile, '#SCALAR');
+                }
+
+                renderValue(opts) {
+                    if (opts.shape.getType() == ArrayType) {
+                        this.renderArray(opts);
+                    }
+                    else if (opts.shape.getType() == BooleanType) {
+                        this.renderBoolean(opts);
+                    }
+                    else if (opts.shape.getType() == DateType) {
+                        this.renderDate(opts);
+                    }
+                    else if (opts.shape.getType() == NumberType) {
+                        this.renderNumber(opts);
+                    }
+                    else if (opts.shape.getType() == ObjectType) {
+                        this.renderObject(opts);
+                    }
+                    else if (opts.shape.getType() == RegexType) {
+                        this.renderRegex(opts);
+                    }
+                    else if (opts.shape.getType() == StringType) {
+                        this.renderString(opts);
+                    }
+                }
+
+                setReadOnly(readonly) {
+                    if (BooleanType.verify(readonly)) {
+                        if (readonly != this.readonly) {
+                            this.readonly = readonly;
+                            this.updateEditability();
                         }
                     }
 
-                    if (!readonly && !meta.readonly) {
-                        // *********************************************************************
-                        // *********************************************************************
-                        console.log(`ARRAY is editable: ${meta.key}`);
-                    }
-
-                    return div;
+                    return this;
                 }
-                
-                renderObject(meta, readonly) {
-                    let div = createElementFromOuterHtml('<div design="dataeditor-widget-object"></div>');
-                    let table = createElement('table-widget').setColumnCount(2);
 
-                    for (let field of meta.fields) {
-                        if (field.property in meta.value) {
-                            let surface = this.renderValue(field.key, !readonly && !meta.readonly );
-
-                            if (surface) {
-                                table.appendRow([
-                                    {
-                                        content: field.label,
-                                        style: 'color:var(--label-color);',
-                                    },
-                                    {
-                                        content: surface
-                                    }
-                                ]);
+                updateEditability() {
+                    for (let rendered of this.rendered) {
+                        if (rendered.category == '#ARRAY') {
+                            if (this.readonly) {
+                            }
+                            else {
                             }
                         }
-                    }
-
-                    if (!readonly && !meta.readonly) {
-                        // *********************************************************************
-                        // *********************************************************************
-                        console.log(`OBJECT is editable: ${meta.key}`);
-                    }
-
-                    div.append(table);
-                    return div;
-                }
-
-                renderScalar(meta, readonly) {
-                    let options;
-
-                    if (StringType.verify(meta.value)) {
-                        options = {
-                            design: 'dataeditor-widget-content',
-                            class: 'dataeditor-widget-string',
-                            'rds-bind': meta.key,
-                            'rds-meta': meta,
-                        };
-                    }
-                    else if (NumberType.verify(meta.value)) {
-                        options = {
-                            design: 'dataeditor-widget-content',
-                            class: 'dataeditor-widget-number',
-                            'rds-bind': meta.key,
-                            'rds-meta': meta,
-                        };
-                    }
-                    else if (BooleanType.verify(meta.value)) {
-                        options = {
-                            design: 'dataeditor-widget-content',
-                            class: 'dataeditor-widget-boolean',
-                            'rds-bind': meta.key,
-                            'rds-meta': meta,
-                        };
-                    }
-                    else if (DateType.verify(meta.value)) {
-                        options = {
-                            design: 'dataeditor-widget-content',
-                            class: 'dataeditor-widget-boolean',
-                            'rds-bind': meta.key,
-                            'rds-meta': meta,
-                        };
-                    }
-                    else if (PatternType.verify(value)) {
-                        options = {
-                            design: 'dataeditor-widget-content',
-                            class: 'dataeditor-widget-regex',
-                            'rds-bind': meta.key,
-                            'rds-meta': meta,
-                        };
-                    }
-                    else {
-                        options = {
-                            design: '"dataeditor-widget-content"',
-                            class: 'dataeditor-widget-other',
-                            'rds-bind': meta.key,
-                            'rds-meta': meta,
-                        };
-                    }
-
-                    if (!readonly && !meta.readonly) {
-                        options['evt-click'] = 'edit';
-                        options.class = `${options.class} dataeditor-widget-editable`;
-                    }
-
-                    return createElement('div', options);
-                }
-
-                renderValue(key, readonly) {
-                    let meta = this.getMeta(key);
-
-                    if (meta.type === ArrayType) {
-                        return this.renderArray(meta, readonly); 
-                    }
-                    else if (meta.type === ObjectType) {
-                        return this.renderObject(meta, readonly);
-                    }
-                    else {
-                        return this.renderScalar(meta, readonly);
+                        else if (rendered.category == '#PROPERTY') {
+                            if (this.readonly) {
+                            }
+                            else if (rendered.shape.isOptional()) {
+                                // rendered.tile.append(some-sort-of-svg);
+                                rendered.tile.setClassName('data-widget-actionable');
+                            }
+                        }
+                        else if (rendered.category == '#SCALAR') {
+                            if (this.readonly) {
+                            }
+                            else {
+                                Controller.setEventAlias(rendered.tile, 'click', 'scalar');
+                                rendered.tile.setClassName('data-widget-actionable');
+                            }
+                        }
                     }
                 }
             }
         </script>
-        <style>
-            [design=content] {
-                margin: 0px;
-                padding: 0px;
-                font-family: 'Courier New', Courier, monospace;
-                font-size: 16px;
-            }
-            [design=object] {
-                display: block;
-                margin-top: 6px;
-                margin-bottom: 6px;
-                margin-left: 0px;
-                margin-right: 0px;
-                padding: 0px;
-                font-family: 'Courier New', Courier, monospace;
-                font-size: 16px;
-                border: 1px solid var(--faint-border-color);
-            }
-            .dataeditor-widget-string {
-                color: var(--value-string-color);
-            }
-            .dataeditor-widget-number {
-                color: var(--value-number-color);
-            }
-            .dataeditor-widget-boolean {
-                color: var(--value-boolean-color);
-            }
-            .dataeditor-widget-date {
-                color: var(--value-date-color);
-            }
-            .dataeditor-widget-regex {
-                color: var(--value-regex-color);
-            }
-            .dataeditor-widget-other {
-                color: var(--value-other-color);
-            }
-            .dataeditor-widget-editable {
-                cursor: pointer;
-            }
-            .dataeditor-widget-editable:hover {
-                color: var(--hover-color);
-                outline: 1px solid var(--hover-border-color);
-            }
-        </style>
     </widget>
-    -->
     <!-- ***************************************************************************************************************** -->
     <!-- ***************************************************************************************************************** -->
     <widget tagname="essay-widget">
@@ -532,26 +468,6 @@
                 }
 
                 init() {
-                    // *******************************************************************
-                    // *******************************************************************
-                    // *******************************************************************
-                    // *******************************************************************
-                    Controller.defineData(StringType, 'ONE', 'test');
-
-                    Controller.defineData(
-                        [ { value: StringType, text: StringType } ],
-                        [
-                            { value: 'ONE', text: 'Hello what do you want?' },
-                            { value: 'TWO', text: 'Zwei' },
-                            { value: 'THREE', text: 'Drei' },
-                            { value: 'FOUR', text: 'Vier' },
-                        ],
-                        'options'
-                    );
-                    // *******************************************************************
-                    // *******************************************************************
-                    // *******************************************************************
-                    // *******************************************************************
                     this.setClassName('input-widget-select');
 
                     try {

@@ -670,6 +670,7 @@ const eventProxy = {
 
 define(class ElementEvent {
     constructor(event) {
+        console.log(event);
         this[eventKey] = event;
         return new Proxy(this, eventProxy);
     }
@@ -720,15 +721,31 @@ define(class DocElement extends DocNode {
         this.listeners = {};
         this.propagation = mkRdsEnum();
 
+        /*
+        for (let key in this.node) {
+            if (key.startsWith('on')) {
+            }
+        }
+        */
+
         for (let attribute of this.getAttributes()) {
             try {
-                if (attribute.name.startsWith('rds-')) {
-                    let rdsName = attribute.name.substring(4);
-                    let snakeCase = rdsName.replaceAll('-', '_');
-                    let pascalCase = RdsText.toPascalCase(snakeCase);
-                    let rdsValue = StringType.verify(attribute.value) ? attribute.value.trim() : '';
-                    this[`getRds${pascalCase}`] = () => rdsValue;
-                }
+                //if (!(attribute.name in attrs)) {
+                    //attrs[attribute.name] = attribute.value;
+
+                    if (attribute.name.startsWith('rds-')) {
+                        let rdsName = attribute.name.substring(4);
+                        let snakeCase = rdsName.replaceAll('-', '_');
+                        let pascalCase = RdsText.toPascalCase(snakeCase);
+                        let rdsValue = StringType.verify(attribute.value) ? attribute.value.trim() : '';
+                        this[`getRds${pascalCase}`] = () => rdsValue;
+                    }
+                    else if (attribute.name.startsWith('evt-')) {
+                        let eventName = attribute.name.substring(4);
+                        let eventAlias = attribute.value;
+                        Controller.setEventAlias(this, eventName, eventAlias);
+                    }
+                //}
             }
             catch (e) {
                 caught(e);

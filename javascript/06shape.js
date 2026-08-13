@@ -162,23 +162,37 @@ define(class RdsShape {
     }
 
     getKeys() {
-        return Object.keys(this.keys);
+        if (this.type == ObjectType) {
+            return Object.keys(this.keys);
+        }
+        else if (this.type == ArrayType) {
+            if (this.clss.type == ObjectType) {
+                return Object.keys(this.clss.keys);
+            }
+        }
+        
+        return [];
     }
 
     getType() {
         return this.type;
     }
 
-    getValue(key) {
-        if (this.keys) {
-            return this.keys[key];
-        }
-
-        return undefined;
-    }
-
     isArray() {
         return this.type === ArrayType;
+    }
+
+    isOptional(key) {
+        if (this.type === ObjectType) {
+            if (key in this.keys) {
+                return false;
+            }
+            else if (`_${key}` in this.keys) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     isScalar() {
@@ -206,6 +220,19 @@ define(class RdsShape {
         }
 
         return this;
+    }
+
+    [Symbol.iterator]() {
+        if (this.type == ObjectType) {
+            return Object.keys(this.keys)[Symbol.iterator]();
+        }
+        else if (this.type == ArrayType) {
+            if (this.clss.type == ObjectType) {
+                return Object.keys(this.clss.keys)[Symbol.iterator]();
+            }
+        }
+        
+        return [][Symbol.iterator]();
     }
 
     verify(value) {

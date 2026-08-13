@@ -264,6 +264,10 @@ singleton(class Win extends Emitter {
         return window.top;
     }
 
+    hasDragAndDrop() {
+        return 'draggable' in Doc.getBody().node;
+    }
+
     isClosed() {
         return window.closed;
     }

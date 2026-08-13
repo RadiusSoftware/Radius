@@ -36,6 +36,7 @@ singleton(class Controller extends Emitter {
         this.nodes = new WeakMap();
         this.bindingsByDotted = {};
         this.bindingsByDocElement = new WeakMap();
+        this.eventAliases = new WeakMap();
 
         this.on('Set', message => {
             let byDotted = this.bindingsByDotted[message.dotted];
@@ -174,24 +175,62 @@ singleton(class Controller extends Emitter {
         return RdsData.has(this.value, dotted);
     }
 
+    // ***********************************************************************************
+    // ***********************************************************************************
+    // ***********************************************************************************
+    setEventAlias(docElement, eventName, eventAlias) {
+        let docElementAliases = this.eventAliases.get(docElement);
+
+        if (!docElementAliases) {
+            docElementAliases = {};
+            this.eventAliases.set(docElement, docElementAliases);
+        }
+
+        if (!(eventName in docElementAliases)) {
+            docElementAliases[eventName] = eventAlias;
+
+            docElement.on(eventName, message => {
+                console.log(`${eventName} => ${eventAlias}`);
+            });
+        }
+    }
+
     initNode(docNode) {
         if (!this.nodes.has(docNode)) {
             if (docNode instanceof Widget) {
                 if (docNode.hasSubstitute()) {
                     docNode.substituteNode();
                 }
-            
+                
                 for (let key of Reflect.ownKeys(Reflect.getPrototypeOf(docNode))) {
                     if (StringType.verify(key) && key.startsWith('onEvent')) {
                         if (FunctionType.verify(docNode[key])) {
                             let eventName = key.substring(7).toLowerCase();
-                            docNode.on(eventName, message => {
-                                message.event.preventDefault();
-                                docNode[key](message);
-                            });
+                            //docNode.on(eventName, message => docNode.handleEvent(message));
                         }
                     }
                 }
+                /*
+                    if (message.event.rdsAlias) {
+                        let aliasName = message.event.rdsAlias;
+                        let methodName = `onEvent${aliasName[0].toUpperCase()}${aliasName.substring(1)}`;
+
+                        if (FunctionType.verify(this[methodName])) {
+                            this[methodName](message);
+                            message.event.preventDefault();
+                            return;
+                        }
+                    }
+
+                    let eventName = message.name;
+                    let methodName = `onEvent${eventName[0].toUpperCase()}${eventName.substring(1)}`;
+
+                    if (FunctionType.verify(this[methodName])) {
+                        this[methodName](message);
+                        message.event.preventDefault();
+                        return;
+                    }
+                */
             }
 
             Packages.processNode(docNode);

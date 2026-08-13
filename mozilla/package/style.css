@@ -14,9 +14,15 @@
         --button-hover-background-color: rgb(9, 68, 117);
         --checked-color: steelblue;
         --color: gray;
+        --data-date-color: hsla(311, 72%, 37%, 0.369);
+        --data-number-color: gold;
+        --data-pattern-color: red;
+        --data-property-color: steelblue;
+        --data-property-optional-color: gainsboro;
+        --data-string-color: green;
         --disabled-border-color: rgb(134, 139, 134);
         --disabled-button-color: lightgray;
-        --disabled-text-color: rgb(120, 124, 120);
+        --disabled-text-color: rgb(180, 26, 191);
         --error-color: rgb(181, 95, 112);
         --faint-border-color: gainsboro;
         --hover-color: darkorange;
@@ -54,6 +60,12 @@
         --button-hover-background-color: steelblue;
         --checked-color: lightsteelblue;
         --color: gainsboro;
+        --data-date-color: hsla(311, 72%, 37%, 0.369);
+        --data-number-color: gold;
+        --data-pattern-color: red;
+        --data-property-color: steelblue;
+        --data-property-optional-color: gainsboro;
+        --data-string-color: green;
         --disabled-border-color: rgb(53, 56, 53);
         --disabled-button-color: lightsteelblue;
         --disabled-text-color: rgb(153, 159, 153);
@@ -167,6 +179,53 @@ body {
     border-style: solid;
     border-width: 1px;
     border-radius: 15px;
+}
+
+.center {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+
+.data-widget-actionable {
+    &:hover {
+        color: var(--hover-color);
+        border-color: var(--hover-border-color);
+        cursor: pointer;
+    }
+}
+
+.data-widget-object {
+    width: 100%;
+    height: auto;
+    border: 1px solid var(--faint-border-color);
+    border-radius: 20px;
+}
+
+.data-widget-object-body {
+    width: 100%;
+    height: auto;
+}
+
+.data-widget-object-property {
+    text-align: left;
+    color: var(--data-property-color);
+    font-weight: bold;
+}
+
+.data-widget-object-property-optional {
+    text-align: left;
+    color: var(--data-property-optional-color);
+}
+
+.data-widget-number {
+    color: var(--data-number-color);
+}
+
+.data-widget-string {
+    overflow: auto;
+    color: var(--data-strind-color);
 }
 
 .disabled {
