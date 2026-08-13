@@ -79,14 +79,14 @@
                     return this.readonly;
                 }
 
-                onEventClick(message) {
+                onEventClick(event) {
                     console.log('** Click');
-                    console.log(message);
+                    console.log(event);
                 }
                 
-                onEventScalar(message) {
+                onEventScalar(event) {
                     console.log('** Scalar');
-                    console.log(message);
+                    console.log(event);
                 }
 
                 pushToRendered(opts, tile, category) {
@@ -251,7 +251,7 @@
                             if (this.readonly) {
                             }
                             else {
-                                Controller.setEventAlias(rendered.tile, 'click', 'scalar');
+                                rendered.tile.setEventAlias('click', 'scalar');
                                 rendered.tile.setClassName('data-widget-actionable');
                             }
                         }

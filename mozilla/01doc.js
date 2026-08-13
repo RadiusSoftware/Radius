@@ -32,60 +32,26 @@
 singleton(class Doc extends Emitter {
     constructor() {
         super();
-        [
-            'animationcancel',
-            'animationend',
-            'animationiteration',
-            'animationstart',
-            'click',
-            'contextmenu',
-            'copy',
-            'cut',
-            'dblclick',
-            'DOMContentLoaded',
-            'drag',
-            'dragend',
-            'dragenter',
-            'dragleave',
-            'dragover',
-            'dragstart',
-            'drop',
-            'fullscreenchange',
-            'fullscreenerror',
-            'gotpointercapture',
-            'keydown',
-            'keyup',
-            'lostpointercapture',
-            'paste',
-            'pointercancel',
-            'pointerdown',
-            'pointerenter',
-            'pointerleave',
-            'pointerlockchange',
-            'pointerlockerror',
-            'pointermove',
-            'pointerout',
-            'pointerover',
-            'pointerup',
-            'readystatechange',
-            'scroll',
-            'selectinchange',
-            'touchcancel',
-            'touchend',
-            'touchmove',
-            'touchstart',
-            'transitioncancel',
-            'transitionend',
-            'transitionrun',
-            'transitionstart',
-            'visibilitychange',
-            'wheel',
-        ].forEach(eventName => document.addEventListener(eventName, event => {
+
+        document.addEventListener('DOMContentLoaded', event => {
             this.emit({
-                name: `${eventName}`,
-                event: mkElementEvent(event)
+                name: 'DOMContentLoaded',
+                event: mkRdsEvent(event),
             });
-        }));
+        });
+
+        for (let key in document) {
+            if (key.startsWith('on') && key != 'onunload') {
+                let eventName = key.substring(2);
+
+                document.addEventListener(eventName, event => {
+                    this.emit({
+                        name: eventName,
+                        event: mkRdsEvent(event),
+                    });
+                });
+            }
+        }
 
         let mutationObserver = new MutationObserver(mutationRecords => {
             this.onMutation(mutationRecords);
