@@ -135,6 +135,14 @@ define(class RdsShape {
         return shape;
     }
 
+    getClass() {
+        if (this.type === ArrayType) {
+            return this.clss;
+        }
+
+        return null;
+    }
+
     getDefault() {
         if (this.type === ArrayType) {
             return [ this.clss.getDefault() ];

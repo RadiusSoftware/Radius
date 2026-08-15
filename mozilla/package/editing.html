@@ -2,6 +2,118 @@
 <bundle>
     <!-- ***************************************************************************************************************** -->
     <!-- ***************************************************************************************************************** -->
+    <widget tagname="array-widget">
+        <script type="settings">
+            {
+                "substitute": "table"
+            }
+        </script>
+        <script>
+            class ArrayWidget extends EditingWidget {
+                init() {
+                    super.init();
+                    this.render();
+                }
+
+                onReadonlyChanged() {
+                }
+
+                onStartEditing() {
+                }
+
+                onStopEditing() {
+                }
+
+                render() {
+                    this.clear();
+                    let shape = this.getShape();
+                    let clss = shape.getClass();
+                    let readonly = this.isReadonly();
+                    this.setClassName('array-widget');
+
+                    this.append(
+                        this.tbody = createElement('tbody', {
+                            class: 'array-widget-body',
+                        })
+                    );
+
+                    for (let i = 0; i < Controller.getValue(this.getDotted()).length; i++) {
+                        let dotted = `${this.getDotted()}.${i}`;
+
+                        this.tbody.append(
+                            createElementFromOuterHtml(
+                                `<arrayrow-widget rds-bind="${dotted}" rds-readonly="${readonly}"></arrayrow-widget>`
+                            )
+                        );
+                    }
+                }
+            }
+        </script>
+    </widget>
+    <!-- ***************************************************************************************************************** -->
+    <!-- ***************************************************************************************************************** -->
+    <widget tagname="arrayrow-widget">
+        <script type="settings">
+            {
+                "substitute": "tr"
+            }
+        </script>
+        <script>
+            class ArrayRowWidget extends EditingWidget {
+                init() {
+                    super.init();
+                    this.render();
+                }
+
+                onReadonlyChanged() {
+                }
+
+                onStartEditing() {
+                }
+
+                onStopEditing() {
+                }
+
+                render() {
+                    this.clear();
+                    let shape = this.getShape();
+                    let readonly = this.isReadonly();
+                    this.setClassName('arrayrow-widget');
+
+                    if (shape.getType() === ObjectType) {
+                        for (let property in shape) {
+                            let dotted = `${this.getDotted()}.${property}`;
+
+                            this.append(
+                                createElement('td', {
+                                    class: 'arrayrow-widget-cell',
+                                }).append(
+                                    createElement('data-widget', {
+                                        'rds-bind': dotted,
+                                        'rds-readonly': readonly,
+                                    })
+                                )
+                            );
+                        }
+                    }
+                    else {
+                        this.append(
+                            createElement('td', {
+                                class: 'arrayrow-widget-cell',
+                            }).append(
+                                createElement('data-widget', {
+                                    'rds-bind': this.getDotted(),
+                                    'rds-readonly': readonly,
+                                })
+                            )
+                        );
+                    }
+                }
+            }
+        </script>
+    </widget>
+    <!-- ***************************************************************************************************************** -->
+    <!-- ***************************************************************************************************************** -->
     <widget tagname="button-widget">
         <script type="settings">
             {
@@ -43,217 +155,33 @@
     <!-- ***************************************************************************************************************** -->
     <widget tagname="data-widget">
         <script>
-            class DataWidget extends Widget {
-                static categories = mkRdsEnum(
-                    '#ARRAY',
-                    '#PROPERTY',
-                    '#SCALAR',
-                );
-
+            class DataWidget extends EditingWidget {
                 init() {
                     super.init();
 
-                    this.editingArray = null;
-                    this.editingScalar = null;
-                    this.readonly = this.getRdsReadOnly ? true : false;
-
-                    if (!this.getRdsBind) return;
-                    this.dotted = this.getRdsBind();
-                    delete this.getRdsBind;
-
-                    this.setClassName('data-widget-tile');
-                    this.render();
-                }
-
-                static editArray(tile) {
-                    // ***************************************************
-                    // ***************************************************
-                }
-
-                static editScalar(tile) {
-                    // ***************************************************
-                    // ***************************************************
-                }
-
-                getReadOnly() {
-                    return this.readonly;
-                }
-
-                onEventClick(event) {
-                    console.log('** Click');
-                    console.log(event);
-                }
-                
-                onEventScalar(event) {
-                    console.log('** Scalar');
-                    console.log(event);
-                }
-
-                pushToRendered(opts, tile, category) {
-                    if (DataWidget.categories.has(category)) {
-                        let rendered = {
-                            dotted: opts.dotted,
-                            shape: opts.shape,
-                            tile: tile,
-                            category: category,
+                    if (this.getDotted()) {
+                        let attributes = {
+                            'rds-bind': this.getDotted(),
+                            'rds-readonly': `${this.isReadonly()}`,
                         };
 
-                        this.rendered.push(rendered);
-                    }
+                        for (let attribute of this.getAttributes()) {
+                            if (!(attribute.name in { 'rds-bind':0, 'rds-readonly':0 })) {
+                                attributes[attribute.name] = attribute.value;
+                            }
+                        }
 
-                    return this;
-                }
-
-                render() {
-                    this.clear();
-                    this.rendered = [];
-
-                    this.renderValue({
-                        tile: this,
-                        dotted: this.dotted,
-                        shape: Controller.getShape(this.dotted),
-                    });
-
-                    this.updateEditability();
-                }
-
-                renderArray(opts) {
-                    // ***************************************************
-                    // ***************************************************
-                    console.log('render ArrayType');
-                }
-
-                renderBoolean(opts) {
-                    // ***************************************************
-                    // ***************************************************
-                    console.log('render BooleanType');
-                }
-
-                renderDate(opts) {
-                    // ***************************************************
-                    // ***************************************************
-                    console.log('render DateType');
-                }
-
-                renderNumber(opts) {
-                    opts.tile.setClassName('data-widget-number');
-                    Controller.bindInner(opts.tile, opts.dotted);
-                    this.pushToRendered(opts, opts.tile, '#SCALAR');
-                }
-
-                renderObject(opts) {
-                    let table = createElementFromOuterHtml(
-                        `<table class="data-widget-object">
-                            <tbody class="data-widget-object-body"></tbody>
-                        </table>`
-                    );
-
-                    opts.tile.append(table);
-                    let tbody = table.getChildElementAt(0);
-
-                    for (let property of opts.shape) {
-                        let row;
-
-                        if (opts.shape.isOptional(property)) {
-                            row = createElementFromOuterHtml(
-                                `<tr>
-                                    <td class="data-widget-object-property-optional">${property}</td>
-                                    <td></td>
-                                </tr>`
-                            );
+                        if (this.shape.getType() === ArrayType) {
+                            let widget = createElement('array-widget', attributes);
+                            this.replace(widget);
+                        }
+                        else if (this.shape.getType() === ObjectType) {
+                            let widget = createElement('object-widget', attributes);
+                            this.replace(widget);
                         }
                         else {
-                            row = createElementFromOuterHtml(
-                                `<tr>
-                                    <td class="data-widget-object-property">${property}</td>
-                                    <td></td>
-                                </tr>`
-                            );
-                        }
-
-                        if (Controller.getValue(opts.dotted)) {
-                            this.renderValue({
-                                tile: row.getChildElementAt(1),
-                                dotted: `${opts.dotted}.${property}`,
-                                shape: opts.shape.get(property),
-                            });
-                        }
-
-                        this.pushToRendered(opts, row.getChildElementAt(0), '#PROPERTY');
-                        tbody.append(row);
-                    }
-                }
-
-                renderRegex(opts) {
-                    // ***************************************************
-                    // ***************************************************
-                    console.log('render RegexType');
-                }
-
-                renderString(opts) {
-                    opts.tile.setClassName('data-widget-string');
-                    Controller.bindInner(opts.tile, opts.dotted);
-                    this.pushToRendered(opts, opts.tile, '#SCALAR');
-                }
-
-                renderValue(opts) {
-                    if (opts.shape.getType() == ArrayType) {
-                        this.renderArray(opts);
-                    }
-                    else if (opts.shape.getType() == BooleanType) {
-                        this.renderBoolean(opts);
-                    }
-                    else if (opts.shape.getType() == DateType) {
-                        this.renderDate(opts);
-                    }
-                    else if (opts.shape.getType() == NumberType) {
-                        this.renderNumber(opts);
-                    }
-                    else if (opts.shape.getType() == ObjectType) {
-                        this.renderObject(opts);
-                    }
-                    else if (opts.shape.getType() == RegexType) {
-                        this.renderRegex(opts);
-                    }
-                    else if (opts.shape.getType() == StringType) {
-                        this.renderString(opts);
-                    }
-                }
-
-                setReadOnly(readonly) {
-                    if (BooleanType.verify(readonly)) {
-                        if (readonly != this.readonly) {
-                            this.readonly = readonly;
-                            this.updateEditability();
-                        }
-                    }
-
-                    return this;
-                }
-
-                updateEditability() {
-                    for (let rendered of this.rendered) {
-                        if (rendered.category == '#ARRAY') {
-                            if (this.readonly) {
-                            }
-                            else {
-                            }
-                        }
-                        else if (rendered.category == '#PROPERTY') {
-                            if (this.readonly) {
-                            }
-                            else if (rendered.shape.isOptional()) {
-                                // rendered.tile.append(some-sort-of-svg);
-                                rendered.tile.setClassName('data-widget-actionable');
-                            }
-                        }
-                        else if (rendered.category == '#SCALAR') {
-                            if (this.readonly) {
-                            }
-                            else {
-                                rendered.tile.setEventAlias('click', 'scalar');
-                                rendered.tile.setClassName('data-widget-actionable');
-                            }
+                            let widget = createElement('scalar-widget', attributes);
+                            this.replace(widget);
                         }
                     }
                 }
@@ -421,6 +349,136 @@
                         this.setAttribute('type', 'text');
                         this.setClassName(InputWidget.styles.text);
                     }
+                }
+            }
+        </script>
+    </widget>
+    <!-- ***************************************************************************************************************** -->
+    <!-- ***************************************************************************************************************** -->
+    <widget tagname="object-widget">
+        <script type="settings">
+            {
+                "substitute": "table"
+            }
+        </script>
+        <script>
+            class ObjectWidget extends EditingWidget {
+                init() {
+                    super.init();
+                    this.setClassName('object-widget');
+                    this.render();
+
+                }
+
+                onReadonlyChanged() {
+                }
+
+                onStartEditing() {
+                }
+
+                onStopEditing() {
+                }
+
+                render() {
+                    this.clear();
+                    let shape = this.getShape();
+                    let readonly = this.isReadonly();
+                    this.setClassName('object-widget');
+
+                    this.append(
+                        this.tbody = createElement('tbody', {
+                            class: 'object-widget-body',
+                        })
+                    );
+
+                    for (let property of shape) {
+                        let dotted = `${this.getDotted()}.${property}`;
+
+                        if (shape.isOptional(property)) {
+                            this.tbody.append(
+                                createElementFromOuterHtml(
+                                    `<tr>
+                                        <td class="object-widget-optional-property">${property}</td>
+                                        <td>
+                                            <data-widget rds-bind="${dotted}" rds-readonly="${readonly}"></data-widget>
+                                        </td>
+                                    </tr>`
+                                )
+                            );
+                        }
+                        else {
+                            this.tbody.append(
+                                createElementFromOuterHtml(
+                                    `<tr>
+                                        <td class="object-widget-property">${property}</td>
+                                        <td>
+                                            <data-widget rds-bind="${dotted}" rds-readonly="${readonly}"></data-widget>
+                                        </td>
+                                    </tr>`
+                                )
+                            );
+                        }
+                    }
+                }
+            }
+        </script>
+    </widget>
+    <!-- ***************************************************************************************************************** -->
+    <!-- ***************************************************************************************************************** -->
+    <widget tagname="scalar-widget">
+        <script>
+            class ScalarWidget extends EditingWidget {
+                static inputTypes = new WeakMap();
+                static otherTypes = new WeakMap();
+
+                static {
+                    ScalarWidget.inputTypes.set(BigIntType, 'number');
+                    //ScalarWidget.inputTypes.set(ColorType, 'color');
+                    ScalarWidget.inputTypes.set(DateType, 'date');
+                    ScalarWidget.inputTypes.set(DateTimeType, 'datetime-local');
+                    ScalarWidget.inputTypes.set(DoubleType, 'number');
+                    //ScalarWidget.inputTypes.set(EmailType, 'email');
+                    ScalarWidget.inputTypes.set(NumberType, 'number');
+                    ScalarWidget.inputTypes.set(NumericType, 'number');
+                    ScalarWidget.inputTypes.set(RegexType, 'text');
+                    ScalarWidget.inputTypes.set(Float32Type, 'number');
+                    ScalarWidget.inputTypes.set(Float64Type, 'number');
+                    ScalarWidget.inputTypes.set(Int8Type, 'number');
+                    ScalarWidget.inputTypes.set(Int16Type, 'number');
+                    ScalarWidget.inputTypes.set(Int32Type, 'number');
+                    ScalarWidget.inputTypes.set(Int64Type, 'number');
+                    //ScalarWidget.inputTypes.set(PasswordType, 'password');
+                    //ScalarWidget.inputTypes.set(TelephoneType, 'tel');
+                    ScalarWidget.inputTypes.set(UInt8Type, 'number');
+                    ScalarWidget.inputTypes.set(UInt16Type, 'number');
+                    ScalarWidget.inputTypes.set(UInt32Type, 'number');
+                    ScalarWidget.inputTypes.set(UInt64Type, 'number');
+                    //ScalarWidget.inputTypes.set(UrlType, 'url');
+
+                    ScalarWidget.otherTypes.set(BooleanType, 'toggle-widget');
+                    ScalarWidget.otherTypes.set(RdsEnum, 'select-widget');
+                }
+
+                init() {
+                    super.init();
+                    this.setClassName('scalar-widget');
+                    Controller.bindInner(this, this.getDotted());
+                    this.onReadonlyChanged();
+                }
+
+                onReadonlyChanged() {
+                    if (this.isReadonly()) {
+                        this.clearClassName('responsive');
+                    }
+                    else {
+                        this.setClassName('responsive');
+                    }
+                }
+
+                onStartEditing() {
+                }
+
+                onStopEditing() {
                 }
             }
         </script>

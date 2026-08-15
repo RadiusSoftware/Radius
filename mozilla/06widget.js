@@ -161,3 +161,116 @@ define(class Widget extends HtmlElement {
         return this;
     }
 });
+
+
+/*****
+ * Base class for widgets that user-editable / changable.  This is a base class
+ * for widgets that display a value and then toggle between read mode and edit
+ * mode.  There's a few interesting features that need to be implemented and
+ * it's betst to place there here in this super class.
+*****/
+define(class EditingWidget extends Widget {
+    cancelEdit() {
+        if (this.editing) {
+            this.editing = false;
+            this.onStopEditing();
+        }
+    }
+
+    getDotted() {
+        return this.dotted;
+    }
+
+    getShape() {
+        return this.shape;
+    }
+
+    init() {
+        this.readonly = true;
+        this.editing = false;
+
+        if (this.getRdsBind) {
+            this.dotted = this.getRdsBind();
+            delete this.getRdsBind;
+            this.shape = Controller.getShape(this.dotted);
+        }
+
+        if (this.getRdsReadonly) {
+            this.setReadonly(this.getRdsReadonly())
+            delete this.getRdsReadonly();
+        }
+
+        super.init();
+    }
+
+    isEditing() {
+        return this.editing;
+    }
+
+    isReadonly() {
+        return this.readonly;
+    }
+
+    onReadonlyChanged() {
+    }
+
+    onStartEditing() {
+    }
+
+    onStopEditing() {
+    }
+
+    static setReadonly(docElement, readonly) {
+        for (let docNode in docElement.enumerateDescendents()) {
+            if (docNode instanceof EditingWidget) {
+                docNode.setReadonly(readonly);
+            }
+        }
+    }
+
+    setReadonly(readonly) {
+        let newValue;
+
+        if (StringType.verify(readonly)) {
+            if (readonly.trim().toLowerCase() == 'true') {
+                newValue = true;
+            }
+            else if (readonly.trim().toLowerCase() == 'false') {
+                newValue = false;
+            }
+            else {
+                return;
+            }
+        }
+        else if (BooleanType.verify(readonly)) {
+            newValue = readonly;
+        }
+
+        if (newValue != this.readonly) {
+            this.readonly = newValue;
+
+            if (newValue) {
+                if (this.editing) {
+                    this.cancelEdit();
+                }
+            }
+
+            this.onReadonlyChanged();
+
+            this.emit({
+                name: 'ReadonlyChanged',
+                widget: this,
+                readonly: this.readonly,
+            });
+        }
+
+        return this;
+    }
+
+    startEdit() {
+        if (!this.editing) {
+            this.editing = true;
+            this.onStartEditing();
+        }
+    }
+});

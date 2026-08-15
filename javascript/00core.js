@@ -479,7 +479,7 @@ define(async function caught(info) {
 });
 
 caught.handler = (info, message) => {
-    console.log(message.joion('\n'));
+    console.log(message.join('\n'));
 };
 
 

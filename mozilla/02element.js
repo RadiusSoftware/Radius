@@ -196,7 +196,10 @@ define(function createElement(tagName, attrs) {
         if (UndefinedType.verify(attr.value) || NullType.verify(attr.value)) {
             html.push(` ${attr.name}`);
         }
-        else if (StringType.verify(attr.value)) {
+        else if (ObjectType.verify(attr.value) || ArrayType.verify(attr.value)) {
+            html.push(` ${attr.name}="${Tunnel.push(attr.value)}"`);
+        }
+        else {
             let string = attr.value.toString().trim();
 
             if (string) {
@@ -205,9 +208,6 @@ define(function createElement(tagName, attrs) {
             else {
                 html.push(` ${attr.name}`);
             }
-        }
-        else {
-            html.push(` ${attr.name}="${Tunnel.push(attr.value)}"`);
         }
     }
 
@@ -1067,6 +1067,16 @@ define(class DocElement extends DocNode {
             this[methodName](rdsEvent);
             event.preventDefault();
             event.stopImmediatePropagation();
+            return;
+        }
+        
+        let messageName = `${Event}${eventName}`;
+
+        if (this.handles(messageName)) {
+            this.emit({
+                name: messageName,
+                event: event,
+            });
         }
     }
 
