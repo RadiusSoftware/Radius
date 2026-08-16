@@ -197,7 +197,8 @@ define(function createElement(tagName, attrs) {
             html.push(` ${attr.name}`);
         }
         else if (ObjectType.verify(attr.value) || ArrayType.verify(attr.value)) {
-            html.push(` ${attr.name}="${Tunnel.push(attr.value)}"`);
+            let tunnelKey = Tunnel.push(attr.value);
+            html.push(` ${attr.name}="#TUNNEL#${tunnelKey}"`);
         }
         else {
             let string = attr.value.toString().trim();
@@ -660,6 +661,16 @@ define(class DocElement extends DocNode {
                 let rdsName = attribute.name.substring(4);
                 let snakeCase = rdsName.replaceAll('-', '_');
                 let pascalCase = RdsText.toPascalCase(snakeCase);
+
+                if (attribute.value.startsWith('#TUNNEL#')) {
+                    let rdsValue = Tunnel.pop(attribute.value.substring(8));
+
+                    if (rdsValue) {
+                        this[`getRds${pascalCase}`] = () => rdsValue;
+                        continue;
+                    }
+                }
+
                 let rdsValue = StringType.verify(attribute.value) ? attribute.value.trim() : '';
                 this[`getRds${pascalCase}`] = () => rdsValue;
             }

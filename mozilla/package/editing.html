@@ -41,9 +41,10 @@
                         let dotted = `${this.getDotted()}.${i}`;
 
                         this.tbody.append(
-                            createElementFromOuterHtml(
-                                `<arrayrow-widget rds-bind="${dotted}" rds-readonly="${readonly}"></arrayrow-widget>`
-                            )
+                            createElement('arrayrow-widget', {
+                                'rds-bind': dotted,
+                                'rds-readonly': readonly,
+                            })
                         );
                     }
                 }
@@ -393,31 +394,32 @@
 
                     for (let property of shape) {
                         let dotted = `${this.getDotted()}.${property}`;
+                        let propertyClassName;
 
                         if (shape.isOptional(property)) {
-                            this.tbody.append(
-                                createElementFromOuterHtml(
-                                    `<tr>
-                                        <td class="object-widget-optional-property">${property}</td>
-                                        <td>
-                                            <data-widget rds-bind="${dotted}" rds-readonly="${readonly}"></data-widget>
-                                        </td>
-                                    </tr>`
-                                )
-                            );
+                            propertyClassName = 'object-widget-optional-property';
                         }
                         else {
-                            this.tbody.append(
-                                createElementFromOuterHtml(
-                                    `<tr>
-                                        <td class="object-widget-property">${property}</td>
-                                        <td>
-                                            <data-widget rds-bind="${dotted}" rds-readonly="${readonly}"></data-widget>
-                                        </td>
-                                    </tr>`
-                                )
-                            );
+                            propertyClassName = 'object-widget-property';
                         }
+
+                        this.tbody.append(
+                            createElement('tr')
+                            .append(
+                                createElement('td', {
+                                    class: propertyClassName,
+                                })
+                                .setInnerHtml(property),
+
+                                createElement('td')
+                                .append(
+                                    createElement('data-widget', {
+                                        'rds-bind': dotted,
+                                        'rds-readonly': readonly,
+                                    })
+                                )
+                            )
+                        );
                     }
                 }
             }
@@ -502,24 +504,31 @@
                     let innerElements;
 
                     if (option.shape) {
-                        innerElements = createElementFromOuterHtml(
-                            `<span>${option.text.trim()}</span>` +
-                            `<span class="input-widget-select-option-svg"><svg class="icon icon-small" rds-shape="${option.shape}"></svg></span>`
-                        );
+                        innerElements = [
+                            createElement('span').setInnerHtml(option.text.trim()),
+                            createElement('span', {
+                                class: 'input-widget-select-option-svg',
+                            })
+                            .append(
+                                createElement('svg', {
+                                    class: 'icon icon-small',
+                                    'rds-shape': option.shape,
+                                })
+                            )
+                        ];
                     }
                     else if (option.icon) {
-                        /*
-                        innerElements = createElementFromOuterHtml(
-                            `<span>${option.text.trim()}</span>` +
-                            `<span class="input-widget-select-option-svg"><svg class="icon icon-small" rds-shape="${opt.shape}"></svg></span>`
-                        );
-                        */
+                        // TODO **************
+                        // BINARY IMAGE, NOT AN SVG
+                        innerElements = [];
                     }
                     else {
-                        innerElements = createElementFromOuterHtml(
-                            `<span>${option.text.trim()}</span>` +
-                            `<span class="input-widget-select-option-svg"></span>`
-                        );
+                        innerElements = [
+                            createElement('span').setInnerHtml(option.text.trim()),
+                            createElement('span', {
+                                class: 'input-widget-select-option-svg',
+                            })
+                        ];
                     }
                     
                     return optionElement.append(...innerElements);
