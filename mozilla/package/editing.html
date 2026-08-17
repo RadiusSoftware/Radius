@@ -431,34 +431,32 @@
         <script>
             class ScalarWidget extends EditingWidget {
                 static inputTypes = new WeakMap();
-                static otherTypes = new WeakMap();
 
                 static {
-                    ScalarWidget.inputTypes.set(BigIntType, 'number');
-                    //ScalarWidget.inputTypes.set(ColorType, 'color');
-                    ScalarWidget.inputTypes.set(DateType, 'date');
-                    ScalarWidget.inputTypes.set(DateTimeType, 'datetime-local');
-                    ScalarWidget.inputTypes.set(DoubleType, 'number');
-                    //ScalarWidget.inputTypes.set(EmailType, 'email');
-                    ScalarWidget.inputTypes.set(NumberType, 'number');
-                    ScalarWidget.inputTypes.set(NumericType, 'number');
-                    ScalarWidget.inputTypes.set(RegexType, 'text');
-                    ScalarWidget.inputTypes.set(Float32Type, 'number');
-                    ScalarWidget.inputTypes.set(Float64Type, 'number');
-                    ScalarWidget.inputTypes.set(Int8Type, 'number');
-                    ScalarWidget.inputTypes.set(Int16Type, 'number');
-                    ScalarWidget.inputTypes.set(Int32Type, 'number');
-                    ScalarWidget.inputTypes.set(Int64Type, 'number');
-                    //ScalarWidget.inputTypes.set(PasswordType, 'password');
-                    //ScalarWidget.inputTypes.set(TelephoneType, 'tel');
-                    ScalarWidget.inputTypes.set(UInt8Type, 'number');
-                    ScalarWidget.inputTypes.set(UInt16Type, 'number');
-                    ScalarWidget.inputTypes.set(UInt32Type, 'number');
-                    ScalarWidget.inputTypes.set(UInt64Type, 'number');
-                    //ScalarWidget.inputTypes.set(UrlType, 'url');
-
-                    ScalarWidget.otherTypes.set(BooleanType, 'toggle-widget');
-                    ScalarWidget.otherTypes.set(RdsEnum, 'select-widget');
+                    ScalarWidget.inputTypes.set(BigIntType, { tagName: 'input', type: 'number' });
+                    ScalarWidget.inputTypes.set(BooleanType, { tagName: 'toggle-widget' });
+                    //ScalarWidget.inputTypes.set(ColorType, { tagName: 'input', type: 'color' });
+                    ScalarWidget.inputTypes.set(DateType, { tagName: 'input', type: 'date' });
+                    ScalarWidget.inputTypes.set(DateTimeType, { tagName: 'input', type: 'datetime-local' });
+                    ScalarWidget.inputTypes.set(DoubleType, { tagName: 'input', type: 'number' });
+                    //ScalarWidget.inputTypes.set(EmailType, { tagName: 'input', type: 'email' });
+                    ScalarWidget.inputTypes.set(NumberType, { tagName: 'input', type: 'number' });
+                    ScalarWidget.inputTypes.set(NumericType, { tagName: 'input', type: 'number' });
+                    ScalarWidget.inputTypes.set(RegexType, { tagName: 'input', type: 'string' });
+                    ScalarWidget.inputTypes.set(Float32Type, { tagName: 'input', type: 'number' });
+                    ScalarWidget.inputTypes.set(Float64Type, { tagName: 'input', type: 'number' });
+                    ScalarWidget.inputTypes.set(Int8Type, { tagName: 'input', type: 'number' });
+                    ScalarWidget.inputTypes.set(Int16Type, { tagName: 'input', type: 'number' });
+                    ScalarWidget.inputTypes.set(Int32Type, { tagName: 'input', type: 'number' });
+                    ScalarWidget.inputTypes.set(Int64Type, { tagName: 'input', type: 'number' });
+                    //ScalarWidget.inputTypes.set(PasswordType, { tagName: 'input', type: 'password' });
+                    ScalarWidget.inputTypes.set(RdsEnum, { tagName: 'select-widget' });
+                    //ScalarWidget.inputTypes.set(TelephoneType, { tagName: 'input', type: 'tel' });
+                    ScalarWidget.inputTypes.set(UInt8Type, { tagName: 'input', type: 'number' });
+                    ScalarWidget.inputTypes.set(UInt16Type, { tagName: 'input', type: 'number' });
+                    ScalarWidget.inputTypes.set(UInt32Type, { tagName: 'input', type: 'number' });
+                    ScalarWidget.inputTypes.set(UInt64Type, { tagName: 'input', type: 'number' });
+                    //ScalarWidget.inputTypes.set(UrlType, { tagName: 'input', type: 'url' });
                 }
 
                 init() {
@@ -466,6 +464,12 @@
                     this.setClassName('scalar-widget');
                     Controller.bindInner(this, this.getDotted());
                     this.onReadonlyChanged();
+                }
+
+                onEventClick(event) {
+                    if (!this.isEditing()) {
+                        this.startEdit();
+                    }
                 }
 
                 onReadonlyChanged() {

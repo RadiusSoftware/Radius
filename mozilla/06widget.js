@@ -137,6 +137,24 @@ define(class Widget extends HtmlElement {
         return StringType.verify(this.widgetData.settings.substitute);
     }
 
+    init() {
+        super.init();
+        
+        for (let key of Reflect.ownKeys(Reflect.getPrototypeOf(this))) {
+            if (StringType.verify(key)) {
+                if (key.startsWith('onEvent') && FunctionType.verify(this[key])) {
+                    let eventName = RdsText.toSnakeCase(key.substring(7)).replace('_', '-');
+
+                    if (!(`on${eventName}` in this.node)) {
+                        this.node.addEventListener(eventName, event => {
+                            this.handleEvent(event, eventName);
+                        });
+                    }
+                }
+            }
+        }
+    }
+
     substituteNode() {
         let oldNode = this.node;
         let newDocElement = createElement(this.getSubstituteTagName());
@@ -270,6 +288,7 @@ define(class EditingWidget extends Widget {
     startEdit() {
         if (!this.editing) {
             this.editing = true;
+            this.triggerEvent('edit-start');
             this.onStartEditing();
         }
     }

@@ -686,15 +686,13 @@ define(class DocElement extends DocNode {
                 let eventName = key.substring(2);
 
                 this.node.addEventListener(eventName, event => {
-                    if (event.type == 'click') {
-                        if (event.target === this.node) {
-                            if (eventName in this.eventAliases) {
-                                event.rdsAlias = this.eventAliases[eventName];
-                            }
+                    if (event.target === this.node) {
+                        if (eventName in this.eventAliases) {
+                            event.rdsAlias = this.eventAliases[eventName];
                         }
                     }
 
-                    this.handleEvent(event, eventName)
+                    this.handleEvent(event, eventName);
                 });
             }
         }
@@ -1071,7 +1069,7 @@ define(class DocElement extends DocNode {
             }
         }
 
-        let methodName = `onEvent${eventName[0].toUpperCase()}${eventName.substring(1)}`;
+        let methodName = `onEvent${RdsText.toPascalCase(eventName.replaceAll('-', '_'))}`;
 
         if (FunctionType.verify(this[methodName])) {
             let rdsEvent = mkRdsEvent(event);
@@ -1314,5 +1312,16 @@ define(class DocElement extends DocNode {
 
     [Symbol.iterator]() {
         return this.getChildElements()[Symbol.iterator]();
+    }
+
+    triggerEvent(name) {
+        let event = new CustomEvent(name, {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+        });
+
+        this.node.dispatchEvent(event);
+        return this;
     }
 });
