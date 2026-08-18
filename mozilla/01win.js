@@ -22,47 +22,6 @@
 
 
 /*****
- * The docEvent is a high-level wrapper for the browser native event object.
- * The primary purpose for this wrapper is to provide a framework-like AP for
- * each object and to provide access directly to framework objects, instead of
- * the raw nodes and elements.
-*****/
-define(class RdsEvent {
-    constructor(event) {
-        this.event = event;
-    }
-
-    composedPath(...args) {
-        return this.event.composedPath(...args);
-    }
-
-    getDataTransfer() {
-        return this.event.dataTransfer;
-    }
-
-    getSrcElement() {
-        return wrapTree(this.event.srcElement);
-    }
-
-    getTarget() {
-        return wrapTree(this.event.target);
-    }
-
-    preventDefault(...args) {
-        return this.event.preventDefault(...args);
-    }
-
-    stopImmediatePropagation(...args) {
-        return this.event.stopImmediatePropagation(...args);
-    }
-
-    stopPropagation(...args) {
-        return this.event.stopPropagation(...args);
-    }
-});
-
-
-/*****
  * The singleton Radius framework object that manages the underlying window
  * object.  The document wrap is not just a wrap, it's a value-added wrap with
  * features such as returning framework DocElements value-add features for

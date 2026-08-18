@@ -506,7 +506,7 @@ define(class DocNode extends Emitter {
     }
     
     isSame(docNode) {
-        return this.node.isSameNode(docNode.node);
+        return this.node === docNode.node;
     }
 
     isText() {
@@ -654,7 +654,7 @@ define(class DocText extends DocNode {
 define(class DocElement extends DocNode {
     constructor(node) {
         super(node);
-        this.eventAliases = {};
+        this.eventTransforms = {};
 
         for (let attribute of this.getAttributes()) {
             if (attribute.name.startsWith('rds-')) {
@@ -676,24 +676,13 @@ define(class DocElement extends DocNode {
             }
             else if (attribute.name.startsWith('evt-')) {
                 let eventName = attribute.name.substring(4);
-                let eventAlias = attribute.value;
-                this.setEventAlias(eventName, eventAlias);
-            }
-        }
+                let transform = attribute.value.trim();
 
-        for (let key in this.node) {
-            if (key.startsWith('on') && key != 'onunload') {
-                let eventName = key.substring(2);
-
-                this.node.addEventListener(eventName, event => {
-                    if (event.target === this.node) {
-                        if (eventName in this.eventAliases) {
-                            event.rdsAlias = this.eventAliases[eventName];
-                        }
+                if (transform) {
+                    if (!(transform in this.eventTransforms)) {
+                        this.eventTransforms[eventName] = transform;
                     }
-
-                    this.handleEvent(event, eventName);
-                });
+                }
             }
         }
     }
@@ -1056,7 +1045,18 @@ define(class DocElement extends DocNode {
     }
 
     handleEvent(event, eventName) {
-        if ('rdsAlias' in event) {
+        // **** TODO ******************************************************************************
+        // **** TODO ******************************************************************************
+        // **** TODO ******************************************************************************
+        /*
+        if (event.type == 'click' && this.node.isSameNode(event.target)) {
+            console.log(event);
+            console.log(event.target);
+        }
+        */
+        //if ('rdsAlias' in event) {
+        /*
+        if (this.node.isSameNode(event.target) && event.type in this.eventTransforms) {
             let alias = event.rdsAlias;
             let methodName = `onEvent${alias[0].toUpperCase()}${alias.substring(1)}`;
 
@@ -1067,8 +1067,16 @@ define(class DocElement extends DocNode {
                 event.stopImmediatePropagation();
                 return;
             }
+            let transform = this.eventTransforms[event.type];
+            let methodName = `onEvent${RdsText.toPascalCase(transform.replaceAll('-', '_'))}`;
+            //let methodName = `onEvent${transform[0].toUpperCase()}${transform.substring(1)}`;
+            console.log(`*** METHOD NAME ${methodName}`);
+            return;
         }
-
+        */
+        // **** TODO ******************************************************************************
+        // **** TODO ******************************************************************************
+        // **** TODO ******************************************************************************
         let methodName = `onEvent${RdsText.toPascalCase(eventName.replaceAll('-', '_'))}`;
 
         if (FunctionType.verify(this[methodName])) {
@@ -1076,7 +1084,6 @@ define(class DocElement extends DocNode {
             this[methodName](rdsEvent);
             event.preventDefault();
             event.stopImmediatePropagation();
-            return;
         }
         
         let messageName = `${Event}${eventName}`;
@@ -1107,6 +1114,30 @@ define(class DocElement extends DocNode {
     
     init() {
         super.init();
+
+        for (let key in this.node) {
+            if (key.startsWith('on') && key != 'onunload') {
+                let eventName = key.substring(2);
+
+                this.node.addEventListener(eventName, event => {
+                    if (event.target === this.node) {
+                        if (eventName in this.eventTransforms) {
+                            let transform = this.eventTransforms[eventName];
+                            
+                            this.triggerCustomEvent(transform, {
+                                detail: {
+                                    event: mkRdsEvent(event),
+                                }
+                            });
+
+                            return;
+                        }
+                    }
+
+                    this.handleEvent(event, eventName);
+                });
+            }
+        }
 
         if (this.getRdsDynamicSize) {
             this.setDynamicSize();
@@ -1261,11 +1292,6 @@ define(class DocElement extends DocNode {
         }
     }
 
-    setEventAlias(eventName, eventAlias) {
-        this.eventAliases[eventName] = eventAlias;
-        return this;
-    }
-
     setId(id) {
         this.node.setAttribute('id', id);
         return this;
@@ -1314,13 +1340,14 @@ define(class DocElement extends DocNode {
         return this.getChildElements()[Symbol.iterator]();
     }
 
-    triggerEvent(name) {
-        let event = new CustomEvent(name, {
-            bubbles: true,
-            cancelable: true,
-            composed: true,
-        });
+    triggerCustomEvent(name, options) {
+        options = ObjectType.verify(options) ? options : {};
 
+        BooleanType.verify(options.bubbles) ? null : options.bubbles = true;
+        BooleanType.verify(options.cancelable) ? null : options.cancelable = true;
+        BooleanType.verify(options.composed) ? null : options.composed = true;
+
+        let event = new CustomEvent(name, options);
         this.node.dispatchEvent(event);
         return this;
     }

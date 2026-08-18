@@ -138,6 +138,14 @@ define(class Widget extends HtmlElement {
     }
 
     init() {
+        if (this.hasSetting('eventTransforms')) {
+            for (let entry of Object.entries(this.getSetting('eventTransforms'))) {
+                let eventName = entry[0];
+                let transform = entry[1];
+                this.eventTransforms[eventName] = transform;
+            }
+        }
+
         super.init();
         
         for (let key of Reflect.ownKeys(Reflect.getPrototypeOf(this))) {
@@ -288,7 +296,7 @@ define(class EditingWidget extends Widget {
     startEdit() {
         if (!this.editing) {
             this.editing = true;
-            this.triggerEvent('edit-start');
+            this.triggerCustomEvent('edit-start');
             this.onStartEditing();
         }
     }
