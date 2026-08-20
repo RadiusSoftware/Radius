@@ -337,6 +337,7 @@ body {
     padding-right: 4px;
     padding-top: 6px;
     padding-bottom: 6px;
+    box-sizing: border-box;
     border-color: var(--border-color);
     border-width: 1px;
     border-style: solid;
@@ -378,6 +379,7 @@ body {
     background-color: var(--label-background-color);
     border-color: var(--faint-border-color);
     border-width: 1px;
+    box-sizing: border-box;
     border-style: solid;
     border-radius: var(--border-radius-1);
     cursor: pointer;
@@ -459,8 +461,8 @@ body {
     display: flex;
     align-items: center;
     height: 40px;
-    margin-top: 6px;
-    margin-bottom: 6px;
+    margin-top: 0px;
+    margin-bottom: 0px;
     margin-left: 0px;
     margin-right: 0px;
     padding-top: 4px;
@@ -512,6 +514,7 @@ body {
     margin-left: 6px;
     margin-right: 8px;
     padding: 0px;
+    box-sizing: border-box;
     background-color: var(--label-background-color);
     border-color: var(--faint-border-color);
     border-width: 1px;
@@ -580,8 +583,8 @@ body {
     align-items: center;
     box-sizing: border-box;
     height: 40px;
-    margin-top: 6px;
-    margin-bottom: 6px;
+    margin-top: 0px;
+    margin-bottom: 0px;
     margin-left: 0px;
     margin-right: 0px;
     padding-top: 4px;
@@ -625,6 +628,7 @@ body {
     border-color: var(--border-color);
     border-width: 1px;
     border-radius: var(--border-radius-1);
+    box-sizing: border-box;
     background-color: var(--textarea-background-color);
     appearance: base-select;
 }
@@ -723,17 +727,21 @@ ul.list-unordered > li {
 .object-widget-body {
     width: 100%;
     height: auto;
+    box-sizing: border-box;
     margin: 0px;
     padding: 0px;
 }
 
 .object-widget-property {
+    width: 25%;
+    box-sizing: border-box;
     vertical-align: middle;
     font-weight: bold;
     color: var(--data-property-color);
 }
 
 .object-widget-optional-property {
+    box-sizing: border-box;
     vertical-align: middle;
     font-weight: bold;
     color: var(--data-property-optional-color);
@@ -767,6 +775,7 @@ ul.list-unordered > li {
     height: 48px;
     margin: 0px;
     padding: 0px;
+    box-sizing: border-box;
 }
 
 .scalar-widget-viewer {
@@ -776,6 +785,7 @@ ul.list-unordered > li {
     height: 48px;
     margin: 0px;
     padding: 0px;
+    box-sizing: border-box;
 }
 
 .scroll {

@@ -351,6 +351,11 @@
                         this.setClassName(InputWidget.styles.text);
                     }
                 }
+
+                selectAll() {
+                    this.node.setSelectionRange(0, this.node.size);
+                    return this;
+                }
             }
         </script>
     </widget>
@@ -479,22 +484,26 @@
                         if (this.inputType.tagName == 'input-widget') {
                             this.editor = createElement(this.inputType.tagName, {
                                 type: this.inputType.type,
+                                class: 'fill',
                                 'rds-bind': this.getDotted(),
                             });
                         }
                         else {
                             this.editor = createElement(this.inputType.tagName, {
+                                class: 'fill',
                                 'rds-bind': this.getDotted(),
                             });
                         }
+
+                        Doc.primeElement(this.editor);
                     }
 
                     this.onReadonlyChanged();
+                }
 
-                    (async () => {
-                        await pause(2000);
-                        Controller.setValue('acme.operator.org', 'Bob Loblaw');
-                    });
+                onCancelEditing() {
+                    this.editor.replace(this.viewer);
+                    Controller.setValue(this.getDotted(), this.revert);
                 }
 
                 onHandleEventClick(event) {
@@ -505,13 +514,12 @@
 
                 onInspectEventKeydown(event) {
                     if (event.getKey() == 'Escape') {
-                        this.stopEdit();
+                        this.cancelEdit();
+                        event.kill();
                     }
                     else if (event.getKey() == 'Enter') {
                         this.stopEdit();
-                    }
-                    else {
-                        return RdsEvent.propagate;
+                        event.kill()
                     }
                 }
 
@@ -527,8 +535,13 @@
                 }
 
                 onStartEditing() {
+                    this.revert = Controller.getValue(this.getDotted());
                     this.viewer.replace(this.editor);
                     this.editor.focus();
+
+                    if (this.editor.getTagName() == 'input') {
+                        this.editor.selectAll();
+                    }
                 }
 
                 onStopEditing() {

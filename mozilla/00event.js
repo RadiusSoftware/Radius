@@ -60,7 +60,7 @@ define(class RdsEvent {
         return this.event.type;
     }
 
-    halt() {
+    kill() {
         this.event.stopImmediatePropagation();
         this.event.preventDefault();
         return this;

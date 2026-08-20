@@ -1050,7 +1050,7 @@ define(class DocElement extends DocNode {
         if (FunctionType.verify(this[methodName])) {
             let rdsEvent = mkRdsEvent(event);
             this[methodName](rdsEvent);
-            rdsEvent.halt();
+            rdsEvent.kill();
         }
 
         methodName = `onInspectEvent${RdsText.toPascalCase(eventName.replaceAll('-', '_'))}`;

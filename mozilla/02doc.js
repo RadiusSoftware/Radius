@@ -452,6 +452,21 @@ singleton(class Doc extends Emitter {
         }
     }
 
+    primeElement(docElement) {
+        let primer = createElement('div', {
+            style: 'display:none;',
+        })
+        .append(docElement);
+        this.getHtml().append(primer);
+
+        (async () => {
+            await pause(20);
+            primer.remove();
+        })();
+
+        return this;
+    }
+
     queryAll(selector) {
         let selected = [];
       

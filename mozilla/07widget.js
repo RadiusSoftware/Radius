@@ -205,6 +205,14 @@ define(class Widget extends HtmlElement {
  * it's betst to place there here in this super class.
 *****/
 define(class EditingWidget extends Widget {
+    cancelEdit() {
+        if (this.editing) {
+            this.editing = false;
+            this.triggerCustomEvent('edit-stop');
+            this.onCancelEditing();
+        }
+    }
+
     getDotted() {
         return this.dotted;
     }
@@ -237,6 +245,9 @@ define(class EditingWidget extends Widget {
 
     isReadonly() {
         return this.readonly;
+    }
+
+    onCancelEditing() {
     }
 
     onReadonlyChanged() {
