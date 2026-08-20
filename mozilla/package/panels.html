@@ -16,13 +16,12 @@
         </script>
         <script>
             class FormWidget extends Widget {
-                /*
-                async onClick(message) {
-                    message.event.preventDefault();
-                    console.log('click');
-                    console.log(message);
+                init() {
+                    super.init();
+                    this.editing = null;
                 }
 
+                /*
                 async onReset(message) {
                     message.event.preventDefault();
                     console.log('reset');
@@ -30,7 +29,9 @@
                 }
                 */
 
-                async onEventSubmit(message) {
+                async onHandleEventSubmit(message) {
+                    console.log('*** SUBMIT');
+                    /*
                     if (this.getRdsAction) {
                         let rdsAction = `..${this.getRdsAction()}`;
 
@@ -40,11 +41,23 @@
                             let response = await Api[rdsAction](...apiArgs);
                         }
                     }
+                    */
                 }
 
-                onEventEditStart(event) {
-                    console.log('*** Edit Start');
-                    console.log(event);
+                onHandleEventEditStart(event) {
+                    if (this.editing) {
+                        this.editing.stopEdit();
+                        this.editing = event.getTarget();
+                    }
+                    else {
+                        this.editing = event.getTarget();
+                    }
+                }
+
+                onHandleEventEditStop(event) {
+                    if (this.editing) {
+                        this.editing = null;
+                    }
                 }
             }
         </script>

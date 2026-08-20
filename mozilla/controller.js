@@ -48,9 +48,6 @@ singleton(class Controller extends Emitter {
                 }
             }
         });
-
-        Doc.on('Mutation', message => this.onMutationChildList(message));
-        Doc.on('Attr-Mutation', message => this.onMutationAttr(message));
     }
 
     bindAttr(docElement, attrName, ref) {
@@ -244,36 +241,6 @@ singleton(class Controller extends Emitter {
     isArray(ref) {
         let shape = this.shape.get(ref);
         return shape && shape.type === ArrayType;
-    }
-
-    onMutationAttr(message) {
-        let bindings = this.bindingsByDocElement.get(message.target);
-
-        if (bindings) {
-            for (let binding of bindings.bindings) {
-                if (binding.type == 'attr') {
-                    binding.pull();
-                }
-                else if (binding.type == 'attrToggle') {
-                    binding.pull();
-                }
-                else if (binding.type == 'style') {
-                    binding.pull();
-                }
-            }
-        }
-    }
-
-    onMutationChildList(message) {
-        let bindings = this.bindingsByDocElement.get(message.target);
-
-        if (bindings) {
-            for (let binding of bindings.bindings) {
-                if (binding.type == 'inner') {
-                    binding.pull();
-                }
-            }
-        }
     }
 
     popValue(dotted) {

@@ -1045,53 +1045,27 @@ define(class DocElement extends DocNode {
     }
 
     handleEvent(event, eventName) {
-        // **** TODO ******************************************************************************
-        // **** TODO ******************************************************************************
-        // **** TODO ******************************************************************************
-        /*
-        if (event.type == 'click' && this.node.isSameNode(event.target)) {
-            console.log(event);
-            console.log(event.target);
-        }
-        */
-        //if ('rdsAlias' in event) {
-        /*
-        if (this.node.isSameNode(event.target) && event.type in this.eventTransforms) {
-            let alias = event.rdsAlias;
-            let methodName = `onEvent${alias[0].toUpperCase()}${alias.substring(1)}`;
-
-            if (FunctionType.verify(this[methodName])) {
-                let rdsEvent = mkRdsEvent(event);
-                this[methodName](rdsEvent);
-                event.preventDefault();
-                event.stopImmediatePropagation();
-                return;
-            }
-            let transform = this.eventTransforms[event.type];
-            let methodName = `onEvent${RdsText.toPascalCase(transform.replaceAll('-', '_'))}`;
-            //let methodName = `onEvent${transform[0].toUpperCase()}${transform.substring(1)}`;
-            console.log(`*** METHOD NAME ${methodName}`);
-            return;
-        }
-        */
-        // **** TODO ******************************************************************************
-        // **** TODO ******************************************************************************
-        // **** TODO ******************************************************************************
-        let methodName = `onEvent${RdsText.toPascalCase(eventName.replaceAll('-', '_'))}`;
+        let methodName = `onHandleEvent${RdsText.toPascalCase(eventName.replaceAll('-', '_'))}`;
 
         if (FunctionType.verify(this[methodName])) {
             let rdsEvent = mkRdsEvent(event);
             this[methodName](rdsEvent);
-            event.preventDefault();
-            event.stopImmediatePropagation();
+            rdsEvent.halt();
+        }
+
+        methodName = `onInspectEvent${RdsText.toPascalCase(eventName.replaceAll('-', '_'))}`;
+
+        if (FunctionType.verify(this[methodName])) {
+            let rdsEvent = mkRdsEvent(event);
+            this[methodName](rdsEvent);
         }
         
-        let messageName = `${Event}${eventName}`;
+        let messageName = `Event${eventName[0].toUpperCase()}${eventName.substring(1)}`;
 
         if (this.handles(messageName)) {
             this.emit({
                 name: messageName,
-                event: event,
+                event: mkRdsEvent(event),
             });
         }
     }

@@ -37,10 +37,14 @@ singleton(class Win extends Emitter {
                 let eventName = key.substring(2);
 
                 window.addEventListener(eventName, event => {
-                    this.emit({
-                        name: eventName,
-                        event: mkRdsEvent(event),
-                    });
+                    let messageName = `Event${eventName[0].toUpperCase()}${eventName.substring(1)}`;
+
+                    if (this.handles(messageName)) {
+                        this.emit({
+                            name: messageName,
+                            event: mkRdsEvent(event),
+                        });
+                    }
                 });
             }
         }

@@ -44,7 +44,7 @@ define(class ControllerBinding {
             this.type = type;
 
             this.docElement.on(
-                'input',
+                'EventInput',
                 message => {
                     this.pull();
                 },
@@ -226,18 +226,6 @@ define(class ControllerBinding {
                         Controller.setValue(this.dotted, this.docElement.getProperty('value'));
                         break;
                 }
-            }
-            else if (this.type == 'attr') {
-                let newValue = this.docElement.getAttribute(this.name);
-                Controller.setValue(this.dotted, newValue);
-            }
-            else if (this.type == 'attrToggle') {
-                let bool = this.docElement.hasAttribute(this.name);
-                Controller.setValue(this.dotted, bool);
-            }
-            else if (this.type == 'style') {
-                let stylePropertyValue = this.docElement.getStyle(this.name);
-                Controller.setValue(this.dotted, stylePropertyValue);
             }
 
             this.blockingFeedback = false;

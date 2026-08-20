@@ -45,10 +45,14 @@ singleton(class Doc extends Emitter {
                 let eventName = key.substring(2);
 
                 document.addEventListener(eventName, event => {
-                    this.emit({
-                        name: eventName,
-                        event: mkRdsEvent(event),
-                    });
+                    let messageName = `Event${eventName[0].toUpperCase()}${eventName.substring(1)}`;
+
+                    if (this.handles(messageName)) {
+                        this.emit({
+                            name: messageName,
+                            event: mkRdsEvent(event),
+                        });
+                    }
                 });
             }
         }

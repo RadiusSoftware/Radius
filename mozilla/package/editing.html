@@ -411,7 +411,9 @@
                                 })
                                 .setInnerHtml(property),
 
-                                createElement('td')
+                                createElement('td', {
+                                    class: 'object-widget-value',
+                                })
                                 .append(
                                     createElement('data-widget', {
                                         'rds-bind': dotted,
@@ -433,58 +435,104 @@
                 static inputTypes = new WeakMap();
 
                 static {
-                    ScalarWidget.inputTypes.set(BigIntType, { tagName: 'input', type: 'number' });
+                    ScalarWidget.inputTypes.set(BigIntType, { tagName: 'input-widget', type: 'number' });
                     ScalarWidget.inputTypes.set(BooleanType, { tagName: 'toggle-widget' });
-                    //ScalarWidget.inputTypes.set(ColorType, { tagName: 'input', type: 'color' });
-                    ScalarWidget.inputTypes.set(DateType, { tagName: 'input', type: 'date' });
-                    ScalarWidget.inputTypes.set(DateTimeType, { tagName: 'input', type: 'datetime-local' });
-                    ScalarWidget.inputTypes.set(DoubleType, { tagName: 'input', type: 'number' });
-                    //ScalarWidget.inputTypes.set(EmailType, { tagName: 'input', type: 'email' });
-                    ScalarWidget.inputTypes.set(NumberType, { tagName: 'input', type: 'number' });
-                    ScalarWidget.inputTypes.set(NumericType, { tagName: 'input', type: 'number' });
-                    ScalarWidget.inputTypes.set(RegexType, { tagName: 'input', type: 'string' });
-                    ScalarWidget.inputTypes.set(Float32Type, { tagName: 'input', type: 'number' });
-                    ScalarWidget.inputTypes.set(Float64Type, { tagName: 'input', type: 'number' });
-                    ScalarWidget.inputTypes.set(Int8Type, { tagName: 'input', type: 'number' });
-                    ScalarWidget.inputTypes.set(Int16Type, { tagName: 'input', type: 'number' });
-                    ScalarWidget.inputTypes.set(Int32Type, { tagName: 'input', type: 'number' });
-                    ScalarWidget.inputTypes.set(Int64Type, { tagName: 'input', type: 'number' });
-                    //ScalarWidget.inputTypes.set(PasswordType, { tagName: 'input', type: 'password' });
+                    //ScalarWidget.inputTypes.set(ColorType, { tagName: 'input-widget', type: 'color' });
+                    ScalarWidget.inputTypes.set(DateType, { tagName: 'input-widget', type: 'date' });
+                    ScalarWidget.inputTypes.set(DateTimeType, { tagName: 'input-widget', type: 'datetime-local' });
+                    ScalarWidget.inputTypes.set(DoubleType, { tagName: 'input-widget', type: 'number' });
+                    //ScalarWidget.inputTypes.set(EmailType, { tagName: 'input-widget', type: 'email' });
+                    ScalarWidget.inputTypes.set(NumberType, { tagName: 'input-widget', type: 'number' });
+                    ScalarWidget.inputTypes.set(NumericType, { tagName: 'input-widget', type: 'number' });
+                    ScalarWidget.inputTypes.set(RegexType, { tagName: 'input-widget', type: 'string' });
+                    ScalarWidget.inputTypes.set(Float32Type, { tagName: 'input-widget', type: 'number' });
+                    ScalarWidget.inputTypes.set(Float64Type, { tagName: 'input-widget', type: 'number' });
+                    ScalarWidget.inputTypes.set(Int8Type, { tagName: 'input-widget', type: 'number' });
+                    ScalarWidget.inputTypes.set(Int16Type, { tagName: 'input-widget', type: 'number' });
+                    ScalarWidget.inputTypes.set(Int32Type, { tagName: 'input-widget', type: 'number' });
+                    ScalarWidget.inputTypes.set(Int64Type, { tagName: 'input-widget', type: 'number' });
+                    //ScalarWidget.inputTypes.set(PasswordType, { tagName: 'input-widget', type: 'password' });
                     ScalarWidget.inputTypes.set(RdsEnum, { tagName: 'select-widget' });
-                    //ScalarWidget.inputTypes.set(TelephoneType, { tagName: 'input', type: 'tel' });
-                    ScalarWidget.inputTypes.set(UInt8Type, { tagName: 'input', type: 'number' });
-                    ScalarWidget.inputTypes.set(UInt16Type, { tagName: 'input', type: 'number' });
-                    ScalarWidget.inputTypes.set(UInt32Type, { tagName: 'input', type: 'number' });
-                    ScalarWidget.inputTypes.set(UInt64Type, { tagName: 'input', type: 'number' });
-                    //ScalarWidget.inputTypes.set(UrlType, { tagName: 'input', type: 'url' });
+                    //ScalarWidget.inputTypes.set(TelephoneType, { tagName: 'input-widget', type: 'tel' });
+                    ScalarWidget.inputTypes.set(StringType, { tagName: 'input-widget', type: 'text' });
+                    ScalarWidget.inputTypes.set(UInt8Type, { tagName: 'input-widget', type: 'number' });
+                    ScalarWidget.inputTypes.set(UInt16Type, { tagName: 'input-widget', type: 'number' });
+                    ScalarWidget.inputTypes.set(UInt32Type, { tagName: 'input-widget', type: 'number' });
+                    ScalarWidget.inputTypes.set(UInt64Type, { tagName: 'input-widget', type: 'number' });
+                    //ScalarWidget.inputTypes.set(UrlType, { tagName: 'input-widget', type: 'url' });
                 }
 
                 init() {
                     super.init();
                     this.setClassName('scalar-widget');
-                    Controller.bindInner(this, this.getDotted());
+
+                    this.append(
+                        this.viewer = createElement('div', {
+                            class: 'scalar-widget-viewer',
+                            'rds-bind': this.getDotted(),
+                        })
+                    );
+
+                    if (ScalarWidget.inputTypes.has(this.getShape().getType())) {
+                        this.inputType = ScalarWidget.inputTypes.get(this.getShape().getType());
+
+                        if (this.inputType.tagName == 'input-widget') {
+                            this.editor = createElement(this.inputType.tagName, {
+                                type: this.inputType.type,
+                                'rds-bind': this.getDotted(),
+                            });
+                        }
+                        else {
+                            this.editor = createElement(this.inputType.tagName, {
+                                'rds-bind': this.getDotted(),
+                            });
+                        }
+                    }
+
                     this.onReadonlyChanged();
+
+                    (async () => {
+                        await pause(2000);
+                        Controller.setValue('acme.operator.org', 'Bob Loblaw');
+                    });
                 }
 
-                onEventClick(event) {
+                onHandleEventClick(event) {
                     if (!this.isEditing()) {
                         this.startEdit();
                     }
                 }
 
-                onReadonlyChanged() {
-                    if (this.isReadonly()) {
-                        this.clearClassName('responsive');
+                onInspectEventKeydown(event) {
+                    if (event.getKey() == 'Escape') {
+                        this.stopEdit();
+                    }
+                    else if (event.getKey() == 'Enter') {
+                        this.stopEdit();
                     }
                     else {
-                        this.setClassName('responsive');
+                        return RdsEvent.propagate;
+                    }
+                }
+
+                onReadonlyChanged() {
+                    if (this.inputType) {
+                        if (this.isReadonly()) {
+                            this.viewer.clearClassName('responsive');
+                        }
+                        else {
+                            this.viewer.setClassName('responsive');
+                        }
                     }
                 }
 
                 onStartEditing() {
+                    this.viewer.replace(this.editor);
+                    this.editor.focus();
                 }
 
                 onStopEditing() {
+                    this.editor.replace(this.viewer);
                 }
             }
         </script>

@@ -32,12 +32,20 @@ define(class RdsEvent {
         this.event = event;
     }
 
+    getClass() {
+        return Reflect.getPrototypeOf(this.event).constructor.name;
+    }
+
     composedPath(...args) {
         return this.event.composedPath(...args);
     }
 
     getDataTransfer() {
         return this.event.dataTransfer;
+    }
+
+    getKey() {
+        return this.event.key;
     }
 
     getSrcElement() {
@@ -48,15 +56,28 @@ define(class RdsEvent {
         return wrapTree(this.event.target);
     }
 
+    getType() {
+        return this.event.type;
+    }
+
+    halt() {
+        this.event.stopImmediatePropagation();
+        this.event.preventDefault();
+        return this;
+    }
+
     preventDefault(...args) {
-        return this.event.preventDefault(...args);
+        this.event.preventDefault(...args);
+        return this;
     }
 
     stopImmediatePropagation(...args) {
-        return this.event.stopImmediatePropagation(...args);
+        this.event.stopImmediatePropagation(...args);
+        return this;
     }
 
     stopPropagation(...args) {
-        return this.event.stopPropagation(...args);
+        this.event.stopPropagation(...args);
+        return this;
     }
 });

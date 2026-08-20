@@ -150,8 +150,17 @@ define(class Widget extends HtmlElement {
         
         for (let key of Reflect.ownKeys(Reflect.getPrototypeOf(this))) {
             if (StringType.verify(key)) {
-                if (key.startsWith('onEvent') && FunctionType.verify(this[key])) {
-                    let eventName = RdsText.toSnakeCase(key.substring(7)).replace('_', '-');
+                if (key.startsWith('onHandleEvent') || FunctionType.verify(this[key])) {
+                    let eventName = RdsText.toSnakeCase(key.substring(13)).replace('_', '-');
+
+                    if (!(`on${eventName}` in this.node)) {
+                        this.node.addEventListener(eventName, event => {
+                            this.handleEvent(event, eventName);
+                        });
+                    }
+                }
+                else if (key.startsWith('onInspectEvent') || FunctionType.verify(this[key])) {
+                    let eventName = RdsText.toSnakeCase(key.substring(14)).replace('_', '-');
 
                     if (!(`on${eventName}` in this.node)) {
                         this.node.addEventListener(eventName, event => {
@@ -196,13 +205,6 @@ define(class Widget extends HtmlElement {
  * it's betst to place there here in this super class.
 *****/
 define(class EditingWidget extends Widget {
-    cancelEdit() {
-        if (this.editing) {
-            this.editing = false;
-            this.onStopEditing();
-        }
-    }
-
     getDotted() {
         return this.dotted;
     }
@@ -277,7 +279,7 @@ define(class EditingWidget extends Widget {
 
             if (newValue) {
                 if (this.editing) {
-                    this.cancelEdit();
+                    this.stopEdit();
                 }
             }
 
@@ -298,6 +300,14 @@ define(class EditingWidget extends Widget {
             this.editing = true;
             this.triggerCustomEvent('edit-start');
             this.onStartEditing();
+        }
+    }
+
+    stopEdit() {
+        if (this.editing) {
+            this.editing = false;
+            this.triggerCustomEvent('edit-stop');
+            this.onStopEditing();
         }
     }
 });
