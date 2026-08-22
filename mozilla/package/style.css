@@ -191,18 +191,30 @@ body {
 }
 
 .arrayrow-widget {
-    width: 100%;
-    height: auto;
     margin: 0px;
     padding: 0px;
 }
 
+.arrayrow-widget-action-cell {
+    margin: 0px;
+    padding: 2px;
+}
+
 .arrayrow-widget-cell {
     border: 1px solid var(--faint-border-color);
+    padding-top: 2px;
+    padding-bottom: 2px;
+    padding-left: 2px;
+    padding-right: 2px;
+}
+
+.arrayrow-widget-actions {
+    width: 26px;
+    height: 48px;
     padding-top: 6px;
     padding-bottom: 6px;
-    padding-left: 6px;
-    padding-right: 0px;
+    padding-left: 2px;
+    padding-right: 2px;
 }
 
 .bordered {

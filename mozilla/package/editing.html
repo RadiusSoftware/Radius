@@ -15,17 +15,36 @@
                     this.render();
                 }
 
+                onHandleEventDeleteRow(event) {
+                    console.log('delete row');
+                }
+
+                onHandleEventInsertRow(event) {
+                    console.log('insert row');
+                }
+
+                onHandleEventInsertRowBottom(event) {
+                    console.log('insert row -- bottom');
+                }
+
+                onHandleEventInsertRowTop(event) {
+                    console.log('insert row -- top');
+                }
+
                 onReadonlyChanged() {
-                }
-
-                onStartEditing() {
-                }
-
-                onStopEditing() {
+                    if (this.actions) {
+                        if (this.isReadonly()) {
+                            this.actions.setStyle({ display: 'none' });
+                        }
+                        else {
+                            this.actions.setStyle({ display: '' });
+                        }
+                    }
                 }
 
                 render() {
                     this.clear();
+
                     let shape = this.getShape();
                     let clss = shape.getClass();
                     let readonly = this.isReadonly();
@@ -67,12 +86,14 @@
                 }
 
                 onReadonlyChanged() {
-                }
-
-                onStartEditing() {
-                }
-
-                onStopEditing() {
+                    if (this.actions) {
+                        if (this.isReadonly()) {
+                            this.actions.setStyle({ display: 'none' });
+                        }
+                        else {
+                            this.actions.setStyle({ display: '' });
+                        }
+                    }
                 }
 
                 render() {
@@ -109,6 +130,29 @@
                             )
                         );
                     }
+
+                    this.append(
+                        this.actions = createElement('grid-widget', {
+                            'rds-rows': '22px,22px',
+                            'rds-cols': '22px',
+                            style: 'display:none;',
+                        })
+                        .append(
+                            createElement('svg', {
+                                class: 'icon icon-small',
+                                'rds-shape': 'minussign',
+                                'evt-click': 'delete-row',
+                            }),
+
+                            createElement('svg', {
+                                class: 'icon icon-small',
+                                'rds-shape': 'plussign',
+                                'evt-click': 'insert-row',
+                            }),
+                        )
+                    );
+
+                    this.onReadonlyChanged();
                 }
             }
         </script>
@@ -352,8 +396,12 @@
                     }
                 }
 
-                selectAll() {
-                    this.node.setSelectionRange(0, this.node.size);
+                selectText() {
+                    let value = this.node.value;
+                    if (StringType.verify(value)) {
+                        this.node.setSelectionRange(0, value.length);
+                    }
+
                     return this;
                 }
             }
@@ -512,6 +560,10 @@
                     }
                 }
 
+                onHandleEventFocusout(event) {
+                    this.cancelEdit();
+                }
+
                 onInspectEventKeydown(event) {
                     if (event.getKey() == 'Escape') {
                         this.cancelEdit();
@@ -540,7 +592,7 @@
                     this.editor.focus();
 
                     if (this.editor.getTagName() == 'input') {
-                        this.editor.selectAll();
+                        this.editor.selectText();
                     }
                 }
 
