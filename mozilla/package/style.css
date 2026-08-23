@@ -190,6 +190,15 @@ body {
     padding: 0px;
 }
 
+.array-widget-action-cell {
+    vertical-align: middle;
+}
+
+.array-widget-action-text {
+    vertical-align: middle;
+    font-size: 12px;
+}
+
 .arrayrow-widget {
     margin: 0px;
     padding: 0px;

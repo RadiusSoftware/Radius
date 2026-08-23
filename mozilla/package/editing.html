@@ -10,9 +10,26 @@
         </script>
         <script>
             class ArrayWidget extends EditingWidget {
+                getColumnCount() {
+                    if (this.getShape().getType() === ObjectType) {
+                        return this.getShape().getKeys().length;
+                    }
+                    else {
+                        return 1;
+                    }
+                }
+
+                getRowCount() {
+                    return Controller.getValue(this.getDotted()).length;
+                }
+
                 init() {
                     super.init();
                     this.render();
+                }
+
+                onHandleEventAppendRow(event) {
+                    console.log('append row');
                 }
 
                 onHandleEventDeleteRow(event) {
@@ -23,12 +40,10 @@
                     console.log('insert row');
                 }
 
-                onHandleEventInsertRowBottom(event) {
-                    console.log('insert row -- bottom');
-                }
-
-                onHandleEventInsertRowTop(event) {
-                    console.log('insert row -- top');
+                onHandleEventPrependRow(event) {
+                    console.log('prepend row');
+                    let def = this.getShape().getClass().getDefault();
+                    //console.log(def);
                 }
 
                 onReadonlyChanged() {
@@ -54,6 +69,35 @@
                         this.tbody = createElement('tbody', {
                             class: 'array-widget-body',
                         })
+                    );
+
+                    this.tbody.append(
+                        this.actions = createElement('tr')
+                        .append(
+                            createElement('td', {
+                                colSpan: this.getColumnCount().toString(),
+                                class: '',
+                            })
+                            .append(
+                                createElement('grid-widget', {
+                                    'rds-rows': 'auto',
+                                    'rds-cols': '32px,32px',
+                                })
+                                .append(
+                                    createElement('svg', {
+                                        class: 'icon icon-small array-widget-action-cell',
+                                        'rds-shape': 'plussign',
+                                        'evt-click': 'prepend-row',
+                                    }),
+                                    
+                                    createElement('svg', {
+                                        class: 'icon icon-small array-widget-action-cell',
+                                        'rds-shape': 'plussign',
+                                        'evt-click': 'append-row',
+                                    }),
+                                )
+                            )
+                        )
                     );
 
                     for (let i = 0; i < Controller.getValue(this.getDotted()).length; i++) {

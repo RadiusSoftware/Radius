@@ -23,11 +23,10 @@
 
 /*****
 *****/
-singleton(class DragAndDrop {
-    constructor() {
+singleton(class NativeHtml {
+    createElement(tagName, attributes) {
     }
 
-    isAvailable() {
-        return false;
+    createElementFromOuterHtml(outerHtml) {
     }
 });
