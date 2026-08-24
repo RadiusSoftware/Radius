@@ -207,6 +207,40 @@ define(class RdsShape {
         return !this.isArray();
     }
 
+    search(baseType) {
+        let dotteds = [];
+
+        if (baseType instanceof BaseType) {
+            let stack = [ { dotted: '', shape: this }];
+
+            while (stack.length) {
+                let entry = stack.pop();
+
+                if (entry.shape.type === baseType) {
+                    dotteds.push(entry.dotted);
+                }
+
+                if (entry.shape.type === ObjectType) {
+                    for (let key of Object.keys(entry.shape.keys).reverse()) {
+                        stack.push({
+                            dotted: entry.dotted ? `${entry.dotted}.${key}` : key,
+                            shape: entry.shape.keys[key],
+                        })
+                    }
+                }
+                else if (entry.shape.type === ArrayType) {
+                    if (entry.shape.clss === ObjectType) {
+                        for (let key of Object.keys(entry.shape.clss.keys).reverse()) {
+                            stack.push({ dotted: `${entry.dotted}.${key}}`, shape: entry.shape.clss.keys[key] });
+                        }
+                    }
+                }
+            }
+        }
+
+        return dotteds;
+    }
+
     set(dotted, shape) {
         let rdsShape = this;
         let segments = RdsText.split(dotted, '.');

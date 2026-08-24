@@ -24,6 +24,9 @@
 /*****
 *****/
 singleton(class NativeHtml {
+    createCompilerElement(tagName) {
+    }
+
     createElement(tagName, attributes) {
     }
 
