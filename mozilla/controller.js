@@ -31,11 +31,19 @@
 singleton(class Controller extends Emitter {
     constructor() {
         super();
-        this.shape = {};
-        this.value = {};
+
+        this.shape = mkRdsShape({});
         this.nodes = new WeakMap();
         this.bindingsByDotted = {};
         this.bindingsByDocElement = new WeakMap();
+        this.byUUID = {};
+
+        this.decorated = {
+            uuid: Crypto.generateUUID(),
+            parent: null,
+            shape: this.shape,
+            value: {},
+        };
 
         this.on('Set', message => {
             let byDotted = this.bindingsByDotted[message.dotted];
@@ -50,23 +58,28 @@ singleton(class Controller extends Emitter {
         });
     }
 
-    bindAttr(docElement, attrName, ref) {
-        this.setBinding(docElement, ref, 'attr', attrName);
+    bindArray(docElement, dotted) {
+        this.setBinding(docElement, dotted, 'array');
         return this;
     }
 
-    bindAttrToggle(docElement, attrName, ref) {
-        this.setBinding(docElement, ref, 'attrToggle', attrName);
+    bindAttr(docElement, attrName, dotted) {
+        this.setBinding(docElement, dotted, 'attr', attrName);
         return this;
     }
 
-    bindInner(docElement, ref) {
-        this.setBinding(docElement, ref, 'inner');
+    bindAttrToggle(docElement, attrName, dotted) {
+        this.setBinding(docElement, dotted, 'attrToggle', attrName);
         return this;
     }
 
-    bindInput(docElement, ref) {
-        this.setBinding(docElement, ref, 'input');
+    bindInner(docElement, dotted) {
+        this.setBinding(docElement, dotted, 'inner');
+        return this;
+    }
+
+    bindInput(docElement, dotted) {
+        this.setBinding(docElement, dotted, 'input');
         return this;
     }
 
@@ -78,42 +91,92 @@ singleton(class Controller extends Emitter {
         return this;
     }
 
-    bindOptions(docElement, ref) {
-        this.setBinding(docElement, 'options', ref);
+    bindOptions(docElement, dotted) {
+        this.setBinding(docElement, 'options', dotted);
         return this;
     }
 
-    bindProperty(docElement, property, ref) {
-        this.setBinding(docElement, ref, 'property', property);
+    bindProperty(docElement, property, dotted) {
+        this.setBinding(docElement, dotted, 'property', property);
         return this;
     }
 
-    bindShow(docElement, ref, ...values) {
-        this.setBinding(docElement, ref, 'show', values);
+    bindShow(docElement, dotted, ...values) {
+        this.setBinding(docElement, dotted, 'show', values);
         return this;
     }
 
-    bindStyle(docElement, styleProperty, ref) {
-        this.setBinding(docElement, ref, 'style', styleProperty);
+    bindStyle(docElement, styleProperty, dotted) {
+        this.setBinding(docElement, dotted, 'style', styleProperty);
         return this;
     }
 
-    defineData(shape, value, dotted) {
-        if (dotted) {
-            if (this.shape instanceof RdsShape) {
-                let rdsShape = shape instanceof RdsShape ? shape : mkRdsShape(shape);
-
-                if (rdsShape.verify(value)) {
-                    this.shape.set(dotted, shape);
-                    RdsData.set(this.value, dotted, value);
-                }
-            }
+    defineData(shape, object) {
+        if (shape.getType() !== ObjectType) {
+            throwError(`Controller.defineData(), value is NOT an object!`);
         }
-        else {
-            if (shape instanceof RdsShape && shape.getType() == ObjectType) {
-                if (shape.verify(value)) {
-                    this.shape = shape;
-                    this.value = value;
+
+        if (!shape.verify(object)) {
+            throwError(`Controller.defineData(), value fails verification!`);
+        }
+
+        for (let key of shape.getKeys().reverse()) {
+            if (this.shape.hasKey(key)) {
+                throwError(`Controller.defineData():  root key name collision: "${key}"`);
+            }
+
+            this.shape.set(key, shape.get(key));
+
+            let stack = [{
+                parent: this.decorated,
+                key: key,
+                shape: shape.get(key),
+                value: object[key],
+            }];
+
+            while (stack.length) {
+                let { parent, key, shape, value } = stack.pop();
+
+                let uuid = Crypto.generateUUID();
+                let decorated = { uuid: uuid, parent: parent, shape: shape };
+                this.byUUID[uuid] = decorated;
+
+                if (shape.getType() === ObjectType) {
+                    decorated.value = {};
+                }
+                else if (shape.getType() === ArrayType) {
+                    decorated.value = [];
+                }
+                else {
+                    decorated.value = value;
+                }
+
+                if (parent.shape.getType() === ObjectType) {
+                    parent.value[key] = decorated;
+                }
+                else if (parent.shape.getType() === ArrayType) {
+                    parent.value.push(decorated);
+                }
+                
+                if (shape.getType() === ObjectType) {
+                    for (let key of shape.getKeys().reverse()) {
+                        stack.push({
+                            parent: decorated,
+                            key: key,
+                            shape: shape.get(key),
+                            value: value[key],
+                        });
+                    }
+                }
+                else if (shape.getType() === ArrayType) {
+                    for (let i = value.length - 1; i >= 0; i--) {
+                        stack.push({
+                            parent: decorated,
+                            key: i,
+                            shape: shape.getClass(),
+                            value: value[i],
+                        });
+                    }
                 }
             }
         }
@@ -149,6 +212,39 @@ singleton(class Controller extends Emitter {
         return this;
     }
 
+    getDecorated(dotted) {
+        if (StringType.verify(dotted) && dotted) {
+            let decorated = this.decorated;
+
+            for (let key of RdsText.split(dotted, '.')) {
+                if (decorated.shape.getType() === ObjectType) {
+                    if (key in decorated.value) {
+                        decorated = decorated.value[key];
+                        continue;
+                    }
+                }
+                else if (decorated.shape.getType() === ArrayType) {
+                    let index = parseInt(key);
+
+                    if (index.toString() == key) {
+                        if (index < decorated.value.length) {
+                            decorated = decorated.value[index];
+                            continue;
+                        }
+                    }
+                }
+                
+                decorated = undefined;
+                break;
+            }
+
+            return decorated;
+        }
+        else {
+            return this.decorated;
+        }
+    }
+
     getShape(dotted) {
         if (StringType.verify(dotted) && dotted) {
             return this.shape.get(dotted);
@@ -159,16 +255,85 @@ singleton(class Controller extends Emitter {
     }
 
     getValue(dotted) {
-        if (StringType.verify(dotted)) {
-            return RdsData.get(this.value, dotted);
+        let decorated = this.getDecorated(dotted);
+
+        if (decorated) {
+            if (decorated.shape.getType().isScalar()) {
+                return decorated.value;
+            }
+
+            let value;
+            let stack = [];
+
+            if (decorated.shape.getType() === ObjectType) {
+                value = {};
+
+                stack.push({
+                    value: value,
+                    decorated: decorated.value,
+                });
+            }
+            else if (decorated.shape.getType() === ArrayType) {
+                value = [];
+
+                stack.push({
+                    value: value,
+                    decorated: decorated.value,
+                });
+            }
+
+            while (stack.length) {
+                let { value, decorated } = stack.pop();
+
+                if (ObjectType.verify(value)) {
+                    for (let key in decorated) {
+                        let decoratedValue = decorated[key];
+
+                        if (decoratedValue.shape.getType() === ObjectType) {
+                            value[key] = {};
+
+                            stack.push({
+                                value: value[key],
+                                decorated: decoratedValue.value,
+                            });
+                        }
+                        else if (decoratedValue.shape.getType() === ArrayType) {
+                            value[key] = [];
+
+                            stack.push({
+                                value: value[key],
+                                decorated: decoratedValue.value,
+                            });
+                        }
+                        else {
+                            value[key] = decoratedValue.value;
+                        }
+                    }
+                }
+                else if (ArrayType.verify(value)) {
+                    for (let decoratedValue of decorated) {
+                        if (decoratedValue.shape.getType() === ObjectType) {
+                            // *******************
+                        }
+                        else if (decoratedValue.shape.getType() === ArrayType) {
+                            // *******************
+                        }
+                        else {
+                            value.push(decoratedValue.value);
+                        }
+                    }
+                }
+            }
+
+            return value;
         }
-        else {
-            return this.value;
-        }
+        
+        return undefined;
     }
 
     hasData(dotted) {
-        return RdsData.has(this.value, dotted);
+        let decorated = this.getDecorated(dotted);
+        return decorated ? true : false;
     }
     
     initNode(docNode) {
@@ -190,6 +355,11 @@ singleton(class Controller extends Emitter {
                     else {
                         this.bindInner(docNode, docNode.getRdsBind());
                     }
+                }
+
+                if (docNode.getRdsBindArray) {
+                    let dotted = docNode.getRdsBindArray();
+                    this.bindArray(docNode, dotted);
                 }
 
                 if (docNode.getRdsBindAttr) {
@@ -238,11 +408,15 @@ singleton(class Controller extends Emitter {
         }
     }
 
-    isArray(ref) {
-        let shape = this.shape.get(ref);
+    isArray(dotted) {
+        let shape = this.shape.get(dotted);
         return shape && shape.type === ArrayType;
     }
 
+    // **************************************************************************
+    // **************************************************************************
+    // **************************************************************************
+    /*
     popValue(dotted) {
         if (StringType.verify(dotted)) {
             let shape = this.shape.get(dotted);
@@ -255,7 +429,12 @@ singleton(class Controller extends Emitter {
 
         return this;
     }
+    */
 
+    // **************************************************************************
+    // **************************************************************************
+    // **************************************************************************
+    /*
     pushValue(dotted, value) {
         if (StringType.verify(dotted)) {
             let shape = this.shape.get(dotted);
@@ -270,26 +449,26 @@ singleton(class Controller extends Emitter {
 
         return this;
     }
+    */
 
-    revokeData(dotted) {
-        let shape = this.shape.get(dotted);
-
-        if (shape) {
-            this.shape.delete(dotted);
-            RdsData.delete(this.value, dotted);
+    revokeData(key) {
+        if (key in shape) {
+            this.shape.delete(key);
+            delete this.value[key];
         }
 
         return this;
     }
 
-    setBinding(docElement, ref, type, name) {
+    setBinding(docElement, dotted, type, name) {
+        return;
         let expr;
 
-        if (typeof ref == 'string' && ref.trim() != '') {
-            expr = mkControllerExpr(ref);
+        if (typeof dotted == 'string' && dotted.trim() != '') {
+            expr = mkControllerExpr(dotted);
         }
-        else if (ref instanceof Expr) {
-            expr = ref;
+        else if (dotted instanceof Expr) {
+            expr = dotted;
         }
 
         if (expr) {
@@ -332,6 +511,10 @@ singleton(class Controller extends Emitter {
         return this;
     }
 
+    // **************************************************************************
+    // **************************************************************************
+    // **************************************************************************
+    /*
     shiftValue(dotted) {
         if (StringType.verify(dotted)) {
             let shape = this.shape.get(dotted);
@@ -344,25 +527,24 @@ singleton(class Controller extends Emitter {
 
         return this;
     }
+    */
 
-    signalBindings(dotted) {
-        let chain;
-        let segments = RdsText.split(dotted, '.');
+    signalBindings(dotted, details) {
+        let bindingsByDotted = this.bindingsByDotted[dotted];
 
-        while (segments.length) {
-            chain = chain ? `${chain}.${segments.shift()}` : segments.shift();
-            let bindingsByDotted = this.bindingsByDotted[chain];
-
-            if (bindingsByDotted) {
-                for (let binding of bindingsByDotted.bindings) {
-                    binding.push();
-                }
+        if (bindingsByDotted) {
+            for (let binding of bindingsByDotted.bindings) {
+                binding.push(details);
             }
         }
 
         return this;
     }
 
+    // **************************************************************************
+    // **************************************************************************
+    // **************************************************************************
+    /*
     unshiftValue(dotted, value) {
         if (StringType.verify(dotted)) {
             let shape = this.shape.get(dotted);
@@ -377,6 +559,7 @@ singleton(class Controller extends Emitter {
 
         return this;
     }
+    */
 });
 
 

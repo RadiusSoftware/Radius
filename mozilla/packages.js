@@ -108,23 +108,28 @@ singleton(class Packages {
         return stringId in this.strings;
     }
 
-    async openApplication(docElement) {
-        const appWidget = createElementFromOuterHtml(`<${webappSettings.tagName}></${webappSettings.tagName}>`);
-        
-        if (webappSettings.title) {
-            Doc.setTitle(this.processText(webappSettings.title));
-        }
+    async openApplication() {
+        try {
+            const appWidget = createElementFromOuterHtml(`<${webappSettings.tagName}></${webappSettings.tagName}>`);
+            
+            if (webappSettings.title) {
+                Doc.setTitle(this.processText(webappSettings.title));
+            }
 
-        if (webappSettings.controllerShape && webappSettings.controllerValue) {
-            let dataShape = fromJson(webappSettings.controllerShape);
-            let dataValue = webappSettings.controllerValue;
-            Controller.defineData(dataShape, dataValue);
-            delete webappSettings.controllerShape;
-            delete webappSettings.controllerValue;
-        }
+            if (webappSettings.controllerShape && webappSettings.controllerValue) {
+                let dataShape = fromJson(webappSettings.controllerShape);
+                let dataValue = webappSettings.controllerValue;
+                Controller.defineData(dataShape, dataValue);
+                delete webappSettings.controllerShape;
+                delete webappSettings.controllerValue;
+            }
 
-        Doc.getBody().clear();
-        Doc.getBody().append(appWidget);
+            Doc.getBody().clear();
+            Doc.getBody().append(appWidget);
+        }
+        catch (e) {
+            console.log(`Web application failed to load:  "${webappSettings.title}"`);
+        }
     }
 
     processNode(docNode) {

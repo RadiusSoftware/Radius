@@ -52,6 +52,10 @@ define(class ControllerBinding {
                 'priority'
             );
         }
+        else if (type == 'array') {
+            this.valid = true;
+            this.type = type;
+        }
         else if (type == 'attr') {
             if (typeof name == 'string' && name != '') {
                 this.valid = true;
@@ -131,7 +135,7 @@ define(class ControllerBinding {
 
             byDocElement.bindings.push(this);
             byDotted.bindings.push(this);
-            this.push();
+            this.push('refresh');
             return this;
         }
         
@@ -199,11 +203,23 @@ define(class ControllerBinding {
         return ControllerBinding.get(controllerBinding) != null;
     }
 
-    pull() {
+    pull(details) {
         if (!this.blockingFeedback) {
             this.blockingFeedback = true;
 
-            if (this.type == 'input') {
+            if (this.type == 'array') {
+                if (ObjectType.verify(details)) {
+                    if (details.action == 'prepend') {
+                    }
+                    else if (details.action == 'append') {
+                    }
+                    else if (details.action == 'insert') {
+                    }
+                    else if (details.action == 'delete') {
+                    }
+                }
+            }
+            else if (this.type == 'input') {
                 switch (this.docElement.getAttribute('type')) {
                     case 'number':
                         Controller.setValue(this.dotted, this.docElement.getProperty('valueAsNumber'));
@@ -232,11 +248,14 @@ define(class ControllerBinding {
         }
     }
 
-    push() {
+    push(details) {
         if (!this.blockingFeedback) {
             this.blockingFeedback = true;
 
-            if (this.type == 'inner') {
+            if (this.type == 'array') {
+                this.docElement.onArrayChanged(this.expr.eval(), details);
+            }
+            else if (this.type == 'inner') {
                 this.docElement.setInnerHtml(this.expr.eval());
             }
             else if (this.type == 'input') {

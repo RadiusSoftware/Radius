@@ -25,25 +25,54 @@
 
                 init() {
                     super.init();
-                    this.render();
+                    Controller.bindArray(this, this.getDotted());
+                }
+
+                onArrayChanged(value, details) {
+                    if (details == 'refresh') {
+                        this.render();
+                    }
+                    else if (ObjectType.verify(details)) {
+                        // ***********************************************
+                        // Binding Update
+                        // ***********************************************
+                        if (details.action == 'prepend') {
+                        }
+                        else if (details.action == 'append') {
+                        }
+                        else if (details.action == 'insert') {
+                        }
+                        else if (details.action == 'delete') {
+                        }
+                    }
                 }
 
                 onHandleEventAppendRow(event) {
+                    // ***********************************************
+                    // User Edit
+                    // ***********************************************
                     console.log('append row');
                 }
 
                 onHandleEventDeleteRow(event) {
+                    // ***********************************************
+                    // User Edit
+                    // ***********************************************
                     console.log('delete row');
                 }
 
                 onHandleEventInsertRow(event) {
+                    // ***********************************************
+                    // User Edit
+                    // ***********************************************
                     console.log('insert row');
                 }
 
                 onHandleEventPrependRow(event) {
+                    // ***********************************************
+                    // User Edit
+                    // ***********************************************
                     console.log('prepend row');
-                    let def = this.getShape().getClass().getDefault();
-                    //console.log(def);
                 }
 
                 onReadonlyChanged() {

@@ -186,6 +186,19 @@ define(class RdsShape {
         return this.type;
     }
 
+    hasKey(key) {
+        if (this.type === ObjectType) {
+            if (key in this.keys) {
+                return true;
+            }
+            else if (`_${key}` in this.keys) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     isArray() {
         return this.type === ArrayType;
     }
