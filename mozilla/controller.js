@@ -200,8 +200,7 @@ singleton(class Controller extends Emitter {
         let enumerated = [];
 
         if (decorated) {
-            enumerated.push(decorated);
-            let stack = [];
+            let stack = [ decorated ];
 
             while (stack.length) {
                 let decorated = stack.pop();
@@ -329,14 +328,13 @@ singleton(class Controller extends Emitter {
                 else if (ArrayType.verify(value)) {
                     for (let decoratedValue of decorated) {
                         if (decoratedValue.shape.getType() === ObjectType) {
-                            // ******************************************************************
-                            // ******************************************************************
-                            // ******************************************************************
-                        }
-                        else if (decoratedValue.shape.getType() === ArrayType) {
-                            // ******************************************************************
-                            // ******************************************************************
-                            // ******************************************************************
+                            let elementValue = {};
+                            value.push(elementValue);
+
+                            stack.push({
+                                value: elementValue,
+                                decorated: decoratedValue.value,
+                            });
                         }
                         else {
                             value.push(decoratedValue.value);
@@ -374,8 +372,8 @@ singleton(class Controller extends Emitter {
         return decorated ? true : false;
     }
 
-    import(parent) {
-        let stack = [ parent ];
+    import(root) {
+        let stack = [ root ];
 
         while (stack.length) {
             let { parent, key, dotted, shape, value } = stack.pop();
@@ -588,13 +586,14 @@ singleton(class Controller extends Emitter {
     }
 
     revokeData(key) {
-        if (key in shape) {
-            // **************************************************************************
-            // Delete bindings
-            // **************************************************************************
-            // **************************************************************************
+        console.log(key);
+        if (key in this.decorated.value) {
+            for (let decorated of this.enumerate(this.decorated.value[key])) {
+                this.deleteBindingsByUUID(decorated.uuid);
+            }
+
             this.shape.delete(key);
-            delete this.value[key];
+            delete this.decorated.value[key];
         }
 
         return this;
@@ -709,6 +708,26 @@ singleton(class Controller extends Emitter {
         return this;
 
     }
+
+    // **************************************************************************
+    // **************************************************************************
+    // **************************************************************************
+    /*
+    splice(dotted, index, count, ...insert) {
+        if (StringType.verify(dotted)) {
+            let shape = this.shape.get(dotted);
+            
+            if (shape && shape.getType() == ArrayType) {
+                if (shape.verify([ value ])) {
+                    RdsData.set(this.value, `${dotted}.unshift`, value);
+                    this.signalBindings(dotted);
+                }
+            }
+        }
+
+        return this;
+    }
+    */
 
     // **************************************************************************
     // **************************************************************************

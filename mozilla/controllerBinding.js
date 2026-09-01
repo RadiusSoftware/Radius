@@ -137,11 +137,7 @@ define(class ControllerBinding {
             this.blockingFeedback = true;
 
             try {
-                if (this.type == 'array') {
-                    // **************************************************************************
-                    // **************************************************************************
-                }
-                else if (this.type == 'input') {
+                if (this.type == 'input') {
                     switch (this.docElement.getAttribute('type')) {
                         case 'number':
                             Controller.pokeValue(this.uuid, this.docElement.getProperty('valueAsNumber'));
