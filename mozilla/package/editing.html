@@ -28,65 +28,31 @@
                     Controller.bindArray(this, this.getDotted());
                 }
 
-                onArrayChanged(value, details) {
-                    if (details == 'refresh') {
-                        this.render();
-                    }
-                    else if (ObjectType.verify(details)) {
-                        // ***********************************************
-                        // Binding Update
-                        // ***********************************************
-                        if (details.action == 'prepend') {
-                        }
-                        else if (details.action == 'append') {
-                        }
-                        else if (details.action == 'insert') {
-                        }
-                        else if (details.action == 'delete') {
-                        }
-                    }
+                onArrayAppendElement(details) {
+                    // ********************************************************************
+                    // ********************************************************************
+                    console.log('onArrayAppendElement()');
                 }
 
-                onHandleEventAppendRow(event) {
-                    // ***********************************************
-                    // User Edit
-                    // ***********************************************
-                    console.log('append row');
+                onArrayDeleteElement(details) {
+                    // ********************************************************************
+                    // ********************************************************************
+                    console.log('onArrayDeleteElement()');
                 }
 
-                onHandleEventDeleteRow(event) {
-                    // ***********************************************
-                    // User Edit
-                    // ***********************************************
-                    console.log('delete row');
+                onArrayInsertElement(details) {
+                    // ********************************************************************
+                    // ********************************************************************
+                    console.log('onArrayInsertElement()');
                 }
 
-                onHandleEventInsertRow(event) {
-                    // ***********************************************
-                    // User Edit
-                    // ***********************************************
-                    console.log('insert row');
+                onArrayPrependElement(details) {
+                    // ********************************************************************
+                    // ********************************************************************
+                    console.log('onArrayPrependElement()');
                 }
 
-                onHandleEventPrependRow(event) {
-                    // ***********************************************
-                    // User Edit
-                    // ***********************************************
-                    console.log('prepend row');
-                }
-
-                onReadonlyChanged() {
-                    if (this.actions) {
-                        if (this.isReadonly()) {
-                            this.actions.setStyle({ display: 'none' });
-                        }
-                        else {
-                            this.actions.setStyle({ display: '' });
-                        }
-                    }
-                }
-
-                render() {
+                onArrayRender(details) {
                     this.clear();
 
                     let shape = this.getShape();
@@ -138,6 +104,45 @@
                                 'rds-readonly': readonly,
                             })
                         );
+                    }
+                }
+
+                onHandleEventAppendRow(event) {
+                    // ***********************************************
+                    // User Edit
+                    // ***********************************************
+                    console.log('append row');
+                }
+
+                onHandleEventDeleteRow(event) {
+                    // ***********************************************
+                    // User Edit
+                    // ***********************************************
+                    console.log('delete row');
+                }
+
+                onHandleEventInsertRow(event) {
+                    // ***********************************************
+                    // User Edit
+                    // ***********************************************
+                    console.log('insert row');
+                }
+
+                onHandleEventPrependRow(event) {
+                    // ***********************************************
+                    // User Edit
+                    // ***********************************************
+                    console.log('prepend row');
+                }
+
+                onReadonlyChanged() {
+                    if (this.actions) {
+                        if (this.isReadonly()) {
+                            this.actions.setStyle({ display: 'none' });
+                        }
+                        else {
+                            this.actions.setStyle({ display: '' });
+                        }
                     }
                 }
             }

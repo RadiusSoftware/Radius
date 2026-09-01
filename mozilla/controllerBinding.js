@@ -28,10 +28,10 @@
  * element and the controller.
 *****/
 define(class ControllerBinding {
-    constructor(docElement, expr, dotted, type, name) {
+    constructor(docElement, expr, uuid, type, name) {
         this.docElement = docElement;
         this.expr = expr;
-        this.dotted = dotted;
+        this.uuid = uuid;
         this.valid = false;
         this.blockingFeedback = false;
         
@@ -46,7 +46,9 @@ define(class ControllerBinding {
             this.docElement.on(
                 'EventInput',
                 message => {
-                    this.pull();
+                    if (this.valid) {
+                        this.pull();
+                    }
                 },
                 false,
                 'priority'
@@ -103,216 +105,163 @@ define(class ControllerBinding {
                 this.name = name;
             }
         }
-
-        if (this.valid) {
-            let binding = ControllerBinding.get(this);
-            
-            if (binding) {
-                return binding;
-            }
-
-            let byDocElement = Controller.bindingsByDocElement.get(this.docElement);
-            
-            if (!byDocElement) {
-                byDocElement = {
-                    docElement: this.docElement,
-                    bindings: [],
-                };
-
-                Controller.bindingsByDocElement.set(this.docElement, byDocElement);
-            }
-
-            let byDotted = Controller.bindingsByDotted[this.dotted];
-
-            if (!byDotted) {
-                byDotted = {
-                    dotted: this.dotted,
-                    bindings: [],
-                };
-
-                Controller.bindingsByDotted[this.dotted] = byDotted;
-            }
-
-            byDocElement.bindings.push(this);
-            byDotted.bindings.push(this);
-            this.push('refresh');
-            return this;
-        }
-        
-        return null;
     }
 
-    delete() {
-        let bindingEntry = Controller.bindingsByDocElement.get();
-
-        if (bindingEntry) {
-            for (let i = 0; i < bindingEntry.bindings.length; i++) {
-                if (Object.is(bindingEntry.bindings[i])) {
-                    bindingEntry.bindings.splice(i, 1);
-                    break;
-                }
-            }
-        }
-
-        bindingEntry = Controller.bindingsByDotted[this.dotted];
-
-        if (bindingEntry) {
-            for (let i = 0; i < bindingEntry.bindings.length; i++) {
-                if (Object.is(bindingEntry.bindings[i])) {
-                    bindingEntry.bindings.splice(i, 1);
-                    break;
-                }
-            }
-        }
-
+    deactivate() {
+        this.valid = false;
         return this;
-    }
-
-    static get(controllerBinding) {
-        if (controllerBinding.valid) {
-            if (controllerBinding.dotted in Controller.bindingsByDotted) {
-                let byDotted = Controller.bindingsByDotted[controllerBinding.dotted];
-
-                for (let binding of byDotted.bindings) {
-                    if (binding.docElement.isSame(controllerBinding.docElement)) {
-                        if (binding.type == controllerBinding.type) {
-                            if (binding.type == 'inner') {
-                                return binding;
-                            }
-                            else if (binding.type == 'input') {
-                                return binding;
-                            }
-
-                            if (binding.name == controllerBinding.name) {
-                                return binding;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        return null;
     }
 
     getElement() {
         return this.docElement;
     }
 
-    static has(controllerBinding) {
-        return ControllerBinding.get(controllerBinding) != null;
+    getExpr() {
+        return this.expr;
     }
 
-    pull(details) {
-        if (!this.blockingFeedback) {
+    getType() {
+        return this.type;
+    }
+
+    getUUID() {
+        return this.uuid;
+    }
+
+    isValid() {
+        return this.valid;
+    }
+
+    pull() {
+        if (this.valid && !this.blockingFeedback) {
             this.blockingFeedback = true;
 
-            if (this.type == 'array') {
-                if (ObjectType.verify(details)) {
-                    if (details.action == 'prepend') {
-                    }
-                    else if (details.action == 'append') {
-                    }
-                    else if (details.action == 'insert') {
-                    }
-                    else if (details.action == 'delete') {
+            try {
+                if (this.type == 'array') {
+                    // **************************************************************************
+                    // **************************************************************************
+                }
+                else if (this.type == 'input') {
+                    switch (this.docElement.getAttribute('type')) {
+                        case 'number':
+                            Controller.pokeValue(this.uuid, this.docElement.getProperty('valueAsNumber'));
+                            break;
+
+                        case 'date':
+                        case 'datetime-local':
+                            Controller.pokeValue(this.uuid, this.docElement.getProperty('valueAsDate'));
+                            break;
+
+                        case 'radio':
+                            Controller.pokeValue(this.uuid, this.docElement.getAttribute('value'));
+                            break;
+
+                        case 'checkbox':
+                            Controller.pokeValue(this.uuid, this.docElement.getProperty('checked'));
+                            break;
+
+                        default:
+                            Controller.pokeValue(this.uuid, this.docElement.getProperty('value'));
+                            break;
                     }
                 }
             }
-            else if (this.type == 'input') {
-                switch (this.docElement.getAttribute('type')) {
-                    case 'number':
-                        Controller.setValue(this.dotted, this.docElement.getProperty('valueAsNumber'));
-                        break;
-
-                    case 'date':
-                    case 'datetime-local':
-                        Controller.setValue(this.dotted, this.docElement.getProperty('valueAsDate'));
-                        break;
-
-                    case 'radio':
-                        Controller.setValue(this.dotted, this.docElement.getAttribute('value'));
-                        break;
-
-                    case 'checkbox':
-                        Controller.setValue(this.dotted, this.docElement.getProperty('checked'));
-                        break;
-
-                    default:
-                        Controller.setValue(this.dotted, this.docElement.getProperty('value'));
-                        break;
-                }
+            catch (e) {
+                caught(e);
             }
 
             this.blockingFeedback = false;
         }
+
+        return this;
     }
 
     push(details) {
-        if (!this.blockingFeedback) {
+        if (this.valid && !this.blockingFeedback) {
             this.blockingFeedback = true;
 
-            if (this.type == 'array') {
-                this.docElement.onArrayChanged(this.expr.eval(), details);
-            }
-            else if (this.type == 'inner') {
-                this.docElement.setInnerHtml(this.expr.eval());
-            }
-            else if (this.type == 'input') {
-                if (this.docElement.getAttribute('type') == 'checkbox') {
-                    this.docElement.setProperty('checked', this.expr.eval());
+            try {
+                if (this.type == 'array') {
+                    if (details.action == 'refresh') {
+                        this.docElement.onArrayRender(this.expr.eval(), details);
+                    }
+                    else if (details.action == 'append') {
+                        this.docElement.onArrayAppendElement(details);
+                    }
+                    else if (details.action == 'delete') {
+                        this.docElement.onArrayDeleteElement(details);
+                    }
+                    else if (details.action == 'insert') {
+                        this.docElement.onArrayInsertElement(details);
+                    }
+                    else if (details.action == 'prepend') {
+                        this.docElement.onArrayPrependElement(details);
+                    }
                 }
-                else if (this.docElement.getAttribute('type') == 'radio') {
-                    if (this.docElement.getAttribute('value') == this.expr.eval()) {
-                        this.docElement.setProperty('checked', true);
+                else if (this.type == 'inner') {
+                    this.docElement.setInnerHtml(this.expr.eval());
+                }
+                else if (this.type == 'input') {
+                    if (this.docElement.getAttribute('type') == 'checkbox') {
+                        this.docElement.setProperty('checked', this.expr.eval());
+                    }
+                    else if (this.docElement.getAttribute('type') == 'radio') {
+                        if (this.docElement.getAttribute('value') == this.expr.eval()) {
+                            this.docElement.setProperty('checked', true);
+                        }
+                        else {
+                            this.docElement.setProperty('checked', false);
+                        }
                     }
                     else {
-                        this.docElement.setProperty('checked', false);
+                        this.docElement.setProperty('value', this.expr.eval());
                     }
                 }
-                else {
-                    this.docElement.setProperty('value', this.expr.eval());
+                else if (this.type == 'attr') {
+                    this.docElement.setAttribute(this.name, this.expr.eval());
                 }
-            }
-            else if (this.type == 'attr') {
-                this.docElement.setAttribute(this.name, this.expr.eval());
-            }
-            else if (this.type == 'attrToggle') {
-                if (this.expr.eval() == true) {
-                    this.docElement.setAttribute(this.name);
+                else if (this.type == 'attrToggle') {
+                    if (this.expr.eval() == true) {
+                        this.docElement.setAttribute(this.name);
+                    }
+                    else {
+                        this.docElement.clearAttribute(this.name);
+                    }
                 }
-                else {
-                    this.docElement.clearAttribute(this.name);
+                else if (this.type == 'method') {
+                    this.docElement[this.name](this.expr.eval());
                 }
-            }
-            else if (this.type == 'method') {
-                this.docElement[this.name](this.expr.eval());
-            }
-            else if (this.type == 'options') {
-                this.docElement.setOptions(this.expr.eval());
-            }
-            else if (this.type == 'property') {
-                this.docElement.setProperty(this.name, this.expr.eval());
-            }
-            else if (this.type == 'show') {
-                let value = this.expr.eval();
+                else if (this.type == 'options') {
+                    this.docElement.setOptions(this.expr.eval());
+                }
+                else if (this.type == 'property') {
+                    this.docElement.setProperty(this.name, this.expr.eval());
+                }
+                else if (this.type == 'show') {
+                    let value = this.expr.eval();
 
-                if (value && this.values.has(value)) {
-                    if (this.docElement.getStyle('display') == 'none') {
-                        this.docElement.setStyle('display', this.display);
+                    if (value && this.values.has(value)) {
+                        if (this.docElement.getStyle('display') == 'none') {
+                            this.docElement.setStyle('display', this.display);
+                        }
+                    }
+                    else if (this.docElement.getStyle('display') != 'none') {
+                        this.docElement.setStyle('display', 'none');
                     }
                 }
-                else if (this.docElement.getStyle('display') != 'none') {
-                    this.docElement.setStyle('display', 'none');
+                else if (this.type == 'style') {
+                    let styleProperty = {};
+                    styleProperty[this.name] = this.expr.eval();
+                    this.docElement.setStyle(styleProperty);
                 }
             }
-            else if (this.type == 'style') {
-                let styleProperty = {};
-                styleProperty[this.name] = this.expr.eval();
-                this.docElement.setStyle(styleProperty);
+            catch (e) {
+                caught(e);
             }
 
             this.blockingFeedback = false;
         }
+
+        return this;
     }
 });

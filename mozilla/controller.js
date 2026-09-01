@@ -34,7 +34,7 @@ singleton(class Controller extends Emitter {
 
         this.shape = mkRdsShape({});
         this.nodes = new WeakMap();
-        this.bindingsByDotted = {};
+        this.bindingsByUUID = {};
         this.bindingsByDocElement = new WeakMap();
         this.byUUID = {};
 
@@ -46,10 +46,10 @@ singleton(class Controller extends Emitter {
         };
 
         this.on('Set', message => {
-            let byDotted = this.bindingsByDotted[message.dotted];
+            let bindingsByUUID = this.bindingsByUUID[message.uuid];
             
-            if (byDotted) {
-                for (let binding of byDotted.bindings) {
+            if (bindingsByUUID) {
+                for (let binding of bindingsByUUID.bindings) {
                     if (binding.isEnabled()) {
                         binding.push();
                     }
@@ -59,55 +59,78 @@ singleton(class Controller extends Emitter {
     }
 
     bindArray(docElement, dotted) {
-        this.setBinding(docElement, dotted, 'array');
+        this.createBinding(docElement, dotted, 'array');
         return this;
     }
 
     bindAttr(docElement, attrName, dotted) {
-        this.setBinding(docElement, dotted, 'attr', attrName);
+        this.createBinding(docElement, dotted, 'attr', attrName);
         return this;
     }
 
     bindAttrToggle(docElement, attrName, dotted) {
-        this.setBinding(docElement, dotted, 'attrToggle', attrName);
+        this.createBinding(docElement, dotted, 'attrToggle', attrName);
         return this;
     }
 
     bindInner(docElement, dotted) {
-        this.setBinding(docElement, dotted, 'inner');
+        this.createBinding(docElement, dotted, 'inner');
         return this;
     }
 
     bindInput(docElement, dotted) {
-        this.setBinding(docElement, dotted, 'input');
+        this.createBinding(docElement, dotted, 'input');
         return this;
     }
 
     bindMethod(docElement, methodName, ...args) {
         for (let dotted of args) {
-            this.setBinding(docElement, dotted, 'method', methodName);
+            this.createBinding(docElement, dotted, 'method', methodName);
         }
 
         return this;
     }
 
     bindOptions(docElement, dotted) {
-        this.setBinding(docElement, 'options', dotted);
+        this.createBinding(docElement, 'options', dotted);
         return this;
     }
 
     bindProperty(docElement, property, dotted) {
-        this.setBinding(docElement, dotted, 'property', property);
+        this.createBinding(docElement, dotted, 'property', property);
         return this;
     }
 
     bindShow(docElement, dotted, ...values) {
-        this.setBinding(docElement, dotted, 'show', values);
+        this.createBinding(docElement, dotted, 'show', values);
         return this;
     }
 
     bindStyle(docElement, styleProperty, dotted) {
-        this.setBinding(docElement, dotted, 'style', styleProperty);
+        this.createBinding(docElement, dotted, 'style', styleProperty);
+        return this;
+    }
+
+    createBinding(docElement, dotted, type, name) {
+        let decorated = this.getDecorated(dotted);
+
+        if (decorated) {
+            let expr = mkControllerExpr(decorated.uuid);
+
+            for (let dependency of expr.getDependencies()) {
+                if (dependency.type == 'controller') {
+                    let binding = mkControllerBinding(docElement, expr, decorated.uuid, type, name);
+
+                    if (!this.hasBinding(binding)) {
+                        this.setBinding(binding);
+                    }
+                    else {
+                        binding.deactivate();
+                    }
+                }
+            }
+        }
+
         return this;
     }
 
@@ -127,58 +150,13 @@ singleton(class Controller extends Emitter {
 
             this.shape.set(key, shape.get(key));
 
-            let stack = [{
+            this.import({
                 parent: this.decorated,
                 key: key,
+                dotted: '',
                 shape: shape.get(key),
                 value: object[key],
-            }];
-
-            while (stack.length) {
-                let { parent, key, shape, value } = stack.pop();
-
-                let uuid = Crypto.generateUUID();
-                let decorated = { uuid: uuid, parent: parent, shape: shape };
-                this.byUUID[uuid] = decorated;
-
-                if (shape.getType() === ObjectType) {
-                    decorated.value = {};
-                }
-                else if (shape.getType() === ArrayType) {
-                    decorated.value = [];
-                }
-                else {
-                    decorated.value = value;
-                }
-
-                if (parent.shape.getType() === ObjectType) {
-                    parent.value[key] = decorated;
-                }
-                else if (parent.shape.getType() === ArrayType) {
-                    parent.value.push(decorated);
-                }
-                
-                if (shape.getType() === ObjectType) {
-                    for (let key of shape.getKeys().reverse()) {
-                        stack.push({
-                            parent: decorated,
-                            key: key,
-                            shape: shape.get(key),
-                            value: value[key],
-                        });
-                    }
-                }
-                else if (shape.getType() === ArrayType) {
-                    for (let i = value.length - 1; i >= 0; i--) {
-                        stack.push({
-                            parent: decorated,
-                            key: i,
-                            shape: shape.getClass(),
-                            value: value[i],
-                        });
-                    }
-                }
-            }
+            });
         }
 
         return this;
@@ -188,10 +166,10 @@ singleton(class Controller extends Emitter {
         let bindingEntry = this.bindingsByDocElement.get(docElement);
 
         if (bindingEntry) {
-            let array = RdsData.copy(bindingEntry.bindings);
+            this.bindingsByDocElement.delete(docElement);
 
-            for (let binding of array) {
-                binding.delete();
+            for (let binding of bindingEntry.bindings) {
+                binding.deactivate();
             }
         }
 
@@ -199,17 +177,50 @@ singleton(class Controller extends Emitter {
     }
 
     deleteBindingsByDotted(dotted) {
-        let bindingEntry = this.bindingsByDotted[dotted];
+        return this.deleteBindingsByUUID(this.getUUID(dotted));
+    }
 
-        if (bindingEntry) {
-            let array = RdsData.copy(bindingEntry.bindings);
+    deleteBindingsByUUID(uuid) {
+        if (uuid) {
+            let bindingEntry = this.bindingsByUUID[uuid];
 
-            for (let binding of array) {
-                binding.delete();
+            if (bindingEntry) {
+                delete this.bindingsByUUID[uuid];
+
+                for (let binding of bindingEntry.bindings) {
+                    binding.deactivate();
+                }
             }
         }
 
         return this;
+    }
+
+    enumerate(decorated) {
+        let enumerated = [];
+
+        if (decorated) {
+            enumerated.push(decorated);
+            let stack = [];
+
+            while (stack.length) {
+                let decorated = stack.pop();
+                enumerated.push(decorated);
+
+                if (decorated.shape.getType() === ObjectType) {
+                    for (let key of Object.keys(decorated.value).reverse()) {
+                        stack.push(decorated.value[key]);
+                    }
+                }
+                else if (decorated.shape.getType() === ArrayType) {
+                    for (let decoratedElement of decorated.value.reverse()) {
+                        stack.push(decoratedElement);
+                    }
+                }
+            }
+        }
+
+        return enumerated;
     }
 
     getDecorated(dotted) {
@@ -252,6 +263,11 @@ singleton(class Controller extends Emitter {
         else {
             return this.shape;
         }
+    }
+
+    getUUID(dotted) {
+        let decorated = this.getDecorated(dotted);
+        return decorated ? decorated.uuid : undefined;
     }
 
     getValue(dotted) {
@@ -313,10 +329,14 @@ singleton(class Controller extends Emitter {
                 else if (ArrayType.verify(value)) {
                     for (let decoratedValue of decorated) {
                         if (decoratedValue.shape.getType() === ObjectType) {
-                            // *******************
+                            // ******************************************************************
+                            // ******************************************************************
+                            // ******************************************************************
                         }
                         else if (decoratedValue.shape.getType() === ArrayType) {
-                            // *******************
+                            // ******************************************************************
+                            // ******************************************************************
+                            // ******************************************************************
                         }
                         else {
                             value.push(decoratedValue.value);
@@ -331,9 +351,86 @@ singleton(class Controller extends Emitter {
         return undefined;
     }
 
+    hasBinding(controllerBinding) {
+        if (controllerBinding.isValid()) {
+            if (controllerBinding.getUUID() in this.bindingsByUUID) {
+                let byUUID = this.bindingsByUUID[controllerBinding.getUUID()];
+
+                for (let binding of byUUID.bindings) {
+                    if (binding.getElement().isSame(controllerBinding.getElement())) {
+                        if (binding.getType() == controllerBinding.getType()) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
     hasData(dotted) {
         let decorated = this.getDecorated(dotted);
         return decorated ? true : false;
+    }
+
+    import(parent) {
+        let stack = [ parent ];
+
+        while (stack.length) {
+            let { parent, key, dotted, shape, value } = stack.pop();
+            let uuid = Crypto.generateUUID();
+            dotted = dotted ? `${dotted}.${key}` : key;
+
+            let decorated = {
+                uuid: uuid,
+                dotted: dotted,
+                parent: parent,
+                shape: shape
+            };
+
+            this.byUUID[uuid] = decorated;
+
+            if (shape.getType() === ObjectType) {
+                decorated.value = {};
+            }
+            else if (shape.getType() === ArrayType) {
+                decorated.value = [];
+            }
+            else {
+                decorated.value = value;
+            }
+
+            if (parent.shape.getType() === ObjectType) {
+                parent.value[key] = decorated;
+            }
+            else if (parent.shape.getType() === ArrayType) {
+                parent.value.push(decorated);
+            }
+            
+            if (shape.getType() === ObjectType) {
+                for (let key of shape.getKeys().reverse()) {
+                    stack.push({
+                        parent: decorated,
+                        key: key,
+                        dotted: dotted,
+                        shape: shape.get(key),
+                        value: value[key],
+                    });
+                }
+            }
+            else if (shape.getType() === ArrayType) {
+                for (let i = value.length - 1; i >= 0; i--) {
+                    stack.push({
+                        parent: decorated,
+                        key: i,
+                        dotted: dotted,
+                        shape: shape.getClass(),
+                        value: value[i],
+                    });
+                }
+            }
+        }
     }
     
     initNode(docNode) {
@@ -413,11 +510,21 @@ singleton(class Controller extends Emitter {
         return shape && shape.type === ArrayType;
     }
 
+    peekValue(uuid) {
+        let decorated = this.byUUID[uuid];
+        return decorated ? decorated.value : undefined;
+    }
+
+    pokeValue(uuid, newValue) {
+        let decorated = this.byUUID[uuid];
+        decorated ? this.setValue(decorated.dotted, newValue) : null;
+    }
+
     // **************************************************************************
     // **************************************************************************
     // **************************************************************************
     /*
-    popValue(dotted) {
+    pop(dotted) {
         if (StringType.verify(dotted)) {
             let shape = this.shape.get(dotted);
             
@@ -435,7 +542,7 @@ singleton(class Controller extends Emitter {
     // **************************************************************************
     // **************************************************************************
     /*
-    pushValue(dotted, value) {
+    push(dotted, value) {
         if (StringType.verify(dotted)) {
             let shape = this.shape.get(dotted);
             
@@ -451,8 +558,41 @@ singleton(class Controller extends Emitter {
     }
     */
 
+    rebuildArray(dotted, ...arrayElements) {
+        let decoratedArray = this.getDecorated(dotted);
+
+        if (decoratedArray) {
+            while (decoratedArray.value.length) {
+                let decoratedElement = decoratedArray.value.shift();
+
+                for (let decorated of this.enumerate(decoratedElement)) {
+                    this.deleteBindingsByUUID(decorated.uuid);
+                }
+            }
+
+            for (let i = 0; i < arrayElements.length; i++) {
+                let value = arrayElements[i];
+
+                this.import({
+                    parent: decoratedArray,
+                    key: i,
+                    dotted: decoratedArray.dotted,
+                    shape: decoratedArray.shape.getClass(),
+                    value: value,
+                });
+            }
+        }
+
+        this.signalBindings(decoratedArray.uuid, { action: 'refresh' });
+        return this;
+    }
+
     revokeData(key) {
         if (key in shape) {
+            // **************************************************************************
+            // Delete bindings
+            // **************************************************************************
+            // **************************************************************************
             this.shape.delete(key);
             delete this.value[key];
         }
@@ -460,52 +600,80 @@ singleton(class Controller extends Emitter {
         return this;
     }
 
-    setBinding(docElement, dotted, type, name) {
-        return;
-        let expr;
+    setBinding(binding) {
+        let byDocElement = this.bindingsByDocElement.get(binding.getElement());
+        
+        if (!byDocElement) {
+            byDocElement = {
+                docElement: this.docElement,
+                bindings: [],
+            };
 
-        if (typeof dotted == 'string' && dotted.trim() != '') {
-            expr = mkControllerExpr(dotted);
-        }
-        else if (dotted instanceof Expr) {
-            expr = dotted;
-        }
-
-        if (expr) {
-            for (let dependency of expr.getDependencies()) {
-                if (dependency.type == 'controller') {
-                    mkControllerBinding(docElement, expr, dependency.dotted, type, name);
-                }
-            }
+            this.bindingsByDocElement.set(binding.getElement(), byDocElement);
         }
 
+        let byUUID = this.bindingsByUUID[binding.getUUID()];
+
+        if (!byUUID) {
+            byUUID = {
+                uuid: this.uuid,
+                bindings: [],
+            };
+
+            this.bindingsByUUID[binding.getUUID()] = byUUID;
+        }
+
+        byDocElement.bindings.push(binding);
+        byUUID.bindings.push(binding);
+        binding.push({ action: 'refresh' });
         return this;
     }
 
     setValue(dotted, newValue) {
-        let shape = this.shape.get(dotted);
+        let decorated = this.getDecorated(dotted);
 
-        if (shape) {
-            if (shape.verify(newValue)) {
-                RdsData.set(this.value, dotted, newValue);
-                this.signalBindings(dotted);
-            }
-            else {
-                this.emit({
-                    name: 'SetFailed',
-                    details: 'value failed verification',
-                    dotted: dotted,
-                    value: newValue,
-                });
-            }
-        }
-        else {
+        if (!decorated) {
             this.emit({
                 name: 'SetFailed',
                 details: 'dotted not found',
                 dotted: dotted,
                 value: newValue,
             });
+        }
+
+        if (!decorated.shape.verify(newValue)) {
+            this.emit({
+                name: 'SetFailed',
+                details: 'value failed verification',
+                dotted: dotted,
+                uuid: decorated.uuis,
+                value: newValue,
+            });
+        }
+
+        let stack = [{
+            decorated: decorated,
+            value: newValue
+        }];
+
+        while (stack.length) {
+            let { decorated, value } = stack.pop();
+
+            if (decorated.shape.getType() === ObjectType) {
+                for (let key  in value) {
+                    stack.push({
+                        decorated: decorated.value[key],
+                        value: value[key]
+                    });
+                }
+            }
+            else if (decorated.shape.getType() === ArrayType) {
+                this.rebuildArray(decorated.dotted, ...newValue);
+            }
+            else {
+                decorated.value = value;
+                this.signalBindings(decorated.uuid);
+            }
         }
 
         return this;
@@ -515,7 +683,7 @@ singleton(class Controller extends Emitter {
     // **************************************************************************
     // **************************************************************************
     /*
-    shiftValue(dotted) {
+    shift(dotted) {
         if (StringType.verify(dotted)) {
             let shape = this.shape.get(dotted);
             
@@ -529,23 +697,24 @@ singleton(class Controller extends Emitter {
     }
     */
 
-    signalBindings(dotted, details) {
-        let bindingsByDotted = this.bindingsByDotted[dotted];
+    signalBindings(uuid, details) {
+        let bindingsByUUID = this.bindingsByUUID[uuid];
 
-        if (bindingsByDotted) {
-            for (let binding of bindingsByDotted.bindings) {
+        if (bindingsByUUID) {
+            for (let binding of bindingsByUUID.bindings) {
                 binding.push(details);
             }
         }
 
         return this;
+
     }
 
     // **************************************************************************
     // **************************************************************************
     // **************************************************************************
     /*
-    unshiftValue(dotted, value) {
+    unshift(dotted, value) {
         if (StringType.verify(dotted)) {
             let shape = this.shape.get(dotted);
             
@@ -589,24 +758,24 @@ Doc.on('Mutation-Add', message => {
  * the controller and it returns the controller value when evaluated.
 *****/
 define(class ControllerExpr extends Expr {
-    constructor(dotted) {
+    constructor(uuid) {
         super();
-        this.dotted = dotted;
+        this.uuid = uuid;
     }
 
     eval() {
-        return Controller.getValue(this.dotted);
+        return Controller.peekValue(this.uuid);
     }
 
     static fromJson(obj) {
-        return mkControllerExpr(obj.dotted);
+        return mkControllerExpr(obj.uuid);
     }
 
     getDependencies() {
         return [{
             type: 'controller',
             expr: this,
-            dotted: this.dotted,
+            uuid: this.uuid,
         }];
     }
 
