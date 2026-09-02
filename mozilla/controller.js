@@ -535,26 +535,43 @@ singleton(class Controller extends Emitter {
         return this;
     }
     */
-
-    // **************************************************************************
-    // **************************************************************************
-    // **************************************************************************
-    /*
+    
     push(dotted, value) {
-        if (StringType.verify(dotted)) {
-            let shape = this.shape.get(dotted);
-            
-            if (shape && shape.getType() == ArrayType) {
-                if (shape.verify([ value ])) {
-                    RdsData.set(this.value, `${dotted}.push`, value);
-                    this.signalBindings(dotted);
-                }
+        let decoratedArray = this.getDecorated(dotted);
+        let elementShape = decoratedArray.shape.getClass();
+        let elementValue;
+
+        if (decoratedArray && decoratedArray.shape.getType() === ArrayType) {
+            if (value && elementShape.verify(value)) {
+                elementValue = value;
             }
+            else {
+                elementValue = elementShape.getDefault();
+            }
+        }
+
+        if (elementValue !== undefined) {
+            let index = decoratedArray.value.length;
+
+            let decoratedElement = {
+                uuid: Crypto.generateUUID(),
+                dotted: `${dotted}.${index}`,
+                parent: decoratedArray,
+                shape: elementShape,
+                value: elementValue,
+            };
+
+            decoratedArray.value.push(decoratedElement);
+            this.byUUID[decoratedElement.uuid] = decoratedElement;
+
+            this.signalBindings(decoratedArray.uuid, {
+                action: 'append',
+                index: index,
+            });
         }
 
         return this;
     }
-    */
 
     rebuildArray(dotted, ...arrayElements) {
         let decoratedArray = this.getDecorated(dotted);

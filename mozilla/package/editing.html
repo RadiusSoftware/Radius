@@ -25,53 +25,57 @@
 
                 init() {
                     super.init();
+                    Controller.push('acme.contact', 'init-1@email.com');
+                    Controller.push('acme.contact', 'init-2@email.com');
                     Controller.bindArray(this, this.getDotted());
+                }
 
-                    // ******************************************************************************
-                    // ******************************************************************************
-                    /*
-                    (async () => {
-                        await pause(2000);
-                        Controller.setValue('acme.contact', [
-                            'chris.wittmann@infosearch.net',
-                            'christoph@wittmann.earth',
-                        ]);
-                    })();
-                    */
-                    // ******************************************************************************
-                    // ******************************************************************************
+                insertRow(i, info) {
+                    let dotted = `${this.getDotted()}.${i}`;
+
+                    let arrayRow = createElement('arrayrow-widget', {
+                        'rds-dotted': dotted,
+                        'rds-readonly': this.isReadonly(),
+                    });
+
+                    if (info == 'append') {
+                        this.tbody.append(arrayRow);
+                    }
+                    else if (info == 'prepend') {
+                        // ********************************************
+                    }
+                    else {
+                        // ********************************************
+                    }
                 }
 
                 onArrayAppendElement(details) {
-                    // ********************************************************************
-                    // ********************************************************************
-                    console.log('onArrayAppendElement()');
+                    this.insertRow(details.index, 'append');
                 }
 
                 onArrayDeleteElement(details) {
                     // ********************************************************************
                     // ********************************************************************
                     console.log('onArrayDeleteElement()');
+                    console.log(details);
                 }
 
                 onArrayInsertElement(details) {
                     // ********************************************************************
                     // ********************************************************************
                     console.log('onArrayInsertElement()');
+                    console.log(details);
                 }
 
                 onArrayPrependElement(details) {
                     // ********************************************************************
                     // ********************************************************************
                     console.log('onArrayPrependElement()');
+                    console.log(details);
                 }
 
                 onArrayRender(details) {
                     this.clear();
-
-                    let shape = this.getShape();
-                    let clss = shape.getClass();
-                    let readonly = this.isReadonly();
                     this.setClassName('array-widget');
 
                     this.append(
@@ -110,22 +114,12 @@
                     );
 
                     for (let i = 0; i < Controller.getValue(this.getDotted()).length; i++) {
-                        let dotted = `${this.getDotted()}.${i}`;
-
-                        this.tbody.append(
-                            createElement('arrayrow-widget', {
-                                'rds-bind': dotted,
-                                'rds-readonly': readonly,
-                            })
-                        );
+                        this.insertRow(i, 'append');
                     }
                 }
 
                 onHandleEventAppendRow(event) {
-                    // ***********************************************
-                    // User Edit
-                    // ***********************************************
-                    console.log('append row');
+                    Controller.push(this.getDotted(), 'append@email.com');
                 }
 
                 onHandleEventDeleteRow(event) {

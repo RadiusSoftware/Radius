@@ -231,6 +231,12 @@ define(class EditingWidget extends Widget {
             this.shape = Controller.getShape(this.dotted);
         }
 
+        if (this.getRdsDotted) {
+            this.dotted = this.getRdsDotted();
+            delete this.getRdsDotted;
+            this.shape = Controller.getShape(this.dotted);
+        }
+
         if (this.getRdsReadonly) {
             this.setReadonly(this.getRdsReadonly())
             delete this.getRdsReadonly();

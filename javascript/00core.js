@@ -458,28 +458,12 @@ define(async function caught(info) {
             diagnostic: info.toString(),
         }));
     }
-
-    let message = [];
-
-    if (info.error instanceof error) {
-        message.push(info.error.toString());
-    }
-
-    if (info.stack) {
-        message.push(info.stack);
-    }
-
-    for (let key in info) {
-        if (!(key in { error:0, stack:0 })) {
-            message.push(`${key}: ${info[key].toString()}`);
-        }
-    }
-
-    await wait(caught.handler(info, message));
 });
 
-caught.handler = (info, message) => {
-    console.log(message.join('\n'));
+caught.handler = (info) => {
+    if (info) {
+        console.log(info);
+    }
 };
 
 
