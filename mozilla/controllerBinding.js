@@ -28,12 +28,13 @@
  * element and the controller.
 *****/
 define(class ControllerBinding {
-    constructor(docElement, expr, uuid, type, name) {
+    constructor(docElement, expr, dotted, type, name) {
         this.docElement = docElement;
         this.expr = expr;
-        this.uuid = uuid;
+        this.dotted = dotted;
         this.valid = false;
         this.blockingFeedback = false;
+        this.uuid = Crypto.generateUUID();
         
         if (type == 'inner') {
             this.valid = true;
@@ -112,6 +113,10 @@ define(class ControllerBinding {
         return this;
     }
 
+    getDotted() {
+        return this.dotted;
+    }
+
     getElement() {
         return this.docElement;
     }
@@ -140,24 +145,24 @@ define(class ControllerBinding {
                 if (this.type == 'input') {
                     switch (this.docElement.getAttribute('type')) {
                         case 'number':
-                            Controller.pokeValue(this.uuid, this.docElement.getProperty('valueAsNumber'));
+                            Controller.setValue(this.dotted, this.docElement.getProperty('valueAsNumber'));
                             break;
 
                         case 'date':
                         case 'datetime-local':
-                            Controller.pokeValue(this.uuid, this.docElement.getProperty('valueAsDate'));
+                            Controller.setValue(this.dotted, this.docElement.getProperty('valueAsDate'));
                             break;
 
                         case 'radio':
-                            Controller.pokeValue(this.uuid, this.docElement.getAttribute('value'));
+                            Controller.setValue(this.dotted, this.docElement.getAttribute('value'));
                             break;
 
                         case 'checkbox':
-                            Controller.pokeValue(this.uuid, this.docElement.getProperty('checked'));
+                            Controller.setValue(this.dotted, this.docElement.getProperty('checked'));
                             break;
 
                         default:
-                            Controller.pokeValue(this.uuid, this.docElement.getProperty('value'));
+                            Controller.setValue(this.dotted, this.docElement.getProperty('value'));
                             break;
                     }
                 }
@@ -178,20 +183,14 @@ define(class ControllerBinding {
 
             try {
                 if (this.type == 'array') {
-                    if (details.action == 'refresh') {
-                        this.docElement.onArrayRender(this.expr.eval(), details);
-                    }
-                    else if (details.action == 'append') {
-                        this.docElement.onArrayAppendElement(details);
-                    }
-                    else if (details.action == 'delete') {
-                        this.docElement.onArrayDeleteElement(details);
+                    if (details.action == 'delete') {
+                        this.docElement.onArrayDelete(details);
                     }
                     else if (details.action == 'insert') {
-                        this.docElement.onArrayInsertElement(details);
+                        this.docElement.onArrayInsert(details);
                     }
-                    else if (details.action == 'prepend') {
-                        this.docElement.onArrayPrependElement(details);
+                    else if (details.action == 'refresh') {
+                        this.docElement.onArrayRender(this.expr.eval(), details);
                     }
                 }
                 else if (this.type == 'inner') {

@@ -32,27 +32,18 @@ singleton(class Controller extends Emitter {
     constructor() {
         super();
 
+        this.value = {};
         this.shape = mkRdsShape({});
         this.nodes = new WeakMap();
-        this.bindingsByUUID = {};
+        this.bindingsByDotted = {};
         this.bindingsByDocElement = new WeakMap();
-        this.byUUID = {};
-
-        this.decorated = {
-            uuid: Crypto.generateUUID(),
-            parent: null,
-            shape: this.shape,
-            value: {},
-        };
 
         this.on('Set', message => {
-            let bindingsByUUID = this.bindingsByUUID[message.uuid];
+            let bindingsByDotted = this.bindingsByDotted[message.dotted];
             
-            if (bindingsByUUID) {
-                for (let binding of bindingsByUUID.bindings) {
-                    if (binding.isEnabled()) {
-                        binding.push();
-                    }
+            if (bindingsByDotted) {
+                for (let binding of bindingsByDotted.bindings) {
+                    binding.push();
                 }
             }
         });
@@ -112,20 +103,42 @@ singleton(class Controller extends Emitter {
     }
 
     createBinding(docElement, dotted, type, name) {
-        let decorated = this.getDecorated(dotted);
+        let expr = mkControllerExpr(dotted);
 
-        if (decorated) {
-            let expr = mkControllerExpr(decorated.uuid);
+        for (let dependency of expr.getDependencies()) {
+            if (dependency.type == 'controller') {
+                let binding = mkControllerBinding(docElement, expr, dotted, type, name);
 
-            for (let dependency of expr.getDependencies()) {
-                if (dependency.type == 'controller') {
-                    let binding = mkControllerBinding(docElement, expr, decorated.uuid, type, name);
-
-                    if (!this.hasBinding(binding)) {
-                        this.setBinding(binding);
+                if (binding.isValid()) {
+                    if (this.hasBinding(binding)) {
+                        binding.deactivate();
                     }
                     else {
-                        binding.deactivate();
+                        let byDocElement = this.bindingsByDocElement.get(binding.getElement());
+                        
+                        if (!byDocElement) {
+                            byDocElement = {
+                                docElement: binding.getElement(),
+                                bindings: [],
+                            };
+
+                            this.bindingsByDocElement.set(binding.getElement(), byDocElement);
+                        }
+
+                        let byDotted = this.bindingsByDotted[binding.getDotted()];
+
+                        if (!byDotted) {
+                            byDotted = {
+                                byDotted: binding.getDotted(),
+                                bindings: [],
+                            };
+
+                            this.bindingsByDotted[binding.getDotted()] = byDotted;
+                        }
+
+                        byDocElement.bindings.push(binding);
+                        byDotted.bindings.push(binding);
+                        binding.push({ action: 'refresh' });
                     }
                 }
             }
@@ -149,26 +162,41 @@ singleton(class Controller extends Emitter {
             }
 
             this.shape.set(key, shape.get(key));
+            this.value[key] = object[key];
+        }
 
-            this.import({
-                parent: this.decorated,
-                key: key,
-                dotted: '',
-                shape: shape.get(key),
-                value: object[key],
-            });
+        return this;
+    }
+
+    deleteBindings(dotted) {
+        for (let enumerated of this.enumerate(dotted)) {
+            this.deleteBindingsByDotted(enumerated);
         }
 
         return this;
     }
 
     deleteBindingsByDocElement(docElement) {
-        let bindingEntry = this.bindingsByDocElement.get(docElement);
+        let bindingsByDocElement = this.bindingsByDocElement.get(docElement);
 
-        if (bindingEntry) {
+        if (bindingsByDocElement) {
             this.bindingsByDocElement.delete(docElement);
 
-            for (let binding of bindingEntry.bindings) {
+            for (let binding of bindingsByDocElement.bindings) {
+                let bindingsByDotted = this.bindingsByDotted(binding.getDotted());
+
+                if (bindingsByDotted.bindings.length < 2) {
+                    delete this.bindingsByDotted[binding.getDotted()];
+                }
+                else {
+                    for (let i = 0; i < bindingsByDotted.bindings.length; i++) {
+                        if (bindingsByDotted.bindings[i].getUUID() == binding.getUUID()) {
+                            bindingsByDotted.bindings.splice(i, 1);
+                            break;
+                        }   
+                    }
+                }
+
                 binding.deactivate();
             }
         }
@@ -177,44 +205,55 @@ singleton(class Controller extends Emitter {
     }
 
     deleteBindingsByDotted(dotted) {
-        return this.deleteBindingsByUUID(this.getUUID(dotted));
-    }
+        let bindingsByDotted = this.bindingsByDotted[dotted];
 
-    deleteBindingsByUUID(uuid) {
-        if (uuid) {
-            let bindingEntry = this.bindingsByUUID[uuid];
+        if (bindingsByDotted) {
+            delete this.bindingsByDotted[dotted];
 
-            if (bindingEntry) {
-                delete this.bindingsByUUID[uuid];
+            for (let binding of bindingsByDotted.bindings) {
+                let bindingsByDocElement = this.bindingsByDocElement.get(binding.getElement());
 
-                for (let binding of bindingEntry.bindings) {
-                    binding.deactivate();
+                if (bindingsByDocElement.bindings.length < 2) {
+                    this.bindingsByDocElement.delete(binding.getElement());
                 }
+                else {
+                    for (let i = 0; i < bindingsByDocElement.bindings.length; i++) {
+                        if (bindingsByDocElement.bindings[i] == binding.getUUID()) {
+                            bindingsByDocElement.bindings.splice(i, 1);
+                            break;
+                        }
+                    }
+                }
+
+                binding.deactivate();
             }
         }
 
         return this;
     }
 
-    enumerate(decorated) {
+    deleteRow(dotted, index) {
+        // **********************************************************************
+        // **********************************************************************
+    }
+
+    enumerate(dotted) {
         let enumerated = [];
+        let stack = [ dotted ];
 
-        if (decorated) {
-            let stack = [ decorated ];
+        while (stack.length) {
+            let dotted = stack.pop();
+            let value = this.getValue(dotted);
+            enumerated.push(dotted);
 
-            while (stack.length) {
-                let decorated = stack.pop();
-                enumerated.push(decorated);
-
-                if (decorated.shape.getType() === ObjectType) {
-                    for (let key of Object.keys(decorated.value).reverse()) {
-                        stack.push(decorated.value[key]);
-                    }
+            if (ObjectType.verify(value)) {
+                for (let key of Object.keys(value).reverse()) {
+                    stack.push(`${dotted}.${key}`);
                 }
-                else if (decorated.shape.getType() === ArrayType) {
-                    for (let decoratedElement of decorated.value.reverse()) {
-                        stack.push(decoratedElement);
-                    }
+            }
+            else if (ArrayType.verify(value)) {
+                for (let i = value.length - 1; i >= 0; i--) {
+                    stack.push(`${dotted}.${i}`);
                 }
             }
         }
@@ -222,143 +261,22 @@ singleton(class Controller extends Emitter {
         return enumerated;
     }
 
-    getDecorated(dotted) {
-        if (StringType.verify(dotted) && dotted) {
-            let decorated = this.decorated;
-
-            for (let key of RdsText.split(dotted, '.')) {
-                if (decorated.shape.getType() === ObjectType) {
-                    if (key in decorated.value) {
-                        decorated = decorated.value[key];
-                        continue;
-                    }
-                }
-                else if (decorated.shape.getType() === ArrayType) {
-                    let index = parseInt(key);
-
-                    if (index.toString() == key) {
-                        if (index < decorated.value.length) {
-                            decorated = decorated.value[index];
-                            continue;
-                        }
-                    }
-                }
-                
-                decorated = undefined;
-                break;
-            }
-
-            return decorated;
-        }
-        else {
-            return this.decorated;
-        }
-    }
-
     getShape(dotted) {
-        if (StringType.verify(dotted) && dotted) {
-            return this.shape.get(dotted);
-        }
-        else {
-            return this.shape;
-        }
-    }
-
-    getUUID(dotted) {
-        let decorated = this.getDecorated(dotted);
-        return decorated ? decorated.uuid : undefined;
+        return this.shape.get(dotted);
     }
 
     getValue(dotted) {
-        let decorated = this.getDecorated(dotted);
-
-        if (decorated) {
-            if (decorated.shape.getType().isScalar()) {
-                return decorated.value;
-            }
-
-            let value;
-            let stack = [];
-
-            if (decorated.shape.getType() === ObjectType) {
-                value = {};
-
-                stack.push({
-                    value: value,
-                    decorated: decorated.value,
-                });
-            }
-            else if (decorated.shape.getType() === ArrayType) {
-                value = [];
-
-                stack.push({
-                    value: value,
-                    decorated: decorated.value,
-                });
-            }
-
-            while (stack.length) {
-                let { value, decorated } = stack.pop();
-
-                if (ObjectType.verify(value)) {
-                    for (let key in decorated) {
-                        let decoratedValue = decorated[key];
-
-                        if (decoratedValue.shape.getType() === ObjectType) {
-                            value[key] = {};
-
-                            stack.push({
-                                value: value[key],
-                                decorated: decoratedValue.value,
-                            });
-                        }
-                        else if (decoratedValue.shape.getType() === ArrayType) {
-                            value[key] = [];
-
-                            stack.push({
-                                value: value[key],
-                                decorated: decoratedValue.value,
-                            });
-                        }
-                        else {
-                            value[key] = decoratedValue.value;
-                        }
-                    }
-                }
-                else if (ArrayType.verify(value)) {
-                    for (let decoratedValue of decorated) {
-                        if (decoratedValue.shape.getType() === ObjectType) {
-                            let elementValue = {};
-                            value.push(elementValue);
-
-                            stack.push({
-                                value: elementValue,
-                                decorated: decoratedValue.value,
-                            });
-                        }
-                        else {
-                            value.push(decoratedValue.value);
-                        }
-                    }
-                }
-            }
-
-            return value;
-        }
-        
-        return undefined;
+        return RdsData.get(this.value, dotted);
     }
 
     hasBinding(controllerBinding) {
-        if (controllerBinding.isValid()) {
-            if (controllerBinding.getUUID() in this.bindingsByUUID) {
-                let byUUID = this.bindingsByUUID[controllerBinding.getUUID()];
+        if (controllerBinding.getDotted() in this.bindingsByDotted) {
+            let byDotted = this.bindingsByDotted[controllerBinding.getDotted()];
 
-                for (let binding of byUUID.bindings) {
-                    if (binding.getElement().isSame(controllerBinding.getElement())) {
-                        if (binding.getType() == controllerBinding.getType()) {
-                            return true;
-                        }
+            for (let binding of byDotted.bindings) {
+                if (binding.getElement().isSame(controllerBinding.getElement())) {
+                    if (binding.getType() == controllerBinding.getType()) {
+                        return true;
                     }
                 }
             }
@@ -368,67 +286,7 @@ singleton(class Controller extends Emitter {
     }
 
     hasData(dotted) {
-        let decorated = this.getDecorated(dotted);
-        return decorated ? true : false;
-    }
-
-    import(root) {
-        let stack = [ root ];
-
-        while (stack.length) {
-            let { parent, key, dotted, shape, value } = stack.pop();
-            let uuid = Crypto.generateUUID();
-            dotted = dotted ? `${dotted}.${key}` : key;
-
-            let decorated = {
-                uuid: uuid,
-                dotted: dotted,
-                parent: parent,
-                shape: shape
-            };
-
-            this.byUUID[uuid] = decorated;
-
-            if (shape.getType() === ObjectType) {
-                decorated.value = {};
-            }
-            else if (shape.getType() === ArrayType) {
-                decorated.value = [];
-            }
-            else {
-                decorated.value = value;
-            }
-
-            if (parent.shape.getType() === ObjectType) {
-                parent.value[key] = decorated;
-            }
-            else if (parent.shape.getType() === ArrayType) {
-                parent.value.push(decorated);
-            }
-            
-            if (shape.getType() === ObjectType) {
-                for (let key of shape.getKeys().reverse()) {
-                    stack.push({
-                        parent: decorated,
-                        key: key,
-                        dotted: dotted,
-                        shape: shape.get(key),
-                        value: value[key],
-                    });
-                }
-            }
-            else if (shape.getType() === ArrayType) {
-                for (let i = value.length - 1; i >= 0; i--) {
-                    stack.push({
-                        parent: decorated,
-                        key: i,
-                        dotted: dotted,
-                        shape: shape.getClass(),
-                        value: value[i],
-                    });
-                }
-            }
-        }
+        return RdsData.has(this.value.dotted);
     }
     
     initNode(docNode) {
@@ -503,283 +361,118 @@ singleton(class Controller extends Emitter {
         }
     }
 
-    isArray(dotted) {
-        let shape = this.shape.get(dotted);
-        return shape && shape.type === ArrayType;
-    }
+    insertRow(dotted, index, value) {
+        let shape = this.getShape(dotted);
 
-    peekValue(uuid) {
-        let decorated = this.byUUID[uuid];
-        return decorated ? decorated.value : undefined;
-    }
+        if (shape) {
+            let elementValue;
+            let array = this.getValue(dotted);
 
-    pokeValue(uuid, newValue) {
-        let decorated = this.byUUID[uuid];
-        decorated ? this.setValue(decorated.dotted, newValue) : null;
-    }
-
-    // **************************************************************************
-    // **************************************************************************
-    // **************************************************************************
-    /*
-    pop(dotted) {
-        if (StringType.verify(dotted)) {
-            let shape = this.shape.get(dotted);
-            
-            if (shape && shape.getType() == ArrayType) {
-                RdsData.delete(this.value, `${dotted}.pop`);
-                this.signalBindings(dotted);
-            }
-        }
-
-        return this;
-    }
-    */
-    
-    push(dotted, value) {
-        let decoratedArray = this.getDecorated(dotted);
-        let elementShape = decoratedArray.shape.getClass();
-        let elementValue;
-
-        if (decoratedArray && decoratedArray.shape.getType() === ArrayType) {
-            if (value && elementShape.verify(value)) {
-                elementValue = value;
-            }
-            else {
-                elementValue = elementShape.getDefault();
-            }
-        }
-
-        if (elementValue !== undefined) {
-            let index = decoratedArray.value.length;
-
-            let decoratedElement = {
-                uuid: Crypto.generateUUID(),
-                dotted: `${dotted}.${index}`,
-                parent: decoratedArray,
-                shape: elementShape,
-                value: elementValue,
-            };
-
-            decoratedArray.value.push(decoratedElement);
-            this.byUUID[decoratedElement.uuid] = decoratedElement;
-
-            this.signalBindings(decoratedArray.uuid, {
-                action: 'append',
-                index: index,
-            });
-        }
-
-        return this;
-    }
-
-    rebuildArray(dotted, ...arrayElements) {
-        let decoratedArray = this.getDecorated(dotted);
-
-        if (decoratedArray) {
-            while (decoratedArray.value.length) {
-                let decoratedElement = decoratedArray.value.shift();
-
-                for (let decorated of this.enumerate(decoratedElement)) {
-                    this.deleteBindingsByUUID(decorated.uuid);
+            if (NumberType.verify(index)) {
+                for (let i = array.length - 1; i >= 0; i--) {
+                    this.shiftBindings(dotted, index, 1);
                 }
             }
 
-            for (let i = 0; i < arrayElements.length; i++) {
-                let value = arrayElements[i];
-
-                this.import({
-                    parent: decoratedArray,
-                    key: i,
-                    dotted: decoratedArray.dotted,
-                    shape: decoratedArray.shape.getClass(),
-                    value: value,
-                });
+            if (shape.verify(value)) {
+                elementValue = value;
             }
+            else {
+                elementValue = shape.getClass().getDefault();
+            }
+
+            if (index === undefined) {
+                array.push(elementValue);
+            }
+            else {
+                array.splice(index, 0, elementValue)
+            }
+
+            this.signalBindings(dotted, {
+                action: 'insert',
+                index: NumberType.verify(index) ? index : array.length - 1,
+            });
         }
 
-        this.signalBindings(decoratedArray.uuid, { action: 'refresh' });
         return this;
     }
 
     revokeData(key) {
-        console.log(key);
-        if (key in this.decorated.value) {
-            for (let decorated of this.enumerate(this.decorated.value[key])) {
-                this.deleteBindingsByUUID(decorated.uuid);
-            }
-
+        if (key in this.value) {
             this.shape.delete(key);
-            delete this.decorated.value[key];
+            delete this.value[key];
+            this.deleteBindings(key);
         }
 
-        return this;
-    }
-
-    setBinding(binding) {
-        let byDocElement = this.bindingsByDocElement.get(binding.getElement());
-        
-        if (!byDocElement) {
-            byDocElement = {
-                docElement: this.docElement,
-                bindings: [],
-            };
-
-            this.bindingsByDocElement.set(binding.getElement(), byDocElement);
-        }
-
-        let byUUID = this.bindingsByUUID[binding.getUUID()];
-
-        if (!byUUID) {
-            byUUID = {
-                uuid: this.uuid,
-                bindings: [],
-            };
-
-            this.bindingsByUUID[binding.getUUID()] = byUUID;
-        }
-
-        byDocElement.bindings.push(binding);
-        byUUID.bindings.push(binding);
-        binding.push({ action: 'refresh' });
         return this;
     }
 
     setValue(dotted, newValue) {
-        let decorated = this.getDecorated(dotted);
+        let shape = this.shape.get(dotted);
 
-        if (!decorated) {
-            this.emit({
-                name: 'SetFailed',
-                details: 'dotted not found',
-                dotted: dotted,
-                value: newValue,
-            });
-        }
+        if (shape && shape.verify(newValue)) {
+            let arrays = [];
 
-        if (!decorated.shape.verify(newValue)) {
-            this.emit({
-                name: 'SetFailed',
-                details: 'value failed verification',
-                dotted: dotted,
-                uuid: decorated.uuis,
-                value: newValue,
-            });
-        }
+            for (let itemDotted of this.enumerate(dotted)) {
+                let array = this.getValue(itemDotted);
 
-        let stack = [{
-            decorated: decorated,
-            value: newValue
-        }];
+                if (ArrayType.verify(array)) {
+                    arrays.push(itemDotted);
 
-        while (stack.length) {
-            let { decorated, value } = stack.pop();
-
-            if (decorated.shape.getType() === ObjectType) {
-                for (let key  in value) {
-                    stack.push({
-                        decorated: decorated.value[key],
-                        value: value[key]
-                    });
+                    for (let i = 0; i < array.length; i++) {
+                        this.deleteBindings(`${itemDotted}.${i}`);
+                    }
                 }
             }
-            else if (decorated.shape.getType() === ArrayType) {
-                this.rebuildArray(decorated.dotted, ...newValue);
+
+            RdsData.set(this.value, dotted, newValue);
+
+            for (let arrayDotted of arrays) {
+                if (arrayDotted != dotted) {
+                    this.signalBindings(arrayDotted, { action: 'refresh' });
+                }
             }
-            else {
-                decorated.value = value;
-                this.signalBindings(decorated.uuid);
-            }
+
+            this.signalBindings(dotted, { action: 'refresh' });
         }
 
         return this;
     }
 
-    // **************************************************************************
-    // **************************************************************************
-    // **************************************************************************
-    /*
-    shift(dotted) {
-        if (StringType.verify(dotted)) {
-            let shape = this.shape.get(dotted);
-            
-            if (shape && shape.getType() == ArrayType) {
-                RdsData.delete(this.value, `${dotted}.shift`);
-                this.signalBindings(dotted);
-            }
+    shiftBindings(array, index, delta) {
+        let dotted = `${array}.${index}`;
+
+        for (let key of Object.keys(this.bindingsByDotted)
+            .sort()
+            .filter(path => path.startsWith(dotted))) {
+                let bindingsByDotted = this.bindingsByDotted[key];
+                let redotted = `${array}.${index+ + delta}`;
+
+                if (key.length > redotted.length) {
+                    redotted += `.${key.substring(redotted.length + 1)}`;
+                }
+
+                for (let binding of bindingsByDotted.bindings) {
+                    binding.dotted = redotted;
+                }
+
+                bindingsByDotted.byDotted = redotted;
+                delete this.bindingsByDotted[key];
+                this.bindingsByDotted[redotted] = bindingsByDotted;
         }
-
-        return this;
     }
-    */
 
-    signalBindings(uuid, details) {
-        let bindingsByUUID = this.bindingsByUUID[uuid];
+    signalBindings(dotted, details) {
+        let bindingsByDotted = this.bindingsByDotted[dotted];
 
-        if (bindingsByUUID) {
-            for (let binding of bindingsByUUID.bindings) {
+        if (bindingsByDotted) {
+            for (let binding of bindingsByDotted.bindings) {
                 binding.push(details);
             }
         }
 
         return this;
 
-    }
-
-    // **************************************************************************
-    // **************************************************************************
-    // **************************************************************************
-    /*
-    splice(dotted, index, count, ...insert) {
-        if (StringType.verify(dotted)) {
-            let shape = this.shape.get(dotted);
-            
-            if (shape && shape.getType() == ArrayType) {
-                if (shape.verify([ value ])) {
-                    RdsData.set(this.value, `${dotted}.unshift`, value);
-                    this.signalBindings(dotted);
-                }
-            }
-        }
-
-        return this;
-    }
-    */
-   
-    unshift(dotted, value) {
-        let decoratedArray = this.getDecorated(dotted);
-        let elementShape = decoratedArray.shape.getClass();
-        let elementValue;
-
-        if (decoratedArray && decoratedArray.shape.getType() === ArrayType) {
-            if (value && elementShape.verify(value)) {
-                elementValue = value;
-            }
-            else {
-                elementValue = elementShape.getDefault();
-            }
-        }
-
-        if (elementValue !== undefined) {
-            for (let i = 0; i < decoratedArray.value.length; i++) {
-                let shiftedElement = decoratedArray.value[i];
-                shiftedElement.dotted = `${dotted}.${i+1}`;
-            }
-
-            let decoratedElement = {
-                uuid: Crypto.generateUUID(),
-                dotted: `${dotted}.0`,
-                parent: decoratedArray,
-                shape: elementShape,
-                value: elementValue,
-            };
-
-            decoratedArray.value.push(decoratedElement);
-            this.byUUID[decoratedElement.uuid] = decoratedElement;
-            this.signalBindings(decoratedArray.uuid, { action: 'prepend' });
-        }
-
-        return this;
     }
 });
 
@@ -810,24 +503,24 @@ Doc.on('Mutation-Add', message => {
  * the controller and it returns the controller value when evaluated.
 *****/
 define(class ControllerExpr extends Expr {
-    constructor(uuid) {
+    constructor(dotted) {
         super();
-        this.uuid = uuid;
+        this.dotted = dotted;
     }
 
     eval() {
-        return Controller.peekValue(this.uuid);
+        return Controller.getValue(this.dotted);
     }
 
     static fromJson(obj) {
-        return mkControllerExpr(obj.uuid);
+        return mkControllerExpr(obj.dotted);
     }
 
     getDependencies() {
         return [{
             type: 'controller',
             expr: this,
-            uuid: this.uuid,
+            dotted: this.dotted,
         }];
     }
 

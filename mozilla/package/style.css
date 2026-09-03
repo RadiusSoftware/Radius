@@ -183,13 +183,6 @@ body {
     padding: 2px;
 }
 
-.array-widget-body {
-    width: 100%;
-    height: auto;
-    margin: 0px;
-    padding: 0px;
-}
-
 .array-widget-action-cell {
     vertical-align: middle;
 }
@@ -197,6 +190,20 @@ body {
 .array-widget-action-text {
     vertical-align: middle;
     font-size: 12px;
+}
+
+.array-widget-body {
+    width: 100%;
+    height: auto;
+    margin: 0px;
+    padding: 0px;
+}
+
+.array-widget-head {
+    width: 100%;
+    height: auto;
+    margin: 0px;
+    padding: 0px;
 }
 
 .arrayrow-widget {

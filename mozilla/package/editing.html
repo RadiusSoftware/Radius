@@ -28,63 +28,50 @@
                     Controller.bindArray(this, this.getDotted());
                 }
 
-                insertRow(i, info) {
-                    let dotted = `${this.getDotted()}.${i}`;
-
-                    let arrayRow = createElement('arrayrow-widget', {
-                        'rds-dotted': dotted,
+                insertRow(index) {
+                    let row = createElement('arrayrow-widget', {
+                        'rds-dotted': `${this.getDotted()}.${index}`,
                         'rds-readonly': this.isReadonly(),
+                        'rds-index': index,
                     });
 
-                    if (info == 'append') {
-                        this.tbody.append(arrayRow);
-                    }
-                    else if (info == 'prepend') {
-                        this.actions.insertAfter(arrayRow);
+                    if (index >= this.tbody.getChildElements().length) {
+                        this.tbody.append(row);
                     }
                     else {
-                        // ********************************************
+                        let anchor = this.tbody.getChildElementAt(index);
+                        anchor.insertBefore(row);
                     }
                 }
 
-                onArrayAppendElement(details) {
-                    this.insertRow(details.index, 'append');
+                /*
+                onArrayDelete(details) {
+                }
+                */
+
+                onArrayInsert(details) {
+                    this.insertRow(details.index);
                 }
 
-                onArrayDeleteElement(details) {
-                    // ********************************************************************
-                    // ********************************************************************
-                    console.log('onArrayDeleteElement()');
-                    console.log(details);
-                }
-
-                onArrayInsertElement(details) {
-                    // ********************************************************************
-                    // ********************************************************************
-                    console.log('onArrayInsertElement()');
-                    console.log(details);
-                }
-
-                onArrayPrependElement(details) {
-                    this.insertRow(details.index, 'prepend');
-                }
-
-                onArrayRender(details) {
+                onArrayRender() {
                     this.clear();
                     this.setClassName('array-widget');
 
                     this.append(
+                        this.thead = createElement('thead', {
+                            class: 'array-widget-head',
+                        }),
+
                         this.tbody = createElement('tbody', {
                             class: 'array-widget-body',
-                        })
+                        }),
                     );
 
-                    this.tbody.append(
+                    this.thead.append(
                         this.actions = createElement('tr')
                         .append(
-                            createElement('td', {
+                            createElement('th', {
                                 colSpan: this.getColumnCount().toString(),
-                                class: '',
                             })
                             .append(
                                 createElement('grid-widget', {
@@ -109,30 +96,41 @@
                     );
 
                     for (let i = 0; i < Controller.getValue(this.getDotted()).length; i++) {
-                        this.insertRow(i, 'append');
+                        this.insertRow(i);
                     }
                 }
 
                 onHandleEventAppendRow(event) {
-                    Controller.push(this.getDotted());
+                    Controller.insertRow(this.getDotted());
                 }
 
+                /*
                 onHandleEventDeleteRow(event) {
-                    // ***********************************************
-                    // User Edit
-                    // ***********************************************
-                    console.log('delete row');
+                    let indexString = event.getTarget().getRdsIndex();
+
+                    if (!UndefinedType.verify(indexString)) {
+                        let index = parseInt(indexString);
+                        let array = Controller.getValue(this.getDotted());
+
+                        if (array.length) {
+                            if (index == array.length - 1) {
+                                Controller.pop(this.getDotted());
+                            }
+                            else {
+                                Controller.splice(this.getDotted(), index, 1);
+                            }
+                        }
+                    }
                 }
+                */
 
                 onHandleEventInsertRow(event) {
-                    // ***********************************************
-                    // User Edit
-                    // ***********************************************
-                    console.log('insert row');
+                    let index = parseInt(event.getTarget().getAttribute('rds-index'));
+                    Controller.insertRow(this.getDotted(), index + 1);
                 }
 
                 onHandleEventPrependRow(event) {
-                    Controller.unshift(this.getDotted());
+                    Controller.insertRow(this.getDotted(), 0);
                 }
 
                 onReadonlyChanged() {
@@ -160,7 +158,6 @@
             class ArrayRowWidget extends EditingWidget {
                 init() {
                     super.init();
-                    this.clearAttribute('rds-dotted');
                     this.render();
                 }
 
@@ -221,12 +218,14 @@
                                 class: 'icon icon-small',
                                 'rds-shape': 'minussign',
                                 'evt-click': 'delete-row',
+                                'rds-index': this.getRdsIndex(),
                             }),
 
                             createElement('svg', {
                                 class: 'icon icon-small',
                                 'rds-shape': 'plussign',
                                 'evt-click': 'insert-row',
+                                'rds-index': this.getRdsIndex(),
                             }),
                         )
                     );

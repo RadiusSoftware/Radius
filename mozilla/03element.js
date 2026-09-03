@@ -301,6 +301,20 @@ define(class DocNode extends Emitter {
 
         return docNodes;
     }
+    
+    getAncestor(tagName) {
+        let node = this.getParentElement();
+
+        while (node instanceof DocElement) {
+            if (node.getTagName() == tagName) {
+                return node;
+            }
+
+            node = node.getParentElement();
+        }
+
+        return null;
+    }
 
     getChildAt(index) {
         if (index >= 0 && index < this.node.childNodes.length) {
@@ -1084,6 +1098,22 @@ define(class DocElement extends DocNode {
 
     hasRds(key) {
         return typeof this[`getRds${key}`] == 'function';
+    }
+
+    indexOf() {
+        if (this.getParentElement()) {
+            let index = 0;
+
+            for (let sibling of this.getParentElement().getChildElements()) {
+                if (this.isSame(sibling)) {
+                    return index;
+                }
+
+                index++;
+            }
+        }
+
+        return -1;
     }
     
     init() {
