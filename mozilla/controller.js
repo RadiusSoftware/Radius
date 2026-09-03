@@ -745,26 +745,42 @@ singleton(class Controller extends Emitter {
         return this;
     }
     */
-
-    // **************************************************************************
-    // **************************************************************************
-    // **************************************************************************
-    /*
+   
     unshift(dotted, value) {
-        if (StringType.verify(dotted)) {
-            let shape = this.shape.get(dotted);
-            
-            if (shape && shape.getType() == ArrayType) {
-                if (shape.verify([ value ])) {
-                    RdsData.set(this.value, `${dotted}.unshift`, value);
-                    this.signalBindings(dotted);
-                }
+        let decoratedArray = this.getDecorated(dotted);
+        let elementShape = decoratedArray.shape.getClass();
+        let elementValue;
+
+        if (decoratedArray && decoratedArray.shape.getType() === ArrayType) {
+            if (value && elementShape.verify(value)) {
+                elementValue = value;
             }
+            else {
+                elementValue = elementShape.getDefault();
+            }
+        }
+
+        if (elementValue !== undefined) {
+            for (let i = 0; i < decoratedArray.value.length; i++) {
+                let shiftedElement = decoratedArray.value[i];
+                shiftedElement.dotted = `${dotted}.${i+1}`;
+            }
+
+            let decoratedElement = {
+                uuid: Crypto.generateUUID(),
+                dotted: `${dotted}.0`,
+                parent: decoratedArray,
+                shape: elementShape,
+                value: elementValue,
+            };
+
+            decoratedArray.value.push(decoratedElement);
+            this.byUUID[decoratedElement.uuid] = decoratedElement;
+            this.signalBindings(decoratedArray.uuid, { action: 'prepend' });
         }
 
         return this;
     }
-    */
 });
 
 

@@ -25,8 +25,6 @@
 
                 init() {
                     super.init();
-                    Controller.push('acme.contact', 'init-1@email.com');
-                    Controller.push('acme.contact', 'init-2@email.com');
                     Controller.bindArray(this, this.getDotted());
                 }
 
@@ -42,7 +40,7 @@
                         this.tbody.append(arrayRow);
                     }
                     else if (info == 'prepend') {
-                        // ********************************************
+                        this.actions.insertAfter(arrayRow);
                     }
                     else {
                         // ********************************************
@@ -68,10 +66,7 @@
                 }
 
                 onArrayPrependElement(details) {
-                    // ********************************************************************
-                    // ********************************************************************
-                    console.log('onArrayPrependElement()');
-                    console.log(details);
+                    this.insertRow(details.index, 'prepend');
                 }
 
                 onArrayRender(details) {
@@ -119,7 +114,7 @@
                 }
 
                 onHandleEventAppendRow(event) {
-                    Controller.push(this.getDotted(), 'append@email.com');
+                    Controller.push(this.getDotted());
                 }
 
                 onHandleEventDeleteRow(event) {
@@ -137,10 +132,7 @@
                 }
 
                 onHandleEventPrependRow(event) {
-                    // ***********************************************
-                    // User Edit
-                    // ***********************************************
-                    console.log('prepend row');
+                    Controller.unshift(this.getDotted());
                 }
 
                 onReadonlyChanged() {
@@ -168,6 +160,7 @@
             class ArrayRowWidget extends EditingWidget {
                 init() {
                     super.init();
+                    this.clearAttribute('rds-dotted');
                     this.render();
                 }
 
