@@ -16,32 +16,78 @@
         </script>
         <script>
             class FormWidget extends Widget {
+                static currentForm = null;
+
+                static {
+                    Doc.on('EventKeydown', message => {
+                        let event = message.event;
+
+                        if (FormWidget.currentForm && event.getKey() == 'Tab') {
+                            if (FormWidget.currentForm.tab(event.getShift())) {
+                                event.preventDefault();
+                                event.stopImmedidatePropagation();
+                            }
+                        }
+                    });
+                }
+
+                activateScalar(scalar) {
+                    if (this.scalar) {
+                        this.scalar.onStartEditing();
+                    }
+                }
+
+                enumerateScalars() {
+                    return this.enumerateElementDescendents()
+                           .filter(descendent => descendent.getTagName() == 'scalar-widget');
+                }
+
                 init() {
                     super.init();
+                    this.reset = {};
                     this.editing = null;
-                }
+                    this.submittable = false;
+                    FormWidget.currentForm = this;
 
-                /*
-                async onReset(message) {
-                    message.event.preventDefault();
-                    console.log('reset');
-                    console.log(message);
-                }
-                */
+                    if (FunctionType.verify(this.getRdsAction)) {
+                        let action = RdsText.split(this.getRdsAction(), ',');
 
-                async onHandleEventSubmit(message) {
-                    console.log('*** SUBMIT');
-                    /*
-                    if (this.getRdsAction) {
-                        let rdsAction = `..${this.getRdsAction()}`;
+                        if (action.length > 1) {
+                            this.method = action[0];
+                            this.dotteds = action.slice(1);
 
-                        if (FunctionType.verify(Api[rdsAction])) {
-                            let apiMethod = Api[rdsAction];
-                            let apiArgs = Api['#PrepareArgs'](rdsAction);
-                            let response = await Api[rdsAction](...apiArgs);
+                            for (let dotted of this.dotteds) {
+                                if (Controller.hasData(dotted)) {
+                                    this.reset[dotted] = RdsData.clone(Controller.getValue(dotted));
+                                }
+                                else {
+                                    return;
+                                }
+                            }
+
+                            this.submittable = true;
                         }
                     }
-                    */
+                }
+
+                async onHandleEventReset(message) {
+                    if (this.submittable) {
+                        for (let dotted in this.reset) {
+                            Controller.setValue(dotted, this.reset[dotted]);
+                        }
+                    }
+                }
+
+                async onHandleEventSubmit(message) {
+                    if (this.submittable) {
+                    // ***************************************************************************
+                    // ***************************************************************************
+                        console.log(`submitting ${this.method}()`);
+
+                        for (let dotted of this.dotteds) {
+                            console.log(dotted);
+                        }
+                    }
                 }
 
                 onHandleEventEditStart(event) {
@@ -59,8 +105,45 @@
                         this.editing = null;
                     }
                 }
+
+                onInterceptEvents(event) {
+                    FormData.currentForm = this;
+                }
+
+                tab(shift) {
+                    let scalars = this.enumerateScalars();
+
+                    if (scalars.length) {
+                        if (this.scalar) {
+                            if (shift) {
+                            }
+                            else {
+                            }
+                        }
+                        else {
+                            if (shift) {
+                                this.activateScalar(scalars[0]);
+                            }
+                            else {
+                                this.activateScalar(scalars[scalars.length - 1]);
+                            }
+                        }
+
+                        return true;
+                    }
+
+                    return false;
+                }
             }
         </script>
+    </widget>
+    <widget tagname="formbuttons-widget">
+        <html>
+            <formbutton-widget class="form-buttons">
+                <button-widget type="submit" class="input-widget-width-wide">##submit##</button-widget>
+                <button-widget type="reset" class="input-widget-width-wide">##reset##</button-widget>
+            </formbutton-widget>
+        </html>
     </widget>
     <widget tagname="grid-widget">
         <script>
@@ -708,4 +791,8 @@
         </script>
     </widget>
     -->
+    <strings lang="en">
+        reset = Reset\
+        submit = Submit\
+    </strings>
 </bundle>

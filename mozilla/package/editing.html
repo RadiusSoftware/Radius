@@ -10,6 +10,10 @@
         </script>
         <script>
             class ArrayWidget extends EditingWidget {
+                deleteRow(index) {
+                    this.tbody.getChildElementAt(index).remove();
+                }
+
                 getColumnCount() {
                     if (this.getShape().getType() === ObjectType) {
                         return this.getShape().getKeys().length;
@@ -32,7 +36,6 @@
                     let row = createElement('arrayrow-widget', {
                         'rds-dotted': `${this.getDotted()}.${index}`,
                         'rds-readonly': this.isReadonly(),
-                        'rds-index': index,
                     });
 
                     if (index >= this.tbody.getChildElements().length) {
@@ -44,10 +47,9 @@
                     }
                 }
 
-                /*
                 onArrayDelete(details) {
+                    this.deleteRow(details.index);
                 }
-                */
 
                 onArrayInsert(details) {
                     this.insertRow(details.index);
@@ -104,28 +106,15 @@
                     Controller.insertRow(this.getDotted());
                 }
 
-                /*
                 onHandleEventDeleteRow(event) {
-                    let indexString = event.getTarget().getRdsIndex();
-
-                    if (!UndefinedType.verify(indexString)) {
-                        let index = parseInt(indexString);
-                        let array = Controller.getValue(this.getDotted());
-
-                        if (array.length) {
-                            if (index == array.length - 1) {
-                                Controller.pop(this.getDotted());
-                            }
-                            else {
-                                Controller.splice(this.getDotted(), index, 1);
-                            }
-                        }
-                    }
+                    let tr = event.getTarget().getAncestor('tr');
+                    let index = tr.indexOf();
+                    Controller.deleteRow(this.getDotted(), index);
                 }
-                */
 
                 onHandleEventInsertRow(event) {
-                    let index = parseInt(event.getTarget().getAttribute('rds-index'));
+                    let tr = event.getTarget().getAncestor('tr');
+                    let index = tr.indexOf();
                     Controller.insertRow(this.getDotted(), index + 1);
                 }
 
@@ -218,14 +207,12 @@
                                 class: 'icon icon-small',
                                 'rds-shape': 'minussign',
                                 'evt-click': 'delete-row',
-                                'rds-index': this.getRdsIndex(),
                             }),
 
                             createElement('svg', {
                                 class: 'icon icon-small',
                                 'rds-shape': 'plussign',
                                 'evt-click': 'insert-row',
-                                'rds-index': this.getRdsIndex(),
                             }),
                         )
                     );
@@ -475,9 +462,12 @@
                 }
 
                 selectText() {
-                    let value = this.node.value;
-                    if (StringType.verify(value)) {
-                        this.node.setSelectionRange(0, value.length);
+                    if (this.getAttribute('type') == 'text') {
+                        let value = this.node.value;
+
+                        if (StringType.verify(value)) {
+                            this.node.setSelectionRange(0, value.length);
+                        }
                     }
 
                     return this;
@@ -572,7 +562,7 @@
                     ScalarWidget.inputTypes.set(DateType, { tagName: 'input-widget', type: 'date' });
                     ScalarWidget.inputTypes.set(DateTimeType, { tagName: 'input-widget', type: 'datetime-local' });
                     ScalarWidget.inputTypes.set(DoubleType, { tagName: 'input-widget', type: 'number' });
-                    //ScalarWidget.inputTypes.set(EmailType, { tagName: 'input-widget', type: 'email' });
+                    ScalarWidget.inputTypes.set(EmailType, { tagName: 'input-widget', type: 'email' });
                     ScalarWidget.inputTypes.set(NumberType, { tagName: 'input-widget', type: 'number' });
                     ScalarWidget.inputTypes.set(NumericType, { tagName: 'input-widget', type: 'number' });
                     ScalarWidget.inputTypes.set(RegexType, { tagName: 'input-widget', type: 'string' });
@@ -591,6 +581,15 @@
                     ScalarWidget.inputTypes.set(UInt32Type, { tagName: 'input-widget', type: 'number' });
                     ScalarWidget.inputTypes.set(UInt64Type, { tagName: 'input-widget', type: 'number' });
                     //ScalarWidget.inputTypes.set(UrlType, { tagName: 'input-widget', type: 'url' });
+                }
+
+                getType() {
+                    if (this.inputType.tagName == 'input-widget') {
+                        return this.inputType.type;
+                    }
+                    else {
+                        return this.inputType.tagName;
+                    }
                 }
 
                 init() {
@@ -639,7 +638,9 @@
                 }
 
                 onHandleEventFocusout(event) {
-                    this.cancelEdit();
+                    if (this.editor.node.checkValidity()) {
+                        this.stopEdit();
+                    }
                 }
 
                 onInspectEventKeydown(event) {
@@ -675,7 +676,9 @@
                 }
 
                 onStopEditing() {
-                    this.editor.replace(this.viewer);
+                    if (this.editor.node.checkValidity()) {
+                        this.editor.replace(this.viewer);
+                    }
                 }
             }
         </script>

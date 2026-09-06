@@ -687,6 +687,7 @@ define(class DocElement extends DocNode {
 
                 let rdsValue = StringType.verify(attribute.value) ? attribute.value.trim() : '';
                 this[`getRds${pascalCase}`] = () => rdsValue;
+                this.clearAttribute(attribute.name);
             }
             else if (attribute.name.startsWith('evt-')) {
                 let eventName = attribute.name.substring(4);
@@ -1073,6 +1074,11 @@ define(class DocElement extends DocNode {
             let rdsEvent = mkRdsEvent(event);
             this[methodName](rdsEvent);
         }
+
+        if (FunctionType.verify(this.onInterceptEvents)) {
+            let rdsEvent = mkRdsEvent(event);
+            this.onInterceptEvents(rdsEvent);
+        }
         
         let messageName = `Event${eventName[0].toUpperCase()}${eventName.substring(1)}`;
 
@@ -1357,6 +1363,10 @@ define(class DocElement extends DocNode {
         }
 
         return this;
+    }
+
+    setTabIndex(index) {
+        this.node.tabIndex = index;
     }
 
     [Symbol.iterator]() {

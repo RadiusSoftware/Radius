@@ -14,7 +14,7 @@
         </script>
         <html class="fill">
             <selector-widget class="fill" rds-bind-method="setMode,setupState">
-                <form-widget class="fill" rds-mode="setup#acme" rds-action="certifyHost">
+                <form-widget class="fill" rds-mode="setup#acme" rds-action="certifyHost,acme">
                     <grid-widget class="fill" rds-rows="50px,auto,50px" rds-cols="50px,auto,50px">
                         <div></div>
                         <div></div>
@@ -22,7 +22,7 @@
                         <div></div>
                         <div>
                             <data-widget rds-bind="acme" rds-readonly="false"></data-widget>
-                            <button-widget type="submit">##setupAcme##</button-widget>
+                            <formbuttons-widget></formbuttons-widget>
                         </div>
                         <div></div>
                         <div></div>
@@ -30,7 +30,7 @@
                         <div></div>
                     </grid-widget>
                 </form-widget>
-                <form-widget class="fill" rds-mode="setup#mode" rds-submit="setMode">
+                <form-widget class="fill" rds-mode="setup#mode" rds-submit="setMode=mode">
                     ** MODE SETUP **
                 </form-widget>
             </selector-widget>

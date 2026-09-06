@@ -186,6 +186,10 @@ define(class RdsShape {
         return this.type;
     }
 
+    getTypeName() {
+        return this.type.getTypeName();
+    }
+
     hasKey(key) {
         if (this.type === ObjectType) {
             if (key in this.keys) {

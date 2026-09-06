@@ -52,6 +52,10 @@ define(class BaseType {
     getName() {
         return Reflect.getPrototypeOf(this).constructor.name;
     }
+
+    getTypeName() {
+        return this['#fqn'];
+    }
 });
 
 singleton(class AnyType extends BaseType {
@@ -406,6 +410,37 @@ singleton(class DoubleType extends BaseType {
     verify(value) {
         if (value != NaN) {
             return typeof value == 'number' || value instanceof Number;
+        }
+
+        return false;
+    }
+});
+
+singleton(class EmailType extends BaseType {
+    fromString(str) {
+        return str;
+    }
+
+    getDefault() {
+        return '';
+    }
+
+    isScalar() {
+        return true;
+    }
+
+    toBool(value) {
+        return value.trim().length > 0;
+    }
+
+    toString(value) {
+        return value.trim().toLowerCase();
+    }
+
+    verify(value) {
+        if (typeof value == 'string' || value instanceof String) {
+            let match = value.trim().match(/^[a-zA-Z0-9.-_\'\"]+@[a-zA-Z0-9-_]+(\.[a-zA-Z0-9-_]+)*$/)
+            return match != null;
         }
 
         return false;

@@ -34,7 +34,6 @@ singleton(class Controller extends Emitter {
 
         this.value = {};
         this.shape = mkRdsShape({});
-        this.nodes = new WeakMap();
         this.bindingsByDotted = {};
         this.bindingsByDocElement = new WeakMap();
 
@@ -233,8 +232,26 @@ singleton(class Controller extends Emitter {
     }
 
     deleteRow(dotted, index) {
-        // **********************************************************************
-        // **********************************************************************
+        let shape = this.getShape(dotted);
+
+        if (shape) {
+            let array = this.getValue(dotted);
+
+            if (NumberType.verify(index) && index >= 0 && index < array.length) {
+                for (let i = array.length - 1; i > index; i--) {
+                    this.shiftBindings(dotted, index, -1);
+                }
+
+                array.splice(index, 1);
+
+                this.signalBindings(dotted, {
+                    action: 'delete',
+                    index: index,
+                });
+            }
+        }
+
+        return this;
     }
 
     enumerate(dotted) {
@@ -286,11 +303,11 @@ singleton(class Controller extends Emitter {
     }
 
     hasData(dotted) {
-        return RdsData.has(this.value.dotted);
+        return RdsData.has(this.value, dotted);
     }
     
     initNode(docNode) {
-        if (!this.nodes.has(docNode)) {
+        if (!docNode['##INITIALIZED##']) {
             if (docNode instanceof Widget) {
                 if (docNode.hasSubstitute()) {
                     docNode.substituteNode();
@@ -357,7 +374,7 @@ singleton(class Controller extends Emitter {
                 }
             }
 
-            this.nodes.set(docNode, {});
+            docNode['##INITIALIZED##'] = true;
         }
     }
 
@@ -385,7 +402,7 @@ singleton(class Controller extends Emitter {
                 array.push(elementValue);
             }
             else {
-                array.splice(index, 0, elementValue)
+                array.splice(index, 0, elementValue);
             }
 
             this.signalBindings(dotted, {
@@ -411,29 +428,11 @@ singleton(class Controller extends Emitter {
         let shape = this.shape.get(dotted);
 
         if (shape && shape.verify(newValue)) {
-            let arrays = [];
-
-            for (let itemDotted of this.enumerate(dotted)) {
-                let array = this.getValue(itemDotted);
-
-                if (ArrayType.verify(array)) {
-                    arrays.push(itemDotted);
-
-                    for (let i = 0; i < array.length; i++) {
-                        this.deleteBindings(`${itemDotted}.${i}`);
-                    }
-                }
-            }
-
             RdsData.set(this.value, dotted, newValue);
 
-            for (let arrayDotted of arrays) {
-                if (arrayDotted != dotted) {
-                    this.signalBindings(arrayDotted, { action: 'refresh' });
-                }
+            for (let modified of this.enumerate(dotted)) {
+                this.signalBindings(modified, { action: 'refresh' });
             }
-
-            this.signalBindings(dotted, { action: 'refresh' });
         }
 
         return this;

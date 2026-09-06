@@ -60,7 +60,7 @@ createService(class SystemService extends Service {
         keyAlg: StringType,
         publicKey: StringType,
         privateKey: StringType,
-        contact: [ StringType ],
+        contact: [ EmailType ],
         createdAt: StringType,
         status: StringType,
         kid: StringType,
@@ -478,7 +478,7 @@ createService(class SystemService extends Service {
                 acme: {
                     name: StringType,
                     url: StringType,
-                    contact: [ StringType ],
+                    contact: [ EmailType ],
                     operator: {
                         country: StringType,
                         state: StringType,

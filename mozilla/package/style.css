@@ -2,6 +2,7 @@
     --font-family: Avenir, Helvetica, Arial, sans-serif;
     --border-radius-1: 6px;
     --border-radius-2: 12px;
+    --modal-border-radius: 15px;
     --radio-radius: 32px;
 }
 
@@ -38,7 +39,6 @@
         --knob-stroke-color: steelblue;
         --modal-background-color: whitesmoke;
         --modal-border: 1px solid darkgray;
-        --modal-border-radius: 15px;
         --object-border-color: steelblue;
         --textarea-background-color: whitesmoke;
         --toggle-selected-background-color: rgb(8, 137, 25);
@@ -85,7 +85,6 @@
         --label-color: rgb(90, 150, 229);
         --modal-background-color: rgb(29, 29, 32);
         --modal-border: 1px solid gray;
-        --modal-border-radius: 15px;
         --object-border-color: steelblue;
         --textarea-background-color: rgb(20, 20, 20);
         --toggle-selected-background-color: rgb(8, 137, 25);
@@ -237,7 +236,7 @@ body {
     border-color: var(--border-color);
     border-style: solid;
     border-width: 1px;
-    border-radius: 15px;
+    border-radius: var(--border-radius-2);
 }
 
 .disabled {
@@ -282,6 +281,17 @@ body {
     flex-direction: row;
     justify-content: right;
     align-items: center;
+}
+
+.form-buttons {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: center;
+    width: 100%;
+    height: 72px;
+    margin-top: 75px;
+    margin-bottom: 75px;
 }
 
 .h1 {

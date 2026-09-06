@@ -177,10 +177,6 @@ define(class Widget extends HtmlElement {
         let newDocElement = createElement(this.getSubstituteTagName());
         let newNode = newDocElement.node;
 
-        if (newDocElement.getTagName() in { input:0 }) {
-            newDocElement.setAttribute('value', this.getInnerHtml().trim());
-        }
-
         for (const attr of oldNode.attributes) {
             newNode.setAttribute(attr.name, attr.value);
         }

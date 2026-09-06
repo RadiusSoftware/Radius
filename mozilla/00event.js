@@ -32,6 +32,10 @@ define(class RdsEvent {
         this.event = event;
     }
 
+    getAlt() {
+        return this.event.altKey;
+    }
+
     getClass() {
         return Reflect.getPrototypeOf(this.event).constructor.name;
     }
@@ -40,12 +44,28 @@ define(class RdsEvent {
         return this.event.composedPath(...args);
     }
 
+    getClass() {
+        return Reflect.getPrototypeOf(this.event).constructor;
+    }
+
+    getClassName() {
+        return Reflect.getPrototypeOf(this.event).constructor.name;
+    }
+
     getDataTransfer() {
         return this.event.dataTransfer;
     }
 
     getKey() {
         return this.event.key;
+    }
+
+    getMeta() {
+        return this.event.metaKey;
+    }
+
+    getShift() {
+        return this.event.shiftKey;
     }
 
     getSrcElement() {
