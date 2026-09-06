@@ -16,38 +16,11 @@
         </script>
         <script>
             class FormWidget extends Widget {
-                static currentForm = null;
-
-                static {
-                    Doc.on('EventKeydown', message => {
-                        let event = message.event;
-
-                        if (FormWidget.currentForm && event.getKey() == 'Tab') {
-                            if (FormWidget.currentForm.tab(event.getShift())) {
-                                event.preventDefault();
-                                event.stopImmedidatePropagation();
-                            }
-                        }
-                    });
-                }
-
-                activateScalar(scalar) {
-                    if (this.scalar) {
-                        this.scalar.onStartEditing();
-                    }
-                }
-
-                enumerateScalars() {
-                    return this.enumerateElementDescendents()
-                           .filter(descendent => descendent.getTagName() == 'scalar-widget');
-                }
-
                 init() {
                     super.init();
                     this.reset = {};
                     this.editing = null;
                     this.submittable = false;
-                    FormWidget.currentForm = this;
 
                     if (FunctionType.verify(this.getRdsAction)) {
                         let action = RdsText.split(this.getRdsAction(), ',');
@@ -80,13 +53,11 @@
 
                 async onHandleEventSubmit(message) {
                     if (this.submittable) {
-                    // ***************************************************************************
-                    // ***************************************************************************
-                        console.log(`submitting ${this.method}()`);
-
-                        for (let dotted of this.dotteds) {
-                            console.log(dotted);
-                        }
+                        console.log(Api);
+                        let response = await Api[this.method](
+                            ...this.dotteds
+                        );
+                        console.log(response);
                     }
                 }
 
@@ -105,34 +76,33 @@
                         this.editing = null;
                     }
                 }
-
-                onInterceptEvents(event) {
-                    FormData.currentForm = this;
-                }
-
-                tab(shift) {
-                    let scalars = this.enumerateScalars();
-
-                    if (scalars.length) {
-                        if (this.scalar) {
-                            if (shift) {
-                            }
-                            else {
-                            }
+                
+                onInspectEventKeydown(event) {
+                    if (this.editing) {
+                        if (event.getKey() == 'Escape') {
+                            this.editing.cancelEdit();
+                            event.kill();
                         }
-                        else {
-                            if (shift) {
-                                this.activateScalar(scalars[0]);
-                            }
-                            else {
-                                this.activateScalar(scalars[scalars.length - 1]);
-                            }
+                        else if (event.getKey() == 'Enter') {
+                            this.editing.stopEdit();
+                            event.kill()
                         }
-
-                        return true;
                     }
+                    else {
+                        if (event.getKey() == 'Enter') {
+                            let activeElement = Doc.getActiveElement();
 
-                    return false;
+                            if (activeElement) {
+                                console.log(activeElement.getTagName());
+                                if (activeElement.getTagName() == 'scalar-widget') {
+                                    activeElement.startEdit();
+                                }
+                                else if (activeElement.hasAttribute('evt-click')) {
+                                    activeElement.triggerCustomEvent('click');
+                                }
+                            }
+                        }
+                    }
                 }
             }
         </script>

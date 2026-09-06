@@ -814,11 +814,25 @@ ul.list-unordered > li {
     margin: 0px;
     padding: 0px;
     box-sizing: border-box;
+
+    &:focus {
+        color: var(--hover-color);
+        border-color: var(--hover-border-color);
+        outline-color: var(--hover-border-color);
+        outline-style: solid;
+        outline-width: 3px;
+    }
 }
 
 .scalar-widget-viewer {
+    /*
     display: table-cell;
     vertical-align: middle;
+    */
+    display: flex;
+    flex-direction: row;
+    justify-content: left;
+    align-items: center;
     width: 100%;
     height: 48px;
     margin: 0px;

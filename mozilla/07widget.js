@@ -86,6 +86,16 @@ singleton(class WidgetLibrary {
                     widget.setInnerHtml(widgetData.innerHtml);
                 }
             }
+
+            connectedCallback() {
+                let widget = this[nodeKey];
+                widget.attached();
+            }
+
+            disconnectedCallback() {
+                let widget = this[nodeKey];
+                widget.detached();
+            }
         })`);
 
         Doc.getHead().append(widget.wrapperClassScript);
@@ -112,6 +122,12 @@ singleton(class WidgetLibrary {
  * data during initialization if needed.
 *****/
 define(class Widget extends HtmlElement {
+    attached() {
+    }
+
+    detached() {
+    }
+
     getPackage() {
         return this.widgetData.package;
     }

@@ -595,6 +595,7 @@
                 init() {
                     super.init();
                     this.setClassName('scalar-widget');
+                    this.setTabIndex(0);
 
                     this.append(
                         this.viewer = createElement('div', {
@@ -636,22 +637,9 @@
                         this.startEdit();
                     }
                 }
-
-                onHandleEventFocusout(event) {
-                    if (this.editor.node.checkValidity()) {
-                        this.stopEdit();
-                    }
-                }
-
-                onInspectEventKeydown(event) {
-                    if (event.getKey() == 'Escape') {
-                        this.cancelEdit();
-                        event.kill();
-                    }
-                    else if (event.getKey() == 'Enter') {
-                        this.stopEdit();
-                        event.kill()
-                    }
+                
+                onInspectEventFocus(event) {
+                    this.startEdit();
                 }
 
                 onReadonlyChanged() {

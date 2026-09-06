@@ -1075,9 +1075,9 @@ define(class DocElement extends DocNode {
             this[methodName](rdsEvent);
         }
 
-        if (FunctionType.verify(this.onInterceptEvents)) {
+        if (FunctionType.verify(this.onInspectEvents)) {
             let rdsEvent = mkRdsEvent(event);
-            this.onInterceptEvents(rdsEvent);
+            this.onInspectEvents(rdsEvent);
         }
         
         let messageName = `Event${eventName[0].toUpperCase()}${eventName.substring(1)}`;
