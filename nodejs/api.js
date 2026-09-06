@@ -207,15 +207,9 @@ define(class Api {
 
     async setEndpoint(method, name, args, permissionSet) {
         let endpointArgs = {};
-        let sync = name.startsWith('..');
 
         for (let key in args) {
-            if (sync) {
-                endpointArgs[key] = args[key];
-            }
-            else {
-                endpointArgs[key] = mkRdsShape(args[key]);
-            }
+            endpointArgs[key] = mkRdsShape(args[key]);
         }
 
         if (name in this.endpoints) {

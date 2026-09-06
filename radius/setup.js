@@ -41,13 +41,13 @@ define(class SetupApp extends Webapp {
     // certifyHost
     // ********************
     async [Api.defineEndpoint(
-        '..certifyHost',
+        'certifyHost',
         {
             acmeSettings: 'acme',
         }
-    )](trx, acmeSettings) {
+    )](trx, acme) {
         console.log('*** ACME TIME ***');
-        console.log(acmeSettings);
+        console.log(acme);
         return '** RESPONSE SENT **';
     }
 });

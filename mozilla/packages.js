@@ -110,7 +110,7 @@ singleton(class Packages {
 
     async openApplication() {
         try {
-            const appWidget = createElementFromOuterHtml(`<${webappSettings.tagName}></${webappSettings.tagName}>`);
+            globalThis.appWidget = createElementFromOuterHtml(`<${webappSettings.tagName}></${webappSettings.tagName}>`);
             
             if (webappSettings.title) {
                 Doc.setTitle(this.processText(webappSettings.title));

@@ -53,11 +53,21 @@
 
                 async onHandleEventSubmit(message) {
                     if (this.submittable) {
-                        console.log(Api);
                         let response = await Api[this.method](
                             ...this.dotteds
                         );
-                        console.log(response);
+
+                        if (appWidget) {
+                            let handlerName = `on${this.method[0].toUpperCase()}${this.method.substring(1)}`;
+
+                            if (handlerName in appWidget) {
+                                appWidget[handlerName]({
+                                    method: this.method,
+                                    dotteds: this.dotteds,
+                                    response: response,
+                                });
+                            }
+                        }
                     }
                 }
 
