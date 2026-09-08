@@ -81,6 +81,7 @@ createService(class SystemService extends Service {
 
     static settingsShape = mkRdsShape({
         mode: StringType,
+        host: StringType,
         hostId: StringType,
         publicKey: StringType,
         privateKey: StringType,
@@ -233,7 +234,8 @@ createService(class SystemService extends Service {
     }
 
     async configureBasicSystem() {
-        if (!this.settings.hostId) {
+        if (!this.settings.host) {
+            this.settings.host = 'host.domain.tld';
             this.settings.hostId = Crypto.generateUUID();
             const keyAlgorithm = 'rsa';
             const { publicKey, privateKey } = await Crypto.generateKeyPair(keyAlgorithm);
@@ -415,7 +417,6 @@ createService(class SystemService extends Service {
 
                 await this.createBootKey();
                 await this.loadBoot();
-
                 await this.configureBasicSystem();
                 await this.configureHttp();
                 await this.configureAcme();
@@ -476,6 +477,7 @@ createService(class SystemService extends Service {
                 setupState: StringType,
 
                 acme: {
+                    host: StringType,
                     name: StringType,
                     url: StringType,
                     contact: [ EmailType ],
@@ -492,14 +494,15 @@ createService(class SystemService extends Service {
                 setupState: this.getSetupState(),
 
                 acme: {
+                    host: this.settings.host,
                     name: 'Let\'s Encrypt',
                     url: 'https://acme-staging-v02.api.letsencrypt.org/directory',
-                    contact: [ 'hypermetabolik@gmail.com' ],
+                    contact: [],
                     operator: {
-                        country: 'this-country',
-                        state: 'the-state',
-                        locale: 'the-locale',
-                        org: 'My Org',
+                        country: '',
+                        state: '',
+                        locale: '',
+                        org: '',
                     }
                 }
             }
@@ -547,6 +550,17 @@ createService(class SystemService extends Service {
             await this.stopHttp();
             await this.startHttp();
         }
+    }
+
+    async onSetAcmeData(message) {
+        this.settings.host = message.acme.host;
+        this.settings.acme.name = message.acme.name;
+        this.settings.acme.url = message.acme.url;
+        this.settings.acme.contact = message.acme.contact;
+        this.settings.acme.operator.country = message.acme.operator.country;
+        this.settings.acme.operator.state = message.acme.operator.state;
+        this.settings.acme.operator.locale = message.acme.operator.locale;
+        this.settings.acme.operator.org = message.acme.operator.org;
     }
 
     async onStartHttp(message) {
@@ -670,6 +684,12 @@ define(class SystemHandle extends Handle {
 
     async restartHttp() {
         return await this.callService({
+        });
+    }
+
+    async setAcmeData(acme) {
+        return await this.callService({
+            acme: acme,
         });
     }
 

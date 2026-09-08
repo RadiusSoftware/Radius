@@ -77,7 +77,7 @@ define(function mkFrameworkSchema() {
                 ]
             },
             {
-                name: 'Otp',
+                name: 'otp',
                 type: 'object',
                 prefix: 'OTP',
                 columns: [

@@ -251,10 +251,10 @@ define(class HttpWorker extends Worker {
                 await this.respondFunction(handle);
             }
             else if (handle.libEntry.type == 'link') {
-                this.handleWebService(handle);
+                this.respondLink(handle);
             }
             else if (handle.libEntry.type == 'webservice') {
-                this.handleWebService(handle);
+                this.respoondWebService(handle);
             }
 
             if (handle.httpFailure) {
@@ -325,59 +325,9 @@ define(class HttpWorker extends Worker {
 
         this.server = LibHttp.createServer({}, (...args) => this.handleRequest(...args));
         this.server.listen(80, '::');
-        this.server.on('upgrade', (...args) => this.onUpgrade(...args));
+        this.server.on('upgrade', (...args) => this.upgrade(...args));
 
         return this;
-    }
-
-    async onUpgrade(httpReq, socket, headData) {
-        let req = mkHttpRequest(this, httpReq);
-        
-        if (await req.isWebSocketAuthorized()) {
-            try {
-                let libEntry = await this.library.get(req.getPath());
-
-                if (libEntry && libEntry.type == 'httpx') {
-                    let httpx = await this.getHttpX({ libEntry: libEntry });
-
-                    if (httpx) {
-                        let sessionCookie = req.getCookie(this.sessionCookieName);
-                        let token = sessionCookie ? sessionCookie.getValue() : '';
-                        let session = await mkSessionHandle().open(token);
-
-                        if (await session.hasPermission('radius#websocket')) {
-                            let secureKey = req.getHeader('sec-websocket-key');
-                            let hash = await Crypto.hash('sha1', `${secureKey}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`);
-                            let webSocket = mkWebsocket(socket, req.getHeader('sec-websocket-extensions'), headData);
-                            
-                            let headers = [
-                                'HTTP/1.1 101 Switching Protocols',
-                                'Upgrade: websocket',
-                                'Connection: upgrade',
-                                `Sec-WebSocket-Accept: ${hash.toString('base64')}`,
-                            ];
-                            
-                            if (webSocket.hasExtensions()) {
-                                headers.push(`Sec-WebSocket-Extensions: ${webSocket.getSecWebsocketExtensions()}`);
-                            }
-
-                            headers.push('\r\n');
-                            socket.write(headers.join('\r\n'));
-
-                            webSocket.on('DataReceived', data => {
-                                httpx.handleWebsocket(data);
-                            });
-                        }
-                    }
-                }
-            }
-            catch (e) {
-                await caught(e);
-            }
-        }
-        else {
-            req.respondStatus(401);
-        }
     }
 
     async respondData(handle) {
@@ -488,6 +438,60 @@ define(class HttpWorker extends Worker {
         else {
             handle.httpFailure = true;
             handle.httpStatusCode = 404;
+        }
+    }
+
+    async respondLink(handle) {
+        // *************************************************************
+        // *************************************************************
+        console.log('respondLink()');
+    }
+
+    async respondWebService(handle) {
+        // *************************************************************
+        // *************************************************************
+        console.log('respondWebService()');
+    }
+
+    async upgrade(httpReq, socket, headData) {
+        let req = mkHttpRequest(this, httpReq);
+        let link = await mkLinkHandle().open(req.getPath());
+
+        if (link.getUUID() && await link.getType() == 'websocket') {
+            try {
+                let secureKey = req.getHeader('sec-websocket-key');
+                let hash = await Crypto.hash('sha1', `${secureKey}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`);
+                let webSocket = mkWebsocket(socket, req.getHeader('sec-websocket-extensions'), headData);
+                
+                let headers = [
+                    'HTTP/1.1 101 Switching Protocols',
+                    'Upgrade: websocket',
+                    'Connection: upgrade',
+                    `Sec-WebSocket-Accept: ${hash.toString('base64')}`,
+                ];
+                
+                if (webSocket.hasExtensions()) {
+                    headers.push(`Sec-WebSocket-Extensions: ${webSocket.getSecWebsocketExtensions()}`);
+                }
+
+                headers.push('\r\n');
+                socket.write(headers.join('\r\n'));
+                // ************************************************************************
+                // ************************************************************************
+                (async () => {
+                    await webSocket.sendData('Hello browser....');
+                    //await webSocket.close();
+                })();
+                // ************************************************************************
+                // ************************************************************************
+            }
+            catch (e) {
+                caught(e);
+                req.respondStatus(500);
+            }
+        }
+        else {
+            req.respondStatus(401);
         }
     }
 });
@@ -765,16 +769,6 @@ define(class HttpRequest {
 
     hasUsername() {
         return this.url.username.length > 0;
-    }
-
-    async isWebSocketAuthorized() {
-        let authorizationCode = this.getHeader('websocket-authorization');
-
-        if (authorizationCode) {
-            return await mkWebSocketHandle(authorizationCode).authorize();
-        }
-
-        return false;
     }
 });
 

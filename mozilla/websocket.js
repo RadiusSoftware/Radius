@@ -33,17 +33,17 @@
  * the socket-life duration.
 *****/
 define(class Websocket extends Emitter {
-    constructor(url) {
+    constructor(path) {
         super();
         this.ws = null;
         this.pending = [];
         this.awaiting = {};
 
         if (window.location.protocol == 'https:') {
-            this.url = `wss${window.location.origin.substring(5)}${url}`;
+            this.url = `wss${window.location.origin.substring(5)}${path}`;
         }
         else if (window.location.protocol == 'http:') {
-            this.url = `ws${window.location.origin.substring(4)}${url}`;
+            this.url = `ws${window.location.origin.substring(4)}${path}`;
         }
     }
 
@@ -121,7 +121,7 @@ define(class Websocket extends Emitter {
                         }
                         catch (e) {
                             this.emit({
-                                messageName: 'WebsocketData',
+                                name: 'WebsocketData',
                                 type: 'string',
                                 payload: event.data,
                             });
@@ -130,7 +130,7 @@ define(class Websocket extends Emitter {
                 }
                 else {
                     this.emit({
-                        messageName: 'WebsocketData',
+                        name: 'WebsocketData',
                         type: 'binary',
                         payload: event.data,
                     });

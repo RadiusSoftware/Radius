@@ -180,6 +180,17 @@ createService(class HttpLibraryService extends Service {
             return libEntry;
         }
 
+        let link = await mkLinkHandle().get(message.path);
+
+        if (link) {
+            let libEntry = {
+                type: 'link',
+                link: link,
+            };
+
+            return libEntry;
+        }
+
         return 404;
     }
 
@@ -297,12 +308,6 @@ define(class HttpLibraryHandle extends Handle {
     }
 
     async get(path) {
-        return await this.callService({
-            path: path,
-        });
-    }
-
-    async has(path) {
         return await this.callService({
             path: path,
         });

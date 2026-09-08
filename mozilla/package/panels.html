@@ -53,8 +53,8 @@
 
                 async onHandleEventSubmit(message) {
                     if (this.submittable) {
-                        let response = await Api[this.method](
-                            ...this.dotteds
+                        let result = await Api[this.method](
+                            ...this.dotteds.map(dotted => Controller.getValue(dotted))
                         );
 
                         if (appWidget) {
@@ -64,7 +64,7 @@
                                 appWidget[handlerName]({
                                     method: this.method,
                                     dotteds: this.dotteds,
-                                    response: response,
+                                    result: result,
                                 });
                             }
                         }
@@ -271,18 +271,12 @@
             }
         </script>
     </widget>
-    <!--
-    <widget tagname="modal-widget">
-        <script>
-            class ModalWidget extends Widget {
-            }
-        </script>
-    </widget>
-    -->
-    <!--
     <widget tagname="monitor-widget">
         <script>
             class MonitorWidget extends Widget {
+                // ******************************************************************************
+                // ******************************************************************************
+                /*
                 async delete() {
                     if (this.path) {
                         await mkHttpRequest().delete();
@@ -319,10 +313,10 @@
 
                     return this;
                 }
+                */
             }
         </script>
     </widget>
-    -->
     <!--
     <widget tagname="navigator-widget">
         <script>
@@ -520,6 +514,67 @@
         </script>
     </widget>
     -->
+    <widget tagname="popup-widget">
+        <script>
+            class PopupWidget extends Widget {
+                // ******************************************************************************
+                // ******************************************************************************
+                init() {
+                    super.init();
+                    this.content = this.getChildElementAt(5);
+
+                    if (FunctionType.verify(this.getRdsPosition)) {
+                    }
+
+                    if (FunctionType.verify(this.getRdsSize)) {
+                    }
+
+                    this.computePosition(position);
+                }
+
+                computePosition(position) {
+                    let x;
+                    let y;
+
+                    if (position == 'nw') {
+                    }
+                    else if (position == 'n') {
+                    }
+                    else if (position == 'ne') {
+                    }
+                    else if (position == 'w') {
+                    }
+                    else if (position == 'c') {
+                    }
+                    else if (position == 'e') {
+                    }
+                    else if (position == 'se') {
+                    }
+                    else if (position == 's') {
+                    }
+                    else if (position == 'se') {
+                    }
+                    else {
+                        x = position.x;
+                        y = position.y;
+                    }
+                }
+            }
+        </script>
+        <html class="popup-widget">
+            <grid-widget rds-rows="24px,auto,24px" rds-cols="24px,auto,24px">
+                <div class="resize-nw"></div>
+                <div class="resize-n"></div>
+                <div class="resize-ne"></div>
+                <div class="resize-w"></div>
+                <div></div>
+                <div class="resize-e"></div>
+                <div class="resize-sw"></div>
+                <div class="resize-s"></div>
+                <div class="resize-se"></div>
+            </grid-widget>
+        </html>
+    </widget>
     <widget tagname="selector-widget">
         <script>
             class SelectorWidget extends Widget {

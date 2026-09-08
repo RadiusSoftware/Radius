@@ -799,6 +799,54 @@ ul.list-unordered > li {
     padding-bottom: 12px;
 }
 
+.popup-widget {
+    display: block;
+    position: absolute;
+    opacity: .9;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-2);
+}
+
+.reisize-nw {
+    border-radius: var(--border-radius-2);
+    cursor: nw-resize;
+}
+
+.resize-n {
+    border-radius: var(--border-radius-2);
+    cursor: n-resize;
+}
+
+.resize-ne {
+    border-radius: var(--border-radius-2);
+    cursor: ne-resize;
+}
+
+.resize-w {
+    border-radius: var(--border-radius-2);
+    cursor: w-resize;
+}
+
+.resize-e {
+    border-radius: var(--border-radius-2);
+    cursor: e-resize;
+}
+
+.resize-sw {
+    border-radius: var(--border-radius-2);
+    cursor: sw-resize;
+}
+
+.resize-s {
+    border-radius: var(--border-radius-2);
+    cursor: s-resize;
+}
+
+.resize-se {
+    border-radius: var(--border-radius-2);
+    cursor: se-resize;
+}
+
 .responsive {
     &:hover {
         color: var(--hover-color);

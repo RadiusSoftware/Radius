@@ -10,8 +10,15 @@
         </script>
         <script>
             class SetupApp extends Widget {
-                onCertifyHost(info) {
-                    console.log(info);
+                onCertifyHost(response) {
+                    let ws = mkWebsocket(response.result.path);
+                     
+                    ws.on('WebsocketData', message => {
+                        console.log(message.payload);
+                        ws.sendServerData('Hello server....');
+                    });
+
+                    ws.connect();
                 }
             }
         </script>

@@ -28,26 +28,41 @@
  * to cofigure the operational settings for the specified mode: swarm or in
  * standalone.
 *****/
-define(class SetupApp extends Webapp {
-    async getControllerData(handle) {
-        return await mkSystemHandle().getSetupData();
-    }
+(async () => {
+    let setupData = await mkSystemHandle().getSetupData();
 
-    async init() {
-        await super.init();
-    }
-
-    // ********************
-    // certifyHost
-    // ********************
-    async [Api.defineEndpoint(
-        'certifyHost',
-        {
-            acmeSettings: 'acme',
+    define(class SetupApp extends Webapp {
+        async getControllerData(handle) {
+            return setupData;
         }
-    )](trx, acme) {
-        console.log('*** ACME TIME ***');
-        console.log(acme);
-        return '** RESPONSE SENT **';
-    }
-});
+
+        async init() {
+            await super.init();
+        }
+
+        // ********************
+        // certifyHost
+        // ********************
+        async [Api.defineEndpoint(
+            'certifyHost',
+            {
+                acme: setupData.shape.get('acme'),
+            }
+        )](trx, acme) {
+            let system = mkSystemHandle();
+            await system.setAcmeData(acme);
+
+            let link = await mkLinkHandle().create({
+                type: 'websocket',
+                lifetime: {
+                    minutes: 1,
+                },
+            });
+
+            return {
+                type: 'websocket',
+                path: await link.getPath(),
+            };
+        }
+    });
+})();
