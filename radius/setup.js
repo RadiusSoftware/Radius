@@ -54,6 +54,7 @@
 
             let link = await mkLinkHandle().create({
                 type: 'websocket',
+                action: certifyHostAcme,
                 lifetime: {
                     minutes: 1,
                 },
@@ -66,3 +67,10 @@
         }
     });
 })();
+
+
+/*****
+*****/
+define(function certifyHostAcme(settings, webSocket) {
+    webSocket.sendData('Hello Browser....');
+});

@@ -72,12 +72,7 @@ createService(class LinkService extends Service {
         this.linksByPath = {};
     }
 
-    async checkExpired() {
-        // ********************************************************
-        // ********************************************************
-    }
-
-    async deactivateLink(link) {
+    async deactivate(link) {
         if (!link.volatile) {
             link.active = false;
             link.closed = mkTime();
@@ -86,6 +81,25 @@ createService(class LinkService extends Service {
 
         delete this.linksByUUID[link.uuid];
         delete this.linksByPath[link.path];
+    }
+
+    get(arg) {
+        if (StringType.verify(arg)) {
+            if (arg in this.linksByUUID) {
+                return this.linksByUUID[arg];
+            }
+            else if (arg in this.linksByPath) {
+                return this.linksByPath[arg];
+            }
+        }
+        else if (ObjectType.verify(arg)) {
+            if ('uuid' in arg && arg.uuid in this.linksByUUID) {
+                return this.linksByUUID[arg.uuid];
+            }
+            else if ('path' in arg && arg.path in this.linksbyPath) {
+                return this.linksByPath[arg.path];
+            }
+        }
     }
 
     async init() {
@@ -162,99 +176,67 @@ createService(class LinkService extends Service {
     }
 
     async onDeactivate(message) {
-        if (message.uuid in this.linksByUUID) {
-            await this.deactivateLink(this.linksByUUID[message.uuid]);
-        }
+        let link = this.get(message);
+        link ? await this.deactivate(link) : null;
     }
 
     async onExecute(message) {
-        // ********************************************************************
-        // ********************************************************************
-        try {
-            if (message.uuid in this.linksByUUID) {
-                let link = this.linksByUUID[message.uuid];
+        let link = this.get(message);
 
-                if (link.active) {
-                    if (link.expires.isGT(mkTime())) {
-                        link.actuals++;
-                        
-                        if (link.actuals >= link.attempts)  {
-                            link.active = false;
-                        }
+        if (this.verify(link)) {
+            link.actuals++;
 
-                        await this.save(link);
-                        link.action(...args);
-                    }
-                }
+            if (link.actuals >= link.attempts) {
+                link.active = false;
             }
-        }
-        catch (e) {
-            await caught(e);
-        }
-    }
 
-    async onGet(message) {
-        if (message.uuid) {
-            if (message.uuid in this.linksByUUID) {
-                let link = this.linksByUUID[message.uuid];
+            await this.save(link);
 
-                if (link.active) {
-                    if (link.expires.isGT(mkTime())) {
-                        return link;
-                    }
-                }
-            }
+            return {
+                func: link.action,
+                settings: link.settings,    
+            };
         }
-        else if (message.path) {
-            if (message.path in this.linksByPath) {
-                let link = this.linksByPath[message.path];
 
-                if (link.active) {
-                    if (link.expires.isGT(mkTime())) {
-                        return link;
-                    }
-                }
-            }
-        }
+        return {};
     }
 
     async onGetPath(message) {
-        if (message.uuid in this.linksByUUID) {
-            return this.linksByUUID[message.uuid].path;
-        }
+        let link = this.get(message);
+        return link ? link.path : undefined;
+    }
+
+    async onGetSettings(message) {
+        let link = this.get(message);
+        return link ? link.settings : undefined;
     }
 
     async onGetType(message) {
-        if (message.uuid in this.linksByUUID) {
-            return this.linksByUUID[message.uuid].type;
-        }
+        let link = this.get(message);
+        return link ? link.type : undefined;
     }
 
     async onOpen(message) {
-        if (message.arg in this.linksByPath) {
-            let link = this.linksByPath[message.arg];
+        let link = this.get(message.arg);
 
-            if (link.active) {
-                if (link.expires.isGT(mkTime())) {
-                    return link.uuid;
-                }
-            }
-        }
-
-        if (message.arg in this.linksByUUID) {
-            let link = this.linksByUUID[message.arg];
-
-            if (link.active) {
-                if (link.expires.isGT(mkTime())) {
-                    return link.uuid;
-                }
-            }
+        if (link && this.verify(link)) {
+            return link.uuid;
         }
     }
 
     async save(link) {
         // ********************************************************
         // ********************************************************
+    }
+
+    verify(link) {
+        if (link.active) {
+            if (link.expires.isGT(mkTime())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 });
 
@@ -270,6 +252,7 @@ define(class LinkHandle extends Handle {
     static optionsShape = mkRdsShape({
         type: mkRdsShape(linkType),
         _action: FunctionType,
+        _container: ClassType,
         _settings: mkRdsShape({}),
         _verify: StringType,
         _mime: StringType,
@@ -311,10 +294,13 @@ define(class LinkHandle extends Handle {
     }
 
     async execute(...args) {
-        await this.callService({
+        let { func, settings } = await this.callService({
             uuid: this.uuid,
-            args: args,
         });
+
+        if (func && settings) {
+            func(settings, ...args);
+        }
 
         return this;
     }
@@ -323,13 +309,15 @@ define(class LinkHandle extends Handle {
         return mkAuthAppHandle(value.uuid);
     }
 
-    get(path) {
-        let args = {};
-        path ? args.path = path : args.uuid = this.uuid;
-        return this.callService(args);
+    getPath() {
+        if (this.uuid) {
+            return this.callService({
+                uuid: this.uuid,
+            });
+        }
     }
 
-    getPath() {
+    getSettings() {
         if (this.uuid) {
             return this.callService({
                 uuid: this.uuid,

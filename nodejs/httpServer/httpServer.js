@@ -476,22 +476,11 @@ define(class HttpWorker extends Worker {
 
                 headers.push('\r\n');
                 socket.write(headers.join('\r\n'));
-                // ************************************************************************
-                // ************************************************************************
-                (async () => {
-                    await webSocket.sendData('Hello browser....');
-                    //await webSocket.close();
-                })();
-                // ************************************************************************
-                // ************************************************************************
+                await link.execute(webSocket);
             }
             catch (e) {
                 caught(e);
-                req.respondStatus(500);
             }
-        }
-        else {
-            req.respondStatus(401);
         }
     }
 });

@@ -180,9 +180,9 @@ createService(class HttpLibraryService extends Service {
             return libEntry;
         }
 
-        let link = await mkLinkHandle().get(message.path);
+        let link = await mkLinkHandle().open(message.path);
 
-        if (link) {
+        if (link && link.getUUID()) {
             let libEntry = {
                 type: 'link',
                 link: link,
