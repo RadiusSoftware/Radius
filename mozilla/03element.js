@@ -215,7 +215,7 @@ define(function createElement(tagName, attrs) {
     html.push(`></${tagName}>`);
     let compiler = getCompilerHtmlElement(tagName, '');
     compiler.setInnerHtml(html.join(''));
-    return compiler.getChildAt(0);
+    return compiler.getChildElementAt(0).remove();
 });
 
 

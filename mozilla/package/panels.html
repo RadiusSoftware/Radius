@@ -517,47 +517,154 @@
     <widget tagname="popup-widget">
         <script>
             class PopupWidget extends Widget {
-                // ******************************************************************************
-                // ******************************************************************************
+                constructor(arg) {
+                    super(arg);
+                    this.setPosition('c');
+                    this.setSize('50%', '50%');
+                }
+
+                applyPosition() {
+                    if (this.position == 'nw') {
+                        this.layout.left = '5%';
+                        this.layout.top = '5%';
+                    }
+                    else if (this.position == 'n') {
+                        this.layout.left = '25%';
+                        this.layout.top = '5%';
+                    }
+                    else if (this.position == 'ne') {
+                        this.layout.left = '55%';
+                        this.layout.top = '5%';
+                    }
+                    else if (this.position == 'w') {
+                        this.layout.left = '5%';
+                        this.layout.top = '25%';
+                    }
+                    else if (this.position == 'c') {
+                        this.layout.left = '25%';
+                        this.layout.top = '25%';
+                    }
+                    else if (this.position == 'e') {
+                        this.layout.left = '55%';
+                        this.layout.top = '25%';
+                    }
+                    else if (this.position == 'sw') {
+                        this.layout.left = '5%';
+                        this.layout.top = '55%';
+                    }
+                    else if (this.position == 's') {
+                        this.layout.left = '25%';
+                        this.layout.top = '55%';
+                    }
+                    else if (this.position == 'se') {
+                        this.layout.left = '55%';
+                        this.layout.top = '55%';
+                    }
+                    else {
+                        this.layout.left = '25%';
+                        this.layout.top = '25%';
+                    }
+                }
+
+                computeLayout() {
+                    this.layout = {
+                        left: '',
+                        top: '',
+                        width: '',
+                        height: '',
+                    };
+
+                    if (ObjectType.verify(this.position)) {
+                        this.layout.left = this.position.left;
+                        this.layout.top = this.position.top;
+                    }
+                    else {
+                        this.applyPosition();
+                    }
+
+                    this.layout.width = this.size.width;
+                    this.layout.height = this.size.height;
+                }
+
+                hide() {
+                    if (this.getParentElement()) {
+                        if (this.getRdsModal) {
+                            Doc.getHtml().thaw();
+                        }
+
+                        this.remove();
+                    }
+
+                    return this;
+                }
+
                 init() {
                     super.init();
                     this.content = this.getChildElementAt(5);
 
                     if (FunctionType.verify(this.getRdsPosition)) {
+                        if (this.getRdsPosition().indexOf(',') > 0) {
+                            let [ left, top ] = RdsText.split(this.getRdsPosition(), ',');
+                            this.setPosition('coordinate', left, top);
+                        }
+                        else {
+                            this.setPosition(this.getRdsPosition());
+                        }
                     }
-
+                    
                     if (FunctionType.verify(this.getRdsSize)) {
+                        let [ width, height ] = RdsText.split(this.getRdsSize(), ',');
+                        this.setSize(width, height);
                     }
-
-                    this.computePosition(position);
                 }
 
-                computePosition(position) {
-                    let x;
-                    let y;
-
-                    if (position == 'nw') {
+                setPosition(anchor, left, top) {
+                    if (anchor in { nw:0, n:0, ne:0, cw:0, c:0, ce:0, sw:0, s:0, se:0 }) {
+                        this.position = anchor;
+                        return this;
                     }
-                    else if (position == 'n') {
-                    }
-                    else if (position == 'ne') {
-                    }
-                    else if (position == 'w') {
-                    }
-                    else if (position == 'c') {
-                    }
-                    else if (position == 'e') {
-                    }
-                    else if (position == 'se') {
-                    }
-                    else if (position == 's') {
-                    }
-                    else if (position == 'se') {
+                    else if (anchor == 'coordinate') {
+                        this.position = { left: left, top: top };
                     }
                     else {
-                        x = position.x;
-                        y = position.y;
+                        this.position = 'c';
                     }
+
+                    return this;
+                }
+
+                setSize(width, height) {
+                    this.size = { width: width, height: height };
+                    return this;
+                }
+
+                show() {
+                    if (!this.getParentElement()) {
+                        this.computeLayout();
+
+                        this.setStyle({
+                            left: this.layout.left,
+                            top: this.layout.top,
+                            width: this.layout.width,
+                            height: this.layout.height,
+                        });
+
+                        if (this.getRdsModal) {
+                            Doc.getHtml().freeze();
+                        }
+
+                        const handler = message => {
+                            if (message.event.getKey() == 'Escape') {
+                                this.hide();
+                                Doc.off('EventKeydown', handler);
+                            }
+                        };
+
+                        Doc.getHtml().append(this);
+                        Doc.on('EventKeydown', handler);
+                    }
+
+                    return this;
                 }
             }
         </script>

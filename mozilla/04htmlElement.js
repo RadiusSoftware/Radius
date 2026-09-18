@@ -79,6 +79,31 @@ define(class HtmlElement extends DocElement {
         return this;
     }
 
+    freeze() {
+        if (!this.overlay) {
+            this.overlay = createElement('div');
+            let left = this.getOffsetX();
+            let top = this.getOffsetY();
+            let width = this.getOffsetWidth();
+            let height = this.getOffsetHeight();
+            
+            this.overlay.setStyle({
+                display: 'block',
+                position: 'absolute',
+                zIndex: 1,
+                left: `${left}px`,
+                top: `${top}px`,
+                width: `${width}px`,
+                height: `${height}px`,
+                opacity: 0,
+            });
+
+            this.append(this.overlay);
+        }
+        
+        return this;
+    }
+
     getData(key) {
         return this.node.dataset[key];
     }
@@ -159,6 +184,15 @@ define(class HtmlElement extends DocElement {
 
     setTitle(title) {
         this.setAttribute('title', title);
+        return this;
+    }
+
+    thaw() {
+        if (this.overlay) {
+            this.overlay.remove();
+            delete this.overlay;
+        }
+        
         return this;
     }
 });

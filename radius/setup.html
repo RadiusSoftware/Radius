@@ -11,6 +11,7 @@
         <script>
             class SetupApp extends Widget {
                 onCertifyHost(response) {
+                    /*
                     let ws = mkWebsocket(response.result.path);
                      
                     ws.on('WebsocketData', message => {
@@ -19,6 +20,15 @@
                     });
 
                     ws.connect();
+                    */
+
+                    let popup = createElement(
+                        'popup-widget',
+                        {
+                            'rds-modal': '',
+                        }
+                    )
+                    .show();
                 }
             }
         </script>

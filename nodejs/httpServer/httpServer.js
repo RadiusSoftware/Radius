@@ -479,7 +479,7 @@ define(class HttpWorker extends Worker {
                 await link.execute(webSocket);
             }
             catch (e) {
-                caught(e);
+                await caught(e);
             }
         }
     }

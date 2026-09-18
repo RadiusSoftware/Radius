@@ -802,9 +802,11 @@ ul.list-unordered > li {
 .popup-widget {
     display: block;
     position: absolute;
+    z-index: 100;
     opacity: .9;
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-2);
+    background-color: red;
 }
 
 .reisize-nw {
