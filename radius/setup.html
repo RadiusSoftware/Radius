@@ -11,24 +11,14 @@
         <script>
             class SetupApp extends Widget {
                 onCertifyHost(response) {
-                    /*
-                    let ws = mkWebsocket(response.result.path);
-                     
-                    ws.on('WebsocketData', message => {
-                        console.log(message.payload);
-                        ws.sendServerData('Hello server....');
-                    });
-
-                    ws.connect();
-                    */
-
-                    let popup = createElement(
+                    createElement(
                         'popup-widget',
                         {
-                            'rds-modal': '',
+                            'rds-model': '',
                         }
-                    )
-                    .show();
+                    ).show(
+                        createElementFromOuterHtml('<div>HELLO CONTENT WORLD</div>')
+                    );
                 }
             }
         </script>

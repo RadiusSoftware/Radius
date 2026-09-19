@@ -340,3 +340,170 @@ define(class EditingWidget extends Widget {
         }
     }
 });
+
+
+/*****
+ * Widgets that extend PopupWidget are designed to hover above the document body
+ * at a z-index of 100.  That places the popup above the freeze-element, which
+ * stands at a z-index of 1, but below any user-designed features that are placed
+ * above a z-index of 100.  The default behavior is to enable automatic sizing,
+ * but a specified size can also be specified.
+*****/
+define(class PopupWidget extends Widget {
+    applyPosition() {
+        if (this.position == 'nw') {
+            this.layout.left = '5%';
+            this.layout.top = '5%';
+        }
+        else if (this.position == 'n') {
+            this.layout.left = '25%';
+            this.layout.top = '5%';
+        }
+        else if (this.position == 'ne') {
+            this.layout.left = '55%';
+            this.layout.top = '5%';
+        }
+        else if (this.position == 'w') {
+            this.layout.left = '5%';
+            this.layout.top = '25%';
+        }
+        else if (this.position == 'c') {
+            this.layout.left = '25%';
+            this.layout.top = '25%';
+        }
+        else if (this.position == 'e') {
+            this.layout.left = '55%';
+            this.layout.top = '25%';
+        }
+        else if (this.position == 'sw') {
+            this.layout.left = '5%';
+            this.layout.top = '55%';
+        }
+        else if (this.position == 's') {
+            this.layout.left = '25%';
+            this.layout.top = '55%';
+        }
+        else if (this.position == 'se') {
+            this.layout.left = '55%';
+            this.layout.top = '55%';
+        }
+        else {
+            this.layout.left = '25%';
+            this.layout.top = '25%';
+        }
+    }
+
+    computeLayout() {
+        this.layout = {
+            left: '',
+            top: '',
+            width: '',
+            height: '',
+        };
+
+        if (ObjectType.verify(this.position)) {
+            this.layout.left = this.position.left;
+            this.layout.top = this.position.top;
+        }
+        else {
+            this.applyPosition();
+        }
+
+        this.layout.width = this.size.width;
+        this.layout.height = this.size.height;
+    }
+
+    hide() {
+        if (this.getParentElement()) {
+            if (this.getRdsModal) {
+                Doc.getBody().thaw();
+            }
+
+            this.remove();
+        }
+
+        return this;
+    }
+
+    init() {
+        super.init();
+
+        if (FunctionType.verify(this.getRdsPosition)) {
+            if (this.getRdsPosition().indexOf(',') > 0) {
+                let [ left, top ] = RdsText.split(this.getRdsPosition(), ',');
+                this.setPosition('coordinate', left, top);
+            }
+            else {
+                this.setPosition(this.getRdsPosition());
+            }
+        }
+        else {
+            this.setPosition('c');
+        }
+        
+        if (FunctionType.verify(this.getRdsSize)) {
+            let [ width, height ] = RdsText.split(this.getRdsSize(), ',');
+            this.setSize(width, height);
+        }
+        else {
+            this.setSize('50%', '50%');
+        }
+
+        this.computeLayout();
+
+        this.setStyle({
+            display: 'block',
+            position: 'absolute',
+            zIndex: 100,
+            left: this.layout.left,
+            top: this.layout.top,
+            width: this.layout.width,
+            height: this.layout.height,
+        });
+
+        if (this.getRdsModal) {
+            Doc.getBody().freeze();
+        }
+
+        const handler = message => {
+            if (message.event.getKey() == 'Escape') {
+                this.hide();
+                Doc.off('EventKeydown', handler);
+            }
+        };
+
+        Doc.on('EventKeydown', handler);
+    }
+
+    setPosition(anchor, left, top) {
+        if (anchor in { nw:0, n:0, ne:0, cw:0, c:0, ce:0, sw:0, s:0, se:0 }) {
+            this.position = anchor;
+            return this;
+        }
+        else if (anchor == 'coordinate') {
+            this.position = { left: left, top: top };
+        }
+        else {
+            this.position = 'c';
+        }
+
+        return this;
+    }
+
+    setSize(width, height) {
+        this.size = { width: width, height: height };
+        return this;
+    }
+
+    show(content) {
+        if (!this.getParentElement()) {
+            if (content) {
+                this.append(content);
+            }
+
+            Doc.getBody().append(this);
+        }
+
+        return this;
+    }
+});

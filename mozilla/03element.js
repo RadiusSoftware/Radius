@@ -232,10 +232,12 @@ define(function createElementFromOuterHtml(html) {
 
     if (compiler.getChildCount() == 1) {
         let element = compiler.getChildAt(0);
-        return element;
+        return element.remove();
     }
     else if (compiler.getChildCount() > 1) {
-        return compiler.getChildren();
+        let elements = compiler.getChildren();
+        elements.forEachElement(element => element.remove());
+        return elements;
     }
 });
 
