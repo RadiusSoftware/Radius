@@ -350,72 +350,56 @@ define(class EditingWidget extends Widget {
  * but a specified size can also be specified.
 *****/
 define(class PopupWidget extends Widget {
-    applyPosition() {
-        if (this.position == 'nw') {
-            this.layout.left = '5%';
-            this.layout.top = '5%';
-        }
-        else if (this.position == 'n') {
-            this.layout.left = '25%';
-            this.layout.top = '5%';
-        }
-        else if (this.position == 'ne') {
-            this.layout.left = '55%';
-            this.layout.top = '5%';
-        }
-        else if (this.position == 'w') {
-            this.layout.left = '5%';
-            this.layout.top = '25%';
-        }
-        else if (this.position == 'c') {
-            this.layout.left = '25%';
-            this.layout.top = '25%';
-        }
-        else if (this.position == 'e') {
-            this.layout.left = '55%';
-            this.layout.top = '25%';
-        }
-        else if (this.position == 'sw') {
-            this.layout.left = '5%';
-            this.layout.top = '55%';
-        }
-        else if (this.position == 's') {
-            this.layout.left = '25%';
-            this.layout.top = '55%';
-        }
-        else if (this.position == 'se') {
-            this.layout.left = '55%';
-            this.layout.top = '55%';
-        }
-        else {
-            this.layout.left = '25%';
-            this.layout.top = '25%';
-        }
+    clearModal() {
+        delete this.modal;
+        return this;
     }
-
+    
     computeLayout() {
-        this.layout = {
-            left: '',
-            top: '',
-            width: '',
-            height: '',
+        const layout = {
+            left: null,
+            top: null,
+            width: this.size.width,
+            height: this.size.height,
         };
 
-        if (ObjectType.verify(this.position)) {
-            this.layout.left = this.position.left;
-            this.layout.top = this.position.top;
+        if (this.position) {
+            if (this.position.left) {
+                layout.left = this.position.left;
+                layout.top = this.position.top;
+            }
+            else if (this.position.right) {
+                layout.left = this.position.right - this.size.width;
+                layout.top = this.position.top;
+            }
         }
         else {
-            this.applyPosition();
+            layout.left = (Win.getInnerWidth() - this.size.width) / 2;
+            layout.top = (Win.getInnerHeight() - this.size.height) / 2;
+
+            this.resizeHandler = message => {
+                this.setStyle({
+                    left: `${(Win.getInnerWidth() - this.size.width) / 2}px`,
+                    top: `${(Win.getInnerHeight() - this.size.height) / 2}px`,
+                });
+            };
+
+            Win.on('EventResize', this.resizeHandler);
         }
 
-        this.layout.width = this.size.width;
-        this.layout.height = this.size.height;
+        this.setStyle({
+            position: 'absolute',
+            zIndex: 100,
+            left: `${layout.left}px`,
+            top: `${layout.top}px`,
+            width: `${layout.width}px`,
+            height: `${layout.height}px`,
+        });
     }
 
     hide() {
         if (this.getParentElement()) {
-            if (this.getRdsModal) {
+            if (this.isModal()) {
                 Doc.getBody().thaw();
             }
 
@@ -428,79 +412,72 @@ define(class PopupWidget extends Widget {
     init() {
         super.init();
 
-        if (FunctionType.verify(this.getRdsPosition)) {
-            if (this.getRdsPosition().indexOf(',') > 0) {
-                let [ left, top ] = RdsText.split(this.getRdsPosition(), ',');
-                this.setPosition('coordinate', left, top);
-            }
-            else {
-                this.setPosition(this.getRdsPosition());
-            }
-        }
-        else {
-            this.setPosition('c');
-        }
-        
-        if (FunctionType.verify(this.getRdsSize)) {
-            let [ width, height ] = RdsText.split(this.getRdsSize(), ',');
-            this.setSize(width, height);
-        }
-        else {
-            this.setSize('50%', '50%');
-        }
-
-        this.computeLayout();
-
-        this.setStyle({
-            display: 'block',
-            position: 'absolute',
-            zIndex: 100,
-            left: this.layout.left,
-            top: this.layout.top,
-            width: this.layout.width,
-            height: this.layout.height,
-        });
-
-        if (this.getRdsModal) {
+        if (this.isModal()) {
             Doc.getBody().freeze();
         }
 
-        const handler = message => {
+        this.keyDownHandler = message => {
             if (message.event.getKey() == 'Escape') {
                 this.hide();
-                Doc.off('EventKeydown', handler);
+                Doc.off('EventKeydown', this.keyDownHandler);
+
+                if (this.resizeHandler) {
+                    Win.off('EventResize', this.resizeHandler);
+                }
             }
         };
 
-        Doc.on('EventKeydown', handler);
-    }
+        Doc.on('EventKeydown', this.keyDownHandler);
 
-    setPosition(anchor, left, top) {
-        if (anchor in { nw:0, n:0, ne:0, cw:0, c:0, ce:0, sw:0, s:0, se:0 }) {
-            this.position = anchor;
-            return this;
-        }
-        else if (anchor == 'coordinate') {
-            this.position = { left: left, top: top };
+        if (this.size) {
+            this.computeLayout();
         }
         else {
-            this.position = 'c';
+            (async () => {
+                await pause(5);
+
+                this.setSize(
+                    this.getOffsetWidth(),
+                    this.getOffsetHeight(),
+                );
+
+                this.computeLayout();
+            })();
+        }
+    }
+
+    isModal() {
+        return this.modal === true;
+    }
+
+    setModal() {
+        this.modal = true;
+        return this;
+    }
+
+    setPosition(left, top, right) {
+        if (NumberType.verify(top)) {
+            if (NumberType.verify(left)) {
+                this.position = { left: left, top: top };
+            }
+            else if (NumberType.verify(right)) {
+                this.position = { right: right, top: top };
+            }
         }
 
         return this;
     }
 
     setSize(width, height) {
-        this.size = { width: width, height: height };
+        if (NumberType.verify(width) && NumberType.verify(height)) {
+            this.size = { width: width, height: height };
+        }
+
         return this;
     }
 
-    show(content) {
+    show() {
         if (!this.getParentElement()) {
-            if (content) {
-                this.append(content);
-            }
-
             Doc.getBody().append(this);
         }
 

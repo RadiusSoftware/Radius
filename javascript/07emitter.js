@@ -92,15 +92,12 @@ define(class Emitter {
                     if (name in this.handlers) {
                         let thunks = this.handlers[name];
 
-                        if (func['#HANDLER'] in thunks) {
-                            for (let i = 0; i < thunks.length; i++) {
-                                let thunk = thunks[i];
+                        for (let i = 0; i < thunks.length; i++) {
+                            let thunk = thunks[i];
 
-                                if (thunk.func['#HANDLER'] === func['#HANDLER']) {
-                                    thunk.splice(i, 1);
-                                    delete thunks[func['#HANDLER']];
-                                    break;
-                                }
+                            if (thunk.func['#HANDLER'] === func['#HANDLER']) {
+                                thunks.splice(i, 1);
+                                break;
                             }
                         }
                     }

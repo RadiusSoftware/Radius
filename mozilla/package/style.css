@@ -246,6 +246,16 @@ body {
 
 }
 
+.dialog-widget {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    border: var(--modal-border);
+    border-radius: var(--modal-border-radius);
+    background-color: var(--modal-background-color);
+}
+
 .fill {
     display: table;
     width: 100%;
@@ -797,15 +807,6 @@ ul.list-unordered > li {
     padding-right: 12px;
     padding-top: 12px;
     padding-bottom: 12px;
-}
-
-.popup-widget {
-    /*
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-    */
 }
 
 .reisize-nw {

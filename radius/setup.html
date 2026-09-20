@@ -12,13 +12,10 @@
             class SetupApp extends Widget {
                 onCertifyHost(response) {
                     createElement(
-                        'popup-widget',
+                        'dialog-widget',
                         {
-                            'rds-model': '',
                         }
-                    ).show(
-                        createElementFromOuterHtml('<div>HELLO CONTENT WORLD</div>')
-                    );
+                    ).show();
                 }
             }
         </script>
