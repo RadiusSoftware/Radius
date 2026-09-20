@@ -11,23 +11,175 @@
     <widget tagname="dialog-widget">
         <script>
             class DialogWidget extends PopupWidget {
-                getContent() {
-                    return this.getChildElementAt(0).getChildElementAt(5);
+                static dialogTypes = mkRdsEnum('none', 'ok', 'cancel', 'confirm', 'submit');
+
+                getOffsetWidth() {
+                    let buttons = this.getChildElementAt(0).getChildElementAt(10);
+                    let buttonWidth = buttons.getOffsetWidth();
+
+                    let content = this.getChildElementAt(0).getChildElementAt(4);
+                    let contentWidth = content.getOffsetWidth();
+
+                    let width = buttonWidth >= contentWidth ? buttonWidth : contentWidth;
+                    let grid = this.getChildElementAt(0);
+                    width += parseInt(grid.rows[0]);
+                    width += parseInt(grid.rows[grid.rows.length - 1]);
+
+                    return width;
                 }
 
                 init() {
+                    if (this.getRdsDialogType) {
+                        this.setDialogType(this.getRdsDialogType());
+                    }
+                    else {
+                        this.setDialogType('ok');
+                    }
+
                     this.setModal();
+                    this.setButtons();
                     super.init();
+                }
+                
+                onInspectEventClick(event) {
+                    let source = event.getSrcElement();
+                    
+                    if (source.getRdsDialogAction) {
+                        let value;
+
+                        if (source.getRdsDialogAction() == 'ok') {
+                            value = 'ok';
+                        }
+                        else if (source.getRdsDialogAction() == 'cancel') {
+                            value = 'cancel';
+                        }
+                        else if (source.getRdsDialogAction() == 'confirm') {
+                            value = 'confirm';
+                        }
+                        else if (source.getRdsDialogAction() == 'submit') {
+                            value = 'submit';
+                        }
+
+                        event.kill();
+                        this.hide(value);
+
+                        this.emit({
+                            name: 'DialogDone',
+                            value: value,
+                        });
+                    }
+                }
+
+                setButtons() {
+                    let buttons = this.getChildElementAt(0).getChildElementAt(10);
+
+                    if (this.dialogType == 'ok') {
+                        buttons.append(
+                            createElement(
+                                'button-widget',
+                                {
+                                    class: 'input-widget-width-medium',
+                                    'rds-label': '##ok##',
+                                    'rds-dialog-action': 'ok',
+                                }
+                            )
+                        );
+                    }
+                    else if (this.dialogType == 'cancel') {
+                        buttons.append(
+                            createElement(
+                                'button-widget',
+                                {
+                                    class: 'input-widget-width-medium',
+                                    'rds-label': '##cancel##',
+                                    'rds-dialog-action': 'cancel',
+                                }
+                            )
+                        );
+                    }
+                    else if (this.dialogType == 'confirm') {
+                        buttons.append(
+                            createElement(
+                                'button-widget',
+                                {
+                                    class: 'input-widget-width-medium',
+                                    'rds-label': '##confirm##',
+                                    'rds-dialog-action': 'confirm',
+                                }
+                            ),
+
+                            createElement(
+                                'button-widget',
+                                {
+                                    class: 'input-widget-width-medium',
+                                    'rds-label': '##cancel##',
+                                    'rds-dialog-action': 'cancel',
+                                }
+                            )
+                        );
+                    }
+                    else if (this.dialogType == 'submit') {
+                        buttons.append(
+                            createElement(
+                                'button-widget',
+                                {
+                                    class: 'input-widget-width-medium',
+                                    'rds-label': '##submit##',
+                                    'rds-dialog-action': 'submit',
+                                }
+                            ),
+
+                            createElement(
+                                'button-widget',
+                                {
+                                    class: 'input-widget-width-medium',
+                                    'rds-label': '##cancel##',
+                                    'rds-dialog-action': 'cancel',
+                                }
+                            )
+                        );
+                    }
+
+                    return this;
+                }
+
+                setContent(...args) {
+                    let content = this.getChildElementAt(0).getChildElementAt(4);
+
+                    for (let arg of args) {
+                        if (StringType.verify(arg)) {
+                            content.append(createElementFromOuterHtml(arg));
+                        }
+                        else if (arg instanceof DocElement) {
+                            content.append(arg);
+                        }
+                    }
+
+                    return this;
+                }
+
+                setDialogType(dialogType) {
+                    if (DialogWidget.dialogTypes.has(dialogType)) {
+                        this.dialogType = dialogType;
+                    }
+
+                    return this;
                 }
             }
         </script>
         <html class="dialog-widget" style="width:200px; height:250px;">
-            <grid-widget rds-rows="20px,auto,20px" rds-cols="20px,auto,20px">
+            <grid-widget class="fill" rds-rows="20px,auto,15px,48px,20px" rds-cols="20px,auto,20px">
                 <div></div>
                 <div></div>
                 <div></div>
                 <div></div>
-                <div>CONTENT GOES HERE!</div>
+                <div class="flex-cc"></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div></div>
+                <div class="flex-cc"></div>
                 <div></div>
                 <div></div>
                 <div></div>
@@ -309,61 +461,37 @@
     <widget tagname="monitor-widget">
         <script>
             class MonitorWidget extends Widget {
-                init() {
-                    super.init();
-                    this.setInnerHtml('HELLO MONITOR.....');
-                }
-                // ******************************************************************************
-                // ******************************************************************************
-                /*
-                async delete() {
-                    if (this.path) {
-                        await mkHttpRequest().delete();
-                    }
-
-                    return this;
-                }
-
-                async get() {
-                    if (this.path) {
-                        let httpResponse = await mkHttpRequest().get(this.path);
-                    }
-                }
-
-                getPath() {
-                    return this.path;
-                }
-
-                init() {
-                    this.path = StringType.verify(path) ? path : '';
-                    super.init();
-
-                    if (this.getRdsPath) {
-                        this.setPath(this.getRdsPath().trim());
-                    }
-
-                    this.get();
-
-                    // ***************************************************************************
-                    let ws = mkWebsocket(response.result.path);
+                connect(webSocketPath) {
+                    this.webSocket = mkWebsocket(webSocketPath);
                      
-                    ws.on('WebsocketData', message => {
-                        console.log(message.payload);
-                        ws.sendServerData('Hello server....');
+                    this.webSocket.on('WebsocketData', message => {
+                        this.onNotification(message);
                     });
 
-                    ws.connect();
-                    // ***************************************************************************
+                    this.webSocket.on('open', message => {
+                        this.webSocket.sendServerData('##READY##');
+                    });
+
+                    this.webSocket.connect();
                 }
 
-                setPath(path) {
-                    if (StringType.verify(path)) {
-                        this.path = path;
+                init() {
+                    this.setClassName('monitor-text')
+                    super.init();
+
+                    if (this.getRdsWebsocketPath) {
+                        this.connect(this.getRdsWebsocketPath());
                     }
-
-                    return this;
                 }
-                */
+
+                onNotification(message) {
+                    if (message.type == 'string') {
+                        this.append(
+                            mkDocText(`${message.payload}`),
+                            createElement('br'),
+                        );
+                    }
+                }
             }
         </script>
     </widget>
@@ -371,6 +499,14 @@
     <widget tagname="popupmenu-widget">
         <script>
             class PopupMenuWidget extends PopupWidget {
+            }
+        </script>
+    </widget>
+    -->
+    <!--
+    <widget tagname="popupmonitor-widget">
+        <script>
+            class PopupMonitorWidget extends PopupWidget {
             }
         </script>
     </widget>

@@ -233,6 +233,10 @@
                     if (!(this.getAttribute('type') in { submit:0, reset:0, button:0 } )) {
                         this.setAttribute('type', 'button');
                     }
+
+                    if (this.getRdsLabel) {
+                        this.node.value = Packages.processText(this.getRdsLabel());
+                    }
                 }
             }
         </script>

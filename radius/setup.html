@@ -11,11 +11,29 @@
         <script>
             class SetupApp extends Widget {
                 onCertifyHost(response) {
-                    createElement(
-                        'dialog-widget',
-                        {
-                        }
-                    ).show();
+                    if (response.result && response.result.type == 'websocket') {
+                        createElement(
+                            'dialog-widget',
+                            {
+                                'rds-dialog-type': 'none',
+                            }
+                        )
+                        .setContent(
+                            createElement(
+                                'monitor-widget',
+                                {
+                                    style: 'width:400px; height: 400px;',
+                                    'rds-websocket-path': response.result.path,
+                                }
+                            )
+                        )
+                        .show();
+                    }
+                    else {
+                        // *******************************************************************
+                        // *******************************************************************
+                        alert('NEED ERROR DIAGLOG');
+                    }
                 }
             }
         </script>

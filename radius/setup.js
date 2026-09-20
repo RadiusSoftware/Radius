@@ -72,5 +72,10 @@
 /*****
 *****/
 define(function certifyHostAcme(settings, webSocket) {
-    webSocket.sendData('Hello Browser....');
+    webSocket.on('DataReceived', async message => {
+        if (message.payload.toString() == '##READY##') {
+            await pause(300);
+            webSocket.sendData('Starting ACME certification.');
+        }
+    });
 });

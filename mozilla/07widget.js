@@ -397,13 +397,14 @@ define(class PopupWidget extends Widget {
         });
     }
 
-    hide() {
+    hide(value) {
         if (this.getParentElement()) {
             if (this.isModal()) {
                 Doc.getBody().thaw();
             }
 
             this.remove();
+            this.ok(value);
         }
 
         return this;
@@ -414,6 +415,10 @@ define(class PopupWidget extends Widget {
 
         if (this.isModal()) {
             Doc.getBody().freeze();
+
+            if (Doc.getActiveElement()) {
+                Doc.getActiveElement().blur();
+            }
         }
 
         this.keyDownHandler = message => {
@@ -424,6 +429,8 @@ define(class PopupWidget extends Widget {
                 if (this.resizeHandler) {
                     Win.off('EventResize', this.resizeHandler);
                 }
+
+                this.emit({ name: 'PopupCancelled' });
             }
         };
 
@@ -434,7 +441,7 @@ define(class PopupWidget extends Widget {
         }
         else {
             (async () => {
-                await pause(5);
+                await pause(0);
 
                 this.setSize(
                     this.getOffsetWidth(),
@@ -479,8 +486,21 @@ define(class PopupWidget extends Widget {
     show() {
         if (!this.getParentElement()) {
             Doc.getBody().append(this);
+
+            this.promise = new Promise((ok, fail) => {
+                this.ok = value => ok(value);
+            });
+        }
+        else {
+            this.promise = new Promise(() => {});
         }
 
         return this;
+    }
+
+    wait() {
+        if (this.promise) {
+            return this.promise;
+        }
     }
 });

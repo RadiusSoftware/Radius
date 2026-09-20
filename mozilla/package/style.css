@@ -1,5 +1,6 @@
 :root {
     --font-family: Avenir, Helvetica, Arial, sans-serif;
+    --font-family-tech: Courier, "Courier New", "Lucida Sans Typewriter", "Lucida Typewriter", monospace;
     --border-radius-1: 6px;
     --border-radius-2: 12px;
     --modal-border-radius: 15px;
@@ -251,6 +252,8 @@ body {
     flex-direction: row;
     justify-content: center;
     align-items: center;
+    margin: 0px;
+    padding: 0px;
     border: var(--modal-border);
     border-radius: var(--modal-border-radius);
     background-color: var(--modal-background-color);
@@ -277,6 +280,13 @@ body {
     flex-direction: row;
     justify-content: left;
     align-items: center;
+}
+
+.flex-lt {
+    display: flex;
+    flex-direction: row;
+    justify-content: left;
+    align-items: flex-start;
 }
 
 .flex-cc {
@@ -763,6 +773,17 @@ ul.list-unordered > li {
     margin-top: 30px;
 }
 
+.monitor-text {
+    display: flex;
+    flex-direction: row;
+    justify-content: left;
+    align-items: flex-start;
+    margin: 0px;
+    padding: 6px;
+    font-family: var(--font-family-tech);
+    font-size: 16px;
+}
+
 .object-widget {
     width: 100%;
     height: auto;
@@ -875,10 +896,6 @@ ul.list-unordered > li {
 }
 
 .scalar-widget-viewer {
-    /*
-    display: table-cell;
-    vertical-align: middle;
-    */
     display: flex;
     flex-direction: row;
     justify-content: left;
