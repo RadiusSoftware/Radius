@@ -12,22 +12,14 @@
             class SetupApp extends Widget {
                 onCertifyHost(response) {
                     if (response.result && response.result.type == 'websocket') {
-                        createElement(
-                            'dialog-widget',
-                            {
-                                'rds-dialog-type': 'none',
-                            }
-                        )
-                        .setContent(
+                        showDialog('close', '700px', '400px', 
                             createElement(
-                                'monitor-widget',
+                                'progress-widget',
                                 {
-                                    style: 'width:400px; height: 400px;',
                                     'rds-websocket-path': response.result.path,
                                 }
                             )
-                        )
-                        .show();
+                        );
                     }
                     else {
                         // *******************************************************************

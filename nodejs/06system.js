@@ -173,14 +173,32 @@ createService(class SystemService extends Service {
         return false;
     }
 
-    async certifyHost(notificationHandler) {
+    // certify ********************************************************
+    // certify ********************************************************
+    async certifyHost(pipe) {
         let acmeClient = mkAcmeClient(
             this.settings.acme,
             SystemService.acmeSettingsShape,
         );
 
-        if (FunctionType.verify(notificationHandle)) {
-            acmeClient.on('Acme', message => notificationHandle(message));
+        if (pipe) {
+            await pause(200);
+            pipe.send({
+                update: 'Starting ACME Certification'
+            });
+
+            acmeClient.on('Acme', async message => {
+                if (message.error) {
+                    pipe.send({
+                        update: message.error,
+                    });
+                }
+                else {
+                    pipe.send({
+                        update: message.task,
+                    });
+                }
+            });
         }
 
         for (let i = 0; i < 5; i++) {
@@ -205,9 +223,13 @@ createService(class SystemService extends Service {
             this.componentStatus.acme = true;
         }
         else if (this.hasAcmeAccount()) {
+            // certify ********************************************************
+            // certify ********************************************************
+            /*
             this.componentStatus = await this.certifyHost(notification => {
                 console.log(notification);
             });
+            */
         }
         else {
             const keyPair = await Crypto.generateKeyPair('rsa');
@@ -437,18 +459,9 @@ createService(class SystemService extends Service {
     }
 
     async onCertifyHost(message) {
-        let notificationHandler = message.args[0];
-
-        if (message.args.length == 2) {
-
-        }
-        else if (message.args.length == 1) {
-        }
-        else if (message.args.length == 0) {
-            if (this.settings.acme.kid) {
-                let response = this.certifyHost(notification => {});
-            }
-        }
+        let pipe = mkWorkerPipe(message.workerId);
+        this.certifyHost(pipe);
+       return pipe.getUUID();
     }
 
     async onGetBootTime(message) {
@@ -624,7 +637,6 @@ define(class SystemHandle extends Handle {
 
     async certifyHost() {
         return await this.callService({
-            args: arguments,
         });
     }
 

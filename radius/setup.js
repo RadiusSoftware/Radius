@@ -70,12 +70,31 @@
 
 
 /*****
+ * This is the link callback used for running and tracking ACME certification.
+ * The protocol here is to wait for the browser-based MonitorWidget to send the
+ * "##READY##" message via the Websocket, after which we'll launch the ACME
+ * certificaiton and send status updates to the client MonitorWidget.
 *****/
 define(function certifyHostAcme(settings, webSocket) {
     webSocket.on('DataReceived', async message => {
+        let messageName;
+
         if (message.payload.toString() == '##READY##') {
-            await pause(300);
-            webSocket.sendData('Starting ACME certification.');
+            let system = mkSystemHandle();
+            messageName = await system.certifyHost();
+            let lokker = mkLokker();
+
+            Process.on(messageName, async message => {
+                await lokker.lock();
+                await webSocket.sendMessage(message.update);
+                lokker.free();
+            });
+        }
+        else if (message.payload.toString() == '##CLOSE##') {
+            // *******************************************************************
+            // *******************************************************************
+            console.log('canceling.....');
+            Process.off(messageName);
         }
     });
 });

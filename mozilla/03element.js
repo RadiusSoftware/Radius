@@ -1222,6 +1222,22 @@ define(class DocElement extends DocNode {
         return null;
     }
 
+    scrollBottom() {
+        return this.setScrollTop(this.getScrollHeight());
+    }
+
+    scrollLeft() {
+        return this.setScrollLeft(0);
+    }
+
+    scrollRight() {
+        return this.setScrollLeft(this.getScrollWidth());
+    }
+
+    scrollTop() {
+        return this.setScrollTop(0);
+    }
+
     selectAncestor(attrEncoded) {
         let htmlElement = this.getParentElement();
         let opts = RdsText.parseAttributeEncoded(attrEncoded);

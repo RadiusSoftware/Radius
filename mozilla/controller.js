@@ -48,6 +48,16 @@ singleton(class Controller extends Emitter {
         });
     }
 
+    autoScroll(docNode) {
+        let parentElement = docNode.getParentElement();
+
+        if (parentElement && parentElement.getRdsScrolling) {
+            if (parentElement.getRdsScrolling() == 'auto') {
+                parentElement.scrollBottom();
+            }
+        }
+    }
+
     bindArray(docElement, dotted) {
         this.createBinding(docElement, dotted, 'array');
         return this;
@@ -316,6 +326,7 @@ singleton(class Controller extends Emitter {
 
             Packages.processNode(docNode);
             docNode.init();
+            this.autoScroll(docNode);
 
             if (docNode instanceof DocElement) {
                 if (docNode.getRdsBind) {
@@ -371,6 +382,17 @@ singleton(class Controller extends Emitter {
                 if (docNode.getRdsBindStyle) {
                     let [ styleProperty, dotted ] = docNode.getRdsBindStyle().split(',');
                     this.bindStyle(docNode, styleProperty, dotted);
+                }
+
+                if (docNode.getRdsScrolling) {
+                    let width = docNode.getParentElement().getOffsetWidth();
+                    let height = docNode.getParentElement().getOffsetHeight();
+
+                    docNode.setStyle({
+                        width: `${width}px`,
+                        height: `${height}px`,
+                        overflow: 'scroll',
+                    });
                 }
             }
 

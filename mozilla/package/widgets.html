@@ -11,7 +11,7 @@
     <widget tagname="dialog-widget">
         <script>
             class DialogWidget extends PopupWidget {
-                static dialogTypes = mkRdsEnum('none', 'ok', 'cancel', 'confirm', 'submit');
+                static dialogTypes = mkRdsEnum('ok', 'close', 'confirm', 'submit');
 
                 getOffsetWidth() {
                     let buttons = this.getChildElementAt(0).getChildElementAt(10);
@@ -36,8 +36,9 @@
                         this.setDialogType('ok');
                     }
 
-                    this.setModal();
+                    this.setClassName('dialog-widget');
                     this.setButtons();
+                    this.setModal();
                     super.init();
                 }
                 
@@ -45,22 +46,8 @@
                     let source = event.getSrcElement();
                     
                     if (source.getRdsDialogAction) {
-                        let value;
-
-                        if (source.getRdsDialogAction() == 'ok') {
-                            value = 'ok';
-                        }
-                        else if (source.getRdsDialogAction() == 'cancel') {
-                            value = 'cancel';
-                        }
-                        else if (source.getRdsDialogAction() == 'confirm') {
-                            value = 'confirm';
-                        }
-                        else if (source.getRdsDialogAction() == 'submit') {
-                            value = 'submit';
-                        }
-
                         event.kill();
+                        let value = source.getRdsDialogAction();
                         this.hide(value);
 
                         this.emit({
@@ -85,14 +72,14 @@
                             )
                         );
                     }
-                    else if (this.dialogType == 'cancel') {
+                    else if (this.dialogType == 'close') {
                         buttons.append(
                             createElement(
                                 'button-widget',
                                 {
                                     class: 'input-widget-width-medium',
-                                    'rds-label': '##cancel##',
-                                    'rds-dialog-action': 'cancel',
+                                    'rds-label': '##close##',
+                                    'rds-dialog-action': 'close',
                                 }
                             )
                         );
@@ -143,18 +130,18 @@
                     return this;
                 }
 
-                setContent(...args) {
-                    let content = this.getChildElementAt(0).getChildElementAt(4);
+                setContent(arg) {
+                    let content;
+                    let container = this.getChildElementAt(0).getChildElementAt(4);
 
-                    for (let arg of args) {
-                        if (StringType.verify(arg)) {
-                            content.append(createElementFromOuterHtml(arg));
-                        }
-                        else if (arg instanceof DocElement) {
-                            content.append(arg);
-                        }
+                    if (StringType.verify(arg)) {
+                        content = createElementFromOuterHtml(arg);
+                    }
+                    else if (arg instanceof DocElement) {
+                        content = arg;
                     }
 
+                    container.append(content);
                     return this;
                 }
 
@@ -162,12 +149,15 @@
                     if (DialogWidget.dialogTypes.has(dialogType)) {
                         this.dialogType = dialogType;
                     }
+                    else {
+                        this.dialogType = 'ok';
+                    }
 
                     return this;
                 }
             }
         </script>
-        <html class="dialog-widget" style="width:200px; height:250px;">
+        <html class="dialog-widget">
             <grid-widget class="fill" rds-rows="20px,auto,15px,48px,20px" rds-cols="20px,auto,20px">
                 <div></div>
                 <div></div>
@@ -458,9 +448,9 @@
         </script>
     </widget>
     -->
-    <widget tagname="monitor-widget">
+    <widget tagname="progress-widget">
         <script>
-            class MonitorWidget extends Widget {
+            class ProgressWidget extends Widget {
                 connect(webSocketPath) {
                     this.webSocket = mkWebsocket(webSocketPath);
                      
@@ -476,7 +466,8 @@
                 }
 
                 init() {
-                    this.setClassName('monitor-text')
+                    this.getRdsScrolling = () => 'auto';
+                    this.setClassName('progress-text')
                     super.init();
 
                     if (this.getRdsWebsocketPath) {
@@ -495,22 +486,6 @@
             }
         </script>
     </widget>
-    <!--
-    <widget tagname="popupmenu-widget">
-        <script>
-            class PopupMenuWidget extends PopupWidget {
-            }
-        </script>
-    </widget>
-    -->
-    <!--
-    <widget tagname="popupmonitor-widget">
-        <script>
-            class PopupMonitorWidget extends PopupWidget {
-            }
-        </script>
-    </widget>
-    -->
     <widget tagname="selector-widget">
         <script>
             class SelectorWidget extends Widget {
@@ -762,8 +737,30 @@
         </script>
     </widget>
     -->
+    <!--
+    <script>
+        define(function showPopup() {
+            console.log('createPopup()');
+        });
+    </script>
+    -->
+    <script>
+        define(function showDialog(dialogType, width, height, content) {
+            return createElement(
+                'dialog-widget',
+                {
+                    'rds-dialog-type': dialogType,
+                    style: `width:${width}; height:${height};`,
+                }
+            )
+            .setContent(content)
+            .show()
+            .wait();
+        });
+    </script>
     <strings lang="en">
         cancel = Cancel\
+        close = Close\
         confirm = Confirm\
         ok = OK\
         reset = Reset\
