@@ -32,6 +32,24 @@
     let setupData = await mkSystemHandle().getSetupData();
 
     define(class SetupApp extends Webapp {
+        async certifyAcmeHost(websocketHandle) {
+            await websocketHandle.connect();
+
+            //await websocketHandle.sendData(mkBuffer('Hello World!'));
+            //await websocketHandle.sendData('Hello World!');
+
+            /*
+            let pipe = mkWebsocketPipe(websocketHandle);
+
+            pipe.send({
+                name: 'ProgressUpdate',
+                update: 'Starting Acme Certification',
+            });
+
+            await pipe.close();
+            */
+        }
+
         async getControllerData(handle) {
             return setupData;
         }
@@ -51,30 +69,22 @@
         )](trx, acme) {
             let system = mkSystemHandle();
             await system.setAcmeData(acme);
-
-            let link = await mkLinkHandle().create({
-                type: 'websocket',
-                action: certifyHostAcme,
-                lifetime: {
-                    minutes: 1,
-                },
-            });
+            let websocketHandle = await mkWebsocketHandle().create();
+            this.certifyAcmeHost(websocketHandle);
 
             return {
                 type: 'websocket',
-                path: await link.getPath(),
+                path: await websocketHandle.getPath(),
             };
         }
     });
 })();
-
-
 /*****
  * This is the link callback used for running and tracking ACME certification.
  * The protocol here is to wait for the browser-based MonitorWidget to send the
  * "##READY##" message via the Websocket, after which we'll launch the ACME
  * certificaiton and send status updates to the client MonitorWidget.
-*****/
+*****
 define(function certifyHostAcme(settings, webSocket) {
     webSocket.on('DataReceived', async message => {
         let messageName;
@@ -82,12 +92,12 @@ define(function certifyHostAcme(settings, webSocket) {
         if (message.payload.toString() == '##READY##') {
             let system = mkSystemHandle();
             messageName = await system.certifyHost();
-            let lokker = mkLokker();
+            //let lokker = mkLokker();
 
             Process.on(messageName, async message => {
-                await lokker.lock();
-                await webSocket.sendMessage(message.update);
-                lokker.free();
+                //await lokker.lock();
+                webSocket.sendMessage(message.update);
+                //lokker.free();
             });
         }
         else if (message.payload.toString() == '##CLOSE##') {
@@ -98,3 +108,4 @@ define(function certifyHostAcme(settings, webSocket) {
         }
     });
 });
+*/

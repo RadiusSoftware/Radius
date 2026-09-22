@@ -28,7 +28,6 @@
 *****/
 const linkType = mkRdsEnum(
     'verifyself',
-    'websocket',
 );
 
 

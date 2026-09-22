@@ -72,6 +72,10 @@ define(class Websocket extends Emitter {
             this.interval = setInterval(() => this.ping(), 15000);
 
             this.ws.onopen = event => {
+                this.sendServerMessage({
+                    name: '##WEBSOCKETREADY##',
+                });
+
                 this.emit({
                     name: 'open',
                     event: event,
@@ -115,8 +119,19 @@ define(class Websocket extends Emitter {
                                 delete this.awaiting[trapId];
                                 trap.handleResponse(message['#RESPONSE']);
                             }
+                            else if (message instanceof Buffer) {
+                                this.emit({
+                                    name: 'WebsocketData',
+                                    type: 'binary',
+                                    payload: message,
+                                });
+                            }
                             else {
-                                this.emit(message);
+                                this.emit({
+                                    name: 'WebsocketData',
+                                    type: 'message',
+                                    message: message,
+                                });
                             }
                         }
                         catch (e) {

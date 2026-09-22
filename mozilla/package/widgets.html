@@ -455,11 +455,7 @@
                     this.webSocket = mkWebsocket(webSocketPath);
                      
                     this.webSocket.on('WebsocketData', message => {
-                        this.onNotification(message);
-                    });
-
-                    this.webSocket.on('open', message => {
-                        this.webSocket.sendServerData('##READY##');
+                        this.onReceived(message);
                     });
 
                     this.webSocket.connect();
@@ -475,12 +471,14 @@
                     }
                 }
 
-                onNotification(message) {
-                    if (message.type == 'string') {
-                        this.append(
-                            mkDocText(`${message.payload}`),
-                            createElement('br'),
-                        );
+                onReceived(bundle) {
+                    if (bundle.type == 'message') {
+                        if (bundle.message.name == 'ProgressUpdate') {
+                            this.append(
+                                mkDocText(`${bundle.message.update}`),
+                                createElement('br'),
+                            );
+                        }
                     }
                 }
             }

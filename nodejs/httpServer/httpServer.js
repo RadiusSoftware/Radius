@@ -455,28 +455,11 @@ define(class HttpWorker extends Worker {
 
     async upgrade(httpReq, socket, headData) {
         let req = mkHttpRequest(this, httpReq);
-        let link = await mkLinkHandle().open(req.getPath());
+        let websocketHandle = await mkWebsocketHandle().open(req.getPath());
 
-        if (link.getUUID() && await link.getType() == 'websocket') {
+        if (await websocketHandle.validate()) {
             try {
-                let secureKey = req.getHeader('sec-websocket-key');
-                let hash = await Crypto.hash('sha1', `${secureKey}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`);
-                let webSocket = mkWebsocket(socket, req.getHeader('sec-websocket-extensions'), headData);
-                
-                let headers = [
-                    'HTTP/1.1 101 Switching Protocols',
-                    'Upgrade: websocket',
-                    'Connection: upgrade',
-                    `Sec-WebSocket-Accept: ${hash.toString('base64')}`,
-                ];
-                
-                if (webSocket.hasExtensions()) {
-                    headers.push(`Sec-WebSocket-Extensions: ${webSocket.getSecWebsocketExtensions()}`);
-                }
-
-                headers.push('\r\n');
-                socket.write(headers.join('\r\n'));
-                await link.execute(webSocket);
+                await websocketHandle.connect(socket, req, headData);
             }
             catch (e) {
                 await caught(e);
