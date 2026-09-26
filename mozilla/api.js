@@ -61,7 +61,7 @@ singleton(class Api {
             }
         }
         
-        let response = await callServer({
+        let response = await call({
             name: name,
             args: callingArgs,
         });

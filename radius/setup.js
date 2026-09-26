@@ -33,10 +33,12 @@
 
     define(class SetupApp extends Webapp {
         async certifyAcmeHost(websocketHandle) {
-            await websocketHandle.connect();
+            await websocketHandle.connected();
+            console.log('connected......');
 
-            //await websocketHandle.sendData(mkBuffer('Hello World!'));
-            //await websocketHandle.sendData('Hello World!');
+            //websocketHandle.sendData('Hello World!');
+            //let data = await websocketHandle.wait();
+            //console.log(data);
 
             /*
             let pipe = mkWebsocketPipe(websocketHandle);
@@ -69,43 +71,13 @@
         )](trx, acme) {
             let system = mkSystemHandle();
             await system.setAcmeData(acme);
-            let websocketHandle = await mkWebsocketHandle().create();
+            let { websocketHandle, path } = await mkWebsocketHandle().create();
             this.certifyAcmeHost(websocketHandle);
 
             return {
                 type: 'websocket',
-                path: await websocketHandle.getPath(),
+                path: path,
             };
         }
     });
 })();
-/*****
- * This is the link callback used for running and tracking ACME certification.
- * The protocol here is to wait for the browser-based MonitorWidget to send the
- * "##READY##" message via the Websocket, after which we'll launch the ACME
- * certificaiton and send status updates to the client MonitorWidget.
-*****
-define(function certifyHostAcme(settings, webSocket) {
-    webSocket.on('DataReceived', async message => {
-        let messageName;
-
-        if (message.payload.toString() == '##READY##') {
-            let system = mkSystemHandle();
-            messageName = await system.certifyHost();
-            //let lokker = mkLokker();
-
-            Process.on(messageName, async message => {
-                //await lokker.lock();
-                webSocket.sendMessage(message.update);
-                //lokker.free();
-            });
-        }
-        else if (message.payload.toString() == '##CLOSE##') {
-            // *******************************************************************
-            // *******************************************************************
-            console.log('canceling.....');
-            Process.off(messageName);
-        }
-    });
-});
-*/

@@ -38,7 +38,7 @@
 Doc.on('DOMContentLoaded', async () => {
     webappSettings = fromJson(mkBuffer(webappSettings, 'hex'));
     
-    define(async function callServer(message) {
+    define(async function call(message) {
         const rsp = await mkHttpRequest().post(webappSettings.httpPath, message);
         return rsp.getPayload();
     });

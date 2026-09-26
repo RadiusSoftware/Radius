@@ -455,16 +455,15 @@ define(class HttpWorker extends Worker {
 
     async upgrade(httpReq, socket, headData) {
         let req = mkHttpRequest(this, httpReq);
-        let websocketHandle = await mkWebsocketHandle().open(req.getPath());
 
-        if (await websocketHandle.validate()) {
-            try {
-                await websocketHandle.connect(socket, req, headData);
-            }
-            catch (e) {
-                await caught(e);
-            }
+        try {
+            await mkWebsocketHandle().connect(
+                socket,
+                req,
+                headData,
+            );
         }
+        catch (e) {}
     }
 });
 

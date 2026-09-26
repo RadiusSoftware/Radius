@@ -36,8 +36,8 @@ define(class Websocket extends Emitter {
     constructor(path) {
         super();
         this.ws = null;
-        this.pending = [];
-        this.awaiting = {};
+        this.pending = {};
+        this.lokker = mkLokker();
 
         if (window.location.protocol == 'https:') {
             this.url = `wss${window.location.origin.substring(5)}${path}`;
@@ -47,149 +47,156 @@ define(class Websocket extends Emitter {
         }
     }
 
-    callServer(message) {
-        let trap = mkTrap();
-        trap.setExpected(1);
-        message['#TRAP'] = trap.id;
-        this.pending.push(toJson(message));
-        this.awaiting[trap.id] = trap;
-        this.sendPending();
-        return trap.promise;
+    async call(message) {
+        if (ObjectType.verify(data) && StringType.verify(data.name)) {
+            await this.lokker.lock();
+            let trap = mkTrap();
+            trap.setExpected(1);
+            message['#TRAP'] = trap.id;
+            this.ws.send(toJson(message));
+            this.pending[trap.id] = trap;
+            await this.lokker.free();
+            return trap.promise;
+        }
     }
 
-    close(code, reason) {
+    async close(code, reason) {
+        if (this.ws && this.ws.readyState == 1) {
+            await this.lokker.lock();
+            this.ws.close(code, reason);
+            await this.lokker.free();
+        }
+
+        return this;
+    }
+
+    connect() {
+        if (!this.ws) {
+            this.ws = new WebSocket(this.url);
+            this.interval = setInterval(() => this.ping(), 30000);
+
+            this.ws.onopen = async event => {
+                this.send({
+                    name: '##WEBSOCKET_OPEN##',
+                });
+            };
+
+            this.ws.onerror = error => {
+                this.onError(error);
+            }
+
+            this.ws.onclose = () => {
+                this.onClose();
+            };
+
+            this.ws.onmessage = event => {
+                this.onMessage(event);
+            }
+        }
+
+        return this;
+    }
+
+    onClose() {
+        // *************************************************************************
+        // *************************************************************************
+        /*
         if (this.ws && this.ws.readyState == 1) {
             this.ws.close(code, reason);
             this.ws = null;
             this.interval ? clearInterval(this.interval) : null;
             delete this.interval;
         }
+        */
     }
 
-    connect() {
-        if (!this.ws) {
-            this.ws = new WebSocket(this.url);
-            this.interval = setInterval(() => this.ping(), 15000);
+    onError(error) {
+        // *************************************************************************
+        // *************************************************************************
+    }
 
-            this.ws.onopen = event => {
-                this.sendServerMessage({
-                    name: '##WEBSOCKETREADY##',
-                });
+    async onMessage(event) {
+        await this.lokker.lock();
+        const isString = event.data == 'string';
 
-                this.emit({
-                    name: 'open',
-                    event: event,
-                    websocket: this,
-                });
-
-                this.sendPending();
-            };
-
-            this.ws.onerror = error => {
-                this.emit({
-                    name: 'error',
-                    error: error,
-                    websocket: this,
-                });
-
-                this.ws = null;
+        if (isString) {
+            if (event.data == '#Ping') {
+                this.pong();
             }
+            else if (event.data != '#Pong') {
+                try {
+                    let message = fromJson(event.data);
 
-            this.ws.onclose = () => {
-                this.emit({
-                    name: 'close',
-                    websocket: this,
-                });
-
-                this.ws = null;
-            };
-
-            this.ws.onmessage = event => {
-                if (typeof event.data == 'string') {
-                    if (event.data == '#Ping') {
-                        this.pong();
+                    if ('#TRAP' in message) {
+                        // ****************************************************************
+                        // ****************************************************************
+                        /*
+                        let trapId = message['#TRAP'];
+                        let trap = this.awaiting[trapId];
+                        delete this.awaiting[trapId];
+                        trap.handleResponse(message['#RESPONSE']);
+                        */
                     }
-                    else if (event.data != '#Pong') {
-                        try {
-                            let message = fromJson(event.data);
-
-                            if ('#TRAP' in message) {
-                                let trapId = message['#TRAP'];
-                                let trap = this.awaiting[trapId];
-                                delete this.awaiting[trapId];
-                                trap.handleResponse(message['#RESPONSE']);
-                            }
-                            else if (message instanceof Buffer) {
-                                this.emit({
-                                    name: 'WebsocketData',
-                                    type: 'binary',
-                                    payload: message,
-                                });
-                            }
-                            else {
-                                this.emit({
-                                    name: 'WebsocketData',
-                                    type: 'message',
-                                    message: message,
-                                });
-                            }
-                        }
-                        catch (e) {
-                            this.emit({
-                                name: 'WebsocketData',
-                                type: 'string',
-                                payload: event.data,
-                            });
-                        }
+                    else if (message instanceof Buffer) {
+                        await wait(this.emit({
+                            name: 'WebsocketData',
+                            type: 'binary',
+                            payload: message,
+                        }));
                     }
+                    else {
+                        await wait(this.emit({
+                            name: 'WebsocketData',
+                            type: 'message',
+                            message: message,
+                        }));
+                    }
+
+                    this.lokker.free();
                 }
-                else {
-                    this.emit({
-                        name: 'WebsocketData',
-                        type: 'binary',
-                        payload: event.data,
-                    });
-                }
-            };
+                catch (e) {}
+            }
+        }
+        
+        await wait(this.emit({
+            name: 'WebsocketData',
+            type: isString ? 'string' : 'binary',
+            payload: event.data,
+        }));
+
+        this.lokker.free();
+    }
+
+    async ping() {
+        if (this.ws) {
+            this.sendData('#Ping');
+        }
+    }
+
+    async pong() {
+        if (this.ws) {
+            this.sendData('#Pong');
+        }
+    }
+
+    async send(data) {
+        await this.lokker.lock();
+        let payload;
+
+        if (ObjectType.verify(data) && StringType.verify(data.name)) {
+            payload = toJson(data);
+        }
+        else {
+            payload = data;
         }
 
+        this.ws.send(payload);
+
+        while (this.ws.bufferAmount > 0) {
+            await pause(20);
+        }
+
+        await this.lokker.free();
         return this;
-    }
-
-    ping() {
-        if (this.ws) {
-            this.sendServerData('#Ping');
-        }
-    }
-
-    pong() {
-        if (this.ws) {
-            this.sendServerData('#Pong');
-        }
-    }
-
-    sendServerData(data) {
-        this.pending.push(data);
-        this.sendPending();
-    }
-
-    sendServerMessage(message) {
-        this.pending.push(toJson(message));
-        this.sendPending();
-    }
-
-    sendPending() {
-        while (this.pending.length) {
-            if (!this.ws) {
-                this.connect();
-                return;
-            }
-            else if (this.ws.readyState != 1) {
-                return;
-            }
-            else {
-                this.ws.send(this.pending.shift());
-            }
-        }
     }
 });

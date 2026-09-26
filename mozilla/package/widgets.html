@@ -451,26 +451,17 @@
     <widget tagname="progress-widget">
         <script>
             class ProgressWidget extends Widget {
-                connect(webSocketPath) {
-                    this.webSocket = mkWebsocket(webSocketPath);
-                     
-                    this.webSocket.on('WebsocketData', message => {
-                        this.onReceived(message);
-                    });
-
-                    this.webSocket.connect();
-                }
-
                 init() {
                     this.getRdsScrolling = () => 'auto';
                     this.setClassName('progress-text')
                     super.init();
 
                     if (this.getRdsWebsocketPath) {
-                        this.connect(this.getRdsWebsocketPath());
+                        this.webSocket = mkWebsocket(this.getRdsWebsocketPath()).connect();
                     }
                 }
 
+                /*
                 onReceived(bundle) {
                     if (bundle.type == 'message') {
                         if (bundle.message.name == 'ProgressUpdate') {
@@ -480,7 +471,16 @@
                             );
                         }
                     }
+
+                    // **** NEED lokkers in the websocket object.....
+                    this.webSocket.sendData('Hello data!!');
+
+                    this.webSocket.sendMessage({
+                        name: 'HelloWorld',
+                        text: 'ewfjiet4hiot4iv ubebiorbiuwyvboietbuetvboier',
+                    });
                 }
+                */
             }
         </script>
     </widget>
