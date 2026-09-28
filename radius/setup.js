@@ -34,7 +34,17 @@
     define(class SetupApp extends Webapp {
         async certifyAcmeHost(websocketHandle) {
             await websocketHandle.connected();
-            console.log('connected......');
+
+            let payload = await websocketHandle.get();
+            console.log(payload.toString());
+            //await websocketHandle.close();
+
+            /*
+            while (true) {
+                let payload = await websocketHandle.getPayload();
+                console.log(payload.toString());
+            }
+            */
 
             //websocketHandle.sendData('Hello World!');
             //let data = await websocketHandle.wait();

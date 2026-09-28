@@ -36,8 +36,7 @@ define(class Websocket extends Emitter {
     constructor(path) {
         super();
         this.ws = null;
-        this.pending = {};
-        this.lokker = mkLokker();
+        this.pending = [];
 
         if (window.location.protocol == 'https:') {
             this.url = `wss${window.location.origin.substring(5)}${path}`;
@@ -47,24 +46,25 @@ define(class Websocket extends Emitter {
         }
     }
 
-    async call(message) {
+    /*
+    call(message) {
         if (ObjectType.verify(data) && StringType.verify(data.name)) {
-            await this.lokker.lock();
             let trap = mkTrap();
             trap.setExpected(1);
             message['#TRAP'] = trap.id;
             this.ws.send(toJson(message));
             this.pending[trap.id] = trap;
-            await this.lokker.free();
             return trap.promise;
         }
     }
+    */
 
-    async close(code, reason) {
+    close(code, reason) {
         if (this.ws && this.ws.readyState == 1) {
-            await this.lokker.lock();
-            this.ws.close(code, reason);
-            await this.lokker.free();
+            this.ws.close(
+                Int32Type.verify(code) ? code : 1000,
+                StringType.verify(reason) ? reason : 'unavailable',
+            );
         }
 
         return this;
@@ -77,8 +77,14 @@ define(class Websocket extends Emitter {
 
             this.ws.onopen = async event => {
                 this.send({
-                    name: '##WEBSOCKET_OPEN##',
+                    name: 'WebsocketOpen',
                 });
+
+                for (let payload of this.pending) {
+                    this.send(payload);
+                }
+
+                this.pending = [];
             };
 
             this.ws.onerror = error => {
@@ -98,16 +104,9 @@ define(class Websocket extends Emitter {
     }
 
     onClose() {
-        // *************************************************************************
-        // *************************************************************************
-        /*
-        if (this.ws && this.ws.readyState == 1) {
-            this.ws.close(code, reason);
-            this.ws = null;
-            this.interval ? clearInterval(this.interval) : null;
-            delete this.interval;
-        }
-        */
+        this.ws = null;
+        this.interval ? clearInterval(this.interval) : null;
+        console.log('*** ON CLOSE');
     }
 
     onError(error) {
@@ -115,11 +114,8 @@ define(class Websocket extends Emitter {
         // *************************************************************************
     }
 
-    async onMessage(event) {
-        await this.lokker.lock();
-        const isString = event.data == 'string';
-
-        if (isString) {
+    onMessage(event) {
+        if (event.data == 'string') {
             if (event.data == '#Ping') {
                 this.pong();
             }
@@ -138,65 +134,64 @@ define(class Websocket extends Emitter {
                         */
                     }
                     else if (message instanceof Buffer) {
-                        await wait(this.emit({
+                        this.emit({
                             name: 'WebsocketData',
                             type: 'binary',
                             payload: message,
-                        }));
+                        });
                     }
                     else {
-                        await wait(this.emit({
+                        this.emit({
                             name: 'WebsocketData',
                             type: 'message',
                             message: message,
-                        }));
+                        });
                     }
-
-                    this.lokker.free();
                 }
                 catch (e) {}
             }
         }
         
-        await wait(this.emit({
+        this.emit({
             name: 'WebsocketData',
-            type: isString ? 'string' : 'binary',
+            type: 'binary',
             payload: event.data,
-        }));
-
-        this.lokker.free();
+        });
     }
 
-    async ping() {
+    ping() {
         if (this.ws) {
-            this.sendData('#Ping');
+            this.send('#Ping');
         }
+
+        return this;
     }
 
-    async pong() {
+    pong() {
         if (this.ws) {
-            this.sendData('#Pong');
+            this.send('#Pong');
         }
+
+        return this;
     }
 
-    async send(data) {
-        await this.lokker.lock();
-        let payload;
+    send(data) {
+        if (this.ws.readyState == 1) {
+            let payload;
 
-        if (ObjectType.verify(data) && StringType.verify(data.name)) {
-            payload = toJson(data);
+            if (ObjectType.verify(data) && StringType.verify(data.name)) {
+                payload = toJson(data);
+            }
+            else {
+                payload = data;
+            }
+
+            this.ws.send(payload);
         }
         else {
-            payload = data;
+            this.pending.push(data);
         }
 
-        this.ws.send(payload);
-
-        while (this.ws.bufferAmount > 0) {
-            await pause(20);
-        }
-
-        await this.lokker.free();
         return this;
     }
 });

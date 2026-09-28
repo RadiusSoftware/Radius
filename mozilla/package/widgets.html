@@ -458,6 +458,19 @@
 
                     if (this.getRdsWebsocketPath) {
                         this.webSocket = mkWebsocket(this.getRdsWebsocketPath()).connect();
+
+                        (async () => {
+                            this.webSocket.send('Greetings from the browser!');
+
+                            /*
+                            await pause(1000);
+                            this.webSocket.close();
+                            console.log('webSocket closed...');
+                            */
+                            //this.webSocket.send('MESSAGE #01');
+                            //this.webSocket.send('The sun is rising.');
+                            //this.webSocket.send('Don\'t fear the reaper.');
+                        })();
                     }
                 }
 

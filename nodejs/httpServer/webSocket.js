@@ -48,7 +48,6 @@ define(class Websocket extends Emitter {
         this.socket = socket;
         this.socket.setTimeout(2*60*1000);
         this.socket.setNoDelay();
-        this.lokker = mkLokker();
 
         this.socket.on('timeout', () => {
             this.onClose();
@@ -105,9 +104,8 @@ define(class Websocket extends Emitter {
 
     async close(code, reason) {
         if (this.socket) {
-            await this.lokker.lock();
             code = code ? code : 1000;
-            reason = reason ? reason : 'none';
+            reason = reason ? reason : 'unavailable';
             let buffer = Buffer.concat([ mkBuffer('0000', 'hex'), mkBuffer(reason) ]);
             buffer.writeUint16BE(code, 0);
 
@@ -116,7 +114,6 @@ define(class Websocket extends Emitter {
             }
 
             this.onClose(buffer);
-            this.lokker.free();
         }
 
         return this;
@@ -204,7 +201,6 @@ define(class Websocket extends Emitter {
 
     async queryMessage(message) {
         if (this.socket) {
-            await this.lokker.lock();
             let trap = mkTrap();
             trap.setExpected(trap, 1);
             message['#TRAP'] = trap.id;
@@ -213,15 +209,12 @@ define(class Websocket extends Emitter {
                 this.socket.write(frame);
             }
             
-            this.lokker.free();
             return trap.promise;
         }
     }
 
     async sendData(data) {
         if (this.socket) {
-            await this.lokker.lock();
-
             if (data instanceof Buffer) {
                 for (let frame of await this.frameBuilder.buildFrames(data, 'text')) {
                     this.socket.write(frame);
@@ -232,20 +225,14 @@ define(class Websocket extends Emitter {
                     this.socket.write(frame);
                 }
             }
-
-            this.lokker.free();
         }
     }
 
     async sendMessage(message) {
         if (this.socket) {
-            await this.lokker.lock();
-
             for (let frame of await this.frameBuilder.buildFrames(mkBuffer(toJson(message)), 'text')) {
                 this.socket.write(frame);
             }
-
-            this.lokker.free();
         }
 
         return this;
@@ -396,7 +383,6 @@ define(class WebsocketMessageParser {
         this.fragmented = false;
         this.state = 'CheckHeader';
         this.buffered = Buffer.from(headData);
-        this.lokker = mkLokker();
 
         this.analyzers = {
             CheckHeader: this.checkHeader,
@@ -546,7 +532,6 @@ define(class WebsocketMessageParser {
     }
 
     async onMessage() {
-        await this.lokker.lock();
         let type = this.type;
         let payload = this.payload;
 
@@ -557,7 +542,6 @@ define(class WebsocketMessageParser {
             }
         }
 
-        this.lokker.free();
         this.reset();
         this.webSocket.onMessage(type, payload);
     }
@@ -659,7 +643,7 @@ createService(class WebsocketService extends Service {
         this.byPath = {};
         this.byUUID = {};
 
-        Process.on('##WEBSOCKET_CLOSED##', message => {
+        Process.on('##WEBSOCKET_SERVICE_CONSUMER_CLOSED##', message => {
             if (message.uuid in this.byUUID) {
                 let websocketThunk = this.byUUID[message.uuid];
                 delete this.byUUID[websocketThunk.uuid];
@@ -668,24 +652,21 @@ createService(class WebsocketService extends Service {
                 Process.sendWorker(
                     websocketThunk.consumerId,
                     {
-                        name: '##WEBSOCKET_CLOSED##',
+                        name: '##WEBSOCKET_CONSUMER_CLOSED##',
+                        uuid: message.uuid,
                     }
                 );
             }
         });
 
-        Process.on('##WEBSOCKET_DATA##', message => {
+        Process.on('##WEBSOCKET_SERVICE_CONSUMER_DATA##', message => {
             if (message.uuid in this.byUUID) {
                 let websocketThunk = this.byUUID[message.uuid];
-
-                if (!websocketThunk.producerId) {
-                    websocketThunk.producerId = message.workerId;
-                }
 
                 Process.sendWorker(
                     websocketThunk.consumerId,
                     {
-                        name: '##WEBSOCKET_DATA##',
+                        name: '##WEBSOCKET_CONSUMER_DATA##',
                         uuid: message.uuid,
                         payload: message.payload,
                     }
@@ -701,22 +682,23 @@ createService(class WebsocketService extends Service {
     }
     */
 
-    /*
     async onClose(message) {
         if (message.uuid in this.byUUID) {
             let websocketThunk = this.byUUID[message.uuid];
 
-            Process.sendWorker(websocketThunk.workerId, {
-                name: '##WEBSOCKETCLOSE##',
+            Process.sendWorker(websocketThunk.producerId, {
+                name: '##WEBSOCKET_PRODUCER_CLOSED##',
                 uuid: websocketThunk.uuid,
-            })
+                code: Int32Type.verify(message.code) ? message.code : 1000,
+                reason: StringType.verify(message.reason) ? message.reason : 'unavailable',
+            });
         }
     }
-    */
 
     async onConnect(message) {
         if (message.path in this.byPath) {
             let websocketThunk = this.byPath[message.path];
+            websocketThunk.producerId = message.workerId;
             return websocketThunk.uuid;
         }
     }
@@ -768,25 +750,24 @@ createService(class WebsocketService extends Service {
  * currently using the handle.
 *****/
 define(class WebsocketHandle extends Handle {
-    static handles = {};
-    static websockets = {};
+    static consumers = {};
+    static producers = {};
 
     static {
-        Process.on('##WEBSOCKET_CLOSED##', async message => {
+        Process.on('##WEBSOCKET_CONSUMER_CLOSED##', async message => {
             try {
-                if (message.uuid in WebsocketHandle.handles) {
-                    let handle = WebsocketHandle.handles[message.uuid];
-                    delete WebsocketHandle.handles[message.uuid];
+                if (message.uuid in WebsocketHandle.consumers) {
+                    let handle = WebsocketHandle.consumers[message.uuid];
+                    delete WebsocketHandle.consumers[message.uuid];
                     handle.uuid = '';
                 }
             }
             catch (e) {}
         });
-        
-        Process.on('##WEBSOCKET_DATA##',async message => {
-            console.log(message);
-            if (message.uuid in WebsocketHandle.handles) {
-                let handle = WebsocketHandle.handles[message.uuid];
+
+        Process.on('##WEBSOCKET_CONSUMER_DATA##', async message => {
+            if (message.uuid in WebsocketHandle.consumers) {
+                let handle = WebsocketHandle.consumers[message.uuid];
 
                 try {
                     let payloadMessage = fromJson(message.payload.toString());
@@ -806,40 +787,51 @@ define(class WebsocketHandle extends Handle {
                             });
                             */
                         }
-                        else if (payloadMessage.name == '##WEBSOCKET_OPEN##') {
-                            if (message.uuid in WebsocketHandle.handles) {
-                                let handle = WebsocketHandle.handles[message.uuid];
+                        else if (payloadMessage.name == 'WebsocketOpen') {
+                            if (message.uuid in WebsocketHandle.consumers) {
+                                let handle = WebsocketHandle.consumers[message.uuid];
                                 handle.trigger();
+                                handle.trigger = null;
                             }
                         }
                         else {
-                            /*
-                            Process.sendWorker(
-                                websocketThunk.workerId,
-                                {
-                                name: '##WEBSOCKET_DATA##',
-                                uuid: bundle.uuid,
-                                payload: message,
-                            });
-                            */
+                            await handle.push(payloadMessage);
                         }
 
                         return;
                     }
-                    else {
-                        // HANDLE NON-MESSAGE DATA
-                    }
                 }
                 catch (e) {}
+                await handle.push(message.payload);
             }
+        });
+
+        Process.on('##WEBSOCKET_PRODUCER_CLOSED##', async message => {
+            try {
+                if (message.uuid in WebsocketHandle.producers) {
+                    let handle = WebsocketHandle.producers[message.uuid];
+                    delete WebsocketHandle.producers[message.uuid];
+                    handle.uuid = '';
+                    handle.websocket.close(message.code, message.reason);
+                    handle.websocket = null;
+                }
+            }
+            catch (e) {}
+        });
+
+        Process.on('##WEBSOCKET_PRODUCER_DATA##', async message => {
+            try {
+            }
+            catch (e) {}
         });
     }
 
     constructor() {
         super();
         this.uuid = '';
-        this.lokker = mkLokker();
+        this.payloads = [];
         this.trigger = null;
+        this.lokker = mkLokker();
     }
 
     /*
@@ -853,17 +845,17 @@ define(class WebsocketHandle extends Handle {
     }
     */
 
-    /*
-    async close() {
+    async close(code, reason) {
         if (this.uuid) {
             await this.callService({
                 uuid: this.uuid,
+                code: code,
+                reason: reason,
             });
         }
 
         return this;
     }
-    */
     
     async connect(socket, req, headData) {
         this.uuid = await this.callService({
@@ -871,30 +863,32 @@ define(class WebsocketHandle extends Handle {
         });
 
         if (this.uuid) {
-            let websocket = mkWebsocket(
+            WebsocketHandle.producers[this.uuid] = this;
+
+            this.websocket = mkWebsocket(
                 socket,
                 req.getHeader('sec-websocket-extensions'),
                 headData,
             );
 
-            websocket.on('SocketClosed', message => {
-                delete WebsocketHandle.websockets[this.uuid];
-
+            this.websocket.on('SocketClosed', message => {
                 Process.sendPrimary({
-                    name: '##WEBSOCKET_CLOSED##',
+                    name: '##WEBSOCKET_SERVICE_CONSUMER_CLOSED##',
                     uuid: this.uuid,
                 });
+
+                delete WebsocketHandle.producers[this.uuid];
+                this.uuid = '';
             });
 
-            websocket.on('DataReceived', async data => {
+            this.websocket.on('DataReceived', async data => {
                 Process.sendPrimary({
-                    name: '##WEBSOCKET_DATA##',
+                    name: '##WEBSOCKET_SERVICE_CONSUMER_DATA##',
                     uuid: this.uuid,
                     payload: data.payload,
                 });
             });
 
-            WebsocketHandle.websockets[this.uuid] = websocket;
             let secureKey = req.getHeader('sec-websocket-key');
             let hash = await Crypto.hash('sha1', `${secureKey}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`);
             
@@ -905,22 +899,22 @@ define(class WebsocketHandle extends Handle {
                 `Sec-WebSocket-Accept: ${hash.toString('base64')}`,
             ];
             
-            if (websocket.hasExtensions()) {
-                headers.push(`Sec-WebSocket-Extensions: ${websocket.getSecWebsocketExtensions()}`);
+            if (this.websocket.hasExtensions()) {
+                headers.push(`Sec-WebSocket-Extensions: ${this.websocket.getSecWebsocketExtensions()}`);
             }
 
             headers.push('\r\n');
             socket.write(headers.join('\r\n'));
         }
+
+        return this;
     }
 
     connected() {
         if (this.uuid) {
-            let promise = new Promise((ok, fail) => {
+            return new Promise((ok, fail) => {
                 this.trigger = () => ok(this);
             });
-
-            return promise;
         }
         else {
             return new Promise((ok, fail) => this);
@@ -934,7 +928,7 @@ define(class WebsocketHandle extends Handle {
 
         if (uuid && path) {
             this.uuid = uuid;
-            WebsocketHandle.handles[this.uuid] = this;
+            WebsocketHandle.consumers[this.uuid] = this;
 
             return {
                 websocketHandle: this,
@@ -943,8 +937,57 @@ define(class WebsocketHandle extends Handle {
         }
     }
 
+    async get() {
+        try {
+            await this.lokker.lock();
+
+            if (this.payloads.length) {
+                if (this.trigger) {
+                    this.trigger(this.payloads.shift());
+                    this.trigger = null;
+                }
+                else {
+                    return this.payloads.shift();
+                }
+            }
+            else {
+                return new Promise((ok, fail) => {
+                    this.trigger = payload => ok(payload);
+                });
+            }
+        }
+        finally {
+            this.lokker.free();
+        }
+    }
+
     getUUID() {
         return this.uuid;
+    }
+
+    async has() {
+        try {
+            await this.lokker.lock()
+            return this.payloads.length > 0;
+        }
+        finally {
+            this.lokker.free();
+        }
+    }
+
+    async push(payload) {
+        try {
+            await this.lokker.lock();
+            this.payloads.push(payload);
+
+            if (this.trigger) {
+                this.trigger(this.payloads.shift());
+                this.trigger = null;
+            }
+        }
+        finally {
+            this.lokker.free();
+        }
     }
 
     /*
