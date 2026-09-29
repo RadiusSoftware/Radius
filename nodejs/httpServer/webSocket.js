@@ -378,11 +378,10 @@ define(class WebsocketMessageParser {
         this.socket = webSocket.socket;
         this.socket.on('data', data => this.onData(data));
         this.socket.on('error', error => this.onError(error));
-
-        this.payload = mkBuffer();
-        this.fragmented = false;
-        this.state = 'CheckHeader';
-        this.buffered = Buffer.from(headData);
+        this.buffered = mkBuffer(headData);
+        this.backlog = [];
+        this.lokker = mkLokker();
+        this.reset();
 
         this.analyzers = {
             CheckHeader: this.checkHeader,
@@ -456,7 +455,7 @@ define(class WebsocketMessageParser {
 
     checkPayload() {
         if (this.buffered.length >= this.headerLength + this.payloadLength) {
-            let subarray = this.buffered.subarray(this.headerLength);
+            let subarray = this.buffered.subarray(this.headerLength, this.headerLength + this.payloadLength);
             let demasked = Buffer.alloc(subarray.length);
     
             for (let i = 0; i < subarray.length; i++) {
@@ -468,16 +467,26 @@ define(class WebsocketMessageParser {
         }
     }
 
-    onData(buffer) {
-        this.buffered = Buffer.concat([this.buffered, buffer]);
+    async onData(buffer) {
+        this.backlog.push(buffer);
 
-        while(this.buffered.length > 0 && this.state in this.analyzers) {
-            let state = this.state;
-            Reflect.apply(this.analyzers[this.state], this, []);
+        if (this.lokker.isFree()) {
+            await this.lokker.lock();
 
-            if (this.state == state) {
-                break;
+            while (this.backlog.length) {
+                this.buffered = Buffer.concat([this.buffered, this.backlog.shift()]);
+
+                while(this.buffered.length > 0 && this.state in this.analyzers) {
+                    let state = this.state;
+                    await wait(Reflect.apply(this.analyzers[this.state], this, []));
+
+                    if (this.state == state) {
+                        break;
+                    }
+                }
             }
+
+            this.lokker.free();
         }
     }
 
@@ -485,7 +494,7 @@ define(class WebsocketMessageParser {
         this.webSocket.onError(error);
     }
 
-    onFrame() {
+    async onFrame() {
         let frameLength = this.headerLength + this.payloadLength;
         let frame = this.buffered.subarray(0, frameLength);
         this.buffered = this.buffered.subarray(frameLength);
@@ -523,7 +532,7 @@ define(class WebsocketMessageParser {
             }
 
             if (this.fin) {
-                this.onMessage();
+                await this.onMessage();
             }
             else {
                 this.fragmented = true;
@@ -563,7 +572,6 @@ define(class WebsocketMessageParser {
         this.payload = mkBuffer();
         this.fragmented = false;
         this.state = 'CheckHeader';
-        this.buffered = mkBuffer();
     }
 });
 

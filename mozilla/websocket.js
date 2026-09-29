@@ -106,7 +106,6 @@ define(class Websocket extends Emitter {
     onClose() {
         this.ws = null;
         this.interval ? clearInterval(this.interval) : null;
-        console.log('*** ON CLOSE');
     }
 
     onError(error) {

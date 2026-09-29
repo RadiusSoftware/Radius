@@ -461,15 +461,11 @@
 
                         (async () => {
                             this.webSocket.send('Greetings from the browser!');
-
-                            /*
+                            this.webSocket.send('Another message to pack together');
+                            await pause(4000);
+                            this.webSocket.send('Wow!  We waited for this one.');
                             await pause(1000);
                             this.webSocket.close();
-                            console.log('webSocket closed...');
-                            */
-                            //this.webSocket.send('MESSAGE #01');
-                            //this.webSocket.send('The sun is rising.');
-                            //this.webSocket.send('Don\'t fear the reaper.');
                         })();
                     }
                 }
