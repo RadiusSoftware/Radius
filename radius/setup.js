@@ -34,7 +34,31 @@
     define(class SetupApp extends Webapp {
         async certifyAcmeHost(websocketHandle) {
             await websocketHandle.connected();
-            console.log('connected...................');
+
+            /*
+            websocketHandle.send("It's time to start reporting on things.");
+            websocketHandle.send("Another little ditty.");
+            */
+
+            let message = await websocketHandle.get();
+            console.log(message);
+            message = await websocketHandle.get();
+            console.log(message);
+            message = await websocketHandle.get();
+            console.log(message);
+
+            websocketHandle.send('** DONE **');
+
+
+            /*
+            while (websocketHandle.getUUID()) {
+                console.log((await websocketHandle.get()).toString());
+            }
+
+            console.log('DONE ...........................');
+            websocketHandle.on('Data', message => {
+                console.log(message.payload.toString());
+            });
 
             let payload = await websocketHandle.get();
             console.log(payload.toString());
@@ -48,6 +72,7 @@
 
             payload = await websocketHandle.get();
             console.log(payload.toString());
+            */
 
             /*
             while (true) {
@@ -91,7 +116,7 @@
         )](trx, acme) {
             let system = mkSystemHandle();
             await system.setAcmeData(acme);
-            let { websocketHandle, path } = await mkWebsocketHandle().create();
+            let { websocketHandle, path } = await mkWebsocketHandle(WebsocketHandle.synchronous).create();
             this.certifyAcmeHost(websocketHandle);
 
             return {

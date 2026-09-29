@@ -457,20 +457,21 @@
                     super.init();
 
                     if (this.getRdsWebsocketPath) {
-                        this.webSocket = mkWebsocket(this.getRdsWebsocketPath()).connect();
+                        this.webSocket = mkWebsocket(
+                            this.getRdsWebsocketPath(),
+                            Websocket.asynchronous,
+                        ).connect();
 
-                        (async () => {
-                            this.webSocket.send('Greetings from the browser!');
-                            this.webSocket.send('Another message to pack together');
-                            await pause(4000);
-                            this.webSocket.send('Wow!  We waited for this one.');
-                            await pause(1000);
-                            this.webSocket.close();
-                        })();
+                        this.webSocket.on('Data', message => {
+                            console.log(message);
+                        });
+
+                        this.webSocket.send('ONE');
+                        this.webSocket.send('TWO');
+                        this.webSocket.send('THREE');
                     }
                 }
 
-                /*
                 onReceived(bundle) {
                     if (bundle.type == 'message') {
                         if (bundle.message.name == 'ProgressUpdate') {
@@ -480,16 +481,7 @@
                             );
                         }
                     }
-
-                    // **** NEED lokkers in the websocket object.....
-                    this.webSocket.sendData('Hello data!!');
-
-                    this.webSocket.sendMessage({
-                        name: 'HelloWorld',
-                        text: 'ewfjiet4hiot4iv ubebiorbiuwyvboietbuetvboier',
-                    });
                 }
-                */
             }
         </script>
     </widget>

@@ -48,6 +48,7 @@ define(class Websocket extends Emitter {
         this.socket = socket;
         this.socket.setTimeout(2*60*1000);
         this.socket.setNoDelay();
+        this.lokker = mkLokker();
 
         this.socket.on('timeout', () => {
             this.onClose();
@@ -101,6 +102,22 @@ define(class Websocket extends Emitter {
 
         return this;
     }
+
+    /*
+    async call(message) {
+        if (this.socket) {
+            let trap = mkTrap();
+            trap.setExpected(trap, 1);
+            message['#TRAP'] = trap.id;
+
+            for (let frame of await this.frameBuilder.buildFrames(mkBuffer(toJson(message)), 'text')) {
+                this.socket.write(frame);
+            }
+            
+            return trap.promise;
+        }
+    }
+    */
 
     async close(code, reason) {
         if (this.socket) {
@@ -162,12 +179,6 @@ define(class Websocket extends Emitter {
         this.emit({ name: 'SocketClosed' });
     }
 
-    async onExecCommand(message) {
-        if (message.command == 'SendMessage') {
-            this.sendMessage(message.payload);
-        }
-    }
-
     onMessage(type, payload) {
         if (type == 'close') {
             this.onClose(payload);
@@ -191,48 +202,37 @@ define(class Websocket extends Emitter {
         }
     }
 
-    ping(message) {
-        this.sendData('#Ping');
+    ping() {
+        this.send('#Ping');
     }
 
-    pong(message) {
-        this.sendData('#Pong');
+    pong() {
+        this.send('#Pong');
     }
 
-    async queryMessage(message) {
+    async send(payload) {
         if (this.socket) {
-            let trap = mkTrap();
-            trap.setExpected(trap, 1);
-            message['#TRAP'] = trap.id;
+            await this.lokker.lock();
 
-            for (let frame of await this.frameBuilder.buildFrames(mkBuffer(toJson(message)), 'text')) {
-                this.socket.write(frame);
-            }
-            
-            return trap.promise;
-        }
-    }
-
-    async sendData(data) {
-        if (this.socket) {
-            if (data instanceof Buffer) {
-                for (let frame of await this.frameBuilder.buildFrames(data, 'text')) {
+            if (ObjectType.verify(payload) && StringType.verify(payload.name)) {
+                for (let frame of await this.frameBuilder.buildFrames(mkBuffer(toJson(payload)), 'text')) {
                     this.socket.write(frame);
                 }
             }
             else {
-                for (let frame of await this.frameBuilder.buildFrames(mkBuffer(data), 'text')) {
-                    this.socket.write(frame);
+                if (payload instanceof Buffer) {
+                    for (let frame of await this.frameBuilder.buildFrames(payload, 'text')) {
+                        this.socket.write(frame);
+                    }
+                }
+                else {
+                    for (let frame of await this.frameBuilder.buildFrames(mkBuffer(payload), 'text')) {
+                        this.socket.write(frame);
+                    }
                 }
             }
-        }
-    }
 
-    async sendMessage(message) {
-        if (this.socket) {
-            for (let frame of await this.frameBuilder.buildFrames(mkBuffer(toJson(message)), 'text')) {
-                this.socket.write(frame);
-            }
+            this.lokker.free();
         }
 
         return this;
@@ -730,22 +730,20 @@ createService(class WebsocketService extends Service {
         };
     }
 
-    /*
-    async onSend(payload) {
+    async onSend(message) {
         if (message.uuid in this.byUUID) {
             let websocketThunk = this.byUUID[message.uuid];
 
             Process.sendWorker(
-                websocketThunk.workerId,
+                websocketThunk.producerId,
                 {
-                    name: '##WEBSOCKETSEND##',
+                    name: '##WEBSOCKET_PRODUCER_DATA##',
                     uuid: message.uuid,
                     payload: message.payload,
                 }
             );
         }
     }
-    */
 });
 
 
@@ -760,14 +758,21 @@ createService(class WebsocketService extends Service {
 define(class WebsocketHandle extends Handle {
     static consumers = {};
     static producers = {};
+    static synchronous = Symbol('synchronous');
+    static asynchronous = Symbol('asynchronous');
 
     static {
-        Process.on('##WEBSOCKET_CONSUMER_CLOSED##', async message => {
+        Process.on('##WEBSOCKET_CONSUMER_CLOSED##', message => {
             try {
                 if (message.uuid in WebsocketHandle.consumers) {
                     let handle = WebsocketHandle.consumers[message.uuid];
                     delete WebsocketHandle.consumers[message.uuid];
                     handle.uuid = '';
+                    
+                    if (handle.trigger) {
+                        handle.trigger('');
+                        handle.trigger = null;
+                    }
                 }
             }
             catch (e) {}
@@ -779,9 +784,10 @@ define(class WebsocketHandle extends Handle {
 
                 try {
                     let payloadMessage = fromJson(message.payload.toString());
-                
-                    if (ObjectType.verify(payloadMessage) && StringType.verify(payloadMessage.name)) {
-                        if (NumberType.verify(payloadMessage['#TRAP'])) {
+                    let payload = payloadMessage.payload;
+
+                    if (payloadMessage.type == 'message') {
+                        if (NumberType.verify(payload['#TRAP'])) {
                             // *****************************************************************
                             // *****************************************************************
                             /*
@@ -795,7 +801,7 @@ define(class WebsocketHandle extends Handle {
                             });
                             */
                         }
-                        else if (payloadMessage.name == 'WebsocketOpen') {
+                        else if (payload.name == 'WebsocketOpen') {
                             if (message.uuid in WebsocketHandle.consumers) {
                                 let handle = WebsocketHandle.consumers[message.uuid];
                                 handle.trigger();
@@ -805,16 +811,16 @@ define(class WebsocketHandle extends Handle {
                         else {
                             await handle.push(payloadMessage);
                         }
-
-                        return;
+                    }
+                    else {
+                        await handle.push(payloadMessage);
                     }
                 }
-                catch (e) {}
-                await handle.push(message.payload);
+                catch(e) {}
             }
         });
 
-        Process.on('##WEBSOCKET_PRODUCER_CLOSED##', async message => {
+        Process.on('##WEBSOCKET_PRODUCER_CLOSED##', message => {
             try {
                 if (message.uuid in WebsocketHandle.producers) {
                     let handle = WebsocketHandle.producers[message.uuid];
@@ -827,19 +833,31 @@ define(class WebsocketHandle extends Handle {
             catch (e) {}
         });
 
-        Process.on('##WEBSOCKET_PRODUCER_DATA##', async message => {
+        Process.on('##WEBSOCKET_PRODUCER_DATA##', message => {
             try {
+                if (message.uuid in WebsocketHandle.producers) {
+                    let handle = WebsocketHandle.producers[message.uuid];
+                    handle.websocket.send(message.payload);
+                }
             }
             catch (e) {}
         });
     }
 
-    constructor() {
+    constructor(mode) {
         super();
         this.uuid = '';
         this.payloads = [];
         this.trigger = null;
         this.lokker = mkLokker();
+        this.emitter = mkEmitter();
+
+        if (mode == WebsocketHandle.synchronous) {
+            this.mode = WebsocketHandle.synchronous;
+        }
+        else {
+            this.mode = WebsocketHandle.asynchronous;
+        }
     }
 
     /*
@@ -946,26 +964,32 @@ define(class WebsocketHandle extends Handle {
     }
 
     async get() {
-        try {
-            await this.lokker.lock();
+        if (this.uuid) {
+            if (this.mode == WebsocketHandle.synchronous) {
+                try {
+                    await this.lokker.lock();
 
-            if (this.payloads.length) {
-                if (this.trigger) {
-                    this.trigger(this.payloads.shift());
-                    this.trigger = null;
+                    if (this.payloads.length) {
+                        if (this.trigger) {
+                            this.trigger(this.payloads.shift());
+                            this.trigger = null;
+                        }
+                        else {
+                            return new Promise((ok, fail) => {
+                                ok(this.payloads.shift());
+                            });
+                        }
+                    }
+                    else {
+                        return new Promise((ok, fail) => {
+                            this.trigger = payload => ok(payload);
+                        });
+                    }
                 }
-                else {
-                    return this.payloads.shift();
+                finally {
+                    this.lokker.free();
                 }
             }
-            else {
-                return new Promise((ok, fail) => {
-                    this.trigger = payload => ok(payload);
-                });
-            }
-        }
-        finally {
-            this.lokker.free();
         }
     }
 
@@ -974,31 +998,57 @@ define(class WebsocketHandle extends Handle {
     }
 
     async has() {
-        try {
-            await this.lokker.lock()
-            return this.payloads.length > 0;
+        if (this.uuid) {
+            if (this.mode == WebsocketHandle.synchronous) {
+                try {
+                    await this.lokker.lock()
+                    return this.payloads.length > 0;
+                }
+                finally {
+                    this.lokker.free();
+                }
+            }
         }
-        finally {
-            this.lokker.free();
-        }
+    }
+
+    off(...args) {
+        this.emitter.off(...args);
+        return this;
+    }
+
+    on(...args) {
+        this.emitter.on(...args);
+        return this;
+    }
+
+    once(...args) {
+        this.emitter.once(...args);
+        return this;
     }
 
     async push(payload) {
-        try {
-            await this.lokker.lock();
-            this.payloads.push(payload);
-
-            if (this.trigger) {
-                this.trigger(this.payloads.shift());
-                this.trigger = null;
-            }
+        if (this.mode == WebsocketHandle.asynchronous) {
+            this.emitter.emit({
+                name: 'Data',
+                payload: payload,
+            });
         }
-        finally {
-            this.lokker.free();
+        else {
+            try {
+                await this.lokker.lock();
+                this.payloads.push(payload);
+
+                if (this.trigger) {
+                    this.trigger(this.payloads.shift());
+                    this.trigger = null;
+                }
+            }
+            finally {
+                this.lokker.free();
+            }
         }
     }
 
-    /*
     async send(payload) {
         if (this.uuid) {
             await this.callService({
@@ -1007,5 +1057,4 @@ define(class WebsocketHandle extends Handle {
             });
         }
     }
-    */
 });

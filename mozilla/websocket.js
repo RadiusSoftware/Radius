@@ -33,16 +33,29 @@
  * the socket-life duration.
 *****/
 define(class Websocket extends Emitter {
-    constructor(path) {
+    static synchronous = Symbol('synchronous');
+    static asynchronous = Symbol('asynchronous');
+
+    constructor(path, mode) {
         super();
         this.ws = null;
         this.pending = [];
+        this.payloads = [];
+        this.trigger = null;
+        this.mode = mode in { synchronous:0, asynchronous:0 } ? mode : 'asynchronous';
 
         if (window.location.protocol == 'https:') {
             this.url = `wss${window.location.origin.substring(5)}${path}`;
         }
         else if (window.location.protocol == 'http:') {
             this.url = `ws${window.location.origin.substring(4)}${path}`;
+        }
+
+        if (mode == Websocket.synchronous) {
+            this.mode = WebsocketHandle.synchronous;
+        }
+        else {
+            this.mode = Websocket.asynchronous;
         }
     }
 
@@ -80,16 +93,12 @@ define(class Websocket extends Emitter {
                     name: 'WebsocketOpen',
                 });
 
-                for (let payload of this.pending) {
-                    this.send(payload);
+                for (let pending of this.pending) {
+                    this.send(pending);
                 }
 
                 this.pending = [];
             };
-
-            this.ws.onerror = error => {
-                this.onError(error);
-            }
 
             this.ws.onclose = () => {
                 this.onClose();
@@ -103,18 +112,26 @@ define(class Websocket extends Emitter {
         return this;
     }
 
+    async get() {
+        // *************************************************************************
+        // *************************************************************************
+    }
+
+    async has() {
+        // *************************************************************************
+        // *************************************************************************
+    }
+
     onClose() {
         this.ws = null;
         this.interval ? clearInterval(this.interval) : null;
     }
 
-    onError(error) {
-        // *************************************************************************
-        // *************************************************************************
-    }
-
     onMessage(event) {
-        if (event.data == 'string') {
+        let type;
+        let payload;
+
+        if (StringType.verify(event.data)) {
             if (event.data == '#Ping') {
                 this.pong();
             }
@@ -122,40 +139,51 @@ define(class Websocket extends Emitter {
                 try {
                     let message = fromJson(event.data);
 
-                    if ('#TRAP' in message) {
-                        // ****************************************************************
-                        // ****************************************************************
-                        /*
-                        let trapId = message['#TRAP'];
-                        let trap = this.awaiting[trapId];
-                        delete this.awaiting[trapId];
-                        trap.handleResponse(message['#RESPONSE']);
-                        */
+                    if (message instanceof Buffer) {
+                        type = 'binary';
+                        payload = message;
                     }
-                    else if (message instanceof Buffer) {
-                        this.emit({
-                            name: 'WebsocketData',
-                            type: 'binary',
-                            payload: message,
-                        });
+                    else if (ObjetType.veriy(message) && StringType.verify(message.name)) {
+                        type = 'message';
+                        payload = message;
                     }
                     else {
-                        this.emit({
-                            name: 'WebsocketData',
-                            type: 'message',
-                            message: message,
-                        });
+                        type = 'string';
+                        payload = event.data;
                     }
                 }
-                catch (e) {}
+                catch (e) {
+                    type = 'string';
+                    payload = event.data;
+                }
             }
         }
-        
-        this.emit({
-            name: 'WebsocketData',
-            type: 'binary',
-            payload: event.data,
-        });
+        else {
+            type = 'binary';
+            payload = event.data;
+        }
+
+        if (this.mode == Websocket.synchronous) {
+            // TODO ************************************************************
+            // TODO ************************************************************
+        }
+        else if (type == 'message' && Int32Type.verify(payload['#TRAP'])) {
+            // TODO ************************************************************
+            // TODO ************************************************************
+            /*
+            let trapId = message['#TRAP'];
+            let trap = this.awaiting[trapId];
+            delete this.awaiting[trapId];
+            trap.handleResponse(message['#RESPONSE']);
+            */
+        }
+        else {
+            this.emit({
+                name: 'Data',
+                type: type,
+                payload: payload,
+            });
+        }
     }
 
     ping() {
@@ -174,21 +202,36 @@ define(class Websocket extends Emitter {
         return this;
     }
 
+    async push(payload) {
+        // *************************************************************************
+        // *************************************************************************
+    }
+
     send(data) {
-        if (this.ws.readyState == 1) {
-            let payload;
+        let type;
+        let payload;
 
-            if (ObjectType.verify(data) && StringType.verify(data.name)) {
-                payload = toJson(data);
-            }
-            else {
-                payload = data;
-            }
-
-            this.ws.send(payload);
+        if (ObjectType.verify(data) && StringType.verify(data.name)) {
+            type = 'message';
+            payload = toJson(data);
+        }
+        else if (StringType.verify(data)) {
+            type = 'string';
+            payload = data;
         }
         else {
-            this.pending.push(data);
+            type = 'binary';
+            payload = data;
+        }
+
+        if (this.ws.readyState == 1) {
+            this.ws.send(toJson({
+                type: type,
+                payload: payload,
+            }));
+        }
+        else {
+            this.pending.push(payload);
         }
 
         return this;
