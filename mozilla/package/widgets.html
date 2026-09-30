@@ -459,9 +459,23 @@
                     if (this.getRdsWebsocketPath) {
                         this.webSocket = mkWebsocket(this.getRdsWebsocketPath(), Websocket.synchronous).connect();
 
+                        (async () => {
+                            await this.webSocket.connected();
+
+                            let response = await this.webSocket.call({
+                                name: 'TalkToMe',
+                                number: 32438,
+                            });
+
+                            console.log(response);
+                        })();
+
+                        /*
                         this.webSocket.on('Greetings', async message => {
+                            await pause(3000);
                             return { thenumber: 383858 };
                         });
+                        */
                     }
                 }
 

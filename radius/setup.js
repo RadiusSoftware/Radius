@@ -35,11 +35,18 @@
         async certifyAcmeHost(websocketHandle) {
             await websocketHandle.connected();
 
+            /*
             let response = await websocketHandle.call({
                 name: 'Greetings',
                 flavor: 'lemon',
             });
             console.log(response);
+            */
+
+            websocketHandle.on('TalkToMe', message => {
+                console.log(message);
+                console.log();
+            });
         }
 
         async getControllerData(handle) {

@@ -189,16 +189,18 @@ define(class Websocket extends Emitter {
             let message;
 
             try {
-                let payloadMessage = fromJson(payload.toString());
-                
-                if (payloadMessage.type == 'message') {
-                    message = fromJson(payloadMessage.payload);
-                }
+                message = fromJson(payload);
             }
             catch (e) {}
 
-            if (message && message.name == '##RESPONSE##') {
-                Trap.handleResponse(message['#TRAP'], message.response);
+            if (message && message.payload && message.payload.name == '##RESPONSE##') {
+                Trap.handleResponse(message.payload['#TRAP'], message.payload.response);
+            }
+            else if (message && message.name == '##CALL##') {
+                // ***************************************************************
+                // ***************************************************************
+                console.log(message);
+                console.log();
             }
             else {
                 this.emit({
@@ -839,7 +841,7 @@ define(class WebsocketHandle extends Handle {
                         let payloadMessage = fromJson(message.payload.toString());
 
                         if (payloadMessage.type == 'message') {
-                            let payload = fromJson(payloadMessage.payload);
+                            let payload = payloadMessage.payload;
 
                             if (payload.name == 'WebsocketOpen') {
                                 if (message.uuid in WebsocketHandle.consumers) {

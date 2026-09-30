@@ -59,18 +59,21 @@ define(class Websocket extends Emitter {
         }
     }
 
-    /*
     call(message) {
-        if (ObjectType.verify(data) && StringType.verify(data.name)) {
+        if (ObjectType.verify(message) && StringType.verify(message.name)) {
             let trap = mkTrap();
             trap.setExpected(1);
             message['#TRAP'] = trap.id;
-            this.ws.send(toJson(message));
-            this.pending[trap.id] = trap;
+            message['#CALL'] = true;
+
+            this.ws.send(toJson({
+                name: '##CALL##',
+                payload: message,
+            }));
+
             return trap.promise;
         }
     }
-    */
 
     close(code, reason) {
         if (this.ws && this.ws.readyState == 1) {
@@ -89,6 +92,11 @@ define(class Websocket extends Emitter {
             this.interval = setInterval(() => this.ping(), 30000);
 
             this.ws.onopen = async event => {
+                if (this.trigger) {
+                    this.trigger();
+                    this.trigger = null;
+                }
+
                 this.send({
                     name: 'WebsocketOpen',
                 });
@@ -110,6 +118,12 @@ define(class Websocket extends Emitter {
         }
 
         return this;
+    }
+
+    connected() {
+        return new Promise((ok, fail) => {
+            this.trigger = () => ok();
+        });
     }
 
     async get() {
@@ -253,7 +267,7 @@ define(class Websocket extends Emitter {
 
         if (ObjectType.verify(data) && StringType.verify(data.name)) {
             type = 'message';
-            payload = toJson(data);
+            payload = data;
         }
         else if (StringType.verify(data)) {
             type = 'string';
