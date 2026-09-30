@@ -103,12 +103,12 @@ define(class Websocket extends Emitter {
         return this;
     }
 
-    /*
     async call(message) {
         if (this.socket) {
             let trap = mkTrap();
-            trap.setExpected(trap, 1);
+            trap.setExpected(1);
             message['#TRAP'] = trap.id;
+            message['#CALL'] = true;
 
             for (let frame of await this.frameBuilder.buildFrames(mkBuffer(toJson(message)), 'text')) {
                 this.socket.write(frame);
@@ -117,7 +117,6 @@ define(class Websocket extends Emitter {
             return trap.promise;
         }
     }
-    */
 
     async close(code, reason) {
         if (this.socket) {
@@ -187,11 +186,27 @@ define(class Websocket extends Emitter {
             this.pong();
         }
         else if (type == 'string' && payload.toString() != '#Pong') {
-            this.emit({
-                name: 'DataReceived',
-                type: type,
-                payload: payload,
-            });
+            let message;
+
+            try {
+                let payloadMessage = fromJson(payload.toString());
+                
+                if (payloadMessage.type == 'message') {
+                    message = fromJson(payloadMessage.payload);
+                }
+            }
+            catch (e) {}
+
+            if (message && message.name == '##RESPONSE##') {
+                Trap.handleResponse(message['#TRAP'], message.response);
+            }
+            else {
+                this.emit({
+                    name: 'DataReceived',
+                    type: type,
+                    payload: payload,
+                });
+            }
         }
         else if (type == 'binary') {
             this.emit({
@@ -652,43 +667,80 @@ createService(class WebsocketService extends Service {
         this.byUUID = {};
 
         Process.on('##WEBSOCKET_SERVICE_CONSUMER_CLOSED##', message => {
-            if (message.uuid in this.byUUID) {
-                let websocketThunk = this.byUUID[message.uuid];
-                delete this.byUUID[websocketThunk.uuid];
-                delete this.byPath[websocketThunk.path];
+            try {
+                if (message.uuid in this.byUUID) {
+                    let websocketThunk = this.byUUID[message.uuid];
+                    delete this.byUUID[websocketThunk.uuid];
+                    delete this.byPath[websocketThunk.path];
 
-                Process.sendWorker(
-                    websocketThunk.consumerId,
-                    {
-                        name: '##WEBSOCKET_CONSUMER_CLOSED##',
-                        uuid: message.uuid,
-                    }
-                );
+                    Process.sendWorker(
+                        websocketThunk.consumerId,
+                        {
+                            name: '##WEBSOCKET_CONSUMER_CLOSED##',
+                            uuid: message.uuid,
+                        }
+                    );
+                }
             }
+            catch (e) {}
         });
 
         Process.on('##WEBSOCKET_SERVICE_CONSUMER_DATA##', message => {
-            if (message.uuid in this.byUUID) {
-                let websocketThunk = this.byUUID[message.uuid];
+            try {
+                if (message.uuid in this.byUUID) {
+                    let websocketThunk = this.byUUID[message.uuid];
 
-                Process.sendWorker(
-                    websocketThunk.consumerId,
-                    {
-                        name: '##WEBSOCKET_CONSUMER_DATA##',
-                        uuid: message.uuid,
-                        payload: message.payload,
-                    }
-                );
+                    Process.sendWorker(
+                        websocketThunk.consumerId,
+                        {
+                            name: '##WEBSOCKET_CONSUMER_DATA##',
+                            uuid: message.uuid,
+                            payload: message.payload,
+                        }
+                    );
+                }
             }
+            catch (e) {}
+        });
+
+        Process.on('##WEBSOCKET_SERVER_CONSUMER_RESPONSE##', message => {
+            try {
+                if (message.uuid in this.byUUID) {
+                    let websocketThunk = this.byUUID[message.uuid];
+
+                    Process.sendWorker(
+                        websocketThunk.consumerId,
+                        {
+                            name: '##WEBSOCKET_CONSUMER_RESPONSE##',
+                            uuid: message.uuid,
+                            '#TRAP': message['#CALLER_TRAP'],
+                            response: message.response,
+                        }
+                    );
+                }
+            }
+            catch (e) {}
+        });
+
+        Process.on('##WEBSOCKET_SERVICE_PRODUCER_CALL##', message => {
+            try {
+                if (message.uuid in this.byUUID) {
+                    let websocketThunk = this.byUUID[message.uuid];
+                    
+                    Process.sendWorker(
+                        websocketThunk.producerId,
+                        {
+                            name: '##WEBSOCKET_PRODUCER_CALL##',
+                            uuid: message.uuid,
+                            '#CALLER_TRAP': message['#CALLER_TRAP'],
+                            payload: message.payload,
+                        },
+                    );
+                }
+            }
+            catch (e) {}
         });
     }
-
-    /*
-    async onCall(message) {
-        // *************************************************************
-        // *************************************************************
-    }
-    */
 
     async onClose(message) {
         if (message.uuid in this.byUUID) {
@@ -779,46 +831,61 @@ define(class WebsocketHandle extends Handle {
         });
 
         Process.on('##WEBSOCKET_CONSUMER_DATA##', message => {
-            if (message.uuid in WebsocketHandle.consumers) {
-                let handle = WebsocketHandle.consumers[message.uuid];
+            try {
+                if (message.uuid in WebsocketHandle.consumers) {
+                    let handle = WebsocketHandle.consumers[message.uuid];
 
-                try {
-                    let payloadMessage = fromJson(message.payload.toString());
+                    try {
+                        let payloadMessage = fromJson(message.payload.toString());
 
-                    if (payloadMessage.type == 'message') {
-                        let payload = fromJson(payloadMessage.payload);
+                        if (payloadMessage.type == 'message') {
+                            let payload = fromJson(payloadMessage.payload);
 
-                        if (NumberType.verify(payload['#TRAP'])) {
-                            // *****************************************************************
-                            // *****************************************************************
-                            /*
-                            let response = await Process.callWorker(
-                            websocketThunk.workerId,
-                            {
-                                name: '##WEBSOCKETCALL##',
-                                uuid: this.uuid,
-                                type: 'message',
-                                payload: message,
-                            });
-                            */
-                        }
-                        else if (payload.name == 'WebsocketOpen') {
-                            if (message.uuid in WebsocketHandle.consumers) {
-                                let handle = WebsocketHandle.consumers[message.uuid];
-                                handle.trigger();
-                                handle.trigger = null;
+                            if (payload.name == 'WebsocketOpen') {
+                                if (message.uuid in WebsocketHandle.consumers) {
+                                    let handle = WebsocketHandle.consumers[message.uuid];
+                                    handle.trigger();
+                                    handle.trigger = null;
+                                }
+                            }
+                            else {
+                                handle.push(payloadMessage);
                             }
                         }
                         else {
                             handle.push(payloadMessage);
                         }
                     }
-                    else {
-                        handle.push(payloadMessage);
-                    }
+                    catch(e) {}
                 }
-                catch(e) {}
             }
+            catch (e) {}
+        });
+
+        Process.on('##WEBSOCKET_CONSUMER_RESPONSE##', message => {
+            try {
+                if (message.uuid in this.consumers) {
+                    Trap.handleResponse(message['#TRAP'], message.response);
+                }
+            }
+            catch (e) {}
+        });
+
+        Process.on('##WEBSOCKET_PRODUCER_CALL##', async message => {
+            try {
+                if (message.uuid in WebsocketHandle.producers) {
+                    let handle = WebsocketHandle.producers[message.uuid];
+                    let response = await handle.websocket.call(message.payload);
+
+                    Process.sendPrimary({
+                        name: '##WEBSOCKET_SERVER_CONSUMER_RESPONSE##',
+                        uuid: message.uuid,
+                        '#CALLER_TRAP': message['#CALLER_TRAP'],
+                        response: response,
+                    });
+                }
+            }
+            catch (e) {}
         });
 
         Process.on('##WEBSOCKET_PRODUCER_CLOSED##', message => {
@@ -861,16 +928,22 @@ define(class WebsocketHandle extends Handle {
         }
     }
 
-    /*
-    async call(payload) {
-        if (this.path) {
-            await this.callService({
-                path: this.path,
-                payload: payload,
-            });
+    call(payload) {
+        if (this.uuid) {
+            if (ObjectType.verify(payload) && StringType.verify(payload.name)) {
+                let trap = mkTrap(1);
+
+                Process.sendPrimary({
+                    name: '##WEBSOCKET_SERVICE_PRODUCER_CALL##',
+                    uuid: this.uuid,
+                    '#CALLER_TRAP': trap.id,
+                    payload: payload,
+                });
+
+                return trap.promise;
+            }
         }
     }
-    */
 
     async close(code, reason) {
         if (this.uuid) {

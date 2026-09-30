@@ -35,33 +35,11 @@
         async certifyAcmeHost(websocketHandle) {
             await websocketHandle.connected();
 
-            websocketHandle.send('ONE');
-            await pause(2000);
-            websocketHandle.send('TWO');
-            websocketHandle.send('THREE');
-            await pause(2000);
-            websocketHandle.send('FOUR');
-            await pause(2000);
-            websocketHandle.send('FIVE');
-            /*
-            console.log(await websocketHandle.get());
-            console.log(await websocketHandle.get());
-            console.log(await websocketHandle.get());
-            console.log(await websocketHandle.get());
-            console.log(await websocketHandle.get());
-            websocketHandle.send('** DONE **');
-            */
-
-            /*
-            let pipe = mkWebsocketPipe(websocketHandle);
-
-            pipe.send({
-                name: 'ProgressUpdate',
-                update: 'Starting Acme Certification',
+            let response = await websocketHandle.call({
+                name: 'Greetings',
+                flavor: 'lemon',
             });
-
-            await pipe.close();
-            */
+            console.log(response);
         }
 
         async getControllerData(handle) {

@@ -171,7 +171,7 @@ define(class Websocket extends Emitter {
                         type = 'binary';
                         payload = message;
                     }
-                    else if (ObjetType.veriy(message) && StringType.verify(message.name)) {
+                    else if (ObjectType.verify(message) && StringType.verify(message.name)) {
                         type = 'message';
                         payload = message;
                     }
@@ -191,15 +191,16 @@ define(class Websocket extends Emitter {
             payload = event.data;
         }
 
-        if (type == 'message' && Int32Type.verify(payload['#TRAP'])) {
-            // TODO ************************************************************
-            // TODO ************************************************************
-            /*
-            let trapId = message['#TRAP'];
-            let trap = this.awaiting[trapId];
-            delete this.awaiting[trapId];
-            trap.handleResponse(message['#RESPONSE']);
-            */
+        if (type == 'message' && payload['#CALL']) {
+            (async () => {
+                let response = await this.query(payload);
+                
+                this.send({
+                    name: '##RESPONSE##',
+                    '#TRAP': payload['#TRAP'],
+                    response: response,
+                });
+            })();
         }
         else {
             this.push(type, payload);
