@@ -778,15 +778,16 @@ define(class WebsocketHandle extends Handle {
             catch (e) {}
         });
 
-        Process.on('##WEBSOCKET_CONSUMER_DATA##', async message => {
+        Process.on('##WEBSOCKET_CONSUMER_DATA##', message => {
             if (message.uuid in WebsocketHandle.consumers) {
                 let handle = WebsocketHandle.consumers[message.uuid];
 
                 try {
                     let payloadMessage = fromJson(message.payload.toString());
-                    let payload = payloadMessage.payload;
 
                     if (payloadMessage.type == 'message') {
+                        let payload = fromJson(payloadMessage.payload);
+
                         if (NumberType.verify(payload['#TRAP'])) {
                             // *****************************************************************
                             // *****************************************************************
@@ -809,11 +810,11 @@ define(class WebsocketHandle extends Handle {
                             }
                         }
                         else {
-                            await handle.push(payloadMessage);
+                            handle.push(payloadMessage);
                         }
                     }
                     else {
-                        await handle.push(payloadMessage);
+                        handle.push(payloadMessage);
                     }
                 }
                 catch(e) {}
@@ -975,9 +976,7 @@ define(class WebsocketHandle extends Handle {
                             this.trigger = null;
                         }
                         else {
-                            return new Promise((ok, fail) => {
-                                ok(this.payloads.shift());
-                            });
+                            return this.payloads.shift();
                         }
                     }
                     else {

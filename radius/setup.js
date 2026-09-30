@@ -35,55 +35,22 @@
         async certifyAcmeHost(websocketHandle) {
             await websocketHandle.connected();
 
+            websocketHandle.send('ONE');
+            await pause(2000);
+            websocketHandle.send('TWO');
+            websocketHandle.send('THREE');
+            await pause(2000);
+            websocketHandle.send('FOUR');
+            await pause(2000);
+            websocketHandle.send('FIVE');
             /*
-            websocketHandle.send("It's time to start reporting on things.");
-            websocketHandle.send("Another little ditty.");
-            */
-
-            let message = await websocketHandle.get();
-            console.log(message);
-            message = await websocketHandle.get();
-            console.log(message);
-            message = await websocketHandle.get();
-            console.log(message);
-
+            console.log(await websocketHandle.get());
+            console.log(await websocketHandle.get());
+            console.log(await websocketHandle.get());
+            console.log(await websocketHandle.get());
+            console.log(await websocketHandle.get());
             websocketHandle.send('** DONE **');
-
-
-            /*
-            while (websocketHandle.getUUID()) {
-                console.log((await websocketHandle.get()).toString());
-            }
-
-            console.log('DONE ...........................');
-            websocketHandle.on('Data', message => {
-                console.log(message.payload.toString());
-            });
-
-            let payload = await websocketHandle.get();
-            console.log(payload.toString());
-            //await websocketHandle.close();
-
-            payload = await websocketHandle.get();
-            console.log(payload.toString());
-
-            payload = await websocketHandle.get();
-            console.log(payload.toString());
-
-            payload = await websocketHandle.get();
-            console.log(payload.toString());
             */
-
-            /*
-            while (true) {
-                let payload = await websocketHandle.getPayload();
-                console.log(payload.toString());
-            }
-            */
-
-            //websocketHandle.sendData('Hello World!');
-            //let data = await websocketHandle.wait();
-            //console.log(data);
 
             /*
             let pipe = mkWebsocketPipe(websocketHandle);

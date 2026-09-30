@@ -459,16 +459,31 @@
                     if (this.getRdsWebsocketPath) {
                         this.webSocket = mkWebsocket(
                             this.getRdsWebsocketPath(),
-                            Websocket.asynchronous,
+                            Websocket.synchronous,
                         ).connect();
 
+                        /*
                         this.webSocket.on('Data', message => {
                             console.log(message);
                         });
+                        */
 
-                        this.webSocket.send('ONE');
-                        this.webSocket.send('TWO');
-                        this.webSocket.send('THREE');
+                        (async () => {
+                            console.log(await this.webSocket.get());
+                            console.log(await this.webSocket.get());
+                            console.log(await this.webSocket.get());
+                            console.log(await this.webSocket.get());
+                            console.log(await this.webSocket.get());
+                            /*
+                            this.webSocket.send('ONE');
+                            await pause(1000);
+                            this.webSocket.send('TWO');
+                            this.webSocket.send('THREE');
+                            await pause(2000);
+                            this.webSocket.send('FOUR');
+                            this.webSocket.send('FIVE');
+                            */
+                        })();
                     }
                 }
 

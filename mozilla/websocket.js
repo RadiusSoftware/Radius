@@ -42,7 +42,7 @@ define(class Websocket extends Emitter {
         this.pending = [];
         this.payloads = [];
         this.trigger = null;
-        this.mode = mode in { synchronous:0, asynchronous:0 } ? mode : 'asynchronous';
+        this.lokker = mkLokker();
 
         if (window.location.protocol == 'https:') {
             this.url = `wss${window.location.origin.substring(5)}${path}`;
@@ -52,7 +52,7 @@ define(class Websocket extends Emitter {
         }
 
         if (mode == Websocket.synchronous) {
-            this.mode = WebsocketHandle.synchronous;
+            this.mode = Websocket.synchronous;
         }
         else {
             this.mode = Websocket.asynchronous;
@@ -113,13 +113,41 @@ define(class Websocket extends Emitter {
     }
 
     async get() {
-        // *************************************************************************
-        // *************************************************************************
+        if (this.mode == Websocket.synchronous) {
+            try {
+                await this.lokker.lock();
+
+                if (this.payloads.length) {
+                    if (this.trigger) {
+                        this.trigger(this.payloads.shift());
+                        this.trigger = null;
+                    }
+                    else {
+                        return this.payloads.shift();
+                    }
+                }
+                else {
+                    return new Promise((ok, fail) => {
+                        this.trigger = payload => ok(payload);
+                    });
+                }
+            }
+            finally {
+                this.lokker.free();
+            }
+        }
     }
 
     async has() {
-        // *************************************************************************
-        // *************************************************************************
+        if (this.mode == Websocket.synchronous) {
+            try {
+                await this.lokker.lock()
+                return this.payloads.length > 0;
+            }
+            finally {
+                this.lokker.free();
+            }
+        }
     }
 
     onClose() {
@@ -163,11 +191,7 @@ define(class Websocket extends Emitter {
             payload = event.data;
         }
 
-        if (this.mode == Websocket.synchronous) {
-            // TODO ************************************************************
-            // TODO ************************************************************
-        }
-        else if (type == 'message' && Int32Type.verify(payload['#TRAP'])) {
+        if (type == 'message' && Int32Type.verify(payload['#TRAP'])) {
             // TODO ************************************************************
             // TODO ************************************************************
             /*
@@ -178,11 +202,7 @@ define(class Websocket extends Emitter {
             */
         }
         else {
-            this.emit({
-                name: 'Data',
-                type: type,
-                payload: payload,
-            });
+            this.push(type, payload);
         }
     }
 
@@ -202,9 +222,28 @@ define(class Websocket extends Emitter {
         return this;
     }
 
-    async push(payload) {
-        // *************************************************************************
-        // *************************************************************************
+    async push(type, payload) {
+        if (this.mode == Websocket.asynchronous) {
+            this.emit({
+                name: 'Data',
+                type: type,
+                payload: payload,
+            });
+        }
+        else {
+            try {
+                await this.lokker.lock();
+                this.payloads.push(payload);
+
+                if (this.trigger) {
+                    this.trigger(this.payloads.shift());
+                    this.trigger = null;
+                }
+            }
+            finally {
+                this.lokker.free();
+            }
+        }
     }
 
     send(data) {
