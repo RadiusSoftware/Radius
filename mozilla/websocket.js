@@ -63,6 +63,7 @@ define(class Websocket extends Emitter {
         if (ObjectType.verify(message) && StringType.verify(message.name)) {
             let trap = mkTrap();
             trap.setExpected(1);
+
             message['#TRAP'] = trap.id;
             message['#CALL'] = true;
 
@@ -215,6 +216,9 @@ define(class Websocket extends Emitter {
                     response: response,
                 });
             })();
+        }
+        else if (type == 'message' && payload.name == '##RESPONSE##') {
+            Trap.handleResponse(payload['#TRAP'], payload.response);
         }
         else {
             this.push(type, payload);

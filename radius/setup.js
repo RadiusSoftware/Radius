@@ -44,8 +44,7 @@
             */
 
             websocketHandle.on('TalkToMe', message => {
-                console.log(message);
-                console.log();
+                return { name: 'Smirnoff', number: message.number+1 };
             });
         }
 

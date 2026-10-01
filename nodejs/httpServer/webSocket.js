@@ -197,10 +197,7 @@ define(class Websocket extends Emitter {
                 Trap.handleResponse(message.payload['#TRAP'], message.payload.response);
             }
             else if (message && message.name == '##CALL##') {
-                // ***************************************************************
-                // ***************************************************************
-                console.log(message);
-                console.log();
+                this.emit(message);
             }
             else {
                 this.emit({
@@ -668,6 +665,17 @@ createService(class WebsocketService extends Service {
         this.byPath = {};
         this.byUUID = {};
 
+        Process.on('##WEBSOCKET_SERVICE_CONSUMER_CALL##', message => {
+            try {
+                if (message.uuid in this.byUUID) {
+                    let websocketThunk = this.byUUID[message.uuid];
+                    message.name = '##WEBSOCKET_CONSUMER_CALL##';
+                    Process.sendWorker(websocketThunk.consumerId, message);
+                }
+            }
+            catch (e) {}
+        });
+
         Process.on('##WEBSOCKET_SERVICE_CONSUMER_CLOSED##', message => {
             try {
                 if (message.uuid in this.byUUID) {
@@ -738,6 +746,17 @@ createService(class WebsocketService extends Service {
                             payload: message.payload,
                         },
                     );
+                }
+            }
+            catch (e) {}
+        });
+
+        Process.on('##WEBSOCKET_SERVICE_PRODUCER_RESPONSE##', message => {
+            try {
+                if (message.uuid in this.byUUID) {
+                    let websocketThunk = this.byUUID[message.uuid];
+                    message.name = '##WEBSOCKET_PRODUCER_RESPONSE##';
+                    Process.sendWorker(websocketThunk.producerId, message);
                 }
             }
             catch (e) {}
@@ -816,6 +835,23 @@ define(class WebsocketHandle extends Handle {
     static asynchronous = Symbol('asynchronous');
 
     static {
+        Process.on('##WEBSOCKET_CONSUMER_CALL##', async message => {
+            try {
+                if (message.uuid in WebsocketHandle.consumers) {
+                    let handle = WebsocketHandle.consumers[message.uuid];
+                    let response = await handle.query(message.payload)
+                    
+                    Process.sendPrimary({
+                        name: '##WEBSOCKET_SERVICE_PRODUCER_RESPONSE##',
+                        uuid: message.uuid,
+                        '#CALLER_TRAP': message['#CALLER_TRAP'],
+                        response: response,
+                    });
+                }
+            }
+            catch (e) {}
+        });
+
         Process.on('##WEBSOCKET_CONSUMER_CLOSED##', message => {
             try {
                 if (message.uuid in WebsocketHandle.consumers) {
@@ -866,7 +902,7 @@ define(class WebsocketHandle extends Handle {
 
         Process.on('##WEBSOCKET_CONSUMER_RESPONSE##', message => {
             try {
-                if (message.uuid in this.consumers) {
+                if (message.uuid in WebsocketHandle.consumers) {
                     Trap.handleResponse(message['#TRAP'], message.response);
                 }
             }
@@ -908,6 +944,21 @@ define(class WebsocketHandle extends Handle {
                 if (message.uuid in WebsocketHandle.producers) {
                     let handle = WebsocketHandle.producers[message.uuid];
                     handle.websocket.send(message.payload);
+                }
+            }
+            catch (e) {}
+        });
+
+        Process.on('##WEBSOCKET_PRODUCER_RESPONSE##', message => {
+            try {
+                if (message.uuid in WebsocketHandle.producers) {
+                    let handle = WebsocketHandle.producers[message.uuid];
+
+                    handle.websocket.send({
+                        name: '##RESPONSE##',
+                        '#TRAP': message['#CALLER_TRAP'],
+                        response: message.response,
+                    });
                 }
             }
             catch (e) {}
@@ -991,6 +1042,15 @@ define(class WebsocketHandle extends Handle {
                 });
             });
 
+            this.websocket.on('##CALL##', async message => {
+                Process.sendPrimary({
+                    name: '##WEBSOCKET_SERVICE_CONSUMER_CALL##',
+                    uuid: this.uuid,
+                    '#CALLER_TRAP': message.payload['#TRAP'],
+                    payload: message.payload,
+                });
+            });
+
             let secureKey = req.getHeader('sec-websocket-key');
             let hash = await Crypto.hash('sha1', `${secureKey}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`);
             
@@ -1037,6 +1097,10 @@ define(class WebsocketHandle extends Handle {
                 path: path,
             };
         }
+    }
+
+    emit(...args) {
+        this.emitter.emit(...args);
     }
 
     async get() {
@@ -1121,6 +1185,10 @@ define(class WebsocketHandle extends Handle {
                 this.lokker.free();
             }
         }
+    }
+
+    async query(...args) {
+        return await this.emitter.query(...args);
     }
 
     async send(payload) {
