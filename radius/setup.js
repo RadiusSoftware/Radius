@@ -34,25 +34,25 @@
     define(class SetupApp extends Webapp {
         async certifyAcmeHost(websocketHandle) {
             await websocketHandle.connected();
+            let pipe = await mkWebsocketPipe(websocketHandle);
 
-            websocketHandle.send({
-                name: 'Settings',
-                buttons: [{
-                    name: 'close',
-                    startEnabled: false,
-                    endEnabled: true,
-                }]
-            })
-
+            mkSystemHandle().certifyHost();
+            
+            /*
             let pipe = mkWebsocketPipe(websocketHandle);
             pipe.send('Step ONE now complete.');
             pipe.send('Step TWO.');
             await pause(1000);
             pipe.send('Step Three.');
+            await pause(1000);
+            pipe.send('Hello there people who want to see what is happening with sdf k j fk rekk jk jegrjkgrkudfghiudgrhuidrghiu eghiuerghio');
+            await pause(1000);
             pipe.send('Step Four.');
             pipe.send('Step Five.');
+
             await pause(2000);
-            pipe.send('** DONE **');
+            pipe.close();
+            */
         }
 
         async getControllerData(handle) {

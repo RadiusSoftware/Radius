@@ -13,6 +13,96 @@
             class DialogWidget extends PopupWidget {
                 static dialogTypes = mkRdsEnum('ok', 'close', 'confirm', 'submit');
 
+                disableCancelButton() {
+                    if (this.dialogType == 'confirm' || this.dialogType == 'submit') {
+                        let cancelButton = this.buttons.getChildElementAt(1);
+                        cancelButton.setAttribute('disabled');
+                    }
+
+                    return this;
+                }
+
+                disableCloseButton() {
+                    if (this.dialogType == 'close') {
+                        let closeButton = this.buttons.getChildElementAt(0);
+                        closeButton.setAttribute('disabled');
+                    }
+
+                    return this;
+                }
+
+                disableConfirmButton() {
+                    if (this.dialogType == 'confirm') {
+                        let confirmButton = this.buttons.getChildElementAt(0);
+                        confirmButton.setAttribute('disabled');
+                    }
+
+                    return this;
+                }
+
+                disableOkButton() {
+                    if (this.dialogType == 'ok') {
+                        let okButton = this.buttons.getChildElementAt(0);
+                        okButton.setAttribute('disabled');
+                    }
+
+                    return this;
+                }
+
+                disableSubmitButton() {
+                    if (this.dialogType == 'submit') {
+                        let submitButton = this.buttons.getChildElementAt(0);
+                        submitButton.setAttribute('disabled');
+                    }
+
+                    return this;
+                }
+
+                enableCancelButton() {
+                    if (this.dialogType == 'confirm' || this.dialogType == 'submit') {
+                        let cancelButton = this.buttons.getChildElementAt(1);
+                        cancelButton.clearAttribute('disabled');
+                    }
+
+                    return this;
+                }
+
+                enableCloseButton() {
+                    if (this.dialogType == 'close') {
+                        let closeButton = this.buttons.getChildElementAt(0);
+                        closeButton.clearAttribute('disabled');
+                    }
+
+                    return this;
+                }
+
+                enableConfirmButton() {
+                    if (this.dialogType == 'confirm') {
+                        let confirmButton = this.buttons.getChildElementAt(0);
+                        confirmButton.clearAttribute('disabled');
+                    }
+
+                    return this;
+                }
+
+                enableOkButton() {
+                    if (this.dialogType == 'ok') {
+                        let okButton = this.buttons.getChildElementAt(0);
+                        okButton.clearAttribute('disabled');
+                    }
+
+                    return this;
+                }
+
+                enableSubmitButton() {
+                    if (this.dialogType == 'submit') {
+                        let submitButton = this.buttons.getChildElementAt(0);
+                        submitButton.clearAttribute('disabled');
+                    }
+
+                    return this;
+                }
+
                 getOffsetWidth() {
                     let buttons = this.getChildElementAt(0).getChildElementAt(10);
                     let buttonWidth = buttons.getOffsetWidth();
@@ -57,11 +147,51 @@
                     }
                 }
 
+                onHandleEventCancelbuttondisable(event) {
+                    this.disableCancelButton();
+                }
+
+                onHandleEventCancelbuttonenable(event) {
+                    this.enableCancelButton();
+                }
+
+                onHandleEventClosebuttondisable(event) {
+                    this.disableCloseButton();
+                }
+
+                onHandleEventClosebuttonenable(event) {
+                    this.enableCloseButton();
+                }
+
+                onHandleEventConfirmbuttondisable(event) {
+                    this.disableConfirmButton();
+                }
+
+                onHandleEventCancelbuttonenable(event) {
+                    this.enableCancelButton();
+                }
+
+                onHandleEventOkbuttondisable(event) {
+                    this.disableOkButton();
+                }
+
+                onHandleEventOkbuttonenable(event) {
+                    this.enableOkButton();
+                }
+
+                onHandleEventSubmitbuttondisable(event) {
+                    this.disableSubmitButton();
+                }
+
+                onHandleEventSubmitbuttonenable(event) {
+                    this.enableSubmitButton();
+                }
+
                 setButtons() {
-                    let buttons = this.getChildElementAt(0).getChildElementAt(10);
+                    this.buttons = this.getChildElementAt(0).getChildElementAt(10);
 
                     if (this.dialogType == 'ok') {
-                        buttons.append(
+                        this.buttons.append(
                             createElement(
                                 'button-widget',
                                 {
@@ -73,7 +203,7 @@
                         );
                     }
                     else if (this.dialogType == 'close') {
-                        buttons.append(
+                        this.buttons.append(
                             createElement(
                                 'button-widget',
                                 {
@@ -85,7 +215,7 @@
                         );
                     }
                     else if (this.dialogType == 'confirm') {
-                        buttons.append(
+                        this.buttons.append(
                             createElement(
                                 'button-widget',
                                 {
@@ -106,7 +236,7 @@
                         );
                     }
                     else if (this.dialogType == 'submit') {
-                        buttons.append(
+                        this.buttons.append(
                             createElement(
                                 'button-widget',
                                 {
@@ -272,7 +402,6 @@
                             let activeElement = Doc.getActiveElement();
 
                             if (activeElement) {
-                                console.log(activeElement.getTagName());
                                 if (activeElement.getTagName() == 'scalar-widget') {
                                     activeElement.startEdit();
                                 }
@@ -453,20 +582,25 @@
             class ProgressWidget extends Widget {
                 init() {
                     this.getRdsScrolling = () => 'auto';
-                    this.setClassName('progress-text')
+                    this.setClassName('progress-widget')
                     super.init();
 
                     if (this.getRdsWebsocketPath) {
                         this.webSocket = mkWebsocket(this.getRdsWebsocketPath()).connect();
+                        this.triggerCustomEvent('closebuttondisable');
 
-                        this.webSocket.on('Settings', message => {
-                            console.log(message);
+                        this.webSocket.on('RdsPipeClose', message => {
+                            this.webSocket.close();
+                            this.triggerCustomEvent('closebuttonenable'); 
                         });
 
-                        this.webSocket.on('RdsUpdate', message => {
+                        this.webSocket.on('RdsPipeUpdate', message => {
+                            
                             this.append(
-                                mkDocText(`${message.value}`),
-                                createElement('br'),
+                                createElement('div', {
+                                    class: 'progress-entry'
+                                })
+                                .setInnerHtml(Packages.processText(message.value))
                             );
                         });
                     }
@@ -746,12 +880,4 @@
             .wait();
         });
     </script>
-    <strings lang="en">
-        cancel = Cancel\
-        close = Close\
-        confirm = Confirm\
-        ok = OK\
-        reset = Reset\
-        submit = Submit\
-    </strings>
 </bundle>

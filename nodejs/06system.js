@@ -459,8 +459,7 @@ createService(class SystemService extends Service {
     }
 
     async onCertifyHost(message) {
-        let pipe = mkWorkerPipe(message.workerId);
-        this.certifyHost(pipe);
+        this.certifyHost(message.websocketHandle);
        return pipe.getUUID();
     }
 

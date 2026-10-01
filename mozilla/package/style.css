@@ -69,7 +69,7 @@
         --data-property-optional-color: gainsboro;
         --data-string-color: green;
         --disabled-border-color: rgb(53, 56, 53);
-        --disabled-button-color: lightsteelblue;
+        --disabled-button-color: gray;
         --disabled-text-color: rgb(153, 159, 153);
         --error-color: rgb(93, 11, 28);
         --faint-border-color: rgb(40, 40, 40);
@@ -819,11 +819,12 @@ ul.list-unordered > li {
     padding-bottom: 12px;
 }
 
-.progress-text {
-    display: flex;
-    flex-direction: row;
-    justify-content: left;
-    align-items: flex-start;
+.progress-entry {
+    padding-bottom: 6px;
+    border-bottom: solid 1px var(--border-color);
+}
+
+.progress-widget {
     line-height: 2;
     margin: 0px;
     padding: 6px;

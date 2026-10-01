@@ -82,13 +82,13 @@ define(class WebsocketPipe extends RdsPipe {
     }
 
     async close() {
-        await this.websocketHandle.close();
+        await this.websocketHandle.send({ name: 'RdsPipeClose' })
         return this;
     }
 
     async send(data) {
         this.websocketHandle.send({
-            name: 'RdsUpdate',
+            name: 'RdsPipeUpdate',
             value: data,
         });
 
