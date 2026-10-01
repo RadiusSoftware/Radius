@@ -35,17 +35,24 @@
         async certifyAcmeHost(websocketHandle) {
             await websocketHandle.connected();
 
-            /*
-            let response = await websocketHandle.call({
-                name: 'Greetings',
-                flavor: 'lemon',
-            });
-            console.log(response);
-            */
+            websocketHandle.send({
+                name: 'Settings',
+                buttons: [{
+                    name: 'close',
+                    startEnabled: false,
+                    endEnabled: true,
+                }]
+            })
 
-            websocketHandle.on('TalkToMe', message => {
-                return { name: 'Smirnoff', number: message.number+1 };
-            });
+            let pipe = mkWebsocketPipe(websocketHandle);
+            pipe.send('Step ONE now complete.');
+            pipe.send('Step TWO.');
+            await pause(1000);
+            pipe.send('Step Three.');
+            pipe.send('Step Four.');
+            pipe.send('Step Five.');
+            await pause(2000);
+            pipe.send('** DONE **');
         }
 
         async getControllerData(handle) {
@@ -67,7 +74,7 @@
         )](trx, acme) {
             let system = mkSystemHandle();
             await system.setAcmeData(acme);
-            let { websocketHandle, path } = await mkWebsocketHandle(WebsocketHandle.synchronous).create();
+            let { websocketHandle, path } = await mkWebsocketHandle().create();
             this.certifyAcmeHost(websocketHandle);
 
             return {

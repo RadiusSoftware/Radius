@@ -457,36 +457,18 @@
                     super.init();
 
                     if (this.getRdsWebsocketPath) {
-                        this.webSocket = mkWebsocket(this.getRdsWebsocketPath(), Websocket.synchronous).connect();
+                        this.webSocket = mkWebsocket(this.getRdsWebsocketPath()).connect();
 
-                        (async () => {
-                            await this.webSocket.connected();
-
-                            let response = await this.webSocket.call({
-                                name: 'TalkToMe',
-                                number: 32438,
-                            });
-
-                            console.log(response);
-                        })();
-
-                        /*
-                        this.webSocket.on('Greetings', async message => {
-                            await pause(3000);
-                            return { thenumber: 383858 };
+                        this.webSocket.on('Settings', message => {
+                            console.log(message);
                         });
-                        */
-                    }
-                }
 
-                onReceived(bundle) {
-                    if (bundle.type == 'message') {
-                        if (bundle.message.name == 'ProgressUpdate') {
+                        this.webSocket.on('RdsUpdate', message => {
                             this.append(
-                                mkDocText(`${bundle.message.update}`),
+                                mkDocText(`${message.value}`),
                                 createElement('br'),
                             );
-                        }
+                        });
                     }
                 }
             }

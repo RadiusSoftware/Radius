@@ -37,7 +37,7 @@ define(class RdsPipe {
         return this;
     }
 
-    async send(message) {
+    async send(data) {
         return this;
     }
 });
@@ -62,7 +62,7 @@ define(class LoggingPipe extends RdsPipe {
         return this;
     }
 
-    async send(message) {
+    async send(data) {
         // TBD ***************************************
         // TBD ***************************************
         return this;
@@ -86,8 +86,12 @@ define(class WebsocketPipe extends RdsPipe {
         return this;
     }
 
-    async send(message) {
-        await this.websocketHandle.sendMessage(message);
+    async send(data) {
+        this.websocketHandle.send({
+            name: 'RdsUpdate',
+            value: data,
+        });
+
         return this;
     }
 });

@@ -206,22 +206,37 @@ define(class Websocket extends Emitter {
             payload = event.data;
         }
 
-        if (type == 'message' && payload['#CALL']) {
-            (async () => {
-                let response = await this.query(payload);
-                
-                this.send({
-                    name: '##RESPONSE##',
-                    '#TRAP': payload['#TRAP'],
-                    response: response,
-                });
-            })();
+        if (type == 'message') {
+            if (payload['#CALL']) {
+                (async () => {
+                    let response = await this.query(payload);
+                    
+                    this.send({
+                        name: '##RESPONSE##',
+                        '#TRAP': payload['#TRAP'],
+                        response: response,
+                    });
+                })();
+            }
+            else if (payload.name == '##RESPONSE##') {
+                Trap.handleResponse(payload['#TRAP'], payload.response);
+            }
+            else if (this.mode == Websocket.synchronous) {
+                this.push(type, payload);
+            }
+            else {
+                this.emit(payload);
+            }
         }
-        else if (type == 'message' && payload.name == '##RESPONSE##') {
-            Trap.handleResponse(payload['#TRAP'], payload.response);
+        else if (this.mode == Websocket.synchronous) {
+            this.push(type, payload);
         }
         else {
-            this.push(type, payload);
+            this.emit({
+                name: 'Data',
+                type: type,
+                payload: payload,
+            });
         }
     }
 
@@ -242,26 +257,17 @@ define(class Websocket extends Emitter {
     }
 
     async push(type, payload) {
-        if (this.mode == Websocket.asynchronous) {
-            this.emit({
-                name: 'Data',
-                type: type,
-                payload: payload,
-            });
-        }
-        else {
-            try {
-                await this.lokker.lock();
-                this.payloads.push(payload);
+        try {
+            await this.lokker.lock();
+            this.payloads.push(payload);
 
-                if (this.trigger) {
-                    this.trigger(this.payloads.shift());
-                    this.trigger = null;
-                }
+            if (this.trigger) {
+                this.trigger(this.payloads.shift());
+                this.trigger = null;
             }
-            finally {
-                this.lokker.free();
-            }
+        }
+        finally {
+            this.lokker.free();
         }
     }
 
