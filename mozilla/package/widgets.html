@@ -589,18 +589,16 @@
                         this.webSocket = mkWebsocket(this.getRdsWebsocketPath()).connect();
                         this.triggerCustomEvent('closebuttondisable');
 
-                        this.webSocket.on('RdsPipeClose', message => {
-                            this.webSocket.close();
+                        this.webSocket.on('closed', message => {
                             this.triggerCustomEvent('closebuttonenable'); 
                         });
 
-                        this.webSocket.on('RdsPipeUpdate', message => {
-                            
+                        this.webSocket.on('RdsUpdate', message => {
                             this.append(
                                 createElement('div', {
                                     class: 'progress-entry'
                                 })
-                                .setInnerHtml(Packages.processText(message.value))
+                                .setInnerHtml(message.value)
                             );
                         });
                     }

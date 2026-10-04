@@ -163,59 +163,29 @@ createService(class SystemService extends Service {
         }
     }
 
-    analyzeNetworkInterfaces() {
-        for (let netInterface of NetInterfaces) {
-            if (netInterface.IPv6.getMac() != '00:00:00:00:00:00') {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    // certify ********************************************************
-    // certify ********************************************************
-    async certifyHost(pipe) {
-        let acmeClient = mkAcmeClient(
-            this.settings.acme,
+    // **********************************************************************************
+    // **********************************************************************************
+    // **********************************************************************************
+    async certifyHost(channel) {
+        let response = await mkAcmeClient().certifyHost(
             SystemService.acmeSettingsShape,
+            this.settings.acme,
+            channel,
         );
 
-        if (pipe) {
-            await pause(200);
-            pipe.send({
-                update: 'Starting ACME Certification'
-            });
-
-            acmeClient.on('Acme', async message => {
-                if (message.error) {
-                    pipe.send({
-                        update: message.error,
-                    });
-                }
-                else {
-                    pipe.send({
-                        update: message.task,
-                    });
-                }
-            });
+        console.log(response);
+        /*
+        if (!(response instanceof Failure)) {
+            this.settings.response.hostCert = response[0];
+            this.settings.response.authCert = response[1];
+            this.settings.response.rootCert = response[2];
+            this.settings.acme = acmeClient.getSettings();
+            return true;
         }
-
-        for (let i = 0; i < 5; i++) {
-            let certificateBundle = await acmeClient.certifyHost();
-
-            if (!(certificateBundle instanceof Failure)) {
-                this.settings.certificate.hostCert = certificateBundle[0];
-                this.settings.certificate.authCert = certificateBundle[1];
-                this.settings.certificate.rootCert = certificateBundle[2];
-                this.settings.acme = acmeClient.getSettings();
-                return true;
-            }
-
-            await pause(2000);
+        else {
+            return false;
         }
-
-        return false;
+        */
     }
 
     async configureAcme() {
@@ -231,7 +201,7 @@ createService(class SystemService extends Service {
             });
             */
         }
-        else {
+        else if (!this.settings.acme.publicKey) {
             const keyPair = await Crypto.generateKeyPair('rsa');
 
             this.settings.acme = {
@@ -241,15 +211,15 @@ createService(class SystemService extends Service {
                 keyAlg: 'RS256',
                 publicKey: Crypto.export(keyPair.publicKey),
                 privateKey: Crypto.export(keyPair.privateKey),
-                contact: [ 'sys-admin-user@domain' ],
+                contact: [],
                 createdAt: '',
                 status: '',
                 kid: '',
                 operator: {
-                    country: 'country',
-                    state: 'state or province',
-                    locale: 'town or city',
-                    org: 'organization name',
+                    country: '',
+                    state: '',
+                    locale: '',
+                    org: '',
                 }
             };
         }
@@ -257,7 +227,7 @@ createService(class SystemService extends Service {
 
     async configureBasicSystem() {
         if (!this.settings.host) {
-            this.settings.host = 'host.domain.tld';
+            this.settings.host = '';
             this.settings.hostId = Crypto.generateUUID();
             const keyAlgorithm = 'rsa';
             const { publicKey, privateKey } = await Crypto.generateKeyPair(keyAlgorithm);
@@ -303,25 +273,48 @@ createService(class SystemService extends Service {
     }
 
     async createBootKey() {
-        let macs = [];
+        let machineId;
 
-        for (let netInterface of NetInterfaces) {
-            if (netInterface.IPv6.getMac() != '00:00:00:00:00:00') {
-                macs.push(netInterface.IPv6.getMac());
+        if (LibOs.platform == 'darwin') {
+            let out = await Process.runScript('ioreg -rd1 -c IOPlatformExpertDevice');
+
+            if (!out.stderr) {
+                const match = out.stdout.match(/"IOPlatformUUID" = "([^"]+)"/);
+                match ? machineId = match[1] : null;
             }
         }
+        else if (LibOs.platform == 'linux') {
+            machineId = (await FileSystem.readFileAsString('/etc/machine-id')).trim();
+        }
+        else if (LibOs.platform == 'win32') {
+            const out = await Process.runScript(
+                'reg',
+                [
+                'query',
+                'HKLM\\SOFTWARE\\Microsoft\\Cryptography',
+                '/v',
+                'MachineGuid'
+                ],
+                { encoding: 'utf8' }
+            );
 
-        if (macs.length) {
-            const filename = macs[0].replaceAll(':', '_');
-            this.bootPath = Path.join(radius.path, `../${filename}`);
+            const match = out.match(/MachineGuid\s+REG_SZ\s+(.+)/);
+            return match ? machineId = match[1] : null;
+        }
+
+        if (machineId) {
+            this.bootPath = Path.join(radius.path, '..', 'rdsbky');
 
             this.bootKey = await Crypto.generateAesKeyFromSeed(
                 'sha256',
                 this.bootPath,
-                macs.join('-').replaceAll(':', '_'),
+                `machineId`,
                 '',
                 32,
             );
+        }
+        else {
+            throwError('Unable to generate the Radius boot key.');
         }
     }
 
@@ -417,50 +410,52 @@ createService(class SystemService extends Service {
 
     async onBoot(message) {
         if (this.state == 'system#loaded') {
-            if (this.analyzeNetworkInterfaces()) {
-                await mkPermissionSetHandle().addPermissionTypes(
-                    'radius#signedin',
-                    'radius#admin',
-                    'radius#system',
-                );
+            await mkPermissionSetHandle().addPermissionTypes(
+                'radius#signedin',
+                'radius#admin',
+                'radius#system',
+            );
 
-                await mkHttpLibraryHandle().addData({
-                    path: this.radiusFrameworkPath,
-                    mime: 'text/javascript',
-                    mode: 'tls',
-                    once: false,
-                    pset: await mkPermissionSetHandle().createPermissionSet(),
-                    data: radius.mozilla,
-                });
+            await mkHttpLibraryHandle().addData({
+                path: this.radiusFrameworkPath,
+                mime: 'text/javascript',
+                mode: 'tls',
+                once: false,
+                pset: await mkPermissionSetHandle().createPermissionSet(),
+                data: radius.mozilla,
+            });
 
-                let packages = mkPackageHandle();
-                await packages.loadDirectory(Path.join(radius.path, '/mozilla/package'), '/');
-                await packages.loadDirectory(Path.join(radius.path, '/radius'), this.radiusFrameworkPath);
+            let packages = mkPackageHandle();
+            await packages.loadDirectory(Path.join(radius.path, '/mozilla/package'), '/');
+            await packages.loadDirectory(Path.join(radius.path, '/radius'), this.radiusFrameworkPath);
 
-                await this.createBootKey();
-                await this.loadBoot();
-                await this.configureBasicSystem();
-                await this.configureHttp();
-                await this.configureAcme();
-                await this.configureMode();
-                this.analyzeConfiguration();
+            await this.createBootKey();
+            await this.loadBoot();
+            await this.configureBasicSystem();
+            await this.configureHttp();
+            await this.configureAcme();
+            await this.configureMode();
+            this.analyzeConfiguration();
 
-                if (this.unconfigured.length) {
-                    this.settings.mode = 'system#setup';
-                    await this.saveBoot();
-                }
-
-                await this.startHttp();
+            if (this.unconfigured.length) {
+                this.settings.mode = 'system#setup';
+                await this.saveBoot();
             }
-            else {
-                throwError('Unable to boot server: no non-virtual network interfaces.');
-            }
+
+            await this.startHttp();
         }
     }
 
     async onCertifyHost(message) {
-        this.certifyHost(message.websocketHandle);
-       return pipe.getUUID();
+        await message.channel.ready();
+        this.certifyHost(message.channel);
+    }
+
+    async onGetAcmeSettings(message) {
+        return {
+            shape: SystemService.acmeSettingsShape,
+            value: this.settings.acme,
+        };
     }
 
     async onGetBootTime(message) {
@@ -507,14 +502,14 @@ createService(class SystemService extends Service {
 
                 acme: {
                     host: this.settings.host,
-                    name: 'Let\'s Encrypt',
-                    url: 'https://acme-staging-v02.api.letsencrypt.org/directory',
-                    contact: [],
+                    name: this.settings.acme.name,
+                    url: this.settings.acme.url,
+                    contact: this.settings.acme.contact,
                     operator: {
-                        country: '',
-                        state: '',
-                        locale: '',
-                        org: '',
+                        country: this.settings.acme.operator.country,
+                        state: this.settings.acme.operator.state,
+                        locale: this.settings.acme.operator.locale,
+                        org: this.settings.acme.operator.org,
                     }
                 }
             }
@@ -564,15 +559,17 @@ createService(class SystemService extends Service {
         }
     }
 
-    async onSetAcmeData(message) {
-        this.settings.host = message.acme.host;
-        this.settings.acme.name = message.acme.name;
-        this.settings.acme.url = message.acme.url;
-        this.settings.acme.contact = message.acme.contact;
-        this.settings.acme.operator.country = message.acme.operator.country;
-        this.settings.acme.operator.state = message.acme.operator.state;
-        this.settings.acme.operator.locale = message.acme.operator.locale;
-        this.settings.acme.operator.org = message.acme.operator.org;
+    async onSaveBoot(message) {
+        await this.saveBoot();
+    }
+
+    async onSetAcmeSettings(message) {
+        this.settings.host = message.settings.host;
+        this.settings.acme.name = message.settings.name;
+        this.settings.acme.url = message.settings.url;
+        this.settings.acme.contact = message.settings.contact;
+        this.settings.acme.operator = message.settings.operator;
+        await this.saveBoot();
     }
 
     async onStartHttp(message) {
@@ -634,13 +631,19 @@ define(class SystemHandle extends Handle {
         });
     }
 
-    async certifyHost() {
+    async certifyHost(channel) {
         return await this.callService({
+            channel: channel,
         });
     }
 
     static fromJson(value) {
         return mkSystemHandle();
+    }
+
+    async getAcmeSettings() {
+        return await this.callService({
+        });
     }
 
     async getBootTime() {
@@ -673,6 +676,11 @@ define(class SystemHandle extends Handle {
         });
     }
 
+    async getSetupData() {
+        return await this.callService({
+        });
+    }
+
     async getState() {
         return await this.callService({
         });
@@ -698,9 +706,9 @@ define(class SystemHandle extends Handle {
         });
     }
 
-    async setAcmeData(acme) {
+    async setAcmeSettings(settings) {
         return await this.callService({
-            acme: acme,
+            settings: settings,
         });
     }
 
@@ -714,3 +722,14 @@ define(class SystemHandle extends Handle {
         });
     }
 });
+
+
+/*****
+ * A little inconveient, but we need this shape to be available as soon as the
+ * SystemHandle object is defined.  This shape is required for API function
+ * definitions.
+*****/
+(async () => {
+    let setupData = await mkSystemHandle().getSetupData();
+    SystemHandle.setupDataShape = setupData.shape;
+})();

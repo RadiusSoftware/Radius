@@ -299,7 +299,7 @@ define(class RdsShape {
             return this.verifyArray(value);
         }
         else if (this.type == ObjectType) {
-            return this.verifyObject((value));
+            return this.verifyObject(value);
         }
         else if (this.type == EnumType) {
             return this.enum.has(value);

@@ -803,6 +803,25 @@ createService(class WebsocketService extends Service {
         };
     }
 
+    async onDone(message) {
+        if (message.uuid in this.byUUID) {
+            let websocketThunk = this.byUUID[message.uuid];
+
+            Process.sendWorker(
+                websocketThunk.producerId,
+                {
+                    name: '##WEBSOCKET_PRODUCER_DATA##',
+                    uuid: message.uuid,
+                    payload: {
+                        name: 'WebsocketClose',
+                        code: message.code,
+                        reason: message.reason,
+                    }
+                }
+            );
+        }
+    }
+
     async onSend(message) {
         if (message.uuid in this.byUUID) {
             let websocketThunk = this.byUUID[message.uuid];
@@ -882,8 +901,9 @@ define(class WebsocketHandle extends Handle {
                             if (payload.name == 'WebsocketOpen') {
                                 if (message.uuid in WebsocketHandle.consumers) {
                                     let handle = WebsocketHandle.consumers[message.uuid];
-                                    handle.trigger();
-                                    handle.trigger = null;
+                                    handle.connectTrigger();
+                                    handle.connectPromise = null;
+                                    handle.connectTrigger = null;
                                 }
                             }
                             else {
@@ -968,6 +988,7 @@ define(class WebsocketHandle extends Handle {
     constructor(mode) {
         super();
         this.uuid = '';
+        this.path = '';
         this.payloads = [];
         this.trigger = null;
         this.lokker = mkLokker();
@@ -1074,13 +1095,12 @@ define(class WebsocketHandle extends Handle {
 
     connected() {
         if (this.uuid) {
-            return new Promise((ok, fail) => {
-                this.trigger = () => ok(this);
-            });
+            if (this.connectPromise) {
+                return this.connectPromise;
+            }
         }
-        else {
-            return new Promise((ok, fail) => this);
-        }
+        
+        return this;
     }
 
     async create() {
@@ -1090,13 +1110,25 @@ define(class WebsocketHandle extends Handle {
 
         if (uuid && path) {
             this.uuid = uuid;
-            WebsocketHandle.consumers[this.uuid] = this;
+            this.path = path;
 
-            return {
-                websocketHandle: this,
-                path: path,
-            };
+            this.connectPromise = new Promise((ok, fail) => {
+                this.connectTrigger = () => ok(this);
+            });
+
+            WebsocketHandle.consumers[this.uuid] = this;
+            return this;
         }
+    }
+
+    async done() {
+        if (this.uuid) {
+            await this.callService({
+                uuid: this.uuid,
+            });
+        }
+
+        return this;
     }
 
     emit(...args) {
@@ -1129,6 +1161,10 @@ define(class WebsocketHandle extends Handle {
                 }
             }
         }
+    }
+
+    getPath() {
+        return this.path;
     }
 
     getUUID() {

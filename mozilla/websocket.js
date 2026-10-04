@@ -221,6 +221,13 @@ define(class Websocket extends Emitter {
             else if (payload.name == '##RESPONSE##') {
                 Trap.handleResponse(payload['#TRAP'], payload.response);
             }
+            else if (payload.name == 'WebsocketClose') {
+                this.close(payload.code, payload.reason);
+                
+                this.emit({
+                    name: 'closed',
+                });
+            }
             else if (this.mode == Websocket.synchronous) {
                 this.push(type, payload);
             }

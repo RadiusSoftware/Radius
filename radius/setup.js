@@ -29,33 +29,9 @@
  * standalone.
 *****/
 (async () => {
-    let setupData = await mkSystemHandle().getSetupData();
-
     define(class SetupApp extends Webapp {
-        async certifyAcmeHost(websocketHandle) {
-            await websocketHandle.connected();
-            let pipe = await mkWebsocketPipe(websocketHandle);
-
-            mkSystemHandle().certifyHost();
-            
-            /*
-            let pipe = mkWebsocketPipe(websocketHandle);
-            pipe.send('Step ONE now complete.');
-            pipe.send('Step TWO.');
-            await pause(1000);
-            pipe.send('Step Three.');
-            await pause(1000);
-            pipe.send('Hello there people who want to see what is happening with sdf k j fk rekk jk jegrjkgrkudfghiudgrhuidrghiu eghiuerghio');
-            await pause(1000);
-            pipe.send('Step Four.');
-            pipe.send('Step Five.');
-
-            await pause(2000);
-            pipe.close();
-            */
-        }
-
         async getControllerData(handle) {
+            let setupData = await mkSystemHandle().getSetupData();
             return setupData;
         }
 
@@ -69,17 +45,17 @@
         async [Api.defineEndpoint(
             'certifyHost',
             {
-                acme: setupData.shape.get('acme'),
+                acme: SystemHandle.setupDataShape.get('acme'),
             }
         )](trx, acme) {
             let system = mkSystemHandle();
-            await system.setAcmeData(acme);
-            let { websocketHandle, path } = await mkWebsocketHandle().create();
-            this.certifyAcmeHost(websocketHandle);
+            await system.setAcmeSettings(acme);
+            let channel = await mkWebsocketChannel().open();
+            system.certifyHost(channel);
 
             return {
                 type: 'websocket',
-                path: path,
+                path: channel.getPath(),
             };
         }
     });

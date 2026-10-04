@@ -69,13 +69,7 @@
  * certificate is downloaded and provided back to the caller.
  * 
 *****/
-define(class AcmeClient extends Emitter {
-    constructor(settings, settingsShape) {
-        super();
-        this.settings = settings;
-        this.settingsShape = settingsShape;
-    }
-
+define(class AcmeClient {
     async authorize(authorizationUrl) {
         this.emit({
             name: 'Acme',
@@ -132,14 +126,19 @@ define(class AcmeClient extends Emitter {
         }
     }
 
-    async certifyHost() {
+    async certifyHost(settings, settingsShape, channel) {
         try {
-            this.emit({
-                name: 'Acme',
-                task: 'radius.org.acmeCertifyStarting',
-            });
+            this.settings = settings;
+            this.settingsShape = settingsShape;
+            this.channel = channel;
 
-            await this.checkSettings();
+            await this.signal('##radius.org.acmeStartingCertification##');
+            await this.signal('##radius.org.acmeCheckSettings##');
+
+            if (!this.settingsShape.verify(this.settings)) {
+                throwError('##radius.org.acmeSettingsFailure##');
+            }
+
             await this.establishSession();
             await this.ensureAccount();
             const host = await this.system.getSetting('host');
@@ -220,12 +219,13 @@ define(class AcmeClient extends Emitter {
             }
         }
         catch (e) {
-            this.emit({
-                name: 'Acme',
-                error: e.code ? e.code : e.toString(),
-            });
-
+            await this.signal(e.code ? e.code : e.toString());
             return mkFailure(e);
+        }
+        finally {
+            if (this.channel) {
+                await this.channel.close();
+            }
         }
     }
 
@@ -289,28 +289,12 @@ define(class AcmeClient extends Emitter {
         // ***************************************************************************
         // ***************************************************************************
     }
-
-    async checkSettings() {
-        this.emit({
-            name: 'Acme',
-            task: 'radius.org.acmeSettingsCheck',
-        });
-
-        const acmeSettingsShape = await this.system.getAcmeSettingsShape();
-
-        if (!acmeSettingsShape.verify(this.settings)) {
-            throwError('radius.org.acmeSettingsFailure');
-        }
-    }
     
     async ensureAccount() {
         this.jwk = NpmPemJwk.pem2jwk(this.settings.publicKey);
 
         if (this.settings.kid) {
-            this.emit({
-                name: 'Acme',
-                task: 'radius.org.acmeAccountFoundInSettings',
-            });
+            await this.signal('##radius.org.acmeUsingExistingAccount##');
         }
         else {
             let httpResp = await this.post(
@@ -325,39 +309,28 @@ define(class AcmeClient extends Emitter {
                 Object.assign(this.settings, httpResp.getValue());
                 delete this.settings.key;
                 this.settings.kid = httpResp.getHeader('location');
+                this
+                await this.signal('##radius.org.acmeAccountCreated##');
             }
             else {
-                throwError('radius.org.acmeCreateAccount');
+                throwError('##radius.org.acmeAccountNotCreated##');
             }
-
-            this.emit({
-                name: 'Acme',
-                task: 'radius.org.acmeAccountCreated',
-            });
         }
     }
 
     async establishSession() {
-        this.emit({
-            name: 'Acme',
-            task: 'radius.org.acmeSessionEstablishing',
-        });
-
+        await this.signal('##radius.org.acmeEstablishingSession##');
         let httpResp = await mkHttpClient().get(this.settings.url);
 
         if (httpResp.getStatusCode() == 200 && httpResp.getMime().getCode() == 'application/json') {
             Object.assign(this, httpResp.getValue());
             httpResp = await mkHttpClient().head(this.newNonce);
             this.nonce = httpResp.getHeader('replay-nonce');
+            await this.signal('##radius.org.acmeSessionEstablished##');
         }
         else {
-            return throwError('radius.org.acmeSessionFailed');
+            return throwError('##radius.org.acmeSessionFailed##');
         }
-
-        this.emit({
-            name: 'Acme',
-            task: 'radius.org.acmeSessionEstablished',
-        });
     }
 
     getNewAccountUrl() {
@@ -467,5 +440,13 @@ define(class AcmeClient extends Emitter {
         // ***** TODO
         // ***************************************************************************
         // ***************************************************************************
+    }
+
+
+    async signal(text) {
+        if (this.channel) {
+            this.channel.signal(text);
+            await pause(600);
+        }
     }
 });
