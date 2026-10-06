@@ -106,7 +106,7 @@ singleton(class FileSystem extends Emitter {
     }
 
     generateTempFilePath() {
-        return Path.join(LibOs.tmpdir(), Crypto.generateUUID());
+        return Path.join(LibOs.tmpdir(), `tmx${Crypto.generateUUID()}`);
     }
 
     async isDirectory(path) {
@@ -339,7 +339,7 @@ singleton(class FileSystem extends Emitter {
     }
 
     async writeTempFile(content) {
-        let path = Path.join(LibOs.tmpdir(), Crypto.generateUUID());
+        let path = Path.join(LibOs.tmpdir(), `tmx${Crypto.generateUUID()}`);
         await LibFileSystem.promises.writeFile(path, content);
         return path;
     }

@@ -47,13 +47,14 @@ singleton(class Crypto {
             csrPath = await FileSystem.generateTempFilePath();
             keyPath = await FileSystem.writeTempFile(opts.privateKey);
 
-            let subj = `/C=${opts.country}/ST=${opts.state}/L=${opts.locale}/O=${opts.org}/CN=${opts.hostname}`;
-            await Process.runScript(`openssl req -new -key ${keyPath} -out ${csrPath} -days ${opts.days} -subj "${subj}"`);
+            let subj = `-subj "/C=${opts.country}/ST=${opts.state}/L=${opts.locale}/O=${opts.org}/CN=${opts.hostname}"`;
+            let addext = `-addext "subjectAltName=DNS:${opts.hostname}"`;
+            await Process.runScript(`openssl req -new -key ${keyPath} -out ${csrPath} -days ${opts.days} ${subj} ${addext}`);
 
             if (opts.der) {
                 derPath = FileSystem.generateTempFilePath();
                 await Process.runScript(`openssl req -in ${csrPath} -out ${derPath} -outform DER`);
-                return await FileSystem.readFile(derPath)
+                return await FileSystem.readFile(derPath);
             }
             else {
                 return await FileSystem.readFileAsString(csrPath);

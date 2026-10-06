@@ -71,11 +71,7 @@
 *****/
 define(class AcmeClient {
     async authorize(authorizationUrl) {
-        this.emit({
-            name: 'Acme',
-            task: 'radius.org.acmeAuthorizationStarting',
-        });
-
+        await this.signal('##radius.org.acmeAuthorizationOrder##');
         let httpResp = await this.post(authorizationUrl, 'PostAsGet');
 
         if (httpResp.getStatusCode() == 200) {
@@ -111,75 +107,60 @@ define(class AcmeClient {
 
             if (challenge.methodName) {
                 await this[challenge.methodName](challenge, authorizationUrl);
-
-                this.emit({
-                    name: 'Acme',
-                    task: 'radius.org.acmeAuthorizationSuccessful',
-                });
+                await this.signal('##radius.org.acmeAuthorizationOk##');
             }
             else {
-                throwError('radius.org.challengeFailed');
+                throwError('##radius.org.acmeChallengeFailed##');
             }
         }
         else {
-            throw throwError('radius.org.challengeNotReceived');
+            throw throwError('##radius.org.acmeChallengeNotReceived##');
         }
     }
 
-    async certifyHost(settings, settingsShape, channel) {
+    async certifyHost(opts) {
+        this.opts = {};
+        Object.assign(this.opts, opts);
+            
         try {
-            this.settings = settings;
-            this.settingsShape = settingsShape;
-            this.channel = channel;
-
             await this.signal('##radius.org.acmeStartingCertification##');
+            await this.signal(this.opts.hostname);
             await this.signal('##radius.org.acmeCheckSettings##');
-
-            if (!this.settingsShape.verify(this.settings)) {
+            
+            if (!this.opts.shape.verify(this.opts.settings)) {
                 throwError('##radius.org.acmeSettingsFailure##');
             }
 
             await this.establishSession();
             await this.ensureAccount();
-            const host = await this.system.getSetting('host');
 
             let httpResp = await this.post(
                 this.newOrder,
                 {
                     identifiers: [{
                         type: 'dns',
-                        value: host,
+                        value: this.opts.hostname,
                     }]
                 }
             );
 
             if (httpResp.getStatusCode() == 201) {
-                this.emit({
-                    name: 'Acme',
-                    task: 'radius.org.acmeOrderCreated',
-                });
-
-                const orderUrl = httpResp.getHeader('location');
+                await this.signal('##radius.org.acmeOrderCreated##');
                 const orderHandle = httpResp.getValue();
                 const authorizeUrl = orderHandle.authorizations[0];
                 const finalizeUrl = orderHandle.finalize;
                 await this.authorize(authorizeUrl);
-                const keyPair = await this.system.getKeyPair();
-
-                this.emit({
-                    name: 'Acme',
-                    task: 'radius.org.acmeOrderFinalizing',
-                });
+                await this.signal('##radius.org.acmeFinalizingOrder##');
 
                 let csr = await Crypto.createCsr({
                     der: true,
-                    privateKey: keyPair.privateKey,
-                    country: this.settings.operator.country,
-                    state: this.settings.operator.state,
-                    locale: this.settings.operator.locale,
-                    org: this.settings.operator.org,
-                    hostname: host,
-                    days: this.settings.days,
+                    privateKey: this.opts.privateKey,
+                    country: this.opts.settings.operator.country,
+                    state: this.opts.settings.operator.state,
+                    locale: this.opts.settings.operator.locale,
+                    org: this.opts.settings.operator.org,
+                    hostname: this.opts.hostname,
+                    days: this.opts.settings.days,
                 });
 
                 httpResp = await this.post(finalizeUrl, {
@@ -187,11 +168,7 @@ define(class AcmeClient {
                 });
                 
                 if (httpResp.getStatusCode() == 200) {
-                    this.emit({
-                        name: 'Acme',
-                        task: 'radius.org.acmeOrderFinalized',
-                    });
-
+                    await this.signal('##radius.org.acmeOrderFinalized##');
                     httpResp = await this.pollOrder(httpResp);
                     const certificateUrl = httpResp.getValue().certificate;
 
@@ -201,30 +178,25 @@ define(class AcmeClient {
                         });
 
                         let certBundle = await Crypto.parseAcmeCertificate(httpResp.getValue());
-
-                        this.emit({
-                            name: 'Acme',
-                            task: 'radius.org.acmeCertifyHostSuccess',
-                        });
-
+                        await this.signal('##radius.org.acmeCertificationOk##');
                         return certBundle;
                     }
                 }
                 else {
-                    throwError('radius.org.acmeOrderFinalizeFailed');
+                    throwError('##radius.org.acmeOrderFinalizeFailed##');
                 }
             }
             else {
-                throwError('radius.org.acmeOrderCreateFailed');
+                throwError('##radius.org.acmeOrderCreateFailed##');
             }
         }
         catch (e) {
-            await this.signal(e.code ? e.code : e.toString());
+            await this.signal(e.toString());
             return mkFailure(e);
         }
         finally {
-            if (this.channel) {
-                await this.channel.close();
+            if (this.opts.channel) {
+                await this.opts.channel.close();
             }
         }
     }
@@ -258,7 +230,7 @@ define(class AcmeClient {
                 flags: { disableCompression: true, noEtag: true },
             });
 
-            let response = await this.post(challenge.url, {});
+            await this.post(challenge.url, {});
 
             for (let i = 0; i < 10; i++) {
                 let httpResp = await this.post(authorizationUrl, 'PostAsGet');
@@ -274,13 +246,13 @@ define(class AcmeClient {
                 }
                 else if (httpChallenge.status == 'invalid') {
                     await lib.delete(challengePath);
-                    throwError(`radius.org.acmeHttpChallengeFailed`);
+                    throwError(`##radius.org.acmeHttpChallengeFailed##`);
                 }
 
                 await pause(2000);
             }
 
-            throwError('radius.org.acmeHttpChallengeUnconfirmed');
+            throwError('##radius.org.acmeHttpChallengeUnconfirmed##');
         }
     }
 
@@ -291,9 +263,9 @@ define(class AcmeClient {
     }
     
     async ensureAccount() {
-        this.jwk = NpmPemJwk.pem2jwk(this.settings.publicKey);
+        this.jwk = NpmPemJwk.pem2jwk(this.opts.settings.publicKey);
 
-        if (this.settings.kid) {
+        if (this.opts.settings.kid) {
             await this.signal('##radius.org.acmeUsingExistingAccount##');
         }
         else {
@@ -301,15 +273,14 @@ define(class AcmeClient {
                 this.newAccount,
                 {
                     termsOfServiceAgreed: true,
-                    contact: this.settings.contact.map(contact => `mailto:${contact}`),
+                    contact: this.opts.settings.contact.map(contact => `mailto:${contact}`),
                 }
             );
 
-            if (httpResp.getStatusCode() == 201) {
-                Object.assign(this.settings, httpResp.getValue());
-                delete this.settings.key;
-                this.settings.kid = httpResp.getHeader('location');
-                this
+            if (httpResp.getStatusCode() in { 200:0, 201:0 }) {
+                Object.assign(this.opts.settings, httpResp.getValue());
+                delete this.opts.settings.key;
+                this.opts.settings.kid = httpResp.getHeader('location');
                 await this.signal('##radius.org.acmeAccountCreated##');
             }
             else {
@@ -320,7 +291,7 @@ define(class AcmeClient {
 
     async establishSession() {
         await this.signal('##radius.org.acmeEstablishingSession##');
-        let httpResp = await mkHttpClient().get(this.settings.url);
+        let httpResp = await mkHttpClient().get(this.opts.settings.url);
 
         if (httpResp.getStatusCode() == 200 && httpResp.getMime().getCode() == 'application/json') {
             Object.assign(this, httpResp.getValue());
@@ -364,7 +335,7 @@ define(class AcmeClient {
     }
 
     getSettings() {
-        return this.settings;
+        return this.opts.settings;
     }
 
     async pause(httpResp) {
@@ -388,13 +359,13 @@ define(class AcmeClient {
                 return httpResp;
             }
             else if (resp.status == 'invalid') {
-                throwError(`radius.org.acmeOrderFailed`);
+                throwError('##radius.org.acmePollingInvalid##');
             }
 
             await this.pause(resp.headers);
         }
 
-        throwError(`radius.org.acmeOrderTimedOut`);
+        throwError('##radius.org.acmePollingTimedOut##');
     }
 
     async post(url, payload, headers) {
@@ -404,7 +375,7 @@ define(class AcmeClient {
         headers['Accept-Language'] = 'en-US';
 
         let jwsHeader = {
-            alg: this.settings.keyAlg,
+            alg: this.opts.settings.keyAlg,
             nonce: this.nonce,
             url: url,
         };
@@ -413,14 +384,14 @@ define(class AcmeClient {
             jwsHeader.jwk = this.jwk;
         }
         else {
-            jwsHeader.kid = this.settings.kid;
+            jwsHeader.kid = this.opts.settings.kid;
         }
 
         let jwsHeaderB64 = mkBuffer(toStdJson(jwsHeader)).toString('base64url');
         let jwsPayloadB64 = payload == 'PostAsGet' ? '' : mkBuffer(toStdJson(payload)).toString('base64url');
 
         let jwsSignature = await Crypto.sign(
-            Crypto.createPrivateKey(this.settings.privateKey),
+            Crypto.createPrivateKey(this.opts.settings.privateKey),
             `${jwsHeaderB64}.${jwsPayloadB64}`,
         );
         
@@ -444,9 +415,9 @@ define(class AcmeClient {
 
 
     async signal(text) {
-        if (this.channel) {
-            this.channel.signal(text);
-            await pause(600);
+        if (this.opts.channel) {
+            this.opts.channel.signal(text);
+            await pause(800);
         }
     }
 });

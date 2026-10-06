@@ -163,43 +163,33 @@ createService(class SystemService extends Service {
         }
     }
 
-    // **********************************************************************************
-    // **********************************************************************************
-    // **********************************************************************************
     async certifyHost(channel) {
-        let response = await mkAcmeClient().certifyHost(
-            SystemService.acmeSettingsShape,
-            this.settings.acme,
-            channel,
-        );
+        let acmeClient = await mkAcmeClient();
 
-        console.log(response);
-        /*
-        if (!(response instanceof Failure)) {
-            this.settings.response.hostCert = response[0];
-            this.settings.response.authCert = response[1];
-            this.settings.response.rootCert = response[2];
-            this.settings.acme = acmeClient.getSettings();
-            return true;
+        let response = await acmeClient.certifyHost({
+            hostname: this.settings.host,
+            shape: SystemService.acmeSettingsShape,
+            settings: this.settings.acme,
+            privateKey: this.settings.privateKey,
+            channel: channel,
+        });
+
+        if (response instanceof Failure) {
+            return response;
         }
         else {
-            return false;
+            this.settings.certificate.rootCert = response.rootCert;
+            this.settings.certificate.authCert = response.authCert;
+            this.settings.certificate.hostCert = response.hostCert;
+            this.settings.certificate.hostCertSubject = response.hostCertSubject;
+            this.settings.certificate.hostCertExpires = response.hostCertExpires;
+            await this.saveBoot();
         }
-        */
     }
 
     async configureAcme() {
         if (await this.onGetTlsStatus()) {
             this.componentStatus.acme = true;
-        }
-        else if (this.hasAcmeAccount()) {
-            // certify ********************************************************
-            // certify ********************************************************
-            /*
-            this.componentStatus = await this.certifyHost(notification => {
-                console.log(notification);
-            });
-            */
         }
         else if (!this.settings.acme.publicKey) {
             const keyPair = await Crypto.generateKeyPair('rsa');
@@ -207,7 +197,7 @@ createService(class SystemService extends Service {
             this.settings.acme = {
                 name: 'Let\'s Encrypt',
                 url: 'https://acme-staging-v02.api.letsencrypt.org/directory',
-                days: 75,
+                days: 90,
                 keyAlg: 'RS256',
                 publicKey: Crypto.export(keyPair.publicKey),
                 privateKey: Crypto.export(keyPair.privateKey),
@@ -303,7 +293,7 @@ createService(class SystemService extends Service {
         }
 
         if (machineId) {
-            this.bootPath = Path.join(radius.path, '..', 'rdsbky');
+            this.bootPath = Path.join(radius.path, '..', 'rdsboot');
 
             this.bootKey = await Crypto.generateAesKeyFromSeed(
                 'sha256',
@@ -521,7 +511,7 @@ createService(class SystemService extends Service {
     }
 
     async onGetTlsCerts(message) {
-        if (mkTime(this.settings.certificate.hostCertExpires) < mkTime()) {
+        if (mkTime(this.settings.certificate.hostCertExpires) > mkTime()) {
             if (this.settings.certificate.hostCert) {
                 if (this.settings.certificate.authCert) {
                     if (this.settings.certificate.rootCert) {
@@ -535,7 +525,7 @@ createService(class SystemService extends Service {
     }
 
     async onGetTlsStatus(message) {
-        if (mkTime(this.settings.certificate.hostCertExpires) < mkTime()) {
+        if (mkTime(this.settings.certificate.hostCertExpires) > mkTime()) {
             if (this.settings.certificate.hostCert) {
                 if (this.settings.certificate.authCert) {
                     if (this.settings.certificate.rootCert) {

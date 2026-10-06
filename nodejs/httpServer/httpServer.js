@@ -308,12 +308,12 @@ define(class HttpWorker extends Worker {
 
         if (await system.getTlsStatus()) {
             this.scheme = 'https';
-            let { tlsCert, caaCert } = await system.getTlsCerts();
+            let { hostCert, authCert, rootCert } = await system.getTlsCerts();
 
             this.server = LibHttps.createServer({
                 key: privateKey,
-                cert: tlsCert,
-                ca: caaCert,
+                cert: hostCert,
+                ca: `${authCert}\n${rootCert}`,
             }, (httpReq, httpRsp) => this.handleRequest(httpReq, httpRsp));
 
             this.server.listen(443, '::');
