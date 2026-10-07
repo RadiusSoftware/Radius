@@ -28,7 +28,7 @@
  * workers could be specialized and perform different tasks for the overall
  * processing goal.  Workers are created and destroyed vis-a-vis the primary
  * process's Server object.  Servers have been designed such that they can be
- * killed and then re-created with new settings to alter functionality or to
+ * stopped and then re-created with new settings to alter functionality or to
  * respond to a change in environment.
 *****/
 define(class Server extends Emitter {
@@ -70,7 +70,7 @@ define(class Server extends Emitter {
     }
 
     getClassName() {
-        return this.className;
+        return this.serverClassName;
     }
 
     getCtor() {
@@ -107,38 +107,6 @@ define(class Server extends Emitter {
         return this;
     }
 
-    async kill() {
-        await this.killWorkers();
-        delete Server.servers[this.getClassName()];
-        return this;
-    }
-
-    async killWorker(worker) {
-        let killed;
-
-        let promise = new Promise((ok, fail) => {
-            killed = ok;
-        });
-
-        worker.on('disconnect', message => {
-            delete this.workers[worker.id];
-            killed(this);
-        });
-
-        this.sendWorker(worker, { name: 'kill' });
-        return promise;
-    }
-
-    async killWorkers() {
-        let workers = Object.values(this.workers);
-
-        for (let worker of workers) {
-            await this.killWorker(worker);
-        }
-
-        return this;
-    }
-
     async onGetSettings(message) {
         return this.settings;
     }
@@ -155,6 +123,12 @@ define(class Server extends Emitter {
             this.sendWorker(worker, message);
         }
 
+        return this;
+    }
+
+    async shutdown() {
+        await this.stopWorkers();
+        delete Server.servers[this.getClassName()];
         return this;
     }
 
@@ -182,6 +156,32 @@ define(class Server extends Emitter {
         }`);
 
         this.workers[worker.id] = worker;
+        return this;
+    }
+
+    async stopWorker(worker) {
+        let stopped;
+
+        let promise = new Promise((ok, fail) => {
+            stopped = ok;
+        });
+
+        worker.on('disconnect', message => {
+            delete this.workers[worker.id];
+            stopped(this);
+        });
+
+        this.sendWorker(worker, { name: 'stop' });
+        return promise;
+    }
+
+    async stopWorkers() {
+        let workers = Object.values(this.workers);
+
+        for (let worker of workers) {
+            await this.stopWorker(worker);
+        }
+
         return this;
     }
 
@@ -282,7 +282,7 @@ define(class Worker {
         return this;
     }
 
-    async onKill(message) {
+    async onStop(message) {
         Process.exit(0);
     }
 

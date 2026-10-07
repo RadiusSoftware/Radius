@@ -36,21 +36,21 @@
  *      ****
  *      system#setup
  *      system#standalone
- *      system#swarm
+ *      system#corps
  * 
  *      SETUP
  *      *****
  *      setup#acme
  *      setup#mode
- *      setup#swarm
+ *      setup#corps
  *      setup#standalone.dbms
  *      setup#standalone.email
  *      setup#standalone.user
  *      setup#done
  * 
- * Swarm mode is somewhat complex to describe because the DBMS access, user
+ * Corps mode is somewhat complex to describe because the DBMS access, user
  * management, and spooling (email, sms...) are all performed via thunks that
- * connect webservices within the swarm.
+ * connect webservices within the corps.
 *****/
 createService(class SystemService extends Service {
     static acmeSettingsShape = mkRdsShape({
@@ -93,10 +93,10 @@ createService(class SystemService extends Service {
             hostCertSubject: StringType,
         },
 
-        swarm: {
-            swarmId: StringType,
-            swarmSecret: StringType,
-            swarmHosts: [ StringType ],
+        corps: {
+            corpsId: StringType,
+            corpsSecret: StringType,
+            corpsHosts: [ StringType ],
         },
 
         dbms: {
@@ -127,7 +127,7 @@ createService(class SystemService extends Service {
             acme: false,
             http: false,
             mode: false,
-            swarm: false,
+            corps: false,
             standalone: {
                 dbms: false,
                 email: false,
@@ -184,6 +184,7 @@ createService(class SystemService extends Service {
             this.settings.certificate.hostCertSubject = response.hostCertSubject;
             this.settings.certificate.hostCertExpires = response.hostCertExpires;
             await this.saveBoot();
+            await this.restartHttp();
         }
     }
 
@@ -196,7 +197,7 @@ createService(class SystemService extends Service {
 
             this.settings.acme = {
                 name: 'Let\'s Encrypt',
-                url: 'https://acme-staging-v02.api.letsencrypt.org/directory',
+                url: 'https://acme-v02.api.letsencrypt.org/directory',
                 days: 90,
                 keyAlg: 'RS256',
                 publicKey: Crypto.export(keyPair.publicKey),
@@ -253,7 +254,7 @@ createService(class SystemService extends Service {
             // ********************************************************************************
             // ********************************************************************************
         }
-        else if (this.settings.mode == 'swarm') {
+        else if (this.settings.mode == 'corps') {
             // ********************************************************************************
             // ********************************************************************************
         }
@@ -543,10 +544,7 @@ createService(class SystemService extends Service {
     }
 
     async onRestartHttp(message) {
-        if (this.httpServer) {
-            await this.stopHttp();
-            await this.startHttp();
-        }
+        this.restartHttp();
     }
 
     async onSaveBoot(message) {
@@ -563,14 +561,17 @@ createService(class SystemService extends Service {
     }
 
     async onStartHttp(message) {
-        if (!this.httpServer) {
-            await this.startHttp();
-        }
+        await this.startHttp();
+    }
+    
+    async onStopHttp(message) {
+        await this.stopHttp();
     }
 
-    async onStopHttp(message) {
+    async restartHttp() {
         if (this.httpServer) {
             await this.stopHttp();
+            await this.startHttp();
         }
     }
 
@@ -590,9 +591,9 @@ createService(class SystemService extends Service {
         }
     }
 
-    async stoptHttp() {
+    async stopHttp() {
         if (this.httpServer) {
-            await this.httpServer.kill();
+            await this.httpServer.shutdown();
             delete this.httpServer;
         }
     }
@@ -706,7 +707,7 @@ define(class SystemHandle extends Handle {
         return await this.callService({
         });
     }
-
+    
     async stopHttp() {
         return await this.callService({
         });
