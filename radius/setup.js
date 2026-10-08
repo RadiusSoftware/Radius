@@ -25,8 +25,8 @@
  * The SetupApp is run only when a server intallation does NOT have a valid,
  * encrypted boot configuration file.  The purpose of this application is to
  * secure a TLS certificate via ACME, determine the operational mode, and then
- * to cofigure the operational settings for the specified mode: corps or in
- * standalone.
+ * to cofigure the operational settings for the specified mode: serverteam or
+ * in standalone.
 *****/
 (async () => {
     define(class SetupApp extends Webapp {

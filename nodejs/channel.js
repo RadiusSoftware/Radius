@@ -160,11 +160,6 @@ define(class WebsocketChannel extends RdsChannel {
             value: data,
         });
 
-        Process.sendPrimary({
-            name: this.getMessageName(),
-            value: data,
-        });
-
         return this;
     }
 });

@@ -36,21 +36,21 @@
  *      ****
  *      system#setup
  *      system#standalone
- *      system#corps
+ *      system#serverteam
  * 
  *      SETUP
  *      *****
  *      setup#acme
  *      setup#mode
- *      setup#corps
+ *      setup#serverteam
  *      setup#standalone.dbms
  *      setup#standalone.email
  *      setup#standalone.user
  *      setup#done
  * 
- * Corps mode is somewhat complex to describe because the DBMS access, user
- * management, and spooling (email, sms...) are all performed via thunks that
- * connect webservices within the corps.
+ * ServerTeam mode is somewhat complex to describe because the DBMS access,
+ * user management, and spooling (email, sms...) are all performed via thunks
+ * that connect webservices within the server team.
 *****/
 createService(class SystemService extends Service {
     static acmeSettingsShape = mkRdsShape({
@@ -93,10 +93,10 @@ createService(class SystemService extends Service {
             hostCertSubject: StringType,
         },
 
-        corps: {
-            corpsId: StringType,
-            corpsSecret: StringType,
-            corpsHosts: [ StringType ],
+        serverteam: {
+            serverTeamId: StringType,
+            serverTeamSecret: StringType,
+            serverTeamHosts: [ StringType ],
         },
 
         dbms: {
@@ -127,7 +127,7 @@ createService(class SystemService extends Service {
             acme: false,
             http: false,
             mode: false,
-            corps: false,
+            serverteam: false,
             standalone: {
                 dbms: false,
                 email: false,
@@ -254,7 +254,7 @@ createService(class SystemService extends Service {
             // ********************************************************************************
             // ********************************************************************************
         }
-        else if (this.settings.mode == 'corps') {
+        else if (this.settings.mode == 'serverteam') {
             // ********************************************************************************
             // ********************************************************************************
         }
