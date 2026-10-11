@@ -493,6 +493,76 @@ singleton(class Doc extends Emitter {
         return null;
     }
 
+    setApplicationWidth() {
+        let mode;
+        let winWidth = Win.getInnerWidth();
+        let width = appWidget.getSetting('width');
+
+        if (false) {//Win.isIFrame()) {
+            mode = 'fill';
+        }
+        else if (NumberType.verify(width) && width > 0) {
+            if (width <= winWidth) {
+                mode = 'fixed';
+            }
+        }
+        else if (StringType.verify(width)) {
+            if (width == 'fill') {
+                mode = 'fill';
+            }
+            else if (width.endsWith('%')) {
+                let int = parseInt(width);
+
+                if (int > 0 && int < 100) {
+                    mode = 'percent';
+                    width = int;
+                }
+            }
+            else if (width.endsWith('px')) {
+                let int = parseInt(width);
+
+                if (int > 0 && int < winWidth) {
+                    mode = 'fixed';
+                    width = int;
+                }
+            }
+        }
+
+        if (!mode) {
+            mode = 'fill';
+        }
+
+        if (mode == 'fill') {
+            appWidget.setStyle({
+                width: '100%'
+            });
+        }
+        else if (mode == 'fixed') {
+            let margin = (winWidth - width) / 2;
+
+            appWidget.setStyle({
+                width: `${width}px`,
+            });
+
+            this.getBody().setStyle({
+                marginLeft: `${margin}px`,
+                marginRight: `${margin}px`,
+            });
+        }
+        else if (mode == 'percent') {
+            let margin = (100 - width) / 2;
+
+            appWidget.setStyle({
+                width: `${width}vw`,
+            });
+
+            this.getBody().setStyle({
+                marginLeft: `${margin}vw`,
+                marginRight: `${margin}vw`,
+            });
+        }
+    }
+
     setCookie(cookie) {
         if (cookie instanceof Cookie) {
             document.cookie = cookie.toString();

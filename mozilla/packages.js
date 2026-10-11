@@ -126,6 +126,8 @@ singleton(class Packages {
 
             Doc.getBody().clear();
             Doc.getBody().append(appWidget);
+            Doc.setApplicationWidth();
+            Win.on('EventResize', message => Doc.setApplicationWidth());
         }
         catch (e) {
             console.log(`Web application failed to load:  "${webappSettings.title}"`);

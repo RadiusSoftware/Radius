@@ -248,6 +248,14 @@ singleton(class Win extends Emitter {
         return window.fullScreen;
     }
 
+    isIframe() {
+        try {
+            return window.self !== window.top;
+        } catch (e) {
+            return true;
+        }
+    }
+
     isSecureContext() {
         return window.isSecureContext;
     }
