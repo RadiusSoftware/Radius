@@ -169,17 +169,15 @@ define(class AcmeClient {
                 
                 if (httpResp.getStatusCode() == 200) {
                     await this.signal('##radius.org.acmeOrderFinalized##');
-                    httpResp = await this.pollOrder(httpResp);
-                    const certificateUrl = httpResp.getValue().certificate;
+                    await this.pollOrder(httpResp);
 
-                    if (certificateUrl) {
-                        httpResp = await this.post(certificateUrl, 'PostAsGet', {
+                    if (this.certificateUrl) {
+                        httpResp = await this.post(this.certificateUrl, 'PostAsGet', {
                             Accept: 'application/pem-certificate-chain',
                         });
 
-                        let certBundle = await Crypto.parseAcmeCertificate(httpResp.getValue());
                         await this.signal('##radius.org.acmeCertificationOk##');
-                        return certBundle;
+                        return await Crypto.parseAcmeCertificate(httpResp.getValue());
                     }
                 }
                 else {
@@ -356,7 +354,8 @@ define(class AcmeClient {
             let resp = httpResp.getValue();
 
             if (resp.status == 'valid') {
-                return httpResp;
+                this.certificateUrl = httpResp.getValue().certificate;
+                return;
             }
             else if (resp.status == 'invalid') {
                 throwError('##radius.org.acmePollingInvalid##');
