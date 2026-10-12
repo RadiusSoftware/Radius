@@ -847,6 +847,10 @@ ul.list-unordered > li {
     margin: 0px;
     padding: 0px;
     box-sizing: border-box;
+    border-style: solid;
+    border-color: var(--border-color);
+    border-width: 1px;
+    border-radius: var(--border-radius-1);
 }
 
 .scroll {

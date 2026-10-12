@@ -766,6 +766,11 @@ define(class DocElement extends DocNode {
         return this;
     }
 
+    clearTabIndex() {
+        this.node.tabIndex = -1;
+        return this;
+    }
+
     clearTransition() {
         this.node.attributeStyleMap.delete('transition-behavior');
         this.node.attributeStyleMap.delete('transition-delay');
@@ -1383,8 +1388,9 @@ define(class DocElement extends DocNode {
         return this;
     }
 
-    setTabIndex(index) {
-        this.node.tabIndex = index;
+    setTabIndex() {
+        this.node.tabIndex = 0;
+        return this;
     }
 
     [Symbol.iterator]() {

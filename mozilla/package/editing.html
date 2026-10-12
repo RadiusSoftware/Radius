@@ -27,6 +27,7 @@
 
                 init() {
                     super.init();
+                    this.clearTabIndex();
                     Controller.bindArray(this, this.getDotted());
                 }
 
@@ -83,12 +84,14 @@
                                         class: 'icon icon-small array-widget-action-cell',
                                         'rds-shape': 'plussign',
                                         'evt-click': 'prepend-row',
+                                        'evt-keypress': 'keyprepend',
                                     }),
                                     
                                     createElement('svg', {
                                         class: 'icon icon-small array-widget-action-cell',
                                         'rds-shape': 'plussign',
                                         'evt-click': 'append-row',
+                                        'evt-keypress': 'keyappend',
                                     }),
                                 )
                             )
@@ -118,6 +121,20 @@
 
                 onHandleEventPrependRow(event) {
                     Controller.insertRow(this.getDotted(), 0);
+                }
+
+                onInspectEventKeyappend(event) {
+                    if (event.getKey() == 'Enter') {
+                        event.kill();
+                        Controller.insertRow(this.getDotted());
+                    }
+                }
+
+                onInspectEventKeyprepend(event) {
+                    if (event.getKey() == 'Enter') {
+                        event.kill();
+                        Controller.insertRow(this.getDotted(), 0);
+                    }
                 }
 
                 onReadonlyChanged() {
@@ -159,6 +176,7 @@
 
                 render() {
                     this.clear();
+                    this.clearTabIndex();
                     let shape = this.getShape();
                     let readonly = this.isReadonly();
                     this.setClassName('arrayrow-widget');
@@ -474,6 +492,7 @@
                 init() {
                     super.init();
                     this.setClassName('object-widget');
+                    this.clearTabIndex();
                     this.render();
 
                 }
@@ -579,7 +598,7 @@
                 init() {
                     super.init();
                     this.setClassName('scalar-widget');
-                    this.setTabIndex(0);
+                    this.setTabIndex();
 
                     this.append(
                         this.viewer = createElement('div', {
@@ -619,6 +638,12 @@
                 onHandleEventClick(event) {
                     if (!this.isEditing()) {
                         this.startEdit();
+                    }
+                }
+
+                onHandleEventFocusout(event) {
+                    if (event.getTarget().getParentElement() === this) {
+                        this.stopEdit();
                     }
                 }
                 

@@ -55,6 +55,8 @@ define(class SvgElement extends DocElement {
         if (this.getRdsShape) {
             let shape = Packages.getShape(this.getRdsShape());
             this.setShape(shape);
+            let child = this.getChildElementAt(0);
+            child.clearTabIndex();
         }
     }
 

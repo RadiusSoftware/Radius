@@ -49,11 +49,6 @@ define(class HtmlElement extends DocElement {
         return this;
     }
 
-    clearTabIndex() {
-        this.node.tabIndex = 0;
-        return this;
-    }
-
     clearTitle() {
         this.clearAttribute('title');
         return this;
@@ -128,10 +123,6 @@ define(class HtmlElement extends DocElement {
         return this.node.offsetTop;
     }
 
-    getTabIndex() {
-        return this.node.tabIndex;
-    }
-
     getTitle() {
         return this.getAttribute('title');
     }
@@ -169,16 +160,6 @@ define(class HtmlElement extends DocElement {
 
     setOuterText(text) {
         this.node.outerText = text;
-        return this;
-    }
-
-    setTabIndex(index) {
-        if (typeof index == 'number' && index > 0) {
-        }
-        else {
-            this.node.tabIndex = 0;
-        }
-
         return this;
     }
 

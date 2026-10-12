@@ -64,6 +64,10 @@ define(class RdsEvent {
         return this.event.metaKey;
     }
 
+    getRelatedTarget() {
+        return this.event.relatedTarget;
+    }
+
     getShift() {
         return this.event.shiftKey;
     }
