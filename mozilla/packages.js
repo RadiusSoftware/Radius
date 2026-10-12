@@ -108,7 +108,7 @@ singleton(class Packages {
         return stringId in this.strings;
     }
 
-    async openApplication() {
+    openApplication() {
         try {
             globalThis.appWidget = createElementFromOuterHtml(`<${webappSettings.tagName}></${webappSettings.tagName}>`);
             
@@ -124,10 +124,19 @@ singleton(class Packages {
                 delete webappSettings.controllerValue;
             }
 
-            Doc.getBody().clear();
-            Doc.getBody().append(appWidget);
-            Doc.setApplicationWidth();
-            Win.on('EventResize', message => Doc.setApplicationWidth());
+            let width = '90%';
+            let appWidth = appWidget.getSetting('width');
+
+            if (NumberType.verify(appWidth)) {
+                width = `${appWidth}px`;
+            }
+            else if (StringType.verify(appWidth)) {
+                width = appWidth;
+            }
+
+            appWidget.setClassName('application');
+            appWidget.setStyle({ width: width });
+            Doc.getBody().clear().append(appWidget);
         }
         catch (e) {
             console.log(`Web application failed to load:  "${webappSettings.title}"`);

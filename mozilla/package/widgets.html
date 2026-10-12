@@ -462,7 +462,7 @@
 
                 getAt(row, col) {
                     let index = row * this.cols.length + col;
-                    return this.getChildAt(index);
+                    return this.getChildElementAt(index);
                 }
                 
                 getCols() {
@@ -515,7 +515,7 @@
 
                 setAt(row, col, htmlElement) {
                     let index = row * this.cols.length + col;
-                    let child = this.getChildAt(index);
+                    let child = this.getChildElementAt(index);
                     child.replace(htmlElement);
                     return this;
                 }

@@ -106,14 +106,26 @@ html {
 }
 
 body {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: top;
     width: 100vw;
     height: 100vh;
     margin: 0px;
     padding: 0px;
+    box-sizing: border-box;
     font-family: var(--font-family);
     font-size: 16px;
     color: var(--color);
     background-color: var(--background-color);
+}
+
+.application {
+    display: block;
+    box-sizing: border-box;
+    margin: 0px;
+    padding: 0px;
 }
 
 .array-widget {
@@ -234,6 +246,13 @@ body {
     flex-direction: row;
     justify-content: center;
     align-items: center;
+}
+
+.flex-ct {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: top;
 }
 
 .flex-rc {

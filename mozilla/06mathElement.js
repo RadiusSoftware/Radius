@@ -22,6 +22,10 @@
 
 
 /*****
+ * The encapsulation of an MathMLlement in an HTML document.  In the framework,
+ * it extends DocElement, which corresponds to Element Interface in MDN.  The
+ * MathElement can be constructed with the createElementFromOuterHtml() or the
+ * createElement() functions.
 *****/
 define(class MathElement extends DocElement {
     constructor(arg) {
