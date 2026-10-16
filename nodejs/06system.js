@@ -461,6 +461,7 @@ createService(class SystemService extends Service {
         return {
             shape: mkRdsShape({
                 setupState: StringType,
+                systemMode: StringType,
 
                 acme: {
                     host: StringType,
@@ -478,6 +479,7 @@ createService(class SystemService extends Service {
 
             value: {
                 setupState: this.getSetupState(),
+                systemMode: this.settings.mode,
 
                 acme: {
                     host: this.settings.host,

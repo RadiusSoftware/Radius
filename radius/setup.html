@@ -26,7 +26,7 @@
             }
         </script>
         <html>
-            <selector-widget class="fill" rds-bind-method="setMode,setupState">
+            <selector-panel class="fill" rds-bind-method="setMode,setupState">
                 <form-widget class="fill" rds-mode="setup#acme" rds-action="certifyHost,acme">
                     <grid-widget class="fill" rds-rows="50px,auto,50px" rds-cols="50px,auto,50px">
                         <div></div>
@@ -44,7 +44,8 @@
                     </grid-widget>
                 </form-widget>
                 <form-widget class="fill" rds-mode="setup#mode" rds-submit="setMode=mode">
-                    ** MODE SETUP **
+                    <fieldset-widget rds-options="setup#standalone,setup#serverteam">
+                    </fieldset-widget>
                 </form-widget>
                 <form-widget class="fill" rds-mode="setup#standalone" rds-submit="setMode=mode">
                     ** STANDALONE SETUP **
@@ -52,7 +53,7 @@
                 <form-widget class="fill" rds-mode="setup#serverteam" rds-submit="setMode=mode">
                     ** SERVERTEAM SETUP **
                 </form-widget>
-            </selector-widget>
+            </selector-panel>
         </html>
     </widget>
 </bundle>
