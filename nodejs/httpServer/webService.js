@@ -22,12 +22,29 @@
 
 
 /*****
- * A web service is a construct and framework for managing and implementing web
- * services based on specialized web-service classes and configuration data
- * stored in the web-services DBMS table.  Additionally, the WebServiceService
- * is provided to manage the run state and to configure web services that have
- * been defined by loaded packages.
 *****/
+define(class Webservice extends RdsConfigurable {
+    constructor(opts) {
+        opts.settingCategory = 'webservice';
+        super(opts);
+    }
+});
+
+
+/*****
+*****/
+createService(class WebserviceService extends Service {
+});
+
+
+/*****
+*****/
+define(class WebserviceHandle extends Handle {
+    constructor() {
+        super();
+    }
+});
+/*
 if (Process.isPrimary()) {
     singleton(class WebServices extends Emitter {
         constructor() {
@@ -240,6 +257,7 @@ if (Process.isPrimary()) {
         }
     });
 }
+*/
 
 
 /*****
@@ -247,6 +265,7 @@ if (Process.isPrimary()) {
  * features for a webservice extension (WSE).  WSE's are defined to operator
  * for a specific scope and with API calls.
 *****/
+/*
 define(class WebService extends HttpX {
     constructor(options) {
         super(options);
@@ -308,3 +327,4 @@ define(class WebService extends HttpX {
         super.init();
     }
 });
+*/

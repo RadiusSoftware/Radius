@@ -318,6 +318,37 @@ singleton(class ClassType extends BaseType {
     }
 });
 
+// **********************************************************************************
+// TODO -- verify() + others?
+// **********************************************************************************
+singleton(class ColorType extends BaseType {
+    fromString(str) {
+        return str;
+    }
+
+    getDefault() {
+        return '';
+    }
+
+    isScalar() {
+        return true;
+    }
+
+    toBool(value) {
+        if (value.toLowerCase() == 'true') return true;
+        if (value.toLowerCase() == 'false') return false;
+        return value.length > 0;
+    }
+
+    toString(value) {
+        return value;
+    }
+
+    verify(value) {
+        return typeof value == 'string' || value instanceof String;
+    }
+});
+
 singleton(class DateType extends BaseType {
     compare(a, b) {
         if (getJsType(a) === this && getJsType(b) === this) {
@@ -768,6 +799,37 @@ singleton(class ObjectType extends BaseType {
     }
 });
 
+// **********************************************************************************
+// TODO -- verify() + others?
+// **********************************************************************************
+singleton(class PasswordType extends BaseType {
+    fromString(str) {
+        return str;
+    }
+
+    getDefault() {
+        return '';
+    }
+
+    isScalar() {
+        return true;
+    }
+
+    toBool(value) {
+        if (value.toLowerCase() == 'true') return true;
+        if (value.toLowerCase() == 'false') return false;
+        return value.length > 0;
+    }
+
+    toString(value) {
+        return value;
+    }
+
+    verify(value) {
+        return typeof value == 'string' || value instanceof String;
+    }
+});
+
 singleton(class RegexType extends BaseType {
     compare(a, b) {
         if (this.verify(a) && this.verify(b)) {
@@ -831,6 +893,37 @@ singleton(class StringType extends BaseType {
     }
 });
 
+// **********************************************************************************
+// TODO -- verify() + others?
+// **********************************************************************************
+singleton(class TelephoneType extends BaseType {
+    fromString(str) {
+        return str;
+    }
+
+    getDefault() {
+        return '';
+    }
+
+    isScalar() {
+        return true;
+    }
+
+    toBool(value) {
+        if (value.toLowerCase() == 'true') return true;
+        if (value.toLowerCase() == 'false') return false;
+        return value.length > 0;
+    }
+
+    toString(value) {
+        return value;
+    }
+
+    verify(value) {
+        return typeof value == 'string' || value instanceof String;
+    }
+});
+
 singleton(class UndefinedType extends BaseType {
     fromString(str) {
         return undefined;
@@ -854,6 +947,37 @@ singleton(class UndefinedType extends BaseType {
 
     verify(value) {
         return typeof value == 'undefined';
+    }
+});
+
+// **********************************************************************************
+// TODO -- verify() + others?
+// **********************************************************************************
+singleton(class UrlType extends BaseType {
+    fromString(str) {
+        return str;
+    }
+
+    getDefault() {
+        return '';
+    }
+
+    isScalar() {
+        return true;
+    }
+
+    toBool(value) {
+        if (value.toLowerCase() == 'true') return true;
+        if (value.toLowerCase() == 'false') return false;
+        return value.length > 0;
+    }
+
+    toString(value) {
+        return value;
+    }
+
+    verify(value) {
+        return typeof value == 'string' || value instanceof String;
     }
 });
 

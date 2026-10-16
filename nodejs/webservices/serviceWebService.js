@@ -23,7 +23,7 @@
 
 /*****
 *****/
-define(class ServiceWebService extends WebService {
+define(class ServiceWebservice extends Webservice {
     constructor() {
         super();
     }

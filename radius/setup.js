@@ -32,6 +32,7 @@
     define(class SetupApp extends Webapp {
         async getControllerData(handle) {
             let setupData = await mkSystemHandle().getSetupData();
+            console.log(setupData);
             return setupData;
         }
 

@@ -23,7 +23,7 @@
 
 /*****
 *****/
-define(class ThunkWebService extends WebService {
+define(class ThunkWebservice extends Webservice {
     constructor() {
         super();
     }

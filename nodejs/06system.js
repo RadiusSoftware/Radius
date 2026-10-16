@@ -26,12 +26,6 @@
  * the host or system.  The system is accessable through the service handle.
  * Note that there are two imported system attributes:
  * 
- *      STATE
- *      *****
- *      system#loaded
- *      system#ready
- *      system#running
- * 
  *      MODE
  *      ****
  *      system#setup
@@ -42,15 +36,12 @@
  *      *****
  *      setup#acme
  *      setup#mode
+ *      setup#standalone
  *      setup#serverteam
- *      setup#standalone.dbms
- *      setup#standalone.email
- *      setup#standalone.user
- *      setup#done
  * 
  * ServerTeam mode is somewhat complex to describe because the DBMS access,
  * user management, and spooling (email, sms...) are all performed via thunks
- * that connect webservices within the server team.
+ * that connect via webservices within the server team.
 *****/
 createService(class SystemService extends Service {
     static acmeSettingsShape = mkRdsShape({
@@ -118,7 +109,6 @@ createService(class SystemService extends Service {
         super();
         this.bootTime = mkTime();
         this.bootUUID = Crypto.generateUUID();
-        this.state = 'system#loaded';
         this.radiusFrameworkPath = '/radius';
         this.settings = SystemService.settingsShape.getDefault();
 
@@ -400,41 +390,39 @@ createService(class SystemService extends Service {
     }
 
     async onBoot(message) {
-        if (this.state == 'system#loaded') {
-            await mkPermissionSetHandle().addPermissionTypes(
-                'radius#signedin',
-                'radius#admin',
-                'radius#system',
-            );
+        await mkPermissionSetHandle().addPermissionTypes(
+            'radius#signedin',
+            'radius#admin',
+            'radius#system',
+        );
 
-            await mkHttpLibraryHandle().addData({
-                path: this.radiusFrameworkPath,
-                mime: 'text/javascript',
-                mode: 'tls',
-                once: false,
-                pset: await mkPermissionSetHandle().createPermissionSet(),
-                data: radius.mozilla,
-            });
+        await mkHttpLibraryHandle().addData({
+            path: this.radiusFrameworkPath,
+            mime: 'text/javascript',
+            mode: 'tls',
+            once: false,
+            pset: await mkPermissionSetHandle().createPermissionSet(),
+            data: radius.mozilla,
+        });
 
-            let packages = mkPackageHandle();
-            await packages.loadDirectory(Path.join(radius.path, '/mozilla/package'), '/');
-            await packages.loadDirectory(Path.join(radius.path, '/radius'), this.radiusFrameworkPath);
+        let packages = mkPackageHandle();
+        await packages.loadDirectory(Path.join(radius.path, '/mozilla/package'), '/');
+        await packages.loadDirectory(Path.join(radius.path, '/radius'), this.radiusFrameworkPath);
 
-            await this.createBootKey();
-            await this.loadBoot();
-            await this.configureBasicSystem();
-            await this.configureHttp();
-            await this.configureAcme();
-            await this.configureMode();
-            this.analyzeConfiguration();
+        await this.createBootKey();
+        await this.loadBoot();
+        await this.configureBasicSystem();
+        await this.configureHttp();
+        await this.configureAcme();
+        await this.configureMode();
+        this.analyzeConfiguration();
 
-            if (this.unconfigured.length) {
-                this.settings.mode = 'system#setup';
-                await this.saveBoot();
-            }
-
-            await this.startHttp();
+        if (this.unconfigured.length) {
+            this.settings.mode = 'system#setup';
+            await this.saveBoot();
         }
+
+        await this.startHttp();
     }
 
     async onCertifyHost(message) {
@@ -505,10 +493,6 @@ createService(class SystemService extends Service {
                 }
             }
         };
-    }
-
-    async onGetState(message) {
-        return this.state;
     }
 
     async onGetTlsCerts(message) {
@@ -668,11 +652,6 @@ define(class SystemHandle extends Handle {
     }
 
     async getSetupData() {
-        return await this.callService({
-        });
-    }
-
-    async getState() {
         return await this.callService({
         });
     }
