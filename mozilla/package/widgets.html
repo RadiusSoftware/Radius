@@ -350,7 +350,7 @@
                     }
                 }
 
-                async onHandleEventReset(message) {
+                async onHandleEventReset(event) {
                     if (this.submittable) {
                         for (let dotted in this.reset) {
                             Controller.setValue(dotted, this.reset[dotted]);
@@ -358,7 +358,7 @@
                     }
                 }
 
-                async onHandleEventSubmit(message) {
+                async onHandleEventSubmit(event) {
                     if (this.submittable) {
                         let result = await Api[this.method](
                             ...this.dotteds.map(dotted => Controller.getValue(dotted))

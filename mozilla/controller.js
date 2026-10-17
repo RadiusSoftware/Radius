@@ -333,6 +333,9 @@ singleton(class Controller extends Emitter {
                     if (docNode.getTagName() in { input:0, select:0, textarea:0 }) {
                         this.bindInput(docNode, docNode.getRdsBind());
                     }
+                    else if (docNode.getTagName() == 'selector-panel') {
+                        this.bindMethod(docNode, 'setMode', docNode.getRdsBind());
+                    }
                     else {
                         this.bindInner(docNode, docNode.getRdsBind());
                     }

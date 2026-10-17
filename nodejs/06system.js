@@ -36,8 +36,6 @@
  *      *****
  *      setup#acme
  *      setup#mode
- *      setup#standalone
- *      setup#serverteam
  * 
  * ServerTeam mode is somewhat complex to describe because the DBMS access,
  * user management, and spooling (email, sms...) are all performed via thunks

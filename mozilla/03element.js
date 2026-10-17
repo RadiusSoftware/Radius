@@ -1154,33 +1154,20 @@ define(class DocElement extends DocNode {
     }
 
     initEvent(event) {
-        let intercept = false;
         let eventName = event.type;
+        
+        if (eventName in this.eventTransforms) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            let transform = this.eventTransforms[eventName];
+            
+            this.triggerCustomEvent(transform, {
+                detail: {
+                    event: mkRdsEvent(event),
+                }
+            });
 
-        if (event.target === this.node) {
-            intercept = true;
-        }
-        else if (event.target instanceof SVGElement) {
-            intercept = true;
-        }
-        else if (event.target instanceof MathMLElement) {
-            intercept = true;
-        }
-
-        if (intercept) {
-            if (eventName in this.eventTransforms) {
-                event.preventDefault();
-                event.stopImmediatePropagation();
-                let transform = this.eventTransforms[eventName];
-                
-                this.triggerCustomEvent(transform, {
-                    detail: {
-                        event: mkRdsEvent(event),
-                    }
-                });
-
-                return;
-            }
+            return;
         }
         
         this.handleEvent(event, eventName);

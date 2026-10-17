@@ -23,10 +23,15 @@
                         );
                     }
                 }
+
+                onConfigureMode(response) {
+                    // *********************************************************************************
+                    // *********************************************************************************
+                }
             }
         </script>
         <html>
-            <selector-panel class="fill" rds-bind-method="setMode,setupState">
+            <selector-panel class="fill" rds-bind="setupState">
                 <form-widget class="fill" rds-mode="setup#acme" rds-action="certifyHost,acme">
                     <grid-widget class="fill" rds-rows="50px,auto,50px" rds-cols="50px,auto,50px">
                         <div></div>
@@ -43,16 +48,25 @@
                         <div></div>
                     </grid-widget>
                 </form-widget>
-                <form-widget class="fill" rds-mode="setup#mode" rds-submit="setMode=mode">
-                    <fieldset-widget rds-options="setup#standalone,setup#serverteam">
-                    </fieldset-widget>
-                </form-widget>
-                <form-widget class="fill" rds-mode="setup#standalone" rds-submit="setMode=mode">
-                    ** STANDALONE SETUP **
-                </form-widget>
-                <form-widget class="fill" rds-mode="setup#serverteam" rds-submit="setMode=mode">
-                    ** SERVERTEAM SETUP **
-                </form-widget>
+                <div class="fill" rds-mode="setup#mode">
+                    <form-widget class="fill-horz">
+                        <div class="h1">##selectmode##</div>
+                        <fieldset-widget rds-bind="systemMode" evt-input="set-mode">
+                            [
+                                { "value": "system#standalone", "text": "##standalone##" },
+                                { "value": "system#serverteam", "text": "##serverteam##" }
+                            ]
+                        </fieldset-widget>
+                    </form-widget>
+                    <selector-panel rds-bind="systemMode">
+                        <form-widget rds-mode="system#standalone" rds-submit="setStandalone,standalone">
+                            ** STANDALONE SETUP **
+                        </form-widget>
+                        <form-widget rds-mode="system#serverteam" rds-submit="setMode=setServerTeam,serverteam">
+                            ** SERVERTEAM SETUP **
+                        </form-widget>
+                    </selector-panel>
+                </div>
             </selector-panel>
         </html>
     </widget>
