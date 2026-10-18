@@ -494,7 +494,7 @@
                     this.setClassName('object-widget');
                     this.clearTabIndex();
                     this.render();
-                    Win.on('AppHorzCategory', message => this.render());
+                    mainPanel.on('HorzCategory', message => this.render());
                 }
 
                 onReadonlyChanged() {
@@ -508,7 +508,7 @@
 
                 render() {
                     this.clear();
-                    let awc = Win.getAppHorzCategory();
+                    let awc = mainPanel.getHorzCategory();
                     let shape = this.getShape();
                     let readonly = this.isReadonly();
                     this.setClassName('object-widget');

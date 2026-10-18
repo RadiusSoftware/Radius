@@ -29,8 +29,6 @@
  * extend make the underlying window events available as real-time messages.
 *****/
 singleton(class Win extends Emitter {
-    static appDualWidth = 600;
-
     constructor() {
         super();
         
@@ -66,21 +64,6 @@ singleton(class Win extends Emitter {
                 name: 'ColorSchemeChange',
                 scheme: this.colorScheme,
             });
-        });
-
-        this.setAppHorzCategory();
-
-        this.on('EventResize', message => {
-            let appHorzCategory = this.appHorzCategory;
-            this.setAppHorzCategory();
-
-            if (this.appHorzCategory != appHorzCategory) {
-                this.emit({
-                    name: 'AppHorzCategory',
-                    category: this.appHorzCategory,
-                    width: this.getInnerWidth(),
-                });
-            }
         });
     }
 
@@ -127,8 +110,8 @@ singleton(class Win extends Emitter {
         return this;
     }
 
-    getAppHorzCategory() {
-        return this.appHorzCategory;
+    getAppFixedWidth() {
+        return this.appFixedWidth;
     }
 
     getColorScheme() {
@@ -308,17 +291,6 @@ singleton(class Win extends Emitter {
 
     scrollTo(x, y) {
         window.scrollTo(x, y);
-        return this;
-    }
-    
-    setAppHorzCategory() {
-        if (this.getInnerWidth() < Win.appDualWidth) {
-            this.appHorzCategory = 'small';
-        }
-        else {
-            this.appHorzCategory = 'standard';
-        }
-
         return this;
     }
 

@@ -9,11 +9,7 @@
     <widget tagname="main-panel">
         <script>
             class MainPanel extends Widget {
-                static horzModes = mkRdsEnum(
-                    'dual',
-                    'fill',
-                );
-
+                /*
                 configureDualMode() {
                     if (this.getAttribute('horzmode') != 'dual') {
                         this.setAttribute('horzmode', 'dual');
@@ -24,6 +20,7 @@
                         );
                     }
                 }
+                */
 
                 configureFillMode() {
                     if (this.getAttribute('horzmode') != 'fill') {
@@ -32,14 +29,41 @@
                     }
                 }
 
-                getHorzMode() {
-                    return this.getAttribute('horzmode');
+                getHorzCategory() {
+                    return this.horzCategory;
                 }
 
                 init() {
+                    globalThis.mainPanel = this;
+                    this.horzFixedWidth = 600;
+
+                    const setHorzCategory = winWidth => {
+                        if (winWidth >= this.horzFixedWidth) {
+                            this.horzCategory = 'standard';
+                        }
+                        else {
+                            this.horzCategory = 'small';
+                        }
+                    }
+
+                    setHorzCategory(Win.getInnerWidth());
+
+                    Win.on('EventResize', message => {
+                        let horzCategory = this.horzCategory;
+                        let winWidth = Win.getInnerWidth();
+                        setHorzCategory(winWidth);
+
+                        if (this.horzCategory != horzCategory) {
+                            this.emit({
+                                name: 'HorzCategory',
+                                category: this.horzCategory,
+                                width: winWidth,
+                            })    
+                        }
+                    });
+
                     super.init();
                     this.setClassName('main-panel');
-                    Win.on('AppHorzCategory', message => this.onAppHorzCategory(message));
 
                     if (appWidget.hasSetting('style')) {
                         appWidget.setStyle(appWidget.getSetting('style'));
@@ -55,37 +79,18 @@
 
                     if (appWidget.hasSetting('horzMode')) {
                         let horzMode = appWidget.getSetting('horzMode');
-                        this.setHorzMode(horzMode);
+                        let methodName = `configure${horzMode[0].toUpperCase()}${horzMode.substring(1)}Mode`;
+
+                        if (FunctionType.verify(this[methodName])) {
+                            this[methodName]();
+                        }
+                        else {
+                            this.configureFillMode();
+                        }
                     }
                     else {
                         this.configureFillMode();
                     }
-                }
-
-                onAppHorzCategory(message) {
-                    if (this.getAttribute('horzmode') == 'dual') {
-                        this.renderDualMode(
-                            message.category,
-                            message.width,
-                        );
-                    }
-                }
-
-                renderDualMode(category, width) {
-                    console.log(width);
-                    this.clear().append(appWidget);
-                }
-
-                setHorzMode(horzMode) {
-                    if (MainPanel.horzModes.has(horzMode)) {
-                        let method = `configure${horzMode[0].toUpperCase()}${horzMode.substring(1)}Mode`;
-                        this[method]();
-                    }
-                    else {
-                        this.configureFillMode();
-                    }
-
-                    return this;
                 }
             }
         </script>
