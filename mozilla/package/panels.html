@@ -1,5 +1,70 @@
 <!DOCTYPE bundle>
 <bundle>
+    <widget tagname="main-panel">
+        <script>
+            class MainPanel extends Widget {
+                static horzModes = mkRdsEnum(
+                    'center',
+                    'dual',
+                    'fill',
+                );
+
+                configureCenterMode() {
+                    // ***********************************************************
+                }
+
+                configureDualMode() {
+                    // ***********************************************************
+                }
+
+                configureFillMode() {
+                    this.setAttribute('horzmode', 'fill');
+                    this.clear().append(appWidget);
+                }
+
+                getHorzMode() {
+                    return this.getAttribute('horzmode');
+                }
+
+                init() {
+                    super.init();
+
+                    if (appWidget.hasSetting('style')) {
+                        appWidget.setStyle(appWidget.getSetting('style'));
+                    }
+                    else {
+                        appWidget.setStyle({
+                            display: 'block',
+                            boxSizing: 'border-box',
+                            margin: '0px',
+                            padding: '0px',
+                        });
+                    }
+
+                    if (appWidget.hasSetting('horzMode')) {
+                        let horzMode = appWidget.getSetting('horzMode');
+                        this.setHorzMode(horzMode);
+                    }
+                    else {
+                        this.configureFillMode();
+                    }
+                }
+
+                setHorzMode(horzMode) {
+                    if (MainPanel.horzModes.has(horzMode)) {
+                        let method = `configure${horzMode[0].toUpperCase()}${horzMode.substring(1)}Mode`;
+                        console.log(method);
+                        this[method]();
+                    }
+                    else {
+                        this.configureFillMode();
+                    }
+
+                    return this;
+                }
+            }
+        </script>
+    </widget>
     <widget tagname="nav-panel">
         <!--
         <script>
@@ -432,15 +497,15 @@
             }
         </script>
     </widget>
-    <widget tagname="stack-panel">
-        <script>
-            class StackPanel extends Widget {
-            }
-        </script>
-    </widget>
     <widget tagname="slidein-panel">
         <script>
             class SlideInPanel extends Widget {
+            }
+        </script>
+    </widget>
+    <widget tagname="stack-panel">
+        <script>
+            class StackPanel extends Widget {
             }
         </script>
     </widget>

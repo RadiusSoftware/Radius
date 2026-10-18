@@ -106,10 +106,6 @@ html {
 }
 
 body {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: top;
     width: 100vw;
     height: 100vh;
     margin: 0px;
@@ -121,11 +117,22 @@ body {
     background-color: var(--background-color);
 }
 
-.application {
+main-panel[horzmode=center] {
     display: block;
-    box-sizing: border-box;
-    margin: 0px;
-    padding: 0px;
+    width: 100vw;
+    height: 100vh;
+}
+
+main-panel[horzmode=dual] {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+}
+
+main-panel[horzmode=fill] {
+    display: block;
+    width: 100vw;
+    height: 100vh;
 }
 
 .array-widget {

@@ -494,7 +494,11 @@
                     this.setClassName('object-widget');
                     this.clearTabIndex();
                     this.render();
-
+                    /*
+                    Win.on('EventResize', message => {
+                        console.log('object-widget EventResize');
+                    });
+                    */
                 }
 
                 onReadonlyChanged() {

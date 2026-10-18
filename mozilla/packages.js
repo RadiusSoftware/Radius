@@ -124,19 +124,7 @@ singleton(class Packages {
                 delete webappSettings.controllerValue;
             }
 
-            let width = '90%';
-            let appWidth = appWidget.getSetting('width');
-
-            if (NumberType.verify(appWidth)) {
-                width = `${appWidth}px`;
-            }
-            else if (StringType.verify(appWidth)) {
-                width = appWidth;
-            }
-
-            appWidget.setClassName('application');
-            appWidget.setStyle({ width: width });
-            Doc.getBody().clear().append(appWidget);
+            Doc.getBody().clear().append(createElement('main-panel'));
         }
         catch (e) {
             console.log(`Web application failed to load:  "${webappSettings.title}"`);

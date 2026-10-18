@@ -289,6 +289,16 @@ singleton(class Win extends Emitter {
         window.scrollTo(x, y);
         return this;
     }
+    /*
+    setScreenCategory() {
+        if (this.getInnerWidth() < 800) {
+            this.screenCategory = 'small';
+        }
+        else {
+            this.screenCategory = 'standard';
+        }
+    }
+    */
 
     setName(name) {
         window.name = name;
