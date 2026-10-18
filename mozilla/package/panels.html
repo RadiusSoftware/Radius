@@ -9,24 +9,37 @@
     <widget tagname="main-panel">
         <script>
             class MainPanel extends Widget {
-                /*
-                configureDualMode() {
-                    if (this.getAttribute('horzmode') != 'dual') {
-                        this.setAttribute('horzmode', 'dual');
-
-                        this.renderDualMode(
-                            Win.getAppHorzCategory,
-                            Win.getInnerWidth(),
-                        );
-                    }
-                }
-                */
-
                 configureFillMode() {
-                    if (this.getAttribute('horzmode') != 'fill') {
-                        this.setAttribute('horzmode', 'fill');
-                        this.clear().append(appWidget);
+                    this.setAttribute('horzmode', 'fill');
+                    this.clear().append(appWidget);
+                }
+
+                configureMaxxMode() {
+                    if (appWidget.hasSetting('width')) {
+                        this.maxWidth = appWidget.getSetting('width');
+
+                        if (!NumberType.verify(this.maxWidth)) {
+                            delete this.maxWidth;
+                        }
                     }
+
+                    if (!this.maxWidth) {
+                        this.maxWidth = 800;
+                    }
+
+                    this.setStyle({
+                        display: 'flex',
+                        flexDirection: 'row',
+                        justifyContent: 'center',
+                        alignItems: 'top',
+                    });
+                    
+                    this.append(
+                        appWidget.setStyle({
+                            width: '100%',
+                            maxWidth: `${this.maxWidth}px`,
+                        })
+                    );
                 }
 
                 getHorzCategory() {
@@ -82,13 +95,16 @@
                         let methodName = `configure${horzMode[0].toUpperCase()}${horzMode.substring(1)}Mode`;
 
                         if (FunctionType.verify(this[methodName])) {
+                            this.setAttribute('horzmode', horzMode);
                             this[methodName]();
                         }
                         else {
+                            this.setAttribute('horzmode', 'fill');
                             this.configureFillMode();
                         }
                     }
                     else {
+                        this.setAttribute('horzmode', 'fill');
                         this.configureFillMode();
                     }
                 }
