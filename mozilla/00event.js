@@ -65,7 +65,7 @@ define(class RdsEvent {
     }
 
     getRelatedTarget() {
-        return this.event.relatedTarget;
+        return this.wrap(this.event.relatedTarget);
     }
 
     getShift() {
@@ -73,11 +73,11 @@ define(class RdsEvent {
     }
 
     getSrcElement() {
-        return wrapTree(this.event.srcElement);
+        return this.wrap(this.event.srcElement);
     }
 
     getTarget() {
-        return wrapTree(this.event.target);
+        return this.wrap(this.event.target);
     }
 
     getType() {
@@ -103,5 +103,20 @@ define(class RdsEvent {
     stopPropagation(...args) {
         this.event.stopPropagation(...args);
         return this;
+    }
+
+    wrap(item) {
+        if (item === null) {
+            return item;
+        }
+        else if (item === window) {
+            return Win;
+        }
+        else if (item === document) {
+            return Doc;
+        }
+        else {
+            return wrapTree(item);
+        }
     }
 });

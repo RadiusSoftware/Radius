@@ -28,7 +28,9 @@
  * extending window appearance and placemeent.  Win extends Emitter to help
  * extend make the underlying window events available as real-time messages.
 *****/
-singleton(class Win extends Emitter {  
+singleton(class Win extends Emitter {
+    static appDualWidth = 600;
+
     constructor() {
         super();
         
@@ -64,6 +66,21 @@ singleton(class Win extends Emitter {
                 name: 'ColorSchemeChange',
                 scheme: this.colorScheme,
             });
+        });
+
+        this.setAppHorzCategory();
+
+        this.on('EventResize', message => {
+            let appHorzCategory = this.appHorzCategory;
+            this.setAppHorzCategory();
+
+            if (this.appHorzCategory != appHorzCategory) {
+                this.emit({
+                    name: 'AppHorzCategory',
+                    category: this.appHorzCategory,
+                    width: this.getInnerWidth(),
+                });
+            }
         });
     }
 
@@ -108,6 +125,10 @@ singleton(class Win extends Emitter {
     focus() {
         window.focus();
         return this;
+    }
+
+    getAppHorzCategory() {
+        return this.appHorzCategory;
     }
 
     getColorScheme() {
@@ -289,16 +310,17 @@ singleton(class Win extends Emitter {
         window.scrollTo(x, y);
         return this;
     }
-    /*
-    setScreenCategory() {
-        if (this.getInnerWidth() < 800) {
-            this.screenCategory = 'small';
+    
+    setAppHorzCategory() {
+        if (this.getInnerWidth() < Win.appDualWidth) {
+            this.appHorzCategory = 'small';
         }
         else {
-            this.screenCategory = 'standard';
+            this.appHorzCategory = 'standard';
         }
+
+        return this;
     }
-    */
 
     setName(name) {
         window.name = name;

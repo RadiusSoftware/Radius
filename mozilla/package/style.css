@@ -117,19 +117,7 @@ body {
     background-color: var(--background-color);
 }
 
-main-panel[horzmode=center] {
-    display: block;
-    width: 100vw;
-    height: 100vh;
-}
-
-main-panel[horzmode=dual] {
-    display: block;
-    width: 100vw;
-    height: 100vh;
-}
-
-main-panel[horzmode=fill] {
+.main-panel {
     display: block;
     width: 100vw;
     height: 100vh;

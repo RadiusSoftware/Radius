@@ -6,13 +6,7 @@
                 "type": "app",
                 "title": "##setup##",
                 "path": "setupPath",
-                "horzMode": "fill",
-                "style": {
-                    "display": "block",
-                    "boxSizing": "border-box",
-                    "margin": "0px",
-                    "padding": "0px"
-                }
+                "horzMode": "dual"
             }
         </script>
         <script>
@@ -39,20 +33,9 @@
         <html>
             <selector-panel class="fill" rds-bind="setupState">
                 <form-widget class="fill" rds-mode="setup#acme" rds-action="certifyHost,acme">
-                    <grid-widget class="fill" rds-rows="50px,auto,50px" rds-cols="50px,auto,50px">
-                        <div></div>
-                        <div></div>
-                        <div></div>
-                        <div></div>
-                        <div>
-                            <data-widget rds-bind="acme" rds-readonly="false"></data-widget>
-                            <formbuttons-widget></formbuttons-widget>
-                        </div>
-                        <div></div>
-                        <div></div>
-                        <div></div>
-                        <div></div>
-                    </grid-widget>
+                    <div class="h1">##acmeCertify##</div>
+                    <data-widget rds-bind="acme" rds-readonly="false"></data-widget>
+                    <formbuttons-widget></formbuttons-widget>
                 </form-widget>
                 <div class="fill" rds-mode="setup#mode">
                     <form-widget class="fill-horz">

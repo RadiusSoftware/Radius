@@ -494,11 +494,7 @@
                     this.setClassName('object-widget');
                     this.clearTabIndex();
                     this.render();
-                    /*
-                    Win.on('EventResize', message => {
-                        console.log('object-widget EventResize');
-                    });
-                    */
+                    Win.on('AppHorzCategory', message => this.render());
                 }
 
                 onReadonlyChanged() {
@@ -512,6 +508,7 @@
 
                 render() {
                     this.clear();
+                    let awc = Win.getAppHorzCategory();
                     let shape = this.getShape();
                     let readonly = this.isReadonly();
                     this.setClassName('object-widget');
@@ -533,25 +530,51 @@
                             propertyClassName = 'object-widget-property';
                         }
 
-                        this.tbody.append(
-                            createElement('tr')
-                            .append(
-                                createElement('td', {
-                                    class: propertyClassName,
-                                })
-                                .setInnerHtml(property),
-
-                                createElement('td', {
-                                    class: 'object-widget-value',
-                                })
+                        if (awc == 'small') {
+                            this.tbody.append(
+                                createElement('tr')
                                 .append(
-                                    createElement('data-widget', {
-                                        'rds-bind': dotted,
-                                        'rds-readonly': readonly,
+                                    createElement('td', {
+                                        class: propertyClassName,
                                     })
+                                    .setInnerHtml(property)
+                                ),
+
+                                createElement('tr')
+                                .append(
+                                    createElement('td', {
+                                        class: 'object-widget-value',
+                                    })
+                                    .append(
+                                        createElement('data-widget', {
+                                            'rds-bind': dotted,
+                                            'rds-readonly': readonly,
+                                        })
+                                    )
                                 )
-                            )
-                        );
+                            );
+                        }
+                        else {
+                            this.tbody.append(
+                                createElement('tr')
+                                .append(
+                                    createElement('td', {
+                                        class: propertyClassName,
+                                    })
+                                    .setInnerHtml(property),
+
+                                    createElement('td', {
+                                        class: 'object-widget-value',
+                                    })
+                                    .append(
+                                        createElement('data-widget', {
+                                            'rds-bind': dotted,
+                                            'rds-readonly': readonly,
+                                        })
+                                    )
+                                )
+                            );
+                        }
                     }
                 }
             }
