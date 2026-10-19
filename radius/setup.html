@@ -14,7 +14,8 @@
             class SetupApp extends Widget {
                 onCertifyHost(response) {
                     if (response.result && response.result.type == 'websocket') {
-                        showDialog('close', '700px', '400px', 
+                        showDialog(
+                            'close',
                             createElement(
                                 'progress-widget',
                                 {

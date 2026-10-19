@@ -350,61 +350,20 @@ define(class EditingWidget extends Widget {
  * but a specified size can also be specified.
 *****/
 define(class PopupWidget extends Widget {
-    clearModal() {
-        delete this.modal;
-        return this;
-    }
-    
-    computeLayout() {
-        const layout = {
-            left: null,
-            top: null,
-            width: this.size.width,
-            height: this.size.height,
-        };
-
-        if (this.position) {
-            if (this.position.left) {
-                layout.left = this.position.left;
-                layout.top = this.position.top;
-            }
-            else if (this.position.right) {
-                layout.left = this.position.right - this.size.width;
-                layout.top = this.position.top;
-            }
-        }
-        else {
-            layout.left = (Win.getInnerWidth() - this.size.width) / 2;
-            layout.top = (Win.getInnerHeight() - this.size.height) / 2;
-
-            this.resizeHandler = message => {
-                this.setStyle({
-                    left: `${(Win.getInnerWidth() - this.size.width) / 2}px`,
-                    top: `${(Win.getInnerHeight() - this.size.height) / 2}px`,
-                });
-            };
-
-            Win.on('EventResize', this.resizeHandler);
-        }
-
-        this.setStyle({
-            position: 'absolute',
-            zIndex: 100,
-            left: `${layout.left}px`,
-            top: `${layout.top}px`,
-            width: `${layout.width}px`,
-            height: `${layout.height}px`,
-        });
-    }
-
     hide(value) {
-        if (this.getParentElement()) {
-            if (this.isModal()) {
+        if (this.ok) {
+            if (this.getRdsModal) {
                 Doc.getBody().thaw();
             }
 
             this.remove();
             this.ok(value);
+            delete this.ok;
+
+            if (this.activeElement) {
+                this.activeElement.focus();
+                delete this.activeElement;
+            }
         }
 
         return this;
@@ -412,95 +371,44 @@ define(class PopupWidget extends Widget {
 
     init() {
         super.init();
+        Doc.on('EventKeydown', message => this.handleKeyDown(message));
 
-        if (this.isModal()) {
+        Win.on('EventResize', message => {
+            FunctionType.verify(this.computeLayout) ? this.computeLayout() : null;
+        });
+
+        if (this.getRdsModal) {
             Doc.getBody().freeze();
-
-            if (Doc.getActiveElement()) {
-                Doc.getActiveElement().blur();
-            }
         }
 
-        this.keyDownHandler = message => {
-            if (message.event.getKey() == 'Escape') {
-                this.hide();
-                Doc.off('EventKeydown', this.keyDownHandler);
-
-                if (this.resizeHandler) {
-                    Win.off('EventResize', this.resizeHandler);
-                }
-
-                this.emit({ name: 'PopupCancelled' });
-            }
-        };
-
-        Doc.on('EventKeydown', this.keyDownHandler);
-
-        if (this.size) {
+        (async () => {
+            await pause(5);
             this.computeLayout();
-        }
-        else {
-            (async () => {
-                await pause(0);
+        })();
+    }
 
-                this.setSize(
-                    this.getOffsetWidth(),
-                    this.getOffsetHeight(),
-                );
-
-                this.computeLayout();
-            })();
+    handleKeyDown(message) {
+        if (message.event.getKey() == 'Escape') {
+            this.hide();
+            Doc.off('EventKeydown', this.handleKeyDown);
+            Win.off('EventResize', this.computeLayout);
+            this.emit({ name: 'PopupCancelled' });
         }
     }
 
-    isModal() {
-        return this.modal === true;
-    }
+    show(anchorElement, anchorPlacement) {
+        this.anchorElement = anchorElement;
+        this.anchorPlacement = anchorPlacement;
+        this.activeElement = Doc.getActiveElement();
 
-    setModal() {
-        this.modal = true;
-        return this;
-    }
-
-    setPosition(left, top, right) {
-        if (NumberType.verify(top)) {
-            if (NumberType.verify(left)) {
-                this.position = { left: left, top: top };
-            }
-            else if (NumberType.verify(right)) {
-                this.position = { right: right, top: top };
-            }
+        if (this.activeElement) {
+            this.activeElement.blur();
         }
 
-        return this;
-    }
+        Doc.getBody().append(this);
 
-    setSize(width, height) {
-        if (NumberType.verify(width) && NumberType.verify(height)) {
-            this.size = { width: width, height: height };
-        }
-
-        return this;
-    }
-
-    show() {
-        if (!this.getParentElement()) {
-            Doc.getBody().append(this);
-
-            this.promise = new Promise((ok, fail) => {
-                this.ok = value => ok(value);
-            });
-        }
-        else {
-            this.promise = new Promise(() => {});
-        }
-
-        return this;
-    }
-
-    wait() {
-        if (this.promise) {
-            return this.promise;
-        }
+        return this.promise = new Promise((ok, fail) => {
+            this.ok = value => ok(value);
+        });
     }
 });

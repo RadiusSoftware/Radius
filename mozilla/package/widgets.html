@@ -21,6 +21,17 @@
             class DialogWidget extends PopupWidget {
                 static dialogTypes = mkRdsEnum('ok', 'close', 'confirm', 'submit');
 
+                computeLayout() {
+                    if (mainPanel.getHorzCategory() == 'standard') {
+                        this.setClassName('dialog-widget-standard');
+                        this.clearClassName('dialog-widget-small');
+                    }
+                    else {
+                        this.setClassName('dialog-widget-small');
+                        this.clearClassName('dialog-widget-standard');
+                    }
+                }
+
                 disableCancelButton() {
                     if (this.dialogType == 'confirm' || this.dialogType == 'submit') {
                         let cancelButton = this.buttons.getChildElementAt(1);
@@ -111,21 +122,6 @@
                     return this;
                 }
 
-                getOffsetWidth() {
-                    let buttons = this.getChildElementAt(0).getChildElementAt(10);
-                    let buttonWidth = buttons.getOffsetWidth();
-
-                    let content = this.getChildElementAt(0).getChildElementAt(4);
-                    let contentWidth = content.getOffsetWidth();
-
-                    let width = buttonWidth >= contentWidth ? buttonWidth : contentWidth;
-                    let grid = this.getChildElementAt(0);
-                    width += parseInt(grid.rows[0]);
-                    width += parseInt(grid.rows[grid.rows.length - 1]);
-
-                    return width;
-                }
-
                 init() {
                     if (this.getRdsDialogType) {
                         this.setDialogType(this.getRdsDialogType());
@@ -134,9 +130,7 @@
                         this.setDialogType('ok');
                     }
 
-                    this.setClassName('dialog-widget');
                     this.setButtons();
-                    this.setModal();
                     super.init();
                 }
                 
@@ -293,6 +287,12 @@
 
                     return this;
                 }
+
+                setSize() {
+                    let width = '600px';
+                    let height = '100%';
+                    this.setStyle({ width: width, height: height });
+                }
             }
         </script>
         <html class="dialog-widget">
@@ -315,6 +315,19 @@
             </grid-widget>
         </html>
     </widget>
+    <script>
+        define(function showDialog(dialogType, content) {
+            return createElement(
+                'dialog-widget',
+                {
+                    'rds-modal': '',
+                    'rds-dialog-type': dialogType,
+                }
+            )
+            .setContent(content)
+            .show();
+        });
+    </script>
     <widget tagname="form-widget">
         <script type="settings">
             {
@@ -369,6 +382,7 @@
 
                             if (handlerName in appWidget) {
                                 appWidget[handlerName]({
+                                    form: this,
                                     method: this.method,
                                     dotteds: this.dotteds,
                                     result: result,
@@ -595,9 +609,8 @@
         <script>
             class ProgressWidget extends Widget {
                 init() {
-                    this.getRdsScrolling = () => 'auto';
-                    this.setClassName('progress-widget')
                     super.init();
+                    this.setClassName('progress-widget');
 
                     if (this.getRdsWebsocketPath) {
                         this.webSocket = mkWebsocket(this.getRdsWebsocketPath()).connect();
@@ -627,18 +640,4 @@
         });
     </script>
     -->
-    <script>
-        define(function showDialog(dialogType, width, height, content) {
-            return createElement(
-                'dialog-widget',
-                {
-                    'rds-dialog-type': dialogType,
-                    style: `width:${width}; height:${height};`,
-                }
-            )
-            .setContent(content)
-            .show()
-            .wait();
-        });
-    </script>
 </bundle>
