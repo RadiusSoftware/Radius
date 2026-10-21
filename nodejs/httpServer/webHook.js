@@ -23,9 +23,15 @@
 
 /*****
 *****/
-define(class WebHook extends RdsConfigurable {
-    constructor(opts) {
-        opts.settingCategory = 'webhook';
-        super(opts);
+define(class WebHook {
+    static settingShape = mkRdsShape({
+        name: StringType,
+        type: StringType,
+        uuid: StringType,
+        category: StringType,
+    });
+    
+    constructor() {
+        this.configuration = mkConfiguration('webhook');
     }
 });

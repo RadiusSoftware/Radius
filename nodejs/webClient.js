@@ -23,9 +23,13 @@
 
 /*****
 *****/
-define(class NetClient extends RdsConfigurable {
-    constructor(opts) {
-        opts.settingCategory = 'netclient';
-        super(opts);
+define(class WebClient {
+    static shape = mkRdsShape({
+        something: StringType,
+    });
+
+
+    constructor() {
+        this.configuration = mkConfiguration('webclient');
     }
 });

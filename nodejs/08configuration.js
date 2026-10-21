@@ -22,18 +22,17 @@
 
 
 /*****
- * An object that is self configurahle has a close connection with a specifc set
- * of values in the overall settings.  A SelfConfigurable is always attached to
- * permanent settings, because there's not much value to add for associating with
- * temporary settings.
+ * There are several configurable classes and objects in the system.  A
+ * configuration represents and instance of settings used for configuring an
+ * instance of an object such as a web service, web client, or a web hook.
 *****/
-define(class RdsConfigurable {
-    constructor(opts) {
-        Object.assign(this, opts);
-        this.ctor = Reflect.getProtototypeOf(this).constructor;
-        this.settingName = `RdsConfigurable.${this.ctor.name}.${this.instanceName}`;
+define(class RdsConfiguration {
+    constructor(category) {
+        this.name = '';
+        this.category = category;
     }
 
+    /*
     async createSetting() {
         await mkSettingsHandle().defineSetting(
             this.settingName,
@@ -42,44 +41,36 @@ define(class RdsConfigurable {
             this.settingShape.getDefault(),
         );
     }
+    */
 
-    getClassName() {
-        return this.ctor.name;
+    getCategory() {
+        return this.category;
     }
 
-    getCtor() {
-        return this.ctor;
+    getName() {
+        return this.name ? `${category}-${this.name}` : '';
     }
 
-    getSetting() {
-        return this.setting;
+    getShape() {
+        return this.shape;
     }
 
-    getSettingCategory() {
-        return this.settingCategory;
+    async load() {
+        this.value = await mkSettingsHandle().getSetting(this.settingName);
     }
 
-    getSettingName() {
-        return this.settingName;
-    }
-
-    getSettingShape() {
-        return this.getSettingShape;
-    }
-
-    async hasSetting() {
-        return await mkSettingsHandle().hasSetting(this.settingName);
-    }
-
-    async init() {
-        this.setting = await mkSettingsHandle().getSetting(this.settingName);
-    }
-
-    async saveSetting() {
+    async save() {
+        /*
         if (this.settingShape.verify(this.setting)) {
             await mkSettingsHandle().setSetting(this.settingName, this.setting);
         }
+        */
 
+        return this;
+    }
+
+    setName(name) {
+        this.name = name;
         return this;
     }
 });
