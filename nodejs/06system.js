@@ -36,6 +36,8 @@
  *      *****
  *      setup#acme
  *      setup#mode
+ *      setup#mailer
+ *      setup#user
  * 
  * ServerTeam mode is somewhat complex to describe because the DBMS access,
  * user management, and spooling (email, sms...) are all performed via thunks
@@ -61,6 +63,23 @@ createService(class SystemService extends Service {
         },
     });
 
+    static dbmsSettingsShape = mkRdsShape({
+        dbmsType: StringType,
+        timeout: Int32Type,
+        host: StringType,
+        port: Int32Type,
+        database: StringType,
+        username: StringType,
+        password: StringType,
+        certificate: StringType,
+    });
+
+    static serverTeamSettingsShape = mkRdsShape({
+        serverTeamId: StringType,
+        serverTeamSecret: StringType,
+        serverTeamHosts: [ StringType ],
+    });
+
     static httpServerSettingsShape = mkRdsShape({
         enabled: BooleanType,
         workers: UInt16Type,
@@ -82,23 +101,8 @@ createService(class SystemService extends Service {
             hostCertSubject: StringType,
         },
 
-        serverteam: {
-            serverTeamId: StringType,
-            serverTeamSecret: StringType,
-            serverTeamHosts: [ StringType ],
-        },
-
-        dbms: {
-            dbmsType: StringType,
-            timeout: Int32Type,
-            host: StringType,
-            port: Int32Type,
-            database: StringType,
-            username: StringType,
-            password: StringType,
-            certificate: StringType,
-        },
-
+        serverteam: SystemService.serverTeamSettingsShape,
+        dbms: SystemService.dbmsSettingsShape,
         acme: SystemService.acmeSettingsShape,
         httpServer: SystemService.httpServerSettingsShape,
     });
@@ -472,7 +476,10 @@ createService(class SystemService extends Service {
                         locale: StringType,
                         org: StringType,
                     }
-                }
+                },
+
+                dbms: SystemService.dbmsSettingsShape,
+                serverteam: SystemService.serverTeamSettingsShape,
             }),
 
             value: {
@@ -490,7 +497,10 @@ createService(class SystemService extends Service {
                         locale: this.settings.acme.operator.locale,
                         org: this.settings.acme.operator.org,
                     }
-                }
+                },
+
+                dbms: this.settings.dbms,
+                serverteam: this.settings.serverteam,
             }
         };
     }
@@ -542,6 +552,27 @@ createService(class SystemService extends Service {
         this.settings.acme.contact = message.settings.contact;
         this.settings.acme.operator = message.settings.operator;
         await this.saveBoot();
+    }
+
+    // *********************************************************************************
+    // *********************************************************************************
+    // *********************************************************************************
+    async onSetSystemMode(message) {
+        this.settings.systemMode = message.systemMode;
+
+        if (this.settings.systemMode == 'system#standalone') {
+            if (await this.connectDbms(message.settings)) {
+                console.log
+                // ******************************
+                // await this.saveBoot();
+            }
+        }
+        else if (this.settings.systemMode == 'system#serverteam') {
+            if (await this.connectServerTeam(message.settings)) {
+                // ******************************
+                // await this.saveBoot();
+            }
+        }
     }
 
     async onStartHttp(message) {
@@ -680,6 +711,15 @@ define(class SystemHandle extends Handle {
         return await this.callService({
             settings: settings,
         });
+    }
+
+    async setSystemMode(systemMode, settings) {
+        if (systemMode in { 'system#standalone':0, 'system#serverteam':0 }) {
+            return await this.callService({
+                systemMode: systemMode,
+                settings: settings,
+            });
+        }
     }
 
     async startHttp() {

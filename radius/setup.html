@@ -26,6 +26,12 @@
                     }
                 }
 
+                onSetMode(response) {
+                    // *********************************************************************************
+                    // *********************************************************************************
+                    console.log(response);
+                }
+
                 onConfigureMode(response) {
                     // *********************************************************************************
                     // *********************************************************************************
@@ -40,7 +46,7 @@
                     <formbuttons-widget></formbuttons-widget>
                 </form-widget>
                 <div class="fill" rds-mode="setup#mode">
-                    <form-widget class="fill-horz">
+                    <form-widget class="fill-horz" submit="setServerMode,systemState">
                         <div class="h1">##selectmode##</div>
                         <fieldset-widget rds-bind="systemMode" evt-input="set-mode">
                             [
@@ -50,14 +56,27 @@
                         </fieldset-widget>
                     </form-widget>
                     <selector-panel rds-bind="systemMode">
-                        <form-widget rds-mode="system#standalone" rds-submit="setStandalone,standalone">
+                        <form-widget rds-mode="system#standalone" rds-action="setSystemMode,systemMode,dbms,serverteam">
                             ** STANDALONE SETUP **
+                            <formbuttons-widget></formbuttons-widget>
+                            <script>
+                                () => 'Oh oh, a problem';
+                            </script>
                         </form-widget>
-                        <form-widget rds-mode="system#serverteam" rds-submit="setMode=setServerTeam,serverteam">
+                        <form-widget rds-mode="system#serverteam" rds-action="setSystemMode,systemMode,dbms,serverteam">
                             ** SERVERTEAM SETUP **
+                            <formbuttons-widget></formbuttons-widget>
                         </form-widget>
                     </selector-panel>
                 </div>
+                <form class="fill" rds-mode="setup#mailer">
+                    ** SETUP EMAILER **
+                    <formbuttons-widget></formbuttons-widget>
+                </form>
+                <form class="fill" rds-mode="setup#user">
+                    ** SETUP USER **
+                    <formbuttons-widget></formbuttons-widget>
+                </form>
             </selector-panel>
         </html>
     </widget>

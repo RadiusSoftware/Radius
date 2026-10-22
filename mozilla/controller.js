@@ -289,11 +289,21 @@ singleton(class Controller extends Emitter {
     }
 
     getShape(dotted) {
-        return this.shape.get(dotted);
+        if (StringType.verify(dotted)) {
+            return this.shape.get(dotted);
+        }
+        else {
+            return this.shape;
+        }
     }
 
     getValue(dotted) {
-        return RdsData.get(this.value, dotted);
+        if (StringType.verify(dotted)) {
+            return RdsData.get(this.value, dotted);
+        }
+        else {
+            return RdsData.clone(this.value);
+        }
     }
 
     hasBinding(controllerBinding) {
@@ -458,6 +468,11 @@ singleton(class Controller extends Emitter {
             for (let modified of this.enumerate(dotted)) {
                 this.signalBindings(modified, { action: 'refresh' });
             }
+
+            this.emit({
+                name: 'ValueSet',
+                dotted: dotted,
+            });
         }
 
         return this;

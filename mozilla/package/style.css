@@ -279,6 +279,20 @@ body {
     align-items: center;
 }
 
+form[form-invalid],
+form:invalid {
+    border: solid var(--error-color) 2px;
+}
+
+.form-diagnostic {
+    height: 30px;
+    padding-left: 8px;
+    padding-right: 8px;
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--error-color);
+}
+
 .form-buttons {
     display: flex;
     flex-direction: row;

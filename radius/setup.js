@@ -58,5 +58,24 @@
                 path: channel.getPath(),
             };
         }
+
+        // ********************
+        // setSystemMode
+        // ********************
+        async [Api.defineEndpoint(
+            'setSystemMode',
+            {
+                systemMode: StringType,
+                dbms: SystemHandle.setupDataShape.get('dbms'),
+                serverTeam: SystemHandle.setupDataShape.get('serverteam'),
+            }
+        )](trx, systemMode, dbms, serverTeam) {
+            if (systemMode == 'system#standalone') {
+                return await mkSystemHandle().setServerMode(systemMode, dbms);
+            }
+            else if (systemMode == 'system#serverteam') {
+                return await mkSystemHandle().setServerMode(systemMode, serverteam);
+            }
+        }
     });
 })();

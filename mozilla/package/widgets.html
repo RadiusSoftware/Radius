@@ -337,10 +337,36 @@
         <script>
             class FormWidget extends Widget {
                 init() {
+                    this.validators = [];
+                    let childElements = this.getChildElements();
+
+                    for (let childElement of childElements) {
+                        if (childElement.getTagName() == 'script') {
+                            try {
+                                let validator;
+                                eval(`validator = ${childElement.getInnerHtml()}`);
+
+                                if (FunctionType.verify(validator)) {
+                                    this.validators.push(validator);
+                                }
+                            }
+                            catch (e) {}
+                            childElement.remove();
+                        }
+                    }
+
+                    for (let childElement of this.enumerateElementDescendents()) {
+                        if (childElement.getTagName() == 'formbuttons-widget') {
+                            this.formButtons = childElement;
+                            break;
+                        }
+                    }
+
+                    Controller.on('ValueSet', message => this.onControllerValue());
+
                     super.init();
                     this.reset = {};
                     this.editing = null;
-                    this.submittable = false;
 
                     if (FunctionType.verify(this.getRdsAction)) {
                         let action = RdsText.split(this.getRdsAction(), ',');
@@ -357,14 +383,46 @@
                                     return;
                                 }
                             }
-
-                            this.submittable = true;
                         }
+                    }
+
+                    this.prepend(
+                        this.diagnostics = createElement('div', { class: 'form-diagnostic' })
+                    );
+                }
+
+                onControllerValue() {
+                    let errors = [];
+
+                    for (let validator of this.validators) {
+                        let result = Reflect.apply(validator, this, []);
+                        StringType.verify(result) && result ? errors.push(result) : null;
+                    }
+
+                    if (this.method && this.dotteds.length) {
+                        if (errors.length) {
+                            this.setAttribute('form-invalid');
+                            this.setSubmitButtonEnabled(false);
+                            this.diagnostics.clear().setInnerHtml(errors.join('; '));
+                            this.diagnostics.setStyle({ visibility: 'visible' });
+                        }
+                        else {
+                            this.clearAttribute('form-invalid');
+                            this.setSubmitButtonEnabled(true);
+                            this.diagnostics.clear();
+                            this.diagnostics.setStyle({ visibility: 'hidden' });
+                        }
+                    }
+                    else {
+                        this.setSubmitButtonEnabled(true);
+                        this.diagnostics.clear();
+                        this.diagnostics.setStyle({ visibility: 'hidden' });
+                        this.setSubmitButtonEnabled(false);
                     }
                 }
 
                 async onHandleEventReset(event) {
-                    if (this.submittable) {
+                    if (this.method && this.dotteds.length) {
                         for (let dotted in this.reset) {
                             Controller.setValue(dotted, this.reset[dotted]);
                         }
@@ -372,7 +430,7 @@
                 }
 
                 async onHandleEventSubmit(event) {
-                    if (this.submittable) {
+                    if (this.method && this.dotteds.length) {
                         let result = await Api[this.method](
                             ...this.dotteds.map(dotted => Controller.getValue(dotted))
                         );
@@ -434,15 +492,26 @@
                         }
                     }
                 }
+
+                setSubmitButtonEnabled(enabled) {
+                    if (this.formButtons) {
+                        if (enabled) {
+                            this.formButtons.getChildElementAt(0).clearAttribute('disabled');
+                        }
+                        else {
+                            this.formButtons.getChildElementAt(0).setAttribute('disabled');
+                        }
+                    }
+
+                    return this;
+                }
             }
         </script>
     </widget>
     <widget tagname="formbuttons-widget">
-        <html>
-            <formbutton-widget class="form-buttons">
-                <button-widget type="submit" class="input-widget-width-wide">##submit##</button-widget>
-                <button-widget type="reset" class="input-widget-width-wide">##reset##</button-widget>
-            </formbutton-widget>
+        <html class="form-buttons">
+            <button-widget type="submit" class="input-widget-width-wide">##submit##</button-widget>
+            <button-widget type="reset" class="input-widget-width-wide">##reset##</button-widget>
         </html>
     </widget>
     <widget tagname="grid-widget">
