@@ -661,6 +661,22 @@
             }
         </script>
     </widget>
+    <widget tagname="icon-widget">
+        <script>
+            class IconWidget extends Widget {
+                init() {
+                    if (this.getRdsShape) {
+                        this.append(createElement('svg', { 'rds-shape': this.getRdsShape() }));
+                    }
+                    else {
+                        this.append(createElement('svg', { 'rds-shape': 'dot' }));
+                    }
+
+                    super.init();
+                }
+            }
+        </script>
+    </widget>
     <widget tagname="iframe-widget">
         <script>
             class IframeWidget extends Widget {
