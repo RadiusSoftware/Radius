@@ -562,7 +562,6 @@ createService(class SystemService extends Service {
 
         if (this.settings.systemMode == 'system#standalone') {
             if (await this.connectDbms(message.settings)) {
-                console.log
                 // ******************************
                 // await this.saveBoot();
             }

@@ -2,20 +2,19 @@
 <bundle>
     <!--
     <widget tagname="busydots-widget">
-        <script>
-            class BusyWidget extends Widget {
-            }
-        </script>
+        <html>
+        </html>
     </widget>
     -->
-    <!--
     <widget tagname="busylines-widget">
-        <script>
-            class BusyWidget extends Widget {
-            }
-        </script>
+        <html>
+            <span></span>
+            <span style="animation-delay: -0.15s;"></span>
+            <span style="animation-delay: -0.30s;"></span>
+            <span style="animation-delay: -0.45s;"></span>
+            <span style="animation-delay: -0.60s;"></span>
+        </html>
     </widget>
-    -->
     <widget tagname="dialog-widget">
         <script>
             class DialogWidget extends PopupWidget {
@@ -431,9 +430,11 @@
 
                 async onHandleEventSubmit(event) {
                     if (this.method && this.dotteds.length) {
+                        this.swapOut(createElement('busylines-widget'));
                         let result = await Api[this.method](
                             ...this.dotteds.map(dotted => Controller.getValue(dotted))
                         );
+                        this.swapBack();
 
                         if (appWidget) {
                             let handlerName = `on${this.method[0].toUpperCase()}${this.method.substring(1)}`;
@@ -675,7 +676,7 @@
     </widget>
     <script>
         define(function popupMenu(menu, anchorElement, anchorPlacement) {
-            console.log('createPopup()');
+            console.log('createPopupMenu()');
         });
     </script>
     -->

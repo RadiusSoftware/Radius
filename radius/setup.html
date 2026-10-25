@@ -57,11 +57,9 @@
                     </form-widget>
                     <selector-panel rds-bind="systemMode">
                         <form-widget rds-mode="system#standalone" rds-action="setSystemMode,systemMode,dbms,serverteam">
-                            ** STANDALONE SETUP **
+                            <div class="h1">##configureDbms##</div>
+                            <data-widget rds-bind="dbms" rds-readonly="false"></data-widget>
                             <formbuttons-widget></formbuttons-widget>
-                            <script>
-                                () => 'Oh oh, a problem';
-                            </script>
                         </form-widget>
                         <form-widget rds-mode="system#serverteam" rds-action="setSystemMode,systemMode,dbms,serverteam">
                             ** SERVERTEAM SETUP **

@@ -99,6 +99,23 @@ define(class HtmlElement extends DocElement {
         return this;
     }
 
+    getAbsoluteOrigin() {
+        let node = this.node;
+
+        let origin = {
+            left: this.node.offsetLeft,
+            top: this.node.offsetTop,
+        };
+
+        if (node.parentNode && node.parentNode.tagName != 'BODY') {
+            node = node.parentNode;
+            origin.left += node.offsetLeft;
+            origin.top += node.offsetTop;
+        }
+
+        return origin;
+    }
+
     getData(key) {
         return this.node.dataset[key];
     }
@@ -165,6 +182,29 @@ define(class HtmlElement extends DocElement {
 
     setTitle(title) {
         this.setAttribute('title', title);
+        return this;
+    }
+
+    swapBack() {
+        if (this.swappedWith) {
+            this.swappedWith.replace(this);
+            delete this.swappedWith;
+        }
+
+        return this;
+    }
+
+    swapOut(htmlElement) {
+        if (!this.swappedWith) {
+            htmlElement.setStyle({
+                width: `${this.getOffsetWidth()}px`,
+                height: `${this.getOffsetHeight()}px`,
+            });
+
+            this.swappedWith = htmlElement;
+            this.replace(htmlElement);
+        }
+
         return this;
     }
 

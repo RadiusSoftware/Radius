@@ -30,8 +30,19 @@
 *****/
 (async () => {
     define(class SetupApp extends Webapp {
+        async checkDbmsSettings(dbmsSettings) {
+            // **********************************************************************
+            // **********************************************************************
+        }
+
         async getControllerData(handle) {
             let setupData = await mkSystemHandle().getSetupData();
+            // **********************************************************************
+            // **********************************************************************
+            setupData.value.setupState = 'setup#acme';
+            console.log(setupData.value);
+            // **********************************************************************
+            // **********************************************************************
             return setupData;
         }
 
@@ -48,6 +59,16 @@
                 acme: SystemHandle.setupDataShape.get('acme'),
             }
         )](trx, acme) {
+            // **********************************************************************
+            // **********************************************************************
+            return new Promise(async (ok, fail) => {
+                await pause(2000);
+                ok({
+                    type: 'test',
+                });
+            });
+            // **********************************************************************
+            // **********************************************************************
             let system = mkSystemHandle();
             await system.setAcmeSettings(acme);
             let channel = await mkWebsocketChannel().open();
