@@ -374,17 +374,17 @@ icon-widget {
     margin: 0px;
     padding: 0px;
     fill: var(--icon-std-fill-color);
-    stroke-color: var(--icon-std-stroke-color);
-    cursor: pointer;
+    stroke: var(--icon-std-stroke-color);
 
     &:hover {
         fill: var(--icon-hover-fill-color);
-        stroke-color: var(--hover-std-stroke-color);
+        stroke: var(--icon-hover-stroke-color);
+        cursor: pointer;
     }
 
     &:disabled {
         fill: var(--icon-disabled-fill-color);
-        stroke-color: var(--disabled-std-stroke-color);
+        stroke: var(--icon-disabled-stroke-color);
     }
 }
 
