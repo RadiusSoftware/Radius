@@ -164,7 +164,7 @@ singleton(class Packages {
         }
     }
     
-    processText(text) {
+    processText(text, dontDecorate) {
         let index = 0;
         let segments = [];
 
@@ -176,6 +176,9 @@ singleton(class Packages {
 
             if (match[1] in this.strings) {
                 var value = this.strings[match[1]];
+            }
+            else if (dontDecorate === true) {
+                return match[1];
             }
             else {
                 var value = `## ${match[1]} ##`;
@@ -211,6 +214,8 @@ singleton(class Packages {
     
     registerScripts(pkg) {
         for (let script of pkg.scripts) {
+            console.log(pkg.name);
+            console.log(script);
             let scriptElement = mkHtmlElement('script');
             scriptElement.setInnerHtml(script);
             scriptElement.setAttribute('package', pkg.name);
