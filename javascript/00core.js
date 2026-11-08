@@ -219,6 +219,10 @@
             }
         }
 
+        getName() {
+            return this.ns;
+        }
+
         getObject() {
             return this.object;
         }
@@ -334,6 +338,9 @@
     globalThis.mkNamespace = (...args) => new Namespace(...args);
     globalThis.mkNamespace['#namespace'] = '';
     mkNamespace();
+    globalThis['#define'] = globalThis.define;
+    globalThis['#interface'] = globalThis.interface;
+    globalThis['#singleton'] = globalThis.singleton;
 })();
 
 

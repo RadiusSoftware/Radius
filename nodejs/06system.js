@@ -391,6 +391,12 @@ createService(class SystemService extends Service {
         }
     }
 
+    async loadPackages() {
+        let packages = mkPackageHandle();
+        await packages.loadDirectory(Path.join(radius.path, '/mozilla/package'), '/');
+        await packages.loadDirectory(Path.join(radius.path, '/radius'), this.radiusFrameworkPath);
+    }
+
     async onBoot(message) {
         await mkPermissionSetHandle().addPermissionTypes(
             'radius#signedin',
@@ -407,10 +413,6 @@ createService(class SystemService extends Service {
             data: radius.mozilla,
         });
 
-        let packages = mkPackageHandle();
-        await packages.loadDirectory(Path.join(radius.path, '/mozilla/package'), '/');
-        await packages.loadDirectory(Path.join(radius.path, '/radius'), this.radiusFrameworkPath);
-
         await this.createBootKey();
         await this.loadBoot();
         await this.configureBasicSystem();
@@ -424,6 +426,7 @@ createService(class SystemService extends Service {
             await this.saveBoot();
         }
 
+        await this.loadPackages();
         await this.startHttp();
     }
 

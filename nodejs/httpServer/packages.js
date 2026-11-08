@@ -41,7 +41,7 @@ define(class Package {
         this.boxed = null;
 
         this.nodejs = {
-            workers: [],
+            files: [],
             errors: [],
         };
 
@@ -250,6 +250,13 @@ define(class Package {
                         await this.loadBundle(htmlElement);
                     }
                 }
+                else if (doctype.type == 'script') {
+                    let htmlElement = createDocElementFromOuterHtml(html.substring(doctype.length));
+
+                    if (htmlElement.getTagName() == 'script') {
+                        await this.processScript(htmlElement);
+                    }
+                }
             }
             else {
                 let info = Path.parse(fileName);
@@ -315,7 +322,7 @@ define(class Package {
 
                                     let httpXHandle = {
                                         httpXElement: appWidgetElement,
-                                        path: Path.join(handle.url, httpXName),
+                                        path: Path.join(this.url, httpXName),
                                         permissionSet: handle.filePermissions.getFilePermissionSet(httpXName),
                                         settings: widgetData.settings,
                                     }
@@ -364,6 +371,7 @@ define(class Package {
             if (await FileSystem.isFile(path)) {
                 let pkgMeta = fromJson(await FileSystem.readFileAsString(path));
                 this.name = pkgMeta.name;
+                this.namespace = mkNamespace(this.name);
 
                 if (Array.isArray(pkgMeta.dependencies)) {
                     this.dependencies = pkgMeta.dependencies;
@@ -618,8 +626,23 @@ define(class Package {
 
     registerCode(filePath) {
         try {
-            require(filePath);
-            this.nodejs.workers.push(filePath);
+            (() => {
+                if (this.namespace.getName()) {
+                    globalThis.define = (...args) => this.namespace.define(...args);
+                    globalThis.interface = (...args) => this.namespace.interface(...args);
+                    globalThis.singleton = (...args) => this.namespace.singleton(...args);
+                }
+
+                require(filePath);
+
+                if (this.namespace.getName()) {
+                    globalThis.define = globalThis['#define'];
+                    globalThis.interface = globalThis['#interface'];
+                    globalThis.singleton = globalThis['#singleton'];
+                }
+            })();
+            
+            this.nodejs.files.push(filePath);
         }
         catch (e) {
             this.nodejs.errors.push({
@@ -816,13 +839,15 @@ createService(class PackageService extends Service {
         let packages = [];
 
         for (let pkg of this.packages) {
-            let pkgData = {
+            let packageData = {
                 pkgName: pkg.name,
                 nodejs: [],
             };
 
-            for (let codePath of pkg.nodejs.workers) {
-                pkgData.nodejs.push(codePath);
+            packages.push(packageData);
+
+            for (let codePath of pkg.nodejs.files) {
+                packageData.nodejs.push(codePath);
             }
         }
 
@@ -927,15 +952,29 @@ define(class PackageHandle extends Handle {
     }
 
     async registerWorkerCode() {
-        let files = await this.callService({
-        });
+        for (let pkg of await this.callService({
+        })) {
+            const namespace = mkNamespace(pkg.pkgName);
 
-        for (let file of files) {
-            try {
-                require(file);
+            if (namespace.getName()) {
+                globalThis.define = (...args) => namespace.define(...args);
+                globalThis.interface = (...args) => namespace.interface(...args);
+                globalThis.singleton = (...args) => namespace.singleton(...args);
             }
-            catch (e) {
-                await caught(e)
+
+            for (let file of pkg.nodejs) {
+                try {
+                    require(file);
+                }
+                catch (e) {
+                    await caught(e)
+                }
+            }
+
+            if (namespace.getName()) {
+                globalThis.define = globalThis['#define'];
+                globalThis.interface = globalThis['#interface'];
+                globalThis.singleton = globalThis['#singleton'];
             }
         }
 

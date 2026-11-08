@@ -213,14 +213,38 @@ singleton(class Packages {
     }
     
     registerScripts(pkg) {
+        let scriptElement = mkHtmlElement('script');
+        scriptElement.setAttribute('package', pkg.name);
+
+        if (pkg.name) {
+            scriptElement.append(
+                mkDocText(`
+                    const namespace = mkNamespace('${pkg.name}');
+                    globalThis.define = (...args) => namespace.define(...args);
+                    globalThis.interface = (...args) => namespace.interface(...args);
+                    globalThis.singleton = (...args) => namespace.singleton(...args);
+                `)
+            )
+        };
+
         for (let script of pkg.scripts) {
-            console.log(pkg.name);
-            console.log(script);
-            let scriptElement = mkHtmlElement('script');
-            scriptElement.setInnerHtml(script);
-            scriptElement.setAttribute('package', pkg.name);
-            Doc.getHead().append(scriptElement);
+            scriptElement.append(
+                mkDocText(script),
+                mkDocText('\n'),
+            );
         }
+
+        if (pkg.name) {
+            scriptElement.append(
+                mkDocText(`
+                    globalThis.define = globalThis['#define'];
+                    globalThis.interface = globalThis['#interface'];
+                    globalThis.singleton = globalThis['#singleton'];
+                `)
+            )
+        };
+
+        Doc.getHead().append(scriptElement);
     }
 
     registerShapes(pkg) {
