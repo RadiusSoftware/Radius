@@ -1,4 +1,12 @@
 {
     ".": {
+    },
+    "admin": {
+        "radius#signedin": "+",
+        "radius#admin": "+"
+    },
+    "system": {
+        "radius#signedin": "+",
+        "radius#system": "+"
     }
 }

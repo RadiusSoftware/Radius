@@ -394,7 +394,17 @@ createService(class SystemService extends Service {
     async loadPackages() {
         let packages = mkPackageHandle();
         await packages.loadDirectory(Path.join(radius.path, '/mozilla/package'), '/');
-        await packages.loadDirectory(Path.join(radius.path, '/radius'), this.radiusFrameworkPath);
+
+        // **************************************************************************
+        // **************************************************************************
+        if (this.settings.mode == 'system#serverteam') {
+            console.log(`Packages ${this.settings.mode}`);
+        }
+        else if (this.settings.mode == 'system#standalone') {
+            console.log(`Packages ${this.settings.mode}`);
+        }
+        // **************************************************************************
+        // **************************************************************************
     }
 
     async onBoot(message) {
