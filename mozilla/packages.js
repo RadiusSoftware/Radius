@@ -221,7 +221,7 @@ singleton(class Packages {
                 mkDocText(`
                     const namespace = mkNamespace('${pkg.name}');
                     globalThis.define = (...args) => namespace.define(...args);
-                    globalThis.interface = (...args) => namespace.interface(...args);
+                    globalThis.objectte = (...args) => namespace.objectte(...args);
                     globalThis.singleton = (...args) => namespace.singleton(...args);
                 `)
             )
@@ -238,7 +238,7 @@ singleton(class Packages {
             scriptElement.append(
                 mkDocText(`
                     globalThis.define = globalThis['#define'];
-                    globalThis.interface = globalThis['#interface'];
+                    globalThis.objectte = globalThis['#objectte'];
                     globalThis.singleton = globalThis['#singleton'];
                 `)
             )

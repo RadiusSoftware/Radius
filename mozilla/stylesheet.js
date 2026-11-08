@@ -136,13 +136,13 @@ define(class CssStyleProperties extends CssStyleDeclaration {
 
 (() => {
     /*****
-     * CssRules is an interface that supports operations on the cssRules native
+     * CssRules is an objectte that supports operations on the cssRules native
      * member.  It's implement in the CssStyleSheet and CssGroupingRule classes.
      * It wraps and extends the basic CSSRules native object with features for
      * appending a rule, enumerating a rules tree, and iterating over an object's
      * rules.
     *****/
-    interface(class CssRules {
+    objectte(class CssRules {
         appendRule(cssRule) {
             let index = this.native.length;
             this.native.insertRule(rule, index);
@@ -207,7 +207,7 @@ define(class CssStyleProperties extends CssStyleDeclaration {
     /*****
      * The base class for all of the CSS rules. Some rules directly extend this
      * base class, while others extend CSSGroupingRule, which is essentially
-     * this class, which implements the CssRules interface.  Csss text property
+     * this class, which implements the CssRules objectte.  Csss text property
      * provides the raw (formatted??) Css from the style sheet.
     *****/
     class CssRule {
@@ -240,7 +240,7 @@ define(class CssStyleProperties extends CssStyleDeclaration {
     /*****
      * The grouping rule extends the base rule by supporting a cssRules property
      * as part of the native css value.  The features provided by the cssRules
-     * property are supported with the CssRules interface, which is implemented
+     * property are supported with the CssRules objectte, which is implemented
      * by CssGrouping Rule.
     *****/
     define(class CssGroupingRule extends CssRule {
@@ -321,7 +321,7 @@ define(class CssStyleProperties extends CssStyleDeclaration {
 
 
     /*****
-     * The CSSKeyframeRule interface describes an object representing a set of
+     * The CSSKeyframeRule objectte describes an object representing a set of
      * styles for a given keyframe. It corresponds to the contents of a single
      * keyframe of a @keyframes at-rule.
     *****/

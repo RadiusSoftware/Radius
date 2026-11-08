@@ -33,7 +33,7 @@ define(function mkFrameworkSchema() {
             {
                 name: 'dboLock',
                 type: 'object',
-                prefix: 'dbol',
+                prefix: 'LOKK',
                 columns: [
                     { name: 'objId', type: StringType, size: 50 },
                     { name: 'lockId', type: StringType, size: 50 },
@@ -148,7 +148,7 @@ define(function mkFrameworkSchema() {
                     { name: 'emailAddrId', type: StringType, size: 50 },
                     { name: 'emailAddr2Id', type: StringType, size: 50 },
                     { name: 'otpId', type: StringType, size: 50 },
-                    { name: 'opt2Id', type: StringType, size: 50 },
+                    { name: 'otp2Id', type: StringType, size: 50 },
                     { name: 'phoneId', type: StringType, size: 50 },
                     { name: 'phone2Id', type: StringType, size: 50 },
                     { name: 'active', type: BooleanType },
@@ -156,7 +156,6 @@ define(function mkFrameworkSchema() {
                     { name: 'eulaAccepted', type: BooleanType },
                     { name: 'failedLogins', type: Int32Type },
                     { name: 'permissions', type: JsonType },
-                    { name: 'settings', type: JsonType },
                 ],
                 indexes: [
                     { columnItems: [ { column: 'userName', direction: 'asc' } ]},

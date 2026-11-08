@@ -77,19 +77,19 @@
 
                 this.ns = ns;
                 this.object = object;
-                this.object.define = (func, ...interfaces) => this.define(func, ...interfaces);
+                this.object.define = (func, ...objecttes) => this.define(func, ...objecttes);
                 this.object.singleton = (clss) => this.singleton(clss);
-                this.object.interface = clss => this.interface(clss);
+                this.object.objectte = clss => this.objectte(clss);
                 Namespace.namespaces[ns] = this;
             }
         }
 
-        define(func, ...interfaces) {
+        define(func, ...objecttes) {
             if (typeof func == 'function') {
                 if (func.name && func.name.length) {
                     if (!(func.name in this.object)) {
                         if (func.toString().startsWith('class')) {
-                            this.defineClass(func, ...interfaces);
+                            this.defineClass(func, ...objecttes);
                         }
                         else {
                             this.defineFunction(func);
@@ -110,14 +110,14 @@
             return this;
         }
 
-        defineClass(clss, ...interfaces) {
+        defineClass(clss, ...objecttes) {
             if (clss.name.match(/^[A-Z]/)) {
                 let makerName = `mk${clss.name}`;
 
                 this.object[makerName] = (...args) => {
                     let object = Reflect.construct(clss, args);
 
-                    for (let iface of interfaces) {
+                    for (let iface of objecttes) {
                         if (typeof iface.prototype.ctor == 'function') {
                             Reflect.apply(iface.prototype.ctor, object, []);
                         }
@@ -131,11 +131,11 @@
                 this.object[clss.name]['#namespace'] = this.ns;
                 this.object[clss.name]['#fqn'] = this.ns ? `${this.ns}.${clss.name}` : clss.name;
 
-                if (interfaces.length) {
+                if (objecttes.length) {
                     Namespace.implementors[this.object[clss.name]['#fqn']] = new WeakMap();
 
-                    for (let iface of interfaces) {
-                        if (ClassType.verify(iface) && iface['#interface']) {
+                    for (let iface of objecttes) {
+                        if (ClassType.verify(iface) && iface['#objectte']) {
                             Namespace.implementors[this.object[clss.name]['#fqn']].set(iface, true);
 
                             for (let methodName of Reflect.ownKeys(iface.prototype)) {
@@ -149,7 +149,7 @@
                             }
                         }
                         else {
-                            throw throwError(`Namespace.defineClass() "${clss['#fqn']}" invalid interface encountered.`);
+                            throw throwError(`Namespace.defineClass() "${clss['#fqn']}" invalid objectte encountered.`);
                         }
                     }
                 }
@@ -239,20 +239,20 @@
             return name in this.object;
         }
 
-        interface(clss) {
+        objectte(clss) {
             if (typeof clss == 'function') {
                 if (clss.name.match(/^[A-Z]/)) {
                     this.object[clss.name] = clss;
-                    this.object[clss.name]['#interface'] = true;
+                    this.object[clss.name]['#objectte'] = true;
                     this.object[clss.name]['#namespace'] = this.ns;
                     this.object[clss.name]['#fqn'] = this.ns ? `${this.ns}.${clss.name}` : clss.name;
                 }
                 else {
-                    throw throwError(`Namespace.interface(), class name must start with an upper-case letter: ${clss.name}`);
+                    throw throwError(`Namespace.objectte(), class name must start with an upper-case letter: ${clss.name}`);
                 }
             }
             else {
-                throw throwError(`Namespace.interface(), invalid parameter provided. Expectingh a class definition.`);
+                throw throwError(`Namespace.objectte(), invalid parameter provided. Expectingh a class definition.`);
             }
 
             return this;
@@ -339,19 +339,19 @@
     globalThis.mkNamespace['#namespace'] = '';
     mkNamespace();
     globalThis['#define'] = globalThis.define;
-    globalThis['#interface'] = globalThis.interface;
+    globalThis['#objectte'] = globalThis.objectte;
     globalThis['#singleton'] = globalThis.singleton;
 })();
 
 
 /*****
  * Core function that checks whether an object implements the specified
- * interfaces.  The check simply checks that the prototype of the object
- * has all of the functions in the specified interfaces.
+ * objecttes.  The check simply checks that the prototype of the object
+ * has all of the functions in the specified objecttes.
 *****/
-define(function implementorof(object, ...interfaces) {
-    for (let interface of interfaces) {
-        if (typeof interface == 'function' && interface['#interface']) {
+define(function implementorof(object, ...objecttes) {
+    for (let objectte of objecttes) {
+        if (typeof objectte == 'function' && objectte['#objectte']) {
             let implemented = false;
 
             for (let ctor of RdsData.enumerateClassHierarchy(object)) {
@@ -361,7 +361,7 @@ define(function implementorof(object, ...interfaces) {
                     let implementor = Namespace.implementors[fqn];
 
                     if (implementor) {
-                        if (implementor.has(interface)) {
+                        if (implementor.has(objectte)) {
                             implemented = true;
                             break;
                         }

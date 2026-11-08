@@ -629,7 +629,7 @@ define(class Package {
             (() => {
                 if (this.namespace.getName()) {
                     globalThis.define = (...args) => this.namespace.define(...args);
-                    globalThis.interface = (...args) => this.namespace.interface(...args);
+                    globalThis.objectte = (...args) => this.namespace.objectte(...args);
                     globalThis.singleton = (...args) => this.namespace.singleton(...args);
                 }
 
@@ -637,7 +637,7 @@ define(class Package {
 
                 if (this.namespace.getName()) {
                     globalThis.define = globalThis['#define'];
-                    globalThis.interface = globalThis['#interface'];
+                    globalThis.objectte = globalThis['#objectte'];
                     globalThis.singleton = globalThis['#singleton'];
                 }
             })();
@@ -958,7 +958,7 @@ define(class PackageHandle extends Handle {
 
             if (namespace.getName()) {
                 globalThis.define = (...args) => namespace.define(...args);
-                globalThis.interface = (...args) => namespace.interface(...args);
+                globalThis.objectte = (...args) => namespace.objectte(...args);
                 globalThis.singleton = (...args) => namespace.singleton(...args);
             }
 
@@ -973,7 +973,7 @@ define(class PackageHandle extends Handle {
 
             if (namespace.getName()) {
                 globalThis.define = globalThis['#define'];
-                globalThis.interface = globalThis['#interface'];
+                globalThis.objectte = globalThis['#objectte'];
                 globalThis.singleton = globalThis['#singleton'];
             }
         }
