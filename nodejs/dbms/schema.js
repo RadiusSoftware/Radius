@@ -32,22 +32,30 @@
  * an application server.
 *****/
 define(class DbSchema {
+    static schemas = {};
+
     constructor(arg) {
         this.name = '';
         this.tableArr = [];
         this.tableMap = {};
+        this.name = arg.name;
 
-        if (typeof arg == 'object') {
-            this.name = arg.name;
-
-            for (let table of arg.tables) {
-                let dbTable = mkDbTable(table);
-                this.tableArr.push(dbTable);
-                this.tableMap[dbTable.getName()] = dbTable;
-            }
+        for (let table of arg.tables) {
+            let dbTable = mkDbTable(table);
+            this.tableArr.push(dbTable);
+            this.tableMap[dbTable.getName()] = dbTable;
         }
-        else if (typeof arg == 'string') {
-            this.name = arg;
+
+        if (this.name in DbSchema.schemas) {
+            DbSchema[this.name].defined.push(this);
+        }
+        else {
+            let schemaEntry = {
+                name: this.name,
+                defined: [ this ],
+            };
+
+            DbSchema[this.name] = schemaEntry;
         }
     }
 

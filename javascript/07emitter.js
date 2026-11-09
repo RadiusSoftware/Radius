@@ -360,8 +360,8 @@ define(class HandlerProxy {
 
 /*****
  * In order to enable messages regarding class managemebnt from namespaces, we
- * need to set the Namespace.emitter value.  From the time of the definition of
+ * need to set the globalThis.emitter value.  From the time of the definition of
  * namespaces in 00core.js until now, callers are NOT able to receive messages
  * regarding namespace activity and cannot even register requests.
 *****/
-Namespace.emitter = mkEmitter();
+globalThis.emitter = mkEmitter();

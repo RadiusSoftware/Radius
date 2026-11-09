@@ -32,7 +32,6 @@
 define(class Package {
     constructor() {
         this.name = '';
-        this.type = '';
         this.url = '';
         this.path = '';
         this.status = '';
@@ -126,8 +125,8 @@ define(class Package {
         return this.name;
     }
 
-    getPackageType() {
-        return this.type;
+    getNamsspace() {
+        return this.namespace;
     }
 
     getPath() {
@@ -136,10 +135,6 @@ define(class Package {
 
     getStatus() {
         return this.status;
-    }
-
-    getType() {
-        return this.type;
     }
 
     getUrl() {
@@ -164,8 +159,7 @@ define(class Package {
         try {
             this.path = path;
             this.url = url;
-            this.type = 'filesystem';
-
+            
             let basicPermissions = mkFilePermissions(await mkPermissionSetHandle().createPermissionSet());
             await basicPermissions.getDirPermissionSet();
 
@@ -372,15 +366,14 @@ define(class Package {
                 let pkgMeta = fromJson(await FileSystem.readFileAsString(path));
                 this.name = pkgMeta.name;
                 this.namespace = mkNamespace(this.name);
-
-                if (Array.isArray(pkgMeta.dependencies)) {
-                    this.dependencies = pkgMeta.dependencies;
-                }
-
                 this.status = 'package-found';
                 return true;
             }
         }
+        /*
+            let basicPermissions = mkFilePermissions(await mkPermissionSetHandle().createPermissionSet());
+            await basicPermissions.getDirPermissionSet();
+        */
 
         return false;
     }

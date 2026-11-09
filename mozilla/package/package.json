@@ -1,3 +1,22 @@
 {
-    "name": ""
+    "name": "",
+    "permissionTypes": [
+        "radius#admin",
+        "radius#signedin",
+        "radius#system"
+    ],
+    "permissions": {
+        ".": {
+            "radius#signedin": "+"
+        },
+        "admin": {
+            "radius#admin": "+"
+        },
+        "setup": {
+            "radius#signedin": "-"
+        },
+        "system": {
+            "radius#system": "+"
+        }
+    }
 }

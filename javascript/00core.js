@@ -154,8 +154,8 @@
                     }
                 }
 
-                if (Namespace.emitter) { 
-                    Namespace.emitter.emit({
+                if (globalThis.emitter) { 
+                    globalThis.emitter.emit({
                         name: 'ClassDefined',
                         namespace: this,
                         clss: this.object[clss.name],
@@ -176,8 +176,8 @@
                 this.object[func.name]['#namespace'] = this.ns;
                 this.object[func.name]['#fqn'] = this.ns ? `${this.ns}.${clss.name}` : func.name;
 
-                if (Namespace.emitter) { 
-                    Namespace.emitter.emit({
+                if (globalThis.emitter) { 
+                    globalThis.emitter.emit({
                         name: 'FunctionDefined',
                         namespace: this,
                         func: this.object[func.name],
@@ -259,20 +259,20 @@
         }
 
         static off(...args) {
-            if (Namespace.emitter) {
-                Namespace.emitter.off(...args);
+            if (globalThis.emitter) {
+                globalThis.emitter.off(...args);
             }
         }
 
         static on(...args) {
-            if (Namespace.emitter) {
-                Namespace.emitter.on(...args);
+            if (globalThis.emitter) {
+                globalThis.emitter.on(...args);
             }
         }
 
         static once(...args) {
-            if (Namespace.emitter) {
-                Namespace.emitter.once(...args);
+            if (globalThis.emitter) {
+                globalThis.emitter.once(...args);
             }
         }
 
@@ -287,8 +287,8 @@
                                 this.object[clss.name]['#singleton'] = true;
                                 this.object[clss.name]['#fqn'] = this.ns ? `${this.ns}.${clss.name}` : clss.name;
 
-                                if (Namespace.emitter) { 
-                                    Namespace.emitter.emit({
+                                if (globalThis.emitter) { 
+                                    globalThis.emitter.emit({
                                         name: 'SingletoneConstructed',
                                         namespace: this,
                                         singleton: this.object[clss.name],

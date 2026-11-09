@@ -408,12 +408,6 @@ createService(class SystemService extends Service {
     }
 
     async onBoot(message) {
-        await mkPermissionSetHandle().addPermissionTypes(
-            'radius#signedin',
-            'radius#admin',
-            'radius#system',
-        );
-
         await mkHttpLibraryHandle().addData({
             path: this.radiusFrameworkPath,
             mime: 'text/javascript',
