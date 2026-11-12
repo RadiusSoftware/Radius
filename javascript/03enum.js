@@ -161,9 +161,15 @@ define(class RdsEnum {
         });
     }
 
-    toString() {
+    toDecoratedStrings() {
         return Object.entries(this.values).map(entry => {
             return `${entry[0]}::${entry[1]}`;
+        });
+    }
+
+    toStrings() {
+        return Object.entries(this.values).map(entry => {
+            return entry[0];
         });
     }
 });

@@ -111,7 +111,6 @@ define(class Webapp extends HttpX {
         this.loadOrder = await this.listLoadOrder();
         this.radiusFrameworkPath = await mkSystemHandle().getRadiusFrameworkPath();
 
-        let htmlPath = __filename.replace('.js', '.html');
         let htmlCode = (await mkSystemHandle().getWebapp());
         this.htmlTemplate = mkRdsTemplate(htmlCode);
 

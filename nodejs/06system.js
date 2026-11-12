@@ -393,7 +393,7 @@ createService(class SystemService extends Service {
 
     async loadPackages() {
         let packages = mkPackageHandle();
-        await packages.loadDirectory(Path.join(radius.path, '/mozilla/package'), '/');
+        await packages.loadPackage(Path.join(radius.path, '/mozilla/package'), '/');
 
         // **************************************************************************
         // **************************************************************************

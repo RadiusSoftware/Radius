@@ -9,14 +9,8 @@
         ".": {
             "radius#signedin": "+"
         },
-        "admin": {
-            "radius#admin": "+"
-        },
         "setup": {
             "radius#signedin": "-"
-        },
-        "system": {
-            "radius#system": "+"
         }
     }
 }

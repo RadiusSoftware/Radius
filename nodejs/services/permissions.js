@@ -33,33 +33,16 @@ createService(class PermissionSetService extends Service {
     constructor() {
         super();
         this.permissionSets = {};
-        this.permissionTypesByName = {};
-        this.permissionTypesByCode = {};
-    }
-
-    async init() {
-        singleton(class PermissionSetThunk extends Thunk {
-            async getPermissionTypeSet() {
-                let permissionTypes = mkRdsEnum();
-
-                for (let permissionType of await mkSettingsHandle().getSetting('permissionTypes')) {
-                    permissionTypes.set(permissionType);
-                }
-                
-                return permissionTypes;
-            }
-        });
+        this.permissionTypes = mkRdsEnum();
     }
 
     async onAddPermissionTypes(message) {
         let added = [];
 
-        for (let typeName of message.typeNames) {
-            if (!(typeName in this.permissionTypesByName)) {
-                let typeCode = Crypto.generateUUID();
-                this.permissionTypesByName[typeName] = typeCode;
-                this.permissionTypesByCode[typeCode] = typeName;
-                added.push(typeName);
+        for (let permissionType of message.permissionTypes) {
+            if (!this.permissionTypes.has(permissionType)) {
+                this.permissionTypes.set(permissionType);
+                added.push(permissionType);
             }
         }
 
@@ -69,71 +52,50 @@ createService(class PermissionSetService extends Service {
     async onAuthorize(message) {
         if (message.required in this.permissionSets) {
             if (message.granted in this.permissionSets) {
-                let required = this.permissionSets[message.required].types;
-                let granted = this.permissionSets[message.granted].types;
-
-                for (let typeCode of required) {
-                    if (!granted.has(typeCode)) {
-                        return false;
-                    }
-                }
-
-                return true;
+                let required = this.permissionSets[message.required].permissionTypes;
+                let granted = this.permissionSets[message.granted].permissionTypes;
+                return granted.hasAll(...required);
             }
         }
 
         return false;
     }
 
-    async onCopy(message) {
+    async onCopyPermissionSet(message) {
         if (message.uuid in this.permissionSets) {
-            let copy = {
+            let pset = {
                 uuid: Crypto.generateUUID(),
-                types: mkRdsEnum(),
+                permissionTypes: mkRdsEnum(),
             };
 
-            this.permissionSets[copy.uuid] = copy;
-            copy.types.set(...this.permissionSets[message.uuid].types.getValues());
-            return copy.uuid;
+            pset.permissionTypes.set(...this.permissionSets[message.uuid].permissionTypes.toStrings());
+            this.permissionSets[pset.uuid] = pset;
+            return pset.uuid;
         }
-        
-        return '';
+
+        return null;
     }
 
     async onCreatePermissionSet(message) {
         let pset = {
             uuid: Crypto.generateUUID(),
-            types: mkRdsEnum(),
+            permissionTypes: mkRdsEnum(),
         };
 
-        this.permissionSets[pset.uuid] = pset;
-
-        for (let typeName of message.typeNames) {
-            if (!(typeName in this.permissionTypesByName)) {
-                return false;
+        for (let permissionType of message.permissionTypes) {
+            if (this.permissionTypes.has(permissionType)) {
+                pset.permissionTypes.set(permissionType);
             }
-
-            let typeCode = this.permissionTypesByName[typeName];
-            pset.types.set(typeCode);
         }
 
+        this.permissionSets[pset.uuid] = pset;
         return pset.uuid;
     }
 
     async onDeletePermissions(message) {
         if (message.uuid in this.permissionSets) {
-            let pset = this.permissionSets[message.uuid];
-
-            for (let typeName of message.typeNames) {
-                let typeCode = this.permissionTypesByName[typeName];
-
-                if (typeCode) {
-                    pset.types.clear(typeCode)
-                }
-            }
+            this.permissionSets[message.uuid].permissionTypes.delete(...message.permissionTypes);
         }
-
-        return true;
     }
 
     async onDeletePermissionSet(message) {
@@ -145,50 +107,48 @@ createService(class PermissionSetService extends Service {
         return false;
     }
 
-    async onHasPermission(message) {
-        if (message.typeName in this.permissionTypesByName) {
-            let permissionTypeCode = this.permissionTypesByName[message.typeName];
-
-            if (message.uuid in this.permissionSets) {
-                let permissionSet = this.permissionSets[message.uuid];
-                return permissionSet.types.has(permissionTypeCode);
-            }
-        }
-
-        return false;
-    }
-
     async onHasPermissions(message) {
         if (message.uuid in this.permissionSets) {
             let permissionSet = this.permissionSets[message.uuid];
-            permissionSet.types.getLength() > 0;
+
+            for (let permissionType of message.permissionTypes) {
+                if (!permissionSet.permissionTypes.has(permissionType)) {
+                    return false;
+                }
+            }
         }
 
-        return false;
+        return true;
     }
 
-    async onHasPermissionType(message) {
-        return message.typeName in this.permissionTypesByName;
+    async onHasPermissionTypes(message) {
+        for (let permissionType of message.permissionTypes) {
+            if (!this.permissionTypes.has(permissionType)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     async onListPermissions(message) {
         if (message.uuid in this.permissionSets) {
-            return this.permissionSets[message.uuid].types.getValues().map(typeCode => {
-                return this.permissionTypesByCode[typeCode];
-            });
+            return this.permissionSets[message.uuid].permissionTypes.toStrings();
         }
 
         return [];
     }
 
     async onListPermissionTypes(message) {
-        let types = Object.keys(this.permissionTypesByName);
+        let permissionTypes = this.permissionTypes.toStrings();
 
         if (message.prefix) {
-            types = types.filter(typeName => typeName.startsWith(message.prefix));
+            permissionTypes = permissionTypes.filter(permissionType => {
+                return permissionType.startsWith(message.prefix)
+            });
         }
 
-        return types.sort();
+        return permissionTypes.sort();
     }
 
     async onOpen(message) {
@@ -201,19 +161,12 @@ createService(class PermissionSetService extends Service {
 
     async onSetPermissions(message) {
         if (message.uuid in this.permissionSets) {
-            let pset = this.permissionSets[message.uuid];
-
-            for (let typeName of message.typeNames) {
-                if (typeName in this.permissionTypesByName) {
-                    let typeCode = this.permissionTypesByName[typeName];
-                    pset.types.set(typeCode);
+            for (let permissionType of message.permissionTypes) {
+                if (this.permissionTypes.has(permissionType)) {
+                    this.permissionSets[message.uuid].permissionTypes.set(permissionType);
                 }
             }
-            
-            return true;
         }
-
-        return false;
     }
 });
 
@@ -232,9 +185,9 @@ define(class PermissionSetHandle extends Handle {
         this.uuid = uuid ? uuid : '';
     }
 
-    async addPermissionTypes(...typeNames) {
+    async addPermissionTypes(...permissionTypes) {
         return await this.callService({
-            typeNames: typeNames,
+            permissionTypes: permissionTypes,
         });
     }
 
@@ -248,7 +201,7 @@ define(class PermissionSetHandle extends Handle {
         });
     }
 
-    async copy() {
+    async copyPermissionSet() {
         if (this.uuid) {
             let uuid = await this.callService({
                 uuid: this.uuid,
@@ -260,19 +213,19 @@ define(class PermissionSetHandle extends Handle {
         return false;
     }
 
-    async createPermissionSet(...typeNames) {
+    async createPermissionSet(...permissionTypes) {
         this.uuid = await this.callService({
-            typeNames: typeNames,
+            permissionTypes: permissionTypes,
         });
 
         return this;
     }
 
-    async deletePermissions(...typeNames) {
+    async deletePermissions(...permissionTypes) {
         if (this.uuid) {
             await this.callService({
                 uuid: this.uuid,
-                typeNames: typeNames,
+                permissionTypes: permissionTypes,
             });
         }
 
@@ -298,22 +251,16 @@ define(class PermissionSetHandle extends Handle {
         return this.uuid;
     }
 
-    async hasPermission(typeName) {
+    async hasPermissions(...permissionTypes) {
         return await this.callService({
             uuid: this.uuid,
-            typeName: typeName,
+            permissionTypes: permissionTypes,
         });
     }
 
-    async hasPermissions() {
+    async hasPermissionTypes(...permissionTypes) {
         return await this.callService({
-            uuid: this.uuid,
-        });
-    }
-
-    async hasPermissionType(typeName) {
-        return await this.callService({
-            typeName: typeName,
+            permissionTypes: permissionTypes,
         });
     }
 
@@ -341,11 +288,11 @@ define(class PermissionSetHandle extends Handle {
         return this;
     }
 
-    async setPermissions(...typeNames) {
+    async setPermissions(...permissionTypes) {
         if (this.uuid) {
             await this.callService({
                 uuid: this.uuid,
-                typeNames: typeNames,
+                permissionTypes: permissionTypes,
             });
         }
 

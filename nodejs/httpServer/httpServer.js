@@ -170,9 +170,9 @@ define(class HttpWorker extends Worker {
     }
 
     async filterSignedIn(handle) {
-        if (await handle.libEntry.pset.hasPermission('radius#signedin')) {
+        if (await handle.libEntry.pset.hasPermissions('radius#signedin')) {
             if (handle.session.isOpen()) {
-                if (await handle.session.hasPermission('radius#signedin')) {
+                if (await handle.session.hasPermissions('radius#signedin')) {
                     return false;
                 }
             }

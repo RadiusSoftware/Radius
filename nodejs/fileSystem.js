@@ -63,19 +63,24 @@ singleton(class FileSystem extends Emitter {
         return this;
     }
 
-    async enumerateDirectories(...paths) {
+    async enumerateDirectories(...dirpaths) {
         let dirs = [];
 
-        for (let path of paths) {
-            if (await this.isDirectory(path)) {
-                dirs.push(path);
+        for (let dirpath of dirpaths) {
+            if (await this.isDirectory(dirpath)) {
+                let stack = [ dirpath ];
 
-                for (let dirname of await LibFileSystem.promises.readdir(path)) {
-                    if (!dirname.startsWith('.')) {
-                        let directory = Path.join(path, dirname);
+                while (stack.length) {
+                    let dirpath = stack.pop();
 
-                        if (await this.isDirectory(directory)) {
-                            dirs.push(directory);
+                    for (let entry of await LibFileSystem.promises.readdir(dirpath)) {
+                        if (!entry.startsWith('.')) {
+                            let path = Path.join(dirpath, entry);
+
+                            if (await this.isDirectory(path)) {
+                                dirs.push(path);
+                                stack.push(path);
+                            }
                         }
                     }
                 }
@@ -85,24 +90,33 @@ singleton(class FileSystem extends Emitter {
         return dirs;
     }
 
-    async enumerateFiles(...args) {
-        let dirs = [];
+    async enumerateFiles(...dirpaths) {
+        let files = [];
 
-        for (let arg of args) {
-            if (await this.isDirectory(arg)) {
-                for (let dirname of await LibFileSystem.promises.readdir(arg)) {
-                    if (!dirname.startsWith('.')) {
-                        let path = Path.join(arg, dirname);
+        for (let dirpath of dirpaths) {
+            if (await this.isDirectory(dirpath)) {
+                let stack = [ dirpath ];
 
-                        if (await this.isFile(path)) {
-                            dirs.push(path);
+                while (stack.length) {
+                    let dirpath = stack.pop();
+
+                    for (let entry of await LibFileSystem.promises.readdir(dirpath)) {
+                        if (!entry.startsWith('.')) {
+                            let path = Path.join(dirpath, entry);
+
+                            if (await this.isFile(path)) {
+                                files.push(path);
+                            }
+                            else if (await this.isDirectory(path)) {
+                                stack.push(path);
+                            }
                         }
                     }
                 }
             }
         }
 
-        return dirs;
+        return files;
     }
 
     generateTempFilePath() {
