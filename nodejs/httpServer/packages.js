@@ -151,154 +151,59 @@ define(class Package {
     }
 
     async loadContent() {
-        // *********************************************************************************
-        // *********************************************************************************
-        /*
-        for (let fileName in handle.fileNames) {
-            let filePath = handle.fileNames[fileName];
-            
-            if (fileName.endsWith('.css')) {
-                let cssText = await FileSystem.readFileAsString(filePath);
-                this.mozilla.styleSheets.push(cssText);
-            }
-            else if (fileName.endsWith('.js')) {
-                this.registerCode(filePath);
-            }
-            else if (fileName.endsWith('.html')) {
-                let html = await FileSystem.readFileAsString(filePath);
-                let doctype = this.getDocType(html);
+        let contentPath = Path.join(this.path, 'content');
+        let permissionSet;
 
-                if (doctype.type == 'html') {
-                    let info = Path.parse(fileName);
-
-                    await this.lib.addFile({
-                        pkg: this.name,
-                        path: Path.join(handle.url, fileName),
-                        mime: Mime.getMimeType(info.ext).getCode(),
-                        mode: 'tls',
-                        once: false,
-                        pset: handle.filePermissions.getFilePermissionSet(fileName),
-                        filePath: filePath,
-                    });
-                }
-                else if (doctype.type == 'bundle') {
-                    let htmlElement = createDocElementFromOuterHtml(html.substring(doctype.length));
-
-                    if (htmlElement.getTagName() == 'bundle') {
-                        await this.loadBundle(htmlElement);
-                    }
-                }
-                else if (doctype.type == 'script') {
-                    let htmlElement = createDocElementFromOuterHtml(html.substring(doctype.length));
-
-                    if (htmlElement.getTagName() == 'script') {
-                        await this.processScript(htmlElement);
-                    }
-                }
-            }
-            else {
-                let info = Path.parse(fileName);
-
-                if (Mime.isSupported(info.ext)) {
-                    await this.lib.addFile({
-                        pkg: this.name,
-                        path: Path.join(handle.url, fileName),
-                        mime: Mime.getMimeType(info.ext).getCode(),
-                        mode: 'tls',
-                        once: false,
-                        pset: handle.filePermissions.getFilePermissionSet(fileName),
-                        filePath: filePath,
-                    });
-                }
-            }
+        if ('' in this.permissionSets) {
+            permissionSet = this.permissionSets[''];
         }
-        */
-    }
+        else if ('.' in this.permissionSets) {
+            permissionSet = this.permissionSets['.'];
+        }
+        else {
+            permissionSet = await mkPermissionSetHandle().createPermissionSet();
+        }
 
-    async loadHttpX() {
-        let httpxPath = Path.join(this.path, 'httpx');
+        let stack = [{
+            url: '',
+            path: contentPath,
+            pset: permissionSet,
+        }];
 
-        for (let file of await FileSystem.enumerateFiles(httpxPath)) {
-            if (file.endsWith('html')) {
-                try {
-                    const htmlPath = Path.parse(file);
-                    const httpxName = htmlPath.name;
-                    const jsPath = `${Path.join(htmlPath.dir, httpxName)}.js`;
+        while (stack.length) {
+            let { url, path, pset } = stack.pop();
 
-                    if (await FileSystem.isFile(jsPath)) {
-                        const html = await FileSystem.readFileAsString(file);
-                        const doctype = this.getDocType(html);
+            for (let dirEntry of await FileSystem.readDirectory(path)) {
+                if (!dirEntry.startsWith('.')) {
+                    let entryUrl = `${url}/${dirEntry}`;
+                    let entryPath = Path.join(path, dirEntry);
+                    let entryPset;
 
-                        if (doctype.type == 'bundle') {
-                            const htmlElement = createDocElementFromOuterHtml(html.substring(doctype.length));
-                            
-                            if (htmlElement.getTagName() == 'bundle') {
-                                let appWidgetTagName;
-                                let appWidgetElement;
-
-                                for (const childElement of htmlElement) {
-                                    if (childElement.getTagName() == 'widget') {
-                                        if (appWidgetElement) {
-                                            throwError(`Invalid httpx DOCTYPE: ${htmlPath}`);
-                                        }
-                                        else {
-                                            appWidgetElement = childElement;
-                                            appWidgetTagName = childElement.getAttribute('tagname');
-                                        }
-                                    }
-                                }
-
-                                if (appWidgetElement) {
-                                    await this.loadBundle(htmlElement);
-                                    const widgetData = this.mozilla.widgets[appWidgetTagName];
-                                    widgetData.settings.tagName = appWidgetTagName;
-
-                                    if (widgetData.settings.title) {
-                                        widgetData.settings.title = this.substituteMarkers(widgetData.settings.title);
-                                    }
-
-                                    let permissionSet;
-
-                                    if (httpxName in this.permissionSets) {
-                                        permissionSet = this.permissionSets[httpxName];
-                                    }
-                                    else if ('.' in this.permissionSets) {
-                                        permissionSet = this.permissionSets['.'];
-                                    }
-                                    else {
-                                        permissionSet = await mkPermissionSetHandle().createPermissionSet();
-                                    }
-
-                                    let relativePath = htmlPath.dir.replace(httpxPath, '');
-                                    let relativeUrl = relativePath ? `${relativePath}/${httpxName}` : httpxName;
-                                    let url = Path.join(this.url, relativeUrl);
-
-                                    await this.lib.addHttpX({
-                                        pkg: this.name,
-                                        path: url,
-                                        mime: 'text/html',
-                                        mode: widgetData.settings.mode ? widgetData.settings.mode : 'tls',
-                                        once: widgetData.settings.once === true,
-                                        pset: permissionSet,
-                                        settings: widgetData.settings,
-                                        jsPath: jsPath,
-                                    });
-
-                                    if (widgetData.settings.path) {
-                                        await mkSettingsHandle().defineTemporarySetting(
-                                            widgetData.settings.path,
-                                            'httpx',
-                                            StringType,
-                                            url,
-                                        );
-                                    }
-                                }
-                            }
-                        }
+                    if (entryUrl in this.permissionSets) {
+                        entryPset = this.permissionSets[entryUrl];
                     }
-                }
-                catch (e) {
-                    await caught(e);
+                    else {
+                        entryPset = await pset.copyPermissionSet();
+                    }
+
+                    if (await FileSystem.isDirectory(entryPath)) {
+                        stack.push({
+                            url: entryUrl,
+                            path: entryPath,
+                            pset: entryPset,
+                        });
+                    }
+                    else if (await FileSystem.isFile(entryPath)) {
+                        await this.lib.addFile({
+                            pkg: this.name,
+                            path: entryUrl,
+                            mime: mkMime(Path.parse(entryPath).ext).getCode(),
+                            mode: 'tls',
+                            once: false,
+                            pset: entryPset,
+                            filePath: entryPath,
+                        });
+                    }
                 }
             }
         }
@@ -340,99 +245,6 @@ define(class Package {
         }
     }
 
-    /*
-    async loadFiles(handle) {
-    }
-
-    async loadHttpXs(handle) {
-        let spentFiles = [];
-
-        for (let fileName in handle.fileNames) {
-            if (fileName.endsWith('.js')) {
-                let jsPath = handle.fileNames[fileName];
-                let parsed = Path.parse(jsPath);
-                let htmlFileName = `${parsed.name}.html`;
-                let htmlPath = `${Path.join(parsed.dir, parsed.name)}.html`;
-                let httpXName = parsed.name.toLowerCase();
-                let jsFileName = `${httpXName}.js`;
-
-                if (htmlFileName in handle.fileNames) {
-                    if (await FileSystem.isFile(htmlPath)) {
-                        let html = await FileSystem.readFileAsString(htmlPath);
-                        let doctype = this.getDocType(html);
-
-                        if (doctype.type == 'httpx') {
-                            let htmlElement = createDocElementFromOuterHtml(html.substring(doctype.length));
-                            
-                            if (htmlElement.getTagName() == 'bundle') {
-                                let appWidgetTagName;
-                                let appWidgetElement;
-
-                                for (let childElement of htmlElement) {
-                                    if (childElement.getTagName() == 'widget') {
-                                        if (appWidgetElement) {
-                                            throwError(`Invalid httpx DOCTYPE: ${htmlPath}`);
-                                        }
-                                        else {
-                                            appWidgetElement = childElement;
-                                            appWidgetTagName = childElement.getAttribute('tagname');
-                                        }
-                                    }
-                                }
-
-                                if (appWidgetElement) {
-                                    await this.loadBundle(htmlElement);
-                                    let widgetData = this.mozilla.widgets[appWidgetTagName];
-
-                                    if (widgetData.settings.title) {
-                                        widgetData.settings.title = this.substituteMarkers(widgetData.settings.title);
-                                    }
-
-                                    let httpXHandle = {
-                                        httpXElement: appWidgetElement,
-                                        path: Path.join(this.url, httpXName),
-                                        permissionSet: handle.filePermissions.getFilePermissionSet(httpXName),
-                                        settings: widgetData.settings,
-                                    }
-
-                                    httpXHandle.settings.tagName = appWidgetTagName;
-
-                                    await this.lib.addHttpX({
-                                        pkg: this.name,
-                                        path: httpXHandle.path,
-                                        mime: 'text/html',
-                                        mode: httpXHandle.settings.mode ? httpxHandle.settings.mode : 'tls',
-                                        once: httpXHandle.settings.once === true,
-                                        pset: httpXHandle.permissionSet,
-                                        settings: httpXHandle.settings,
-                                        jsPath: jsPath,
-                                    });
-
-                                    if (widgetData.settings.path) {
-                                        await mkSettingsHandle().defineTemporarySetting(
-                                            widgetData.settings.path,
-                                            'httpx',
-                                            StringType,
-                                            httpXHandle.path,
-                                        );
-                                    }
-
-                                    spentFiles.push(jsFileName);
-                                    spentFiles.push(htmlFileName);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        for (let fileName of spentFiles) {
-            delete handle.fileNames[fileName];
-        }
-    }
-    */
-
     async loadPackage(path, url) {
         try {
             this.path = path;
@@ -440,7 +252,7 @@ define(class Package {
             await this.loadPackageMeta();
             await this.loadNodeJS();
             await this.loadMozilla();
-            await this.loadHttpX();
+            await this.loadWebapp();
             await this.loadContent();
         }
         catch (e) {
@@ -503,6 +315,95 @@ define(class Package {
         }
 
         return false;
+    }
+
+    async loadWebapp() {
+        let webappPath = Path.join(this.path, 'webapp');
+
+        for (let file of await FileSystem.enumerateFiles(webappPath)) {
+            if (file.endsWith('html')) {
+                try {
+                    const htmlPath = Path.parse(file);
+                    const webappName = htmlPath.name;
+                    const jsPath = `${Path.join(htmlPath.dir, webappName)}.js`;
+
+                    if (await FileSystem.isFile(jsPath)) {
+                        const html = await FileSystem.readFileAsString(file);
+                        const doctype = this.getDocType(html);
+
+                        if (doctype.type == 'bundle') {
+                            const htmlElement = createDocElementFromOuterHtml(html.substring(doctype.length));
+                            
+                            if (htmlElement.getTagName() == 'bundle') {
+                                let appWidgetTagName;
+                                let appWidgetElement;
+
+                                for (const childElement of htmlElement) {
+                                    if (childElement.getTagName() == 'widget') {
+                                        if (appWidgetElement) {
+                                            throwError(`Invalid webapp DOCTYPE: ${htmlPath}`);
+                                        }
+                                        else {
+                                            appWidgetElement = childElement;
+                                            appWidgetTagName = childElement.getAttribute('tagname');
+                                        }
+                                    }
+                                }
+
+                                if (appWidgetElement) {
+                                    await this.loadBundle(htmlElement);
+                                    const widgetData = this.mozilla.widgets[appWidgetTagName];
+                                    widgetData.settings.tagName = appWidgetTagName;
+
+                                    if (widgetData.settings.title) {
+                                        widgetData.settings.title = this.substituteMarkers(widgetData.settings.title);
+                                    }
+
+                                    let permissionSet;
+
+                                    if (webappName in this.permissionSets) {
+                                        permissionSet = this.permissionSets[webappName];
+                                    }
+                                    else if ('.' in this.permissionSets) {
+                                        permissionSet = this.permissionSets['.'];
+                                    }
+                                    else {
+                                        permissionSet = await mkPermissionSetHandle().createPermissionSet();
+                                    }
+
+                                    let relativePath = htmlPath.dir.replace(webappPath, '');
+                                    let relativeUrl = relativePath ? `${relativePath}/${webappName}` : webappName;
+                                    let url = Path.join(this.url, relativeUrl);
+
+                                    await this.lib.addHttpX({
+                                        pkg: this.name,
+                                        path: url,
+                                        mime: 'text/html',
+                                        mode: widgetData.settings.mode ? widgetData.settings.mode : 'tls',
+                                        once: widgetData.settings.once === true,
+                                        pset: permissionSet,
+                                        settings: widgetData.settings,
+                                        jsPath: jsPath,
+                                    });
+
+                                    if (widgetData.settings.path) {
+                                        await mkSettingsHandle().defineTemporarySetting(
+                                            widgetData.settings.path,
+                                            'httpx',
+                                            StringType,
+                                            url,
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                catch (e) {
+                    await caught(e);
+                }
+            }
+        }
     }
 
     async processFragment(fragmentElement) {

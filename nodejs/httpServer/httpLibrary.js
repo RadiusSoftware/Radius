@@ -89,7 +89,7 @@ createService(class HttpLibraryService extends Service {
             return mkFailure(e, `HttpLibrary.addFunction() at "${libEntry.path}": INVALID FUNCTION`);
         }
 
-        let buffer = await FileSystem.readFile(message.filepath);
+        let buffer = await FileSystem.readFile(message.filePath);
 
         let libEntry = {
             type: 'file',

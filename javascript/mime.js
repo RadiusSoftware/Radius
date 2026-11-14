@@ -125,8 +125,11 @@ define(class Mime {
         if (arg instanceof Mime) {
             return arg;
         }
-        else {
+        else if (StringType.verify(arg)) {
             Object.assign(this, Mime.getMimeType(arg));
+        }
+        else {
+            Object.assign(this, Mime.byMimeCode['application/octet-stream']);
         }
     }
 
