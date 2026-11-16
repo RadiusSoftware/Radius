@@ -1,4 +1,0 @@
-
-TEST FILE (TEST)
-
-/subdir/file.txt

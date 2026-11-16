@@ -138,7 +138,7 @@ return mkDbSchema({
             type: 'object',
             prefix: 'USER',
             columns: [
-                { name: 'handle', type: StringType, size: 200 },
+                { name: 'userHandle', type: StringType, size: 200 },
                 { name: 'userGroupId', type: StringType, size: 50 },
                 { name: 'userGroupName', type: StringType, size: 200 },
                 { name: 'firstName', type: StringType, size: 50 },
@@ -158,7 +158,7 @@ return mkDbSchema({
                 { name: 'permissions', type: JsonType },
             ],
             indexes: [
-                { columnItems: [ { column: 'handle', direction: 'asc' } ]},
+                { columnItems: [ { column: 'userHandle', direction: 'asc' } ]},
                 { columnItems: [ { column: 'userGroupId', direction: 'asc' } ]},
                 { columnItems: [ { column: 'emailAddr', direction: 'asc' } ]},
                 { columnItems: [ { column: 'emailAddrId', direction: 'asc' } ]},

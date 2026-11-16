@@ -233,6 +233,10 @@ singleton(class PostgresDbms {
         return schema;
     }
 
+    getDetaultDatabase() {
+        return 'postgres';
+    }
+
     getDbmsKey(settings) {
         return `${settings.dbmsType}-${settings.host}-${settings.database}`;
     }
@@ -261,7 +265,12 @@ define(class PostgresConnection {
             database: settings.database,
             user: settings.username,
             password: settings.password,
+            certificate: settings.certificate,
         };
+
+        if (this.settings.database == '') {
+            this.settings.database = 'postgres';
+        }
     }
 
     async close() {
@@ -529,7 +538,7 @@ class PgDatabaseSchema {
     async load(pg, dbName) {
         this.pg = pg;
         let pgDbName = RdsText.toSnakeCase(dbName);
-        let dbSchema = mkDbSchema(dbName);
+        let dbSchema = mkDbSchema();
         let result = await this.pg.query(`SELECT table_name FROM information_schema.TABLES WHERE table_schema='public' AND table_catalog='${pgDbName}' ORDER BY table_name`);
         
         for (let table of result) {

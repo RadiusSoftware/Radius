@@ -201,7 +201,10 @@ define(class Widget extends HtmlElement {
             newNode.appendChild(oldNode.firstChild);
         }
 
-        oldNode.parentNode.replaceChild(newNode, oldNode);
+        if (oldNode.parentNode) {
+            oldNode.parentNode.replaceChild(newNode, oldNode);
+        }
+
         this.node = newNode;
         newNode[nodeKey] = this;
         delete oldNode[nodeKey];

@@ -51,7 +51,7 @@ singleton(class Dbms {
             return await dbms.alterColumnSize(settings, tableName, columnName, size);
         }
     }
-
+ 
     async clearSettings(name) {
         let settingName = name ? `##DBMS##${name}` : '##DBMS##RADIUS';
         await this.settingsHandle.deleteSetting(settingName);

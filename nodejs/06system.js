@@ -36,8 +36,10 @@
  *      *****
  *      setup#acme
  *      setup#mode
+ *      setup#dbms
  *      setup#mailer
  *      setup#user
+ *      setup#serverteam
  * 
  * ServerTeam mode is somewhat complex to describe because the DBMS access,
  * user management, and spooling (email, sms...) are all performed via thunks
@@ -116,42 +118,44 @@ createService(class SystemService extends Service {
 
         this.componentStatus = {
             basic : false,
-            acme: false,
             http: false,
+            acme: false,
             mode: false,
+            dbms: false,
+            email: false,
+            user: false,
             serverteam: false,
-            standalone: {
-                dbms: false,
-                email: false,
-                user: false,
-            },
         };
     }
 
     analyzeConfiguration() {
-        this.unconfigured = [];
-        const stack = [{ dotted: '', component: this.componentStatus }];
+        this.unconfigured = Object.keys(this.componentStatus);
 
-        while (stack.length) {
-            let unit = stack.pop();
+        if (!this.componentStatus.basic) return;
+        this.unconfigured.shift();
 
-            if (ObjectType.verify(unit.component)) {
-                for (let key of Object.keys(unit.component).reverse()) {
-                    let dotted;
+        if (!this.componentStatus.acme) return;
+        this.unconfigured.shift();
+        
+        if (!this.componentStatus.http) return;
+        this.unconfigured.shift();
+        
+        if (!this.componentStatus.mode) return;
+        this.unconfigured.shift();
+        
+        if (this.systemMode == 'system#standalone') {
+            if (!this.componentStatus.dbms) return;
+            this.unconfigured.shift();
 
-                    if (unit.dotted) {
-                        dotted = [ unit.dotted, key ].join('.');
-                    }
-                    else {
-                        dotted = key;
-                    }
+            if (!this.componentStatus.email) return;
+            this.unconfigured.shift();
 
-                    stack.push({ dotted: dotted, component: unit.component[key] });
-                }
-            }
-            else if (!RdsData.get(this.componentStatus, unit.dotted)) {
-                this.unconfigured.push(unit.dotted);
-            }
+            if (!this.componentStatus.user) return;
+            this.unconfigured.shift();
+        }
+        else if (this.systemMode == 'system#serverteam') {
+            if (!this.componentStatus.serverteam) return;
+            this.unconfigured.shift();
         }
     }
 
@@ -177,81 +181,6 @@ createService(class SystemService extends Service {
             this.settings.certificate.hostCertExpires = response.hostCertExpires;
             await this.saveBoot();
             await this.restartHttp();
-        }
-    }
-
-    async configureAcme() {
-        if (await this.onGetTlsStatus()) {
-            this.componentStatus.acme = true;
-        }
-        else if (!this.settings.acme.publicKey) {
-            const keyPair = await Crypto.generateKeyPair('rsa');
-
-            this.settings.acme = {
-                name: 'Let\'s Encrypt',
-                url: 'https://acme-v02.api.letsencrypt.org/directory',
-                days: 90,
-                keyAlg: 'RS256',
-                publicKey: Crypto.export(keyPair.publicKey),
-                privateKey: Crypto.export(keyPair.privateKey),
-                contact: [],
-                createdAt: '',
-                status: '',
-                kid: '',
-                operator: {
-                    country: '',
-                    state: '',
-                    locale: '',
-                    org: '',
-                }
-            };
-        }
-    }
-
-    async configureBasicSystem() {
-        if (!this.settings.host) {
-            this.settings.host = '';
-            this.settings.hostId = Crypto.generateUUID();
-            const keyAlgorithm = 'rsa';
-            const { publicKey, privateKey } = await Crypto.generateKeyPair(keyAlgorithm);
-            this.settings.publicKey = Crypto.export(publicKey);
-            this.settings.privateKey = Crypto.export(privateKey);
-        }
-
-        this.componentStatus.basic = true;
-    }
-
-    async configureHttp() {
-        if (!this.settings.httpServer.enabled) {
-            this.settings.httpServer = {
-                enabled: true,
-                workers: 1,
-                acceptCookiesName: 'cookies',
-                sessionCookieName: 'session',
-            };
-        }
-
-        await mkSettingsHandle().defineTemporarySetting(
-            'httpServer',
-            'server',
-            SystemService.httpServerSettingsShape,
-            this.settings.httpServer,
-        );
-
-        this.componentStatus.http = true;
-    }
-
-    async configureMode() {
-        if (this.settings.mode == 'standalone') {
-            // ********************************************************************************
-            // ********************************************************************************
-        }
-        else if (this.settings.mode == 'serverteam') {
-            // ********************************************************************************
-            // ********************************************************************************
-        }
-        else {
-            this.componentStatus.mode = false;
         }
     }
 
@@ -331,51 +260,117 @@ createService(class SystemService extends Service {
         return false;
     }
 
+    async initAcme() {
+        if (await this.onGetTlsStatus()) {
+            this.componentStatus.acme = true;
+        }
+        else if (!this.settings.acme.publicKey) {
+            const keyPair = await Crypto.generateKeyPair('rsa');
+
+            this.settings.acme = {
+                name: 'Let\'s Encrypt',
+                url: 'https://acme-v02.api.letsencrypt.org/directory',
+                days: 90,
+                keyAlg: 'RS256',
+                publicKey: Crypto.export(keyPair.publicKey),
+                privateKey: Crypto.export(keyPair.privateKey),
+                contact: [],
+                createdAt: '',
+                status: '',
+                kid: '',
+                operator: {
+                    country: '',
+                    state: '',
+                    locale: '',
+                    org: '',
+                }
+            };
+        }
+    }
+
+    async initBasicSystem() {
+        if (!this.settings.host) {
+            this.settings.host = '';
+            this.settings.hostId = Crypto.generateUUID();
+            const keyAlgorithm = 'rsa';
+            const { publicKey, privateKey } = await Crypto.generateKeyPair(keyAlgorithm);
+            this.settings.publicKey = Crypto.export(publicKey);
+            this.settings.privateKey = Crypto.export(privateKey);
+        }
+
+        this.componentStatus.basic = true;
+    }
+
     async initDbms() {
+        if (this.settings.dbms.dbmsType) {
+            let settings = RdsData.clone(this.settings.dbms);
+            settings.database = '';
+            let dbc = await Dbms.connect(settings);
+            let dbcState = dbc.getState();
+            await dbc.close();
+            await dbc.free();
+
+            if (dbcState == 'connected') {
+                this.componentStatus.dbms = true;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    async initEmailer() {
         // **************************************************************************
         // **************************************************************************
-        /*
-        try {
-            if (!(await Dbms.doesDatabaseExist(this.sysdb))) {
-                await Dbms.createDatabase(this.sysdb);
-            }
+    }
 
-            let schema1 = await Dbms.getDatabaseSchema(this.sysdb);
-            let schema2 = mkFrameworkSchema();
+    async initHttp() {
+        if (!this.settings.httpServer.enabled) {
+            this.settings.httpServer = {
+                enabled: true,
+                workers: 1,
+                acceptCookiesName: 'cookies',
+                sessionCookieName: 'session',
+            };
+        }
 
-            for (let diff of mkSchemaAnalysis(schema1, schema2)) {
-                await SchemaUpdater.upgrade(this.sysdb, diff);
-            }
+        await mkSettingsHandle().defineTemporarySetting(
+            'httpServer',
+            'server',
+            SystemService.httpServerSettingsShape,
+            this.settings.httpServer,
+        );
 
-            for (let dbTable of schema2) {
-                if (dbTable.getType() == 'object') {
-                    defineDbo('', dbTable);
+        this.componentStatus.http = true;
+    }
+
+    async initMode() {
+        if (this.settings.systemMode == 'system#standalone') {
+            this.componentStatus.mode = true;
+            await this.initDbms();
+
+            if (this.componentStatus.dbms) {
+                await this.initEmailer();
+
+                if (this.componentStatus.email) {
+                    await this.initUser();
                 }
             }
-
-            await Dbms.setSettings(this.sysdb);
         }
-        catch (e) {}
+        else if (this.settings.mode == 'system#serverteam') {
+            this.componentStatus.mode = true;
+            await this.initServerTeam();
+        }
+    }
 
-        this.state = 'system#setup';
-        await settings.defineSetting('sessionTimeoutMillis', 'security', Int32Type, 120*60*60*1000);
-        await settings.defineSetting('sessionShutdowntMillis', 'security', Int32Type, 240*60*60*1000);
+    async initServerTeam() {
+        // **************************************************************************
+        // **************************************************************************
+    }
 
-        await settings.defineSetting('loginMaxFailures', 'security', Int32Type, 4);
-        await settings.defineSPvine$922-blueetting('loginMaxMfaMinutes', 'security', Int32Type, 5);
-        await settings.defineSetting('passwordMaxDays', 'security', Int32Type, -1);
-        await settings.defineSetting('passwordHistoryMaxDays', 'security', Int32Type, 365);
-        
-
-        await settings.defineSetting('packages', 'package', ArrayType, []);
-        await settings.defineSetting('webServicesPath', 'server', StringType, '/ws');
-
-        await dbms.createObj(DboUserGroup, {
-            name: '',
-            active: true,
-            settings: {},
-        });
-        */
+    async initUser() {
+        // **************************************************************************
+        // **************************************************************************
     }
 
     async loadBoot() {
@@ -395,16 +390,20 @@ createService(class SystemService extends Service {
         let packages = mkPackageHandle();
         await packages.loadPackage(Path.join(radius.path, '/mozilla/package'), '/');
 
-        // **************************************************************************
-        // **************************************************************************
         if (this.settings.mode == 'system#serverteam') {
+            // **************************************************************************
+            // **************************************************************************
             console.log(`Packages ${this.settings.mode}`);
         }
         else if (this.settings.mode == 'system#standalone') {
-            console.log(`Packages ${this.settings.mode}`);
+            let settings = mkSettingsHandle();
+
+            if (await settings.hasSetting('packagePaths')) {
+                for (let packagePath of await settings.getSetting('packagePaths')) {
+                    await packages.loadPackage(Path.join(radius.path, packagePath), '/');
+                }
+            }
         }
-        // **************************************************************************
-        // **************************************************************************
     }
 
     async onBoot(message) {
@@ -419,10 +418,10 @@ createService(class SystemService extends Service {
 
         await this.createBootKey();
         await this.loadBoot();
-        await this.configureBasicSystem();
-        await this.configureHttp();
-        await this.configureAcme();
-        await this.configureMode();
+        await this.initBasicSystem();
+        await this.initHttp();
+        await this.initAcme();
+        await this.initMode();
         this.analyzeConfiguration();
 
         if (this.unconfigured.length) {
@@ -431,6 +430,7 @@ createService(class SystemService extends Service {
         }
 
         await this.loadPackages();
+        await this.upgradeSchema();
         await this.startHttp();
     }
 
@@ -561,22 +561,25 @@ createService(class SystemService extends Service {
         await this.saveBoot();
     }
 
-    // *********************************************************************************
-    // *********************************************************************************
-    // *********************************************************************************
-    async onSetSystemMode(message) {
-        this.settings.systemMode = message.systemMode;
-
+    async onSetDbmsSettings(message) {
         if (this.settings.systemMode == 'system#standalone') {
-            if (await this.connectDbms(message.settings)) {
-                // ******************************
-                // await this.saveBoot();
+            if (SystemService.dbmsSettingsShape.verify(message.settings)) {
+                Object.assign(this.settings.dbms);
+                return await this.initDbms();
             }
         }
-        else if (this.settings.systemMode == 'system#serverteam') {
-            if (await this.connectServerTeam(message.settings)) {
-                // ******************************
-                // await this.saveBoot();
+
+        return false;
+    }
+
+    async onSetSystemMode(message) {
+        if (message.systemMode != this.settings.systemMode) {
+            if (message.systemMode in { 'system#standalone':0, 'system#serverteam':0 }) {
+                this.settings.systemMode = message.systemMode;
+                this.componentStatus.mode = true;
+                this.unconfigured.shift();
+                await this.saveBoot();
+                return this.getSetupState();
             }
         }
     }
@@ -619,7 +622,39 @@ createService(class SystemService extends Service {
         }
     }
 
-    async wipeDbms() {
+    // **************************************************************************
+    // **************************************************************************
+    async upgradeSchema() {
+        if (this.componentStatus.dbms) {
+            try {
+                if (!(await Dbms.doesDatabaseExist(settings))) {
+                    await Dbms.createDatabase(settings);
+                }
+
+                let schema1 = await Dbms.getDatabaseSchema(settings);
+                let schema2 = mkFrameworkSchema();
+
+                for (let diff of mkSchemaAnalysis(schema1, schema2)) {
+                    await SchemaUpdater.upgrade(settings, diff);
+                }
+
+                for (let dbTable of schema2) {
+                    if (dbTable.getType() == 'object') {
+                        defineDbo('', dbTable);
+                    }
+                }
+
+                await Dbms.setSettings(this.sysdb);
+            }
+            catch (e) {
+                return {
+                    error: e,
+                }
+            }
+        }
+    }
+
+    async wipeSchema() {
         // **************************************************************************
         // **************************************************************************
         /*
@@ -719,11 +754,16 @@ define(class SystemHandle extends Handle {
         });
     }
 
-    async setSystemMode(systemMode, settings) {
+    async setDbmsSettings(settings) {
+        return await this.callService({
+            settings: settings,
+        });
+    }
+
+    async setSystemMode(systemMode) {
         if (systemMode in { 'system#standalone':0, 'system#serverteam':0 }) {
             return await this.callService({
                 systemMode: systemMode,
-                settings: settings,
             });
         }
     }
@@ -737,15 +777,11 @@ define(class SystemHandle extends Handle {
         return await this.callService({
         });
     }
+
+    static {
+        (async () => {
+            let setupData = await (new SystemHandle()).getSetupData();
+            SystemHandle.setupDataShape = setupData.shape;
+        })();
+    }
 });
-
-
-/*****
- * A little inconveient, but we need this shape to be available as soon as the
- * SystemHandle object is defined.  This shape is required for API function
- * definitions.
-*****/
-(async () => {
-    let setupData = await mkSystemHandle().getSetupData();
-    SystemHandle.setupDataShape = setupData.shape;
-})();

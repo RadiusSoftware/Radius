@@ -13,7 +13,7 @@
         <script>
             class SetupApp extends Widget {
                 onCertifyHost(response) {
-                    if (response.result && response.result.type == 'websocket') {
+                    if (Object.Type.verify(response.result) && response.result.type == 'websocket') {
                         showDialog(
                             'close',
                             createElement(
@@ -26,15 +26,19 @@
                     }
                 }
 
-                onSetMode(response) {
-                    // *********************************************************************************
-                    // *********************************************************************************
-                    console.log(response);
+                onConfigureDbms(response) {
+                    if (response.result === true) {
+                        Controller.setValue('setupState', response.result);
+                    }
+                    else {
+                        alert('error message on Form....');
+                    }
                 }
 
-                onConfigureMode(response) {
-                    // *********************************************************************************
-                    // *********************************************************************************
+                onSetSystemMode(response) {
+                    if (response.result) {
+                        Controller.setValue('setupState', response.result);
+                    }
                 }
             }
         </script>
@@ -45,36 +49,29 @@
                     <data-widget rds-bind="acme" rds-readonly="false"></data-widget>
                     <formbuttons-widget></formbuttons-widget>
                 </form-widget>
-                <div class="fill" rds-mode="setup#mode">
-                    <form-widget class="fill-horz" submit="setServerMode,systemState">
-                        <div class="h1">##selectmode##</div>
-                        <fieldset-widget rds-bind="systemMode" evt-input="set-mode">
-                            [
-                                { "value": "system#standalone", "text": "##standalone##" },
-                                { "value": "system#serverteam", "text": "##serverteam##" }
-                            ]
-                        </fieldset-widget>
-                    </form-widget>
-                    <selector-panel rds-bind="systemMode">
-                        <form-widget rds-mode="system#standalone" rds-action="setSystemMode,systemMode,dbms,serverteam">
-                            <div class="h1">##configureDbms##</div>
-                            <data-widget rds-bind="dbms" rds-readonly="false"></data-widget>
-                            <formbuttons-widget></formbuttons-widget>
-                        </form-widget>
-                        <form-widget rds-mode="system#serverteam" rds-action="setSystemMode,systemMode,dbms,serverteam">
-                            ** SERVERTEAM SETUP **
-                            <formbuttons-widget></formbuttons-widget>
-                        </form-widget>
-                    </selector-panel>
-                </div>
-                <form class="fill" rds-mode="setup#mailer">
-                    ** SETUP EMAILER **
+                <form-widget class="fill-horz" rds-mode="setup#mode" rds-action="setSystemMode,systemMode">
+                    <div class="h1">##selectmode##</div>
+                    <fieldset-widget rds-bind="systemMode" evt-input="yield">
+                        [
+                            { "value": "system#standalone", "text": "##standalone##" },
+                            { "value": "system#serverteam", "text": "##serverteam##" }
+                        ]
+                    </fieldset-widget>
+                </form-widget>
+                <form-widget class="fill-horz" rds-mode="setup#dbms" rds-action="configureDbms,dbms">
+                    <div class="h1">##configureDbms##</div>
+                    <data-widget rds-bind="dbms" rds-readonly="false"></data-widget>
                     <formbuttons-widget></formbuttons-widget>
-                </form>
-                <form class="fill" rds-mode="setup#user">
-                    ** SETUP USER **
-                    <formbuttons-widget></formbuttons-widget>
-                </form>
+                </form-widget>
+                <form-widget class="fill-horz" rds-mode="setup#emailer" rds-action="configureEmailer,emailer">
+                    *** emailer ***
+                </form-widget>
+                <form-widget class="fill-horz" rds-mode="setup#user" rds-action="configureUser,user">
+                    *** user ***
+                </form-widget>
+                <form-widget class="fill-horz" rds-mode="setup#user" rds-action="configureServerTeam,serverteam">
+                    *** serverteam ***
+                </form-widget>
             </selector-panel>
         </html>
     </widget>

@@ -30,24 +30,55 @@
 *****/
 (async () => {
     define(class SetupApp extends Webapp {
-        async checkDbmsSettings(dbmsSettings) {
-            // **********************************************************************
-            // **********************************************************************
-        }
-
         async getControllerData(handle) {
-            let setupData = await mkSystemHandle().getSetupData();
-            // **********************************************************************
-            // **********************************************************************
-            setupData.value.setupState = 'setup#acme';
-            console.log(setupData.value);
-            // **********************************************************************
-            // **********************************************************************
+            let setupData =  await mkSystemHandle().getSetupData();
+
+            setupData.shape.set('emailer', {
+                serviceName: StringType,
+            });
+
+            setupData.shape.set('user', {
+                userHandle: StringType,
+                firstName: StringType,
+                lastName: StringType,
+
+            });
+
+            setupData.value.emailer = {
+                serviceName: '',
+            }
+
+            setupData.value.user = {
+                userHandle: '',
+                firstName: '',
+                lastName: '',
+            }
+
             return setupData;
         }
 
-        async init() {
-            await super.init();
+        async seedDbmsSettings() {
+            /*
+            this.state = 'system#setup';
+            await settings.defineSetting('sessionTimeoutMillis', 'security', Int32Type, 120*60*60*1000);
+            await settings.defineSetting('sessionShutdowntMillis', 'security', Int32Type, 240*60*60*1000);
+
+            await settings.defineSetting('loginMaxFailures', 'security', Int32Type, 4);
+            await settings.defineSPvine$922-blueetting('loginMaxMfaMinutes', 'security', Int32Type, 5);
+            await settings.defineSetting('passwordMaxDays', 'security', Int32Type, -1);
+            await settings.defineSetting('passwordHistoryMaxDays', 'security', Int32Type, 365);
+            
+
+            await settings.defineSetting('packages', 'package', ArrayType, []);
+            await settings.defineSetting('webServicesPath', 'server', StringType, '/ws');
+
+            await dbms.createObj(DboUserGroup, {
+                name: '',
+                active: true,
+                settings: {},
+            });
+            */
+
         }
 
         // ********************
@@ -59,16 +90,6 @@
                 acme: SystemHandle.setupDataShape.get('acme'),
             }
         )](trx, acme) {
-            // **********************************************************************
-            // **********************************************************************
-            return new Promise(async (ok, fail) => {
-                await pause(2000);
-                ok({
-                    type: 'test',
-                });
-            });
-            // **********************************************************************
-            // **********************************************************************
             let system = mkSystemHandle();
             await system.setAcmeSettings(acme);
             let channel = await mkWebsocketChannel().open();
@@ -81,22 +102,43 @@
         }
 
         // ********************
+        // configureDbms
+        // ********************
+        async [Api.defineEndpoint(
+            'configureDbms',
+            {
+                dbmsSettings: SystemHandle.setupDataShape.get('dbms'),
+            }
+        )](trx, dbmsSettings) {
+            try {
+                let system = mkSystemHandle();
+
+                if (await system.setDbmsSettings(dbmsSettings)) {
+                    return system.getSetupState();
+                }
+                else {
+                    return false;
+                }
+            }
+            catch (e) {
+                return {
+                    success: false,
+                    error: e.toString(),
+                };
+            }
+        }
+
+        // ********************
         // setSystemMode
         // ********************
         async [Api.defineEndpoint(
             'setSystemMode',
             {
                 systemMode: StringType,
-                dbms: SystemHandle.setupDataShape.get('dbms'),
-                serverTeam: SystemHandle.setupDataShape.get('serverteam'),
             }
-        )](trx, systemMode, dbms, serverTeam) {
-            if (systemMode == 'system#standalone') {
-                return await mkSystemHandle().setServerMode(systemMode, dbms);
-            }
-            else if (systemMode == 'system#serverteam') {
-                return await mkSystemHandle().setServerMode(systemMode, serverteam);
-            }
+        )](trx, systemMode) {
+            let system = mkSystemHandle();
+            return await system.setSystemMode(systemMode);
         }
     });
 })();

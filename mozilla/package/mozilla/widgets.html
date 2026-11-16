@@ -426,37 +426,6 @@
                     }
                 }
 
-                async onHandleEventReset(event) {
-                    if (this.method && this.dotteds.length) {
-                        for (let dotted in this.reset) {
-                            Controller.setValue(dotted, this.reset[dotted]);
-                        }
-                    }
-                }
-
-                async onHandleEventSubmit(event) {
-                    if (this.method && this.dotteds.length) {
-                        this.swapOut(createElement('busylines-widget'));
-                        let result = await Api[this.method](
-                            ...this.dotteds.map(dotted => Controller.getValue(dotted))
-                        );
-                        this.swapBack();
-
-                        if (appWidget) {
-                            let handlerName = `on${this.method[0].toUpperCase()}${this.method.substring(1)}`;
-
-                            if (handlerName in appWidget) {
-                                appWidget[handlerName]({
-                                    form: this,
-                                    method: this.method,
-                                    dotteds: this.dotteds,
-                                    result: result,
-                                });
-                            }
-                        }
-                    }
-                }
-
                 onHandleEventEditStart(event) {
                     if (this.editing) {
                         this.editing.stopEdit();
@@ -498,6 +467,41 @@
                             }
                         }
                     }
+                }
+
+                async onHandleEventReset(event) {
+                    if (this.method && this.dotteds.length) {
+                        for (let dotted in this.reset) {
+                            Controller.setValue(dotted, this.reset[dotted]);
+                        }
+                    }
+                }
+
+                async onHandleEventSubmit(event) {
+                    if (this.method && this.dotteds.length) {
+                        this.swapOut(createElement('busylines-widget'));
+                        let result = await Api[this.method](
+                            ...this.dotteds.map(dotted => Controller.getValue(dotted))
+                        );
+                        this.swapBack();
+
+                        if (appWidget) {
+                            let handlerName = `on${this.method[0].toUpperCase()}${this.method.substring(1)}`;
+
+                            if (handlerName in appWidget) {
+                                appWidget[handlerName]({
+                                    form: this,
+                                    method: this.method,
+                                    dotteds: this.dotteds,
+                                    result: result,
+                                });
+                            }
+                        }
+                    }
+                }
+
+                async onHandleEventYield(event) {
+                    this.onHandleEventSubmit(event);
                 }
 
                 setSubmitButtonEnabled(enabled) {

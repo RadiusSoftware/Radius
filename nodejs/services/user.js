@@ -30,6 +30,7 @@
  * facilitate authentication.
 *****/
 createService(class UserService extends Service {
+    /*
     async onCheckUserNameAvailability(message) {
         let dbms = mkDbmsThunk();
 
@@ -469,6 +470,7 @@ createService(class UserService extends Service {
             );
         }
     }
+    */
 });
 
 
@@ -484,6 +486,22 @@ define(class UserHandle extends Handle {
         this.id = id ? id : '';
     }
 
+    async createUser(opts) {
+        let response = await this.callService(opts);
+
+        if (response instanceof Failure) {
+            return response;
+        }
+
+        this.id = response;
+        return this;
+    }
+
+    static fromJson(value) {
+        return mkUserHandle(value.id);
+    }
+
+    /*
     async checkUserNameAvailability(userName) {
         return await this.callService({
             userName: userName,
@@ -538,21 +556,6 @@ define(class UserHandle extends Handle {
         }
 
         return this;
-    }
-
-    async createUser(opts) {
-        let response = await this.callService(opts);
-
-        if (response instanceof Failure) {
-            return response;
-        }
-
-        this.id = response;
-        return this;
-    }
-
-    static fromJson(value) {
-        return mkUserHandle(value.id);
     }
 
     async getEmailAddr() {
@@ -943,4 +946,5 @@ define(class UserHandle extends Handle {
 
         return this;
     }
+    */
 });

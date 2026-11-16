@@ -38,24 +38,27 @@ define(class DbSchema {
         this.name = '';
         this.tableArr = [];
         this.tableMap = {};
-        this.name = arg.name;
 
-        for (let table of arg.tables) {
-            let dbTable = mkDbTable(table);
-            this.tableArr.push(dbTable);
-            this.tableMap[dbTable.getName()] = dbTable;
-        }
+        if (ObjectType.verify(arg)) {
+            this.name = arg.name;
 
-        if (this.name in DbSchema.schemas) {
-            DbSchema[this.name].defined.push(this);
-        }
-        else {
-            let schemaEntry = {
-                name: this.name,
-                defined: [ this ],
-            };
+            for (let table of arg.tables) {
+                let dbTable = mkDbTable(table);
+                this.tableArr.push(dbTable);
+                this.tableMap[dbTable.getName()] = dbTable;
+            }
 
-            DbSchema[this.name] = schemaEntry;
+            if (this.name in DbSchema.schemas) {
+                DbSchema[this.name].defined.push(this);
+            }
+            else {
+                let schemaEntry = {
+                    name: this.name,
+                    defined: [ this ],
+                };
+
+                DbSchema[this.name] = schemaEntry;
+            }
         }
     }
 
